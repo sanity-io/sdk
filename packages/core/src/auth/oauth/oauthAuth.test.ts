@@ -83,6 +83,11 @@ describe('serialize/deserialize tokens', () => {
     expect(deserializeTokens('{"foo":"bar"}')).toBeNull()
     expect(deserializeTokens('123')).toBeNull()
   })
+
+  it('returns null when expiresAt does not parse to a valid date', () => {
+    const raw = JSON.stringify({...JSON.parse(serializeTokens(tokens)), expiresAt: 'garbage'})
+    expect(deserializeTokens(raw)).toBeNull()
+  })
 })
 
 describe('getOauthInitialState', () => {
@@ -92,6 +97,16 @@ describe('getOauthInitialState', () => {
     expect(result.authState).toMatchObject({type: AuthStateType.LOGGED_IN, token: 'access-1'})
     expect(result.oauthTokens).toEqual(tokens)
     expect(result.authMethod).toBe('localstorage')
+  })
+
+  it('returns LOGGED_OUT and clears storage when persisted tokens are corrupt', () => {
+    const storageArea = createMemoryStorage({
+      [OAUTH_TOKENS_KEY]: '{"accessToken":"a","expiresAt":"garbage"}',
+    })
+    const result = getOauthInitialState(baseOptions({storageArea}))
+    expect(result.authState).toEqual({type: AuthStateType.LOGGED_OUT, isDestroyingSession: false})
+    expect(result.oauthTokens).toBeUndefined()
+    expect(storageArea.getItem(OAUTH_TOKENS_KEY)).toBeNull()
   })
 
   it('returns LOGGING_IN when the callback URL matches the redirect URI', () => {
