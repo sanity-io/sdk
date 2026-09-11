@@ -5,8 +5,6 @@ packages:
   - apps/*
   - '@repo/package.config'
 
-overrides:
-  '@babel/types': 8.0.4
 
 allowBuilds:
   esbuild: true
