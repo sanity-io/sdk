@@ -1,5 +1,21 @@
 # Changelog
 
+## [3.2.0](https://github.com/sanity-io/sdk/compare/sdk-v3.1.0...sdk-v3.2.0) (2026-09-11)
+
+
+### Features
+
+* **core:** add OAuth authorization-code + PKCE auth mode ([#1162](https://github.com/sanity-io/sdk/issues/1162)) ([1513fbf](https://github.com/sanity-io/sdk/commit/1513fbf1497c58634761a94e03b629c278681a7f))
+* **typegen:** drop the experimental groq fork behind a compatibility shim ([#1179](https://github.com/sanity-io/sdk/issues/1179)) ([f19d95f](https://github.com/sanity-io/sdk/commit/f19d95f1c7e14bb5cc8f5fa71586d4d1d4713b82))
+
+
+### Bug Fixes
+
+* **core:** align application types with brett ([#1160](https://github.com/sanity-io/sdk/issues/1160)) ([115e74e](https://github.com/sanity-io/sdk/commit/115e74e0d7e3d1743699502dd1a15d1ac44d8926))
+* **core:** escape backslashes in GROQ search filter ([#1188](https://github.com/sanity-io/sdk/issues/1188)) ([90763ac](https://github.com/sanity-io/sdk/commit/90763acbcac18eb58596b74dc6886418a77b0952))
+* **deps:** update dependency zustand to ^5.0.15 ([#1237](https://github.com/sanity-io/sdk/issues/1237)) ([ef693ba](https://github.com/sanity-io/sdk/commit/ef693ba6495be152157eee034a0028d4b51e109d))
+* **deps:** update sanity ([#1204](https://github.com/sanity-io/sdk/issues/1204)) ([77c4748](https://github.com/sanity-io/sdk/commit/77c4748c490e79bbd8182dc10d55414f6a36b359))
+
 ## [3.1.0](https://github.com/sanity-io/sdk/compare/sdk-v3.0.0...sdk-v3.1.0) (2026-09-03)
 
 
