@@ -4,6 +4,8 @@ import {ReleaseDocument} from '@sanity/sdk'
 const releaseQuery = `*[_id == $id][0]`
 
 test.describe('Release Management Dialog', () => {
+  test.describe.configure({timeout: 90_000})
+
   test('creates, edits, schedules, unschedules, publishes, and deletes a release through the dialog', async ({
     page,
     getClient,

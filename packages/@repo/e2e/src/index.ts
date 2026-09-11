@@ -70,7 +70,16 @@ export const basePlaywrightConfig: PlaywrightTestConfig = {
     },
     {
       name: 'firefox',
-      use: {...devices['Desktop Firefox'], storageState: AUTH_FILE, baseURL: BASE_URL},
+      use: {
+        ...devices['Desktop Firefox'],
+        storageState: AUTH_FILE,
+        baseURL: BASE_URL,
+        launchOptions: {
+          // The Dashboard's localhost iframe does not yet delegate Firefox's
+          // loopback-network permission, so Firefox blocks the development app.
+          firefoxUserPrefs: {'network.lna.enabled': false},
+        },
+      },
       dependencies: ['setup'],
     },
     {
