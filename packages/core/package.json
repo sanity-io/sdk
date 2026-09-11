@@ -97,7 +97,7 @@
     "groq-js": "catalog:",
     "reselect": "^5.1.1",
     "rxjs": "catalog:",
-    "zustand": "^5.0.13"
+    "zustand": "^5.0.15"
   },
   "devDependencies": {
     "@repo/config-eslint": "workspace:*",
