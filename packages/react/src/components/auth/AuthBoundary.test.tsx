@@ -7,6 +7,7 @@ import {beforeEach, describe, expect, it, type MockInstance, vi} from 'vitest'
 import {ResourceProvider} from '../../context/ResourceProvider'
 import {useAuthState} from '../../hooks/auth/useAuthState'
 import {useLoginUrl} from '../../hooks/auth/useLoginUrl'
+import {useOAuthAuthorize} from '../../hooks/auth/useOAuthAuthorize'
 import {useVerifyOrgProjects} from '../../hooks/auth/useVerifyOrgProjects'
 import {AuthBoundary} from './AuthBoundary'
 
@@ -15,6 +16,9 @@ vi.mock('../../hooks/auth/useAuthState', () => ({
   useAuthState: vi.fn(() => 'logged-out'),
 }))
 vi.mock('../../hooks/auth/useLoginUrl')
+vi.mock('../../hooks/auth/useOAuthAuthorize', () => ({
+  useOAuthAuthorize: vi.fn(() => vi.fn().mockResolvedValue(undefined)),
+}))
 vi.mock('../../hooks/auth/useVerifyOrgProjects')
 vi.mock('../../hooks/auth/useHandleAuthCallback', () => ({
   useHandleAuthCallback: vi.fn(() => async () => {}),
@@ -139,6 +143,82 @@ describe('AuthBoundary', () => {
     // Wait for the redirect to happen
     await waitFor(() => {
       expect(window.location.href).toBe('https://sanity.io/login')
+    })
+  })
+
+  describe('oauth mode', () => {
+    const oauth = {
+      clientId: 'client-abc',
+      redirectUri: 'https://app.example.com/callback',
+      organizationId: 'org123',
+    }
+
+    it('starts the OAuth authorization flow when authState="logged-out"', async () => {
+      const authorize = vi.fn().mockResolvedValue(undefined)
+      vi.mocked(useOAuthAuthorize).mockReturnValue(authorize)
+      vi.mocked(useAuthState).mockReturnValue({
+        type: AuthStateType.LOGGED_OUT,
+        isDestroyingSession: false,
+      })
+      render(
+        <ResourceProvider projectId="p" dataset="d" auth={{oauth}} fallback={null}>
+          <AuthBoundary projectIds={testProjectIds}>Protected Content</AuthBoundary>
+        </ResourceProvider>,
+      )
+
+      await waitFor(() => expect(authorize).toHaveBeenCalledTimes(1))
+      expect(screen.queryByText('Protected Content')).not.toBeInTheDocument()
+    })
+
+    it('does not start the OAuth flow when logged out without oauth config', async () => {
+      const authorize = vi.fn().mockResolvedValue(undefined)
+      vi.mocked(useOAuthAuthorize).mockReturnValue(authorize)
+      vi.mocked(useAuthState).mockReturnValue({
+        type: AuthStateType.LOGGED_OUT,
+        isDestroyingSession: false,
+      })
+      render(
+        <ResourceProvider projectId="p" dataset="d" fallback={null}>
+          <AuthBoundary projectIds={testProjectIds}>Protected Content</AuthBoundary>
+        </ResourceProvider>,
+      )
+
+      await waitFor(() => expect(screen.queryByText('Protected Content')).not.toBeInTheDocument())
+      expect(authorize).not.toHaveBeenCalled()
+    })
+
+    it('renders the error fallback when starting the OAuth flow rejects', async () => {
+      vi.mocked(useOAuthAuthorize).mockReturnValue(
+        vi.fn().mockRejectedValue(new Error('crypto.subtle unavailable')),
+      )
+      vi.mocked(useAuthState).mockReturnValue({
+        type: AuthStateType.LOGGED_OUT,
+        isDestroyingSession: false,
+      })
+      render(
+        <ResourceProvider projectId="p" dataset="d" auth={{oauth}} fallback={null}>
+          <AuthBoundary projectIds={testProjectIds}>Protected Content</AuthBoundary>
+        </ResourceProvider>,
+      )
+
+      await waitFor(() => expect(screen.getByText('Authentication Error')).toBeInTheDocument())
+    })
+
+    it('renders the error fallback without restarting the flow when authState="error"', async () => {
+      const authorize = vi.fn().mockResolvedValue(undefined)
+      vi.mocked(useOAuthAuthorize).mockReturnValue(authorize)
+      vi.mocked(useAuthState).mockReturnValue({
+        type: AuthStateType.ERROR,
+        error: new Error('access_denied'),
+      })
+      render(
+        <ResourceProvider projectId="p" dataset="d" auth={{oauth}} fallback={null}>
+          <AuthBoundary projectIds={testProjectIds}>Protected Content</AuthBoundary>
+        </ResourceProvider>,
+      )
+
+      await waitFor(() => expect(screen.getByText('Authentication Error')).toBeInTheDocument())
+      expect(authorize).not.toHaveBeenCalled()
     })
   })
 
