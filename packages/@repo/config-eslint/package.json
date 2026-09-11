@@ -27,6 +27,6 @@
     "eslint-plugin-unused-imports": "^4.4.1",
     "globals": "^17.12.0",
     "typescript": "catalog:",
-    "typescript-eslint": "^8.69.0"
+    "typescript-eslint": "^8.70.0"
   }
 }
