@@ -153,7 +153,7 @@ describe('sortListenerEvents operator', () => {
   })
 
   it('should throw MaxBufferExceededError when the buffer exceeds the max size', async () => {
-    // Set a very low maxBufferSize (e.g. 2)
+    // maxBufferSize is 2 below, so the three unchainable mutations overflow it
     const sync = createSyncEvent('rev1')
     // Two mutation events that never chain (their previousRev do not match "rev1")
     const mutation1 = createMutationEvent({

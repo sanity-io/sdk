@@ -242,9 +242,9 @@ interface ApplySingleDocPatchResult {
 }
 
 /**
- * Shared logic for applying user-provided patches to a single document that
- * is identified by an exact ID (no draft/published wrapping). Used by the
- * liveEdit branch of `document.edit` and by `release.edit`.
+ * Applies user-provided patches to a single document identified by an exact ID
+ * (no draft/published wrapping). Used by the liveEdit branch of
+ * `document.edit` and by `release.edit`.
  *
  * Returns the updated base + working sets, plus the diffed patches in both
  * raw and mutation form so the caller can decide what to send to the server.

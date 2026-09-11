@@ -84,11 +84,10 @@ export function handleEdit(
   const baseMutations: Mutation[] = []
   // don't create a draft from the published version in a release perspective
   if (!isReleasePerspective(action.perspective) && !base[draftId] && base[publishedId]) {
-    // otherwise make a draft from the published version
     baseMutations.push({create: {...base[publishedId], _id: draftId}})
   }
 
-  // the above statement and guards should make this never be null or undefined
+  // the existence guards above should leave one of these defined
   const baseBefore = base[patchDocumentId] ?? base[publishedId]
   if (userPatches) {
     baseMutations.push(...userPatches)
@@ -127,7 +126,7 @@ export function handleEdit(
     workingMutations.push({create: newDraftFromPublished})
   }
 
-  // the first if statement should make this never be null or undefined
+  // the existence guards above should leave one of these defined
   const workingBefore = working[patchDocumentId] ?? working[publishedId]
   if (!checkGrant(grants.update, workingBefore!, identity)) {
     throw new PermissionActionError({

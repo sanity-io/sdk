@@ -55,7 +55,7 @@ interface ProcessActionsOptions {
   working: DocumentSet
 
   /**
-   * The timestamp to use for `_updateAt` and other similar timestamps for this
+   * The timestamp to use for `_updatedAt` and other similar timestamps for this
    * transaction
    */
   timestamp: string
@@ -108,13 +108,10 @@ interface ProcessActionsResult {
  * high-level actions into lower-level outgoing mutations/actions that respect
  * the current state of the working documents.
  *
- * Supports a "base" and "working" set of documents to allow actions to be
- * applied on top of a different working set of documents in a 3-way merge
- *
  * Actions are applied to the base set of documents first. The difference
- * between the base before and after is used to create a patch. This patch is
- * then applied to the working set of documents and is set as the outgoing patch
- * sent to the server.
+ * between the base before and after is used to create a patch, which is then
+ * applied to the working set as a 3-way merge and sent to the server as the
+ * outgoing patch.
  */
 export function processActions({
   actions,
@@ -135,7 +132,7 @@ export function processActions({
   // requires a draft+published pair. Mixing them with anything else in the same
   // transaction would silently lose atomicity for the non-liveEdit operations,
   // so require users to split the transaction.
-  // (Note that the reducers already does this for us -- you'd have to try hard to mix them.)
+  // (The reducers already avoid batching them together, so this is hard to hit.)
   const liveEditAction = actions.find((action) => !isReleaseAction(action) && action.liveEdit) as
     | DocumentAction
     | undefined

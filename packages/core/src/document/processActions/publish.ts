@@ -44,8 +44,7 @@ export function handlePublish(
     })
   }
 
-  // Before proceeding, verify that the working draft is identical to the base draft.
-  // TODO: is it enough just to check for the _rev or nah?
+  // TODO: is checking the `_rev` enough?
   if (!isDeepEqual(workingDraft, baseDraft)) {
     throw new ActionError({
       documentId,

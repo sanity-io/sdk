@@ -69,7 +69,7 @@ describe('applyDocumentActions', () => {
       patches: [{set: {foo: 'bar'}}],
     }
 
-    // Call applyDocumentActions with a fixed transactionId for reproducibility.
+    // a fixed transactionId keeps this reproducible
     const applyPromise = applyDocumentActions(instance, {
       actions: [action],
       transactionId: 'txn-success',
@@ -82,26 +82,21 @@ describe('applyDocumentActions', () => {
       disableBatching: false,
       outgoingActions: [],
       outgoingMutations: [],
-      // Simulated base, previous, and working document sets.
       base: {doc1: {...exampleDoc, _id: 'doc1', foo: 'old', _rev: 'rev-old'}},
       working: {doc1: {...exampleDoc, _id: 'doc1', foo: 'bar', _rev: 'rev-new'}},
       previous: {doc1: {...exampleDoc, _id: 'doc1', foo: 'old', _rev: 'rev-old'}},
       previousRevs: {doc1: 'rev-old'},
       timestamp: new Date().toISOString(),
     }
-    // Update the state so that its "applied" array contains our applied transaction.
     state.set('simulateApplied', {applied: [appliedTx]})
 
-    // Await the resolution of applyDocumentActions. This should pick up the applied transaction.
     const result = await applyPromise
 
-    // Check that the result fields match the simulated applied transaction.
     expect(result.transactionId).toEqual('txn-success')
     expect(result.documents).toEqual(appliedTx.working)
     expect(result.previous).toEqual(appliedTx.previous)
     expect(result.previousRevs).toEqual(appliedTx.previousRevs)
-    // In this simple example, since "doc1" exists both in previous and working,
-    // it should be reported as updated.
+    // "doc1" exists in both previous and working, so it is reported as updated
     expect(result.updated).toEqual(['doc1'])
     expect(result.appeared).toEqual([])
     expect(result.disappeared).toEqual([])

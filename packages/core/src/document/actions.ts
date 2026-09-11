@@ -20,8 +20,8 @@ const isSanityMutatePatch = (value: unknown): value is SanityMutatePatchMutation
 }
 
 /**
- * Represents an action to create a new document.
- * Specifies the document type and optionally a document ID (which will be treated as the published ID).
+ * Action to create a new document. An optional `documentId` is treated as the
+ * published ID.
  * @beta
  */
 export interface CreateDocumentAction<
@@ -31,9 +31,9 @@ export interface CreateDocumentAction<
 > extends DocumentTypeHandle<TDocumentType, TDataset, TProjectId> {
   type: 'document.create'
   /**
-   * Optional initial field values for the document.
-   * These values will be set when the document is created.
-   * System fields (_id, _type, _rev, _createdAt, _updatedAt) are omitted as they are set automatically.
+   * Initial field values, set when the document is created. System fields
+   * (_id, _type, _rev, _createdAt, _updatedAt) are omitted because they are set
+   * automatically.
    */
   initialValue?: Partial<
     Omit<
@@ -44,8 +44,7 @@ export interface CreateDocumentAction<
 }
 
 /**
- * Represents an action to delete an existing document.
- * Requires the full document handle including the document ID.
+ * Action to delete an existing document.
  * @beta
  */
 export interface DeleteDocumentAction<
@@ -57,8 +56,7 @@ export interface DeleteDocumentAction<
 }
 
 /**
- * Represents an action to edit an existing document using patches.
- * Requires the full document handle and an array of patch operations.
+ * Action to edit an existing document with patches.
  * @beta
  */
 export interface EditDocumentAction<
@@ -86,8 +84,7 @@ export interface EditDocumentAction<
 }
 
 /**
- * Represents an action to publish the draft version of a document.
- * Requires the full document handle.
+ * Action to publish the draft version of a document.
  * @beta
  */
 export interface PublishDocumentAction<
@@ -99,8 +96,7 @@ export interface PublishDocumentAction<
 }
 
 /**
- * Represents an action to unpublish a document, moving its published content to a draft.
- * Requires the full document handle.
+ * Action to unpublish a document, moving its published content to a draft.
  * @beta
  */
 export interface UnpublishDocumentAction<
@@ -112,8 +108,7 @@ export interface UnpublishDocumentAction<
 }
 
 /**
- * Represents an action to discard the draft changes of a document.
- * Requires the full document handle.
+ * Action to discard the draft changes of a document.
  * @beta
  */
 export interface DiscardDocumentAction<
@@ -152,7 +147,8 @@ export type Action<
 > = DocumentAction<TDocumentType, TDataset, TProjectId> | ReleaseAction
 
 /**
- * Creates a `CreateDocumentAction` object.
+ * Creates a `CreateDocumentAction`. An explicit `documentId` on the handle is
+ * normalized to the ID the action applies to.
  * @param doc - A handle identifying the document type, dataset, and project. An optional `documentId` can be provided.
  * @param initialValue - Optional initial field values for the document. (System fields are omitted as they are set automatically.)
  * @returns A `CreateDocumentAction` object ready for dispatch.
@@ -229,8 +225,7 @@ export interface EditDocumentOptions {
 }
 
 /**
- * Creates an `EditDocumentAction` object with patches for modifying a document.
- * Accepts patches in either the standard `PatchOperations` format or as a `SanityMutatePatchMutation` from `@sanity/mutate`.
+ * Creates an `EditDocumentAction` from a `@sanity/mutate` patch mutation.
  *
  * @param doc - A handle uniquely identifying the document to be edited.
  * @param sanityMutatePatch - A patch mutation object from `@sanity/mutate`.
@@ -248,7 +243,7 @@ export function editDocument<
   options?: EditDocumentOptions,
 ): EditDocumentAction<TDocumentType, TDataset, TProjectId>
 /**
- * Creates an `EditDocumentAction` object with patches for modifying a document.
+ * Creates an `EditDocumentAction` from one or more patch operations.
  *
  * @param doc - A handle uniquely identifying the document to be edited.
  * @param patches - A single patch operation or an array of patch operations.
@@ -266,8 +261,7 @@ export function editDocument<
   options?: EditDocumentOptions,
 ): EditDocumentAction<TDocumentType, TDataset, TProjectId>
 /**
- * Creates an `EditDocumentAction` object with patches for modifying a document.
- * This is the implementation signature and handles the different patch input types.
+ * Creates an `EditDocumentAction` from patches in any accepted format.
  *
  * @param doc - A handle uniquely identifying the document to be edited.
  * @param patches - Patches in various formats (`PatchOperations`, `PatchOperations[]`, or `SanityMutatePatchMutation`).
