@@ -9,6 +9,7 @@ import {subscribeToStateAndFetchCurrentUser} from '../subscribeToStateAndFetchCu
 import {
   getOAuthTokensState,
   handleOAuthCallback,
+  OAUTH_RETURN_TO_KEY,
   OAUTH_STATE_KEY,
   OAUTH_VERIFIER_KEY,
   refreshOAuthTokens,
@@ -156,6 +157,28 @@ describe('startOAuthAuthorization', () => {
     expect(url.searchParams.getAll('resource')).toEqual(['urn:io.sanity:organization:org123'])
   })
 
+  it('stashes the current location to return to, keeping app params intact', async () => {
+    const href = 'https://app.example.com/documents/abc?state=draft&code=x#h'
+    vi.stubGlobal('window', {location: {assign: vi.fn(), href}})
+    vi.stubGlobal('location', {href})
+    const {session} = setup()
+
+    await startOAuthAuthorization(instance!)
+
+    expect(session.getItem(OAUTH_RETURN_TO_KEY)).toBe(href)
+  })
+
+  it('strips stale OAuth params from the stashed location when already on the callback route', async () => {
+    const href = 'https://app.example.com/callback?x=1&code=old&state=old'
+    vi.stubGlobal('window', {location: {assign: vi.fn(), href}})
+    vi.stubGlobal('location', {href})
+    const {session} = setup()
+
+    await startOAuthAuthorization(instance!)
+
+    expect(session.getItem(OAUTH_RETURN_TO_KEY)).toBe('https://app.example.com/callback?x=1')
+  })
+
   it('throws when OAuth is not configured', async () => {
     setup({withOAuthConfig: false})
     await expect(startOAuthAuthorization(instance!)).rejects.toThrow(/OAuth is not configured/)
@@ -201,6 +224,61 @@ describe('handleOAuthCallback', () => {
       type: AuthStateType.LOGGED_IN,
       token: 'new-access',
     })
+  })
+
+  it('returns the stashed same-origin location after a successful exchange', async () => {
+    const returnTo = 'https://app.example.com/documents/abc?x=1'
+    const {session} = setup({
+      sessionSeed: {
+        [OAUTH_STATE_KEY]: 'state-xyz',
+        [OAUTH_VERIFIER_KEY]: 'verifier-1',
+        [OAUTH_RETURN_TO_KEY]: returnTo,
+      },
+    })
+
+    expect(await handleOAuthCallback(instance!, callbackHref)).toBe(returnTo)
+    expect(session.getItem(OAUTH_RETURN_TO_KEY)).toBeNull()
+  })
+
+  it('ignores a stashed location on a different origin', async () => {
+    setup({
+      sessionSeed: {
+        [OAUTH_STATE_KEY]: 'state-xyz',
+        [OAUTH_VERIFIER_KEY]: 'verifier-1',
+        [OAUTH_RETURN_TO_KEY]: 'https://evil.example.com/',
+      },
+    })
+
+    expect(await handleOAuthCallback(instance!, callbackHref)).toBe(
+      'https://app.example.com/callback',
+    )
+  })
+
+  it('does not restore the stashed location on a state mismatch', async () => {
+    const {session} = setup({
+      sessionSeed: {
+        [OAUTH_STATE_KEY]: 'different',
+        [OAUTH_VERIFIER_KEY]: 'verifier-1',
+        [OAUTH_RETURN_TO_KEY]: 'https://app.example.com/deep',
+      },
+    })
+
+    expect(await handleOAuthCallback(instance!, callbackHref)).toBe(
+      'https://app.example.com/callback',
+    )
+    expect(session.getItem(OAUTH_RETURN_TO_KEY)).toBeNull()
+  })
+
+  it('does not restore the stashed location on an ?error= callback', async () => {
+    const {session} = setup({sessionSeed: {[OAUTH_RETURN_TO_KEY]: 'https://app.example.com/deep'}})
+
+    const result = await handleOAuthCallback(
+      instance!,
+      'https://app.example.com/callback?error=access_denied',
+    )
+
+    expect(result).toBe('https://app.example.com/callback')
+    expect(session.getItem(OAUTH_RETURN_TO_KEY)).toBeNull()
   })
 
   it('does not perform a second exchange on a duplicate concurrent invocation', async () => {
