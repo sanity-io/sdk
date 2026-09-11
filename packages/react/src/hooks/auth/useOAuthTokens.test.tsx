@@ -6,6 +6,7 @@ import {
   type StateSource,
 } from '@sanity/sdk'
 import {act, renderHook} from '@testing-library/react'
+import {throwError} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {ResourceProvider} from '../../context/ResourceProvider'
@@ -37,7 +38,7 @@ function createFakeTokenSource(initial: OAuthTokens | null) {
       }
     },
     getCurrent: () => current,
-    observable: undefined as never,
+    observable: throwError(() => new Error('unexpected usage of observable')),
     set: (next) => {
       current = next
       for (const listener of listeners) listener()
