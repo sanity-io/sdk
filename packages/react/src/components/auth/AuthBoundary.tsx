@@ -1,13 +1,14 @@
 import {CorsOriginError} from '@sanity/client'
 import {AuthStateType, getCorsErrorProjectId, isImportError} from '@sanity/sdk'
 import {isDashboardEnvironment, isStudioConfig} from '@sanity/sdk/_internal'
-import {useEffect, useMemo} from 'react'
+import {useEffect, useMemo, useState} from 'react'
 import {ErrorBoundary, type FallbackProps} from 'react-error-boundary'
 
 import {ComlinkTokenRefreshProvider} from '../../context/ComlinkTokenRefresh'
 import {DashboardTokenRefreshProvider} from '../../context/DashboardTokenRefresh'
 import {useAuthState} from '../../hooks/auth/useAuthState'
 import {useLoginUrl} from '../../hooks/auth/useLoginUrl'
+import {useOAuthAuthorize} from '../../hooks/auth/useOAuthAuthorize'
 import {useVerifyOrgProjects} from '../../hooks/auth/useVerifyOrgProjects'
 import {useSanityInstance} from '../../hooks/context/useSanityInstance'
 import {ChunkLoadError} from '../errors/ChunkLoadError'
@@ -183,19 +184,32 @@ function AuthSwitch({
   const orgError = useVerifyOrgProjects(disableVerifyOrg, projectIds)
 
   const isLoggedOut = authState.type === AuthStateType.LOGGED_OUT && !authState.isDestroyingSession
+  const isOAuth = !!instance.config.auth?.oauth
   const loginUrl = useLoginUrl()
+  const authorize = useOAuthAuthorize()
+  const [authorizeError, setAuthorizeError] = useState<unknown>(null)
 
   useEffect(() => {
     if (isLoggedOut && !isInIframe() && !isStudio && !isDashboardEnvironment()) {
       // We don't want to redirect to login if we're in the Dashboard, in studio
       // mode, or in the workbench (the OS owns the session and mints the token)
-      window.location.href = loginUrl
+      if (isOAuth) {
+        // PKCE params and navigation are owned by core. LOGGED_OUT renders
+        // null, so a rejection here must be surfaced or the user sees nothing.
+        authorize().catch(setAuthorizeError)
+      } else {
+        window.location.href = loginUrl
+      }
     }
-  }, [isLoggedOut, loginUrl, isStudio])
+  }, [isLoggedOut, isOAuth, authorize, loginUrl, isStudio])
 
   // Only check the error if verification is enabled
   if (verifyOrganization && orgError) {
     throw new ConfigurationError({message: orgError})
+  }
+
+  if (authorizeError) {
+    throw new AuthError(authorizeError)
   }
 
   switch (authState.type) {

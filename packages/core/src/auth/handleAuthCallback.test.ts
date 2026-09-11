@@ -5,6 +5,7 @@ import {createSanityInstance, type SanityInstance} from '../store/createSanityIn
 import {AuthStateType} from './authStateType'
 import {getAuthState} from './authStore'
 import {handleAuthCallback} from './handleAuthCallback'
+import {handleOAuthCallback} from './oauth/oauthActions'
 import {subscribeToStateAndFetchCurrentUser} from './subscribeToStateAndFetchCurrentUser'
 import {subscribeToStorageEventsAndSetToken} from './subscribeToStorageEventsAndSetToken'
 import {getAuthCode, getTokenFromLocation, getTokenFromStorage} from './utils'
@@ -21,6 +22,11 @@ vi.mock('./utils', async (importOriginal) => {
 
 vi.mock('./subscribeToStateAndFetchCurrentUser')
 vi.mock('./subscribeToStorageEventsAndSetToken')
+
+vi.mock('./oauth/oauthActions', async (importOriginal) => {
+  const original = await importOriginal<typeof import('./oauth/oauthActions')>()
+  return {...original, handleOAuthCallback: vi.fn()}
+})
 
 // Mock logger to prevent actual logging during tests
 vi.mock('../utils/logger', async (importOriginal) => {
@@ -276,5 +282,32 @@ describe('handleCallback', () => {
 
     // Verify logger was called
     expect(createLogger).toHaveBeenCalled()
+  })
+
+  it('delegates to handleOAuthCallback in OAuth mode', async () => {
+    const clientFactory = vi.fn()
+    vi.mocked(getTokenFromStorage).mockReturnValue(null)
+    vi.mocked(handleOAuthCallback).mockResolvedValue('https://app.example.com/callback')
+
+    instance = createSanityInstance({
+      projectId: 'p',
+      dataset: 'd',
+      auth: {
+        clientFactory,
+        oauth: {
+          clientId: 'client-abc',
+          redirectUri: 'https://app.example.com/callback',
+          organizationId: 'org123',
+        },
+      },
+    })
+
+    const href = 'https://app.example.com/callback?code=abc&state=xyz'
+    const result = await handleAuthCallback(instance, href)
+
+    expect(result).toBe('https://app.example.com/callback')
+    expect(handleOAuthCallback).toHaveBeenCalledWith(instance, href)
+    expect(getAuthCode).not.toHaveBeenCalled()
+    expect(clientFactory).not.toHaveBeenCalled()
   })
 })
