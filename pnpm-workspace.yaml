@@ -62,7 +62,7 @@ catalog:
   react-dom: '^19.2.8'
   react-error-boundary: '^6.1.5'
   rimraf: '^6.0.1'
-  rolldown: '^1.2.7'
+  rolldown: '^1.2.8'
   rxjs: '^7.8.2'
   tsx: '^4.23.13'
   typescript: '^6.0.3'
