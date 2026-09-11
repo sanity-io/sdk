@@ -9,7 +9,11 @@ vi.mock('../../hooks/auth/useHandleAuthCallback', () => ({
     const parsedUrl = new URL(url)
     const sid = new URLSearchParams(parsedUrl.hash.slice(1)).get('sid')
     if (sid === 'valid') {
-      return 'https://example.com/new-location'
+      // same document, hash stripped
+      return 'http://localhost/'
+    }
+    if (sid === 'deep-link') {
+      return 'http://localhost/documents/abc?x=1'
     }
     return false
   }),
@@ -48,7 +52,8 @@ describe('LoginCallback', () => {
 
   it('handles a successful callback and calls history.replaceState', async () => {
     // Simulate a valid `sid` in the location hash
-    vi.stubGlobal('location', {href: 'http://localhost#sid=valid'})
+    const replace = vi.fn()
+    vi.stubGlobal('location', {href: 'http://localhost/#sid=valid', replace})
     const {LoginCallback} = await import('./LoginCallback') // Reload after resetModules
 
     render(
@@ -58,12 +63,26 @@ describe('LoginCallback', () => {
     )
 
     await waitFor(() => {
-      expect(history.replaceState).toHaveBeenCalledWith(
-        null,
-        '',
-        'https://example.com/new-location',
-      )
+      expect(history.replaceState).toHaveBeenCalledWith(null, '', 'http://localhost/')
     })
+    expect(replace).not.toHaveBeenCalled()
+  })
+
+  it('navigates when the callback resolves to a different route', async () => {
+    const replace = vi.fn()
+    vi.stubGlobal('location', {href: 'http://localhost/#sid=deep-link', replace})
+    const {LoginCallback} = await import('./LoginCallback') // Reload after resetModules
+
+    render(
+      <ResourceProvider fallback={null}>
+        <LoginCallback />
+      </ResourceProvider>,
+    )
+
+    await waitFor(() => {
+      expect(replace).toHaveBeenCalledWith('http://localhost/documents/abc?x=1')
+    })
+    expect(history.replaceState).not.toHaveBeenCalled()
   })
 
   it('does not call history.replaceState on an unsuccessful callback', async () => {
