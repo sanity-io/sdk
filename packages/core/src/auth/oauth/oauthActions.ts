@@ -175,24 +175,28 @@ export const handleOAuthCallback = bindActionGlobally(
       return false
     }
 
+    // Validation failures move to ERROR, unless a session is already
+    // established: a stale callback URL (e.g. remount before the params were
+    // stripped, after the artifacts were cleared) must not clobber LOGGED_IN.
+    const rejectCallback = (name: string, message: string): string => {
+      clearOAuthArtifacts(session)
+      if (authState.type === AuthStateType.LOGGED_IN) {
+        logger.warn(`${message} — ignoring callback, session already established`)
+      } else {
+        logger.error(`${message} — rejecting callback`)
+        state.set(name, {authState: {type: AuthStateType.ERROR, error: new Error(message)}})
+      }
+      return cleanedUrl
+    }
+
     const storedState = session?.getItem(OAUTH_STATE_KEY) ?? null
     if (!returnedState || !storedState || returnedState !== storedState) {
-      logger.error('OAuth state mismatch — rejecting callback')
-      clearOAuthArtifacts(session)
-      state.set('oauthStateMismatch', {
-        authState: {type: AuthStateType.ERROR, error: new Error('OAuth state mismatch')},
-      })
-      return cleanedUrl
+      return rejectCallback('oauthStateMismatch', 'OAuth state mismatch')
     }
 
     const codeVerifier = session?.getItem(OAUTH_VERIFIER_KEY) ?? null
     if (!codeVerifier) {
-      logger.error('OAuth code verifier missing — cannot exchange code')
-      clearOAuthArtifacts(session)
-      state.set('oauthVerifierMissing', {
-        authState: {type: AuthStateType.ERROR, error: new Error('OAuth code verifier missing')},
-      })
-      return cleanedUrl
+      return rejectCallback('oauthVerifierMissing', 'OAuth code verifier missing')
     }
 
     logger.info('Exchanging OAuth code for tokens')

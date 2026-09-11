@@ -221,6 +221,25 @@ describe('handleOAuthCallback', () => {
     expect(await first).toBe('https://app.example.com/callback')
   })
 
+  it('does not clobber LOGGED_IN when called again with a stale callback URL', async () => {
+    const {request} = setup({
+      sessionSeed: {[OAUTH_STATE_KEY]: 'state-xyz', [OAUTH_VERIFIER_KEY]: 'verifier-1'},
+    })
+
+    expect(await handleOAuthCallback(instance!, callbackHref)).toBe(
+      'https://app.example.com/callback',
+    )
+    // Artifacts are now cleared; a repeat with the same URL fails state validation
+    const result = await handleOAuthCallback(instance!, callbackHref)
+
+    expect(result).toBe('https://app.example.com/callback')
+    expect(request).toHaveBeenCalledTimes(1)
+    expect(getAuthState(instance!).getCurrent()).toMatchObject({
+      type: AuthStateType.LOGGED_IN,
+      token: 'new-access',
+    })
+  })
+
   it('surfaces an ?error= callback as ERROR without exchanging', async () => {
     const {request} = setup()
 
