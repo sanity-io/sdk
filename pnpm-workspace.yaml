@@ -44,7 +44,7 @@ catalog:
   '@sanity/tsconfig': '^2.2.1'
   '@sanity/types': '^6.13.0'
   'sanity': '^6.13.2'
-  '@testing-library/jest-dom': '^6.9.1'
+  '@testing-library/jest-dom': '^7.0.1'
   '@testing-library/react': '^16.3.3'
   '@types/lodash-es': '^4.17.12'
   '@types/node': '^24.13.4'
