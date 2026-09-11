@@ -1,14 +1,21 @@
-import {ClientError, type SanityClient} from '@sanity/client'
 import {createSelector} from 'reselect'
 
 import {bindActionGlobally} from '../../store/createActionBinder'
 import {createStateSourceAction} from '../../store/createStateSourceAction'
-import {type StoreContext} from '../../store/defineStore'
-import {DEFAULT_BASE, REQUEST_TAG_PREFIX} from '../authConstants'
+import {DEFAULT_BASE} from '../authConstants'
 import {getAuthLogger} from '../authLogger'
 import {AuthStateType} from '../authStateType'
 import {authStore, type AuthStoreState} from '../authStore'
 import {createLoggedInAuthState, getDefaultLocation} from '../utils'
+import {
+  createOAuthClient,
+  getOAuthOptions,
+  getResourceIndicator,
+  serializeTokens,
+  type TokenEndpointResponse,
+  toOAuthTokens,
+} from './oauthClient'
+import {runOAuthTokenRefresh} from './oauthRefresh'
 import {generateCodeChallenge, generateCodeVerifier, generateState} from './pkce'
 import {type OAuthTokens} from './types'
 
@@ -17,70 +24,6 @@ export const OAUTH_VERIFIER_KEY = '__sanity_oauth_verifier'
 
 /** sessionStorage key for the CSRF `state` value. */
 export const OAUTH_STATE_KEY = '__sanity_oauth_state'
-
-interface TokenEndpointResponse {
-  access_token: string
-  token_type: string
-  expires_in: number
-  refresh_token?: string
-}
-
-/** Builds the RFC 8707 resource indicator for an organisation. */
-function getResourceIndicator(organizationId: string): string {
-  return `urn:io.sanity:organization:${organizationId}`
-}
-
-/**
- * Serialises tokens for storage, converting `expiresAt` to an ISO string.
- *
- * @internal
- */
-export function serializeTokens(tokens: OAuthTokens): string {
-  return JSON.stringify({
-    accessToken: tokens.accessToken,
-    tokenType: tokens.tokenType,
-    expiresIn: tokens.expiresIn,
-    expiresAt: tokens.expiresAt.toISOString(),
-    ...(tokens.refreshToken !== undefined && {refreshToken: tokens.refreshToken}),
-  })
-}
-
-type AuthOptions = AuthStoreState['options']
-type ConfiguredOAuthOptions = AuthOptions & {oauth: NonNullable<AuthOptions['oauth']>}
-
-/**
- * Reads the store options, throwing when the instance was not configured for
- * OAuth.
- */
-function getOAuthOptions(state: AuthStoreState): ConfiguredOAuthOptions {
-  const {options} = state
-  if (!options.oauth) {
-    throw new Error('OAuth is not configured on this instance (missing `auth.oauth`).')
-  }
-  return options as ConfiguredOAuthOptions
-}
-
-/** Creates a client for the (unauthenticated) public OAuth token/revoke calls. */
-function createOAuthClient(options: AuthOptions): SanityClient {
-  return options.clientFactory({
-    apiVersion: 'v1',
-    requestTagPrefix: REQUEST_TAG_PREFIX,
-    useProjectHostname: false,
-    useCdn: false,
-    ...(options.apiHost && {apiHost: options.apiHost}),
-  })
-}
-
-/** Converts a token endpoint response to the {@link OAuthTokens} shape. */
-function toOAuthTokens(response: TokenEndpointResponse): OAuthTokens {
-  return {
-    accessToken: response.access_token,
-    tokenType: 'bearer',
-    expiresIn: response.expires_in,
-    expiresAt: new Date(Date.now() + response.expires_in * 1000),
-    ...(response.refresh_token !== undefined && {refreshToken: response.refresh_token}),
-  }
-}
 
 /**
  * Starts the OAuth authorization-code + PKCE flow: generates a `code_verifier`,
@@ -241,22 +184,6 @@ export const handleOAuthCallback = bindActionGlobally(
 )
 
 /**
- * A refresh failure is unrecoverable only when the token endpoint rejects the
- * refresh token itself (a 4xx). Rate-limit (429) and request-timeout (408)
- * responses, 5xx errors and network failures are transient, so the session is
- * kept intact for the caller to retry rather than forcing a logout.
- */
-function isUnrecoverableRefreshError(error: unknown): boolean {
-  return error instanceof ClientError && error.statusCode !== 408 && error.statusCode !== 429
-}
-
-// Single-flight refresh shared across concurrent callers. Safe as a module
-// singleton because `authStore` is a global store (one shared state).
-// ponytail: module-level single-flight; upgrade to per-store keying only if
-// the auth store ever stops being global.
-let refreshInFlight: Promise<Omit<OAuthTokens, 'refreshToken'> | null> | null = null
-
-/**
  * Refreshes the OAuth tokens using the `refresh_token` grant. Concurrent
  * callers share a single in-flight request. An unrecoverable failure (a 4xx
  * rejecting the refresh token) clears the tokens and transitions to
@@ -266,75 +193,7 @@ let refreshInFlight: Promise<Omit<OAuthTokens, 'refreshToken'> | null> | null = 
  *
  * @public
  */
-export const refreshOAuthTokens = bindActionGlobally(authStore, (context) => {
-  if (refreshInFlight) return refreshInFlight
-  refreshInFlight = doRefreshOAuthTokens(context).finally(() => {
-    refreshInFlight = null
-  })
-  return refreshInFlight
-})
-
-async function doRefreshOAuthTokens({
-  state,
-  instance,
-}: StoreContext<AuthStoreState>): Promise<Omit<OAuthTokens, 'refreshToken'> | null> {
-  const logger = getAuthLogger(instance)
-  const options = getOAuthOptions(state.get())
-
-  const current = state.get().oauthTokens
-  if (!current?.refreshToken) {
-    logger.warn('No refresh token available — logging out')
-    options.storageArea?.removeItem(options.storageKey)
-    state.set('oauthRefreshNoToken', {
-      authState: {type: AuthStateType.LOGGED_OUT, isDestroyingSession: false},
-      oauthTokens: undefined,
-    })
-    return null
-  }
-
-  try {
-    const client = createOAuthClient(options)
-    const params = new URLSearchParams({
-      grant_type: 'refresh_token',
-      refresh_token: current.refreshToken,
-      client_id: options.oauth.clientId,
-      resource: getResourceIndicator(options.oauth.organizationId),
-    })
-    const response = await client.request<TokenEndpointResponse>({
-      method: 'POST',
-      url: '/auth/oauth/token',
-      headers: {'content-type': 'application/x-www-form-urlencoded'},
-      body: params.toString(),
-      tag: 'oauth.refresh',
-    })
-
-    const tokens = toOAuthTokens(response)
-    if (!tokens.refreshToken) tokens.refreshToken = current.refreshToken
-
-    options.storageArea?.setItem(options.storageKey, serializeTokens(tokens))
-    logger.info('OAuth tokens refreshed')
-    state.set('oauthRefreshed', {
-      authState: createLoggedInAuthState(tokens.accessToken, null),
-      oauthTokens: tokens,
-    })
-    const {refreshToken: _refreshToken, ...publicTokens} = tokens
-    return publicTokens
-  } catch (error) {
-    if (!isUnrecoverableRefreshError(error)) {
-      // Transient (network / 5xx / rate limit) — keep the session so the
-      // caller can retry instead of forcing a logout.
-      logger.warn('OAuth token refresh failed — keeping session for retry', {error})
-      throw error
-    }
-    logger.error('OAuth token refresh failed — logging out', {error})
-    options.storageArea?.removeItem(options.storageKey)
-    state.set('oauthRefreshFailed', {
-      authState: {type: AuthStateType.LOGGED_OUT, isDestroyingSession: false},
-      oauthTokens: undefined,
-    })
-    throw error
-  }
-}
+export const refreshOAuthTokens = bindActionGlobally(authStore, runOAuthTokenRefresh)
 
 /**
  * Revokes the OAuth tokens then clears local storage and transitions to `LOGGED_OUT`.
