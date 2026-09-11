@@ -6,7 +6,7 @@ packages:
   - '@repo/package.config'
 
 overrides:
-  '@babel/types': 7.29.7
+  '@babel/types': 8.0.4
 
 allowBuilds:
   esbuild: true
