@@ -18,6 +18,7 @@ export {
   type AgentResourceContextOptions,
   useAgentResourceContext,
 } from '../hooks/dashboard/useAgentResourceContext'
+export {type TopicEmitter, useEmit} from '../hooks/dashboard/useEmit'
 export {useNavigate} from '../hooks/dashboard/useNavigate'
 export {
   type NavigateToStudioResult,
