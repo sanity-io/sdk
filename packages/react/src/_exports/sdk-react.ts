@@ -31,6 +31,7 @@ export {useCurrentUser} from '../hooks/auth/useCurrentUser'
 export {useHandleAuthCallback} from '../hooks/auth/useHandleAuthCallback'
 export {useLoginUrl} from '../hooks/auth/useLoginUrl'
 export {useLogOut} from '../hooks/auth/useLogOut'
+export {useOAuthTokens, type UseOAuthTokensResult} from '../hooks/auth/useOAuthTokens'
 export {useVerifyOrgProjects} from '../hooks/auth/useVerifyOrgProjects'
 export {useClient} from '../hooks/client/useClient'
 export {
