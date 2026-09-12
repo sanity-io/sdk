@@ -191,7 +191,10 @@ export const authStore = defineStore<AuthStoreState>({
         storageKey: result.storageKey,
         storageArea: result.storageArea,
         authMethod: result.authMethod,
-        oauth: authConfig.oauth,
+        // Only expose oauth options when the oauth strategy is actually in use,
+        // so mode-gated actions (logout, handleAuthCallback) stay consistent
+        // with the resolved mode (e.g. `studio` takes precedence over `oauth`).
+        oauth: mode === 'oauth' ? authConfig.oauth : undefined,
       },
     }
   },

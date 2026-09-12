@@ -1,4 +1,4 @@
-import {type DocumentResource} from '@sanity/sdk'
+import {type AuthConfig, type DocumentResource} from '@sanity/sdk'
 
 // True when running against the e2e environment. The SANITY_APP_E2E_* vars are
 // auto-exposed on import.meta.env by the App SDK's Vite config (SANITY_APP_ prefix).
@@ -8,6 +8,20 @@ export const isE2E = !!import.meta.env['SANITY_APP_E2E_MODE']
 // iframe. Webkit/Safari runs the e2e suite standalone (it can't execute scripts in
 // the Dashboard's sandboxed iframe), while chromium/firefox run inside the Dashboard.
 const isStandalone = window.self === window.top
+
+// Opt into the OAuth (PKCE) login flow locally by setting SANITY_APP_OAUTH_CLIENT_ID in
+// `.env.local`. Register `http://localhost:<port>/` as the redirect URI on that client.
+// Unset, the app uses the standalone `sanity.io/login` flow.
+const oauthClientId = import.meta.env['SANITY_APP_OAUTH_CLIENT_ID']
+export const devAuth: AuthConfig = oauthClientId
+  ? {
+      oauth: {
+        clientId: oauthClientId,
+        organizationId: 'oblZgbTFj',
+        redirectUri: `${window.location.origin}/`,
+      },
+    }
+  : {}
 
 export const devResources: Record<string, DocumentResource> = {
   default: {

@@ -3,6 +3,7 @@ import {DEFAULT_API_VERSION, REQUEST_TAG_PREFIX} from './authConstants'
 import {getAuthLogger} from './authLogger'
 import {AuthStateType} from './authStateType'
 import {authStore, type AuthStoreState, type DashboardContext} from './authStore'
+import {handleOAuthCallback} from './oauth/oauthActions'
 import {
   createLoggedInAuthState,
   getAuthCode,
@@ -12,6 +13,10 @@ import {
 } from './utils'
 
 /**
+ * Handles the auth redirect callback. In OAuth mode this delegates to
+ * {@link handleOAuthCallback}; otherwise it exchanges the legacy `sid` for a
+ * long-lived token.
+ *
  * @public
  */
 export const handleAuthCallback = bindActionGlobally(
@@ -19,13 +24,18 @@ export const handleAuthCallback = bindActionGlobally(
   async ({state, instance}, locationHref: string = getDefaultLocation()) => {
     const logger = getAuthLogger(instance)
 
-    const {providedToken, callbackUrl, clientFactory, apiHost, storageArea, storageKey} =
+    const {providedToken, callbackUrl, clientFactory, apiHost, storageArea, storageKey, oauth} =
       state.get().options
 
     // If a token is provided, no need to handle callback
     if (providedToken) {
       logger.debug('Skipping auth callback - token already provided')
       return false
+    }
+
+    if (oauth) {
+      logger.debug('OAuth mode - delegating to handleOAuthCallback')
+      return handleOAuthCallback(instance, locationHref)
     }
 
     // Don't handle the callback if already in flight.
