@@ -17,6 +17,25 @@ export const OAUTH_VERIFIER_KEY = '__sanity_oauth_verifier'
 /** sessionStorage key for the CSRF `state` value. */
 export const OAUTH_STATE_KEY = '__sanity_oauth_state'
 
+/** sessionStorage key for the location to return to after the callback. */
+export const OAUTH_RETURN_TO_KEY = '__sanity_oauth_return_to'
+
+const OAUTH_CALLBACK_PARAMS = ['code', 'state', 'error', 'error_description']
+
+/** Strips the OAuth callback params from a URL. */
+function stripOAuthParams(href: string): string {
+  const url = new URL(href, DEFAULT_BASE)
+  for (const param of OAUTH_CALLBACK_PARAMS) url.searchParams.delete(param)
+  return url.toString()
+}
+
+/** Whether `href` is the registered redirect URI (origin + pathname; query and hash ignored). */
+function isCallbackRoute(href: string, redirectUri: string): boolean {
+  const current = new URL(href, DEFAULT_BASE)
+  const redirect = new URL(redirectUri, DEFAULT_BASE)
+  return current.origin === redirect.origin && current.pathname === redirect.pathname
+}
+
 interface TokenEndpointResponse {
   access_token: string
   token_type: string
@@ -99,6 +118,17 @@ export const startOAuthAuthorization = bindActionGlobally(authStore, async ({sta
   const session = typeof sessionStorage !== 'undefined' ? sessionStorage : undefined
   session?.setItem(OAUTH_VERIFIER_KEY, codeVerifier)
   session?.setItem(OAUTH_STATE_KEY, oauthState)
+  // The redirect URI must match the registered one exactly, so the current
+  // location (deep link) is stashed here and restored by the callback. OAuth
+  // params are only stripped when we are already on the callback route, so
+  // legitimate app params like `?state=draft` survive the round trip.
+  const currentHref = getDefaultLocation()
+  if (currentHref !== DEFAULT_BASE) {
+    const returnTo = isCallbackRoute(currentHref, options.oauth.redirectUri)
+      ? stripOAuthParams(currentHref)
+      : currentHref
+    session?.setItem(OAUTH_RETURN_TO_KEY, returnTo)
+  }
 
   const authorizeUrl = new URL(
     '/v1/auth/oauth/authorize',
@@ -123,9 +153,11 @@ export const startOAuthAuthorization = bindActionGlobally(authStore, async ({sta
  * responses, exchanges the authorization `code` for tokens, persists them, and
  * transitions to `LOGGED_IN`.
  *
- * Returns the callback URL cleaned of OAuth params (for the caller to
- * `history.replaceState`) when a callback was processed, or `false` when there
- * was nothing to handle (no code, or an exchange already in progress).
+ * Returns the URL for the caller to `history.replaceState` to when a callback
+ * was processed: on success, the same-origin location the user was on when
+ * the flow started (if any), otherwise the callback URL cleaned of OAuth
+ * params. Returns `false` when there was nothing to handle (no code, or an
+ * exchange already in progress).
  *
  * @public
  */
@@ -152,11 +184,7 @@ export const handleOAuthCallback = bindActionGlobally(
 
     const session = typeof sessionStorage !== 'undefined' ? sessionStorage : undefined
 
-    const cleanedUrlObj = new URL(locationHref, DEFAULT_BASE)
-    for (const param of ['code', 'state', 'error', 'error_description']) {
-      cleanedUrlObj.searchParams.delete(param)
-    }
-    const cleanedUrl = cleanedUrlObj.toString()
+    const cleanedUrl = stripOAuthParams(locationHref)
 
     if (error) {
       logger.warn('OAuth callback returned an error', {error, errorDescription})
@@ -224,6 +252,7 @@ export const handleOAuthCallback = bindActionGlobally(
 
       const tokens = toOAuthTokens(response)
       options.storageArea?.setItem(options.storageKey, serializeTokens(tokens))
+      const returnTo = getSameOriginReturnTo(session, options.oauth.redirectUri)
       clearOAuthArtifacts(session)
 
       logger.info('OAuth tokens obtained, user logged in')
@@ -231,7 +260,7 @@ export const handleOAuthCallback = bindActionGlobally(
         authState: createLoggedInAuthState(tokens.accessToken, null),
         oauthTokens: tokens,
       })
-      return cleanedUrl
+      return returnTo ?? cleanedUrl
     } catch (exchangeError) {
       logger.error('Failed to exchange OAuth code for tokens', {error: exchangeError})
       clearOAuthArtifacts(session)
@@ -390,4 +419,20 @@ export const getOAuthTokensState = bindActionGlobally(
 function clearOAuthArtifacts(session: Storage | undefined): void {
   session?.removeItem(OAUTH_VERIFIER_KEY)
   session?.removeItem(OAUTH_STATE_KEY)
+  session?.removeItem(OAUTH_RETURN_TO_KEY)
+}
+
+/**
+ * Reads the stashed pre-authorize location, only honouring it when it shares
+ * the registered redirect URI's origin so a tampered value cannot redirect
+ * off-site. (`origin` includes the scheme, so non-http(s) URLs are rejected.)
+ */
+function getSameOriginReturnTo(session: Storage | undefined, redirectUri: string): string | null {
+  const returnTo = session?.getItem(OAUTH_RETURN_TO_KEY) ?? null
+  if (!returnTo) return null
+  try {
+    return new URL(returnTo).origin === new URL(redirectUri).origin ? returnTo : null
+  } catch {
+    return null
+  }
 }
