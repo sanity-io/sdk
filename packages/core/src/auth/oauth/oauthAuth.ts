@@ -19,7 +19,9 @@ interface SerializedOAuthTokens extends Omit<OAuthTokens, 'expiresAt'> {
 
 /**
  * Parses persisted token JSON back into {@link OAuthTokens}. Returns `null`
- * when the value is missing or malformed.
+ * when the value is missing or malformed, including an `expiresAt` that does
+ * not parse to a valid date (an `Invalid Date` would otherwise read as never
+ * expiring, since `NaN <= now` is always `false`).
  *
  * @internal
  */
@@ -38,11 +40,13 @@ export function deserializeTokens(raw: string | null): OAuthTokens | null {
       return null
     }
     const value = parsed as SerializedOAuthTokens
+    const expiresAt = new Date(value.expiresAt)
+    if (Number.isNaN(expiresAt.getTime())) return null
     return {
       accessToken: value.accessToken,
       tokenType: 'bearer',
       expiresIn: value.expiresIn,
-      expiresAt: new Date(value.expiresAt),
+      expiresAt,
       ...(value.refreshToken !== undefined && {refreshToken: value.refreshToken}),
     }
   } catch {
@@ -68,7 +72,12 @@ export function getOauthInitialState(options: AuthStrategyOptions): AuthStrategy
   const redirectUri = authConfig.oauth?.redirectUri
 
   // Persisted tokens win
-  const tokens = deserializeTokens(storageArea?.getItem(OAUTH_TOKENS_KEY) ?? null)
+  const rawTokens = storageArea?.getItem(OAUTH_TOKENS_KEY) ?? null
+  const tokens = deserializeTokens(rawTokens)
+  if (rawTokens && !tokens) {
+    // Corrupt entry: drop it so it cannot keep shadowing a fresh login
+    storageArea?.removeItem(OAUTH_TOKENS_KEY)
+  }
   if (tokens) {
     return {
       authState: createLoggedInAuthState(tokens.accessToken, null),
