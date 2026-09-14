@@ -1,5 +1,5 @@
 import {installMessageBus, resetMessageBus} from '@sanity/sdk/_internal'
-import {type MessageBus, TopicError, type ValueOf} from '@sanity/sdk/dashboard'
+import {type MessageBusHost, TopicError, type ValueOf} from '@sanity/sdk/dashboard'
 import {Suspense} from 'react'
 import {ErrorBoundary} from 'react-error-boundary'
 import {afterEach, beforeEach, describe, expect, expectTypeOf, it, vi} from 'vitest'
@@ -9,7 +9,7 @@ import {type DashboardApplication, useApplications} from './useApplications'
 
 const MESSAGE_BUS_KEY = Symbol.for('sanity.os.bus')
 
-let host: MessageBus
+let host: MessageBusHost
 
 const application = {
   id: 'application-1',
@@ -116,7 +116,9 @@ const externalApplication = {
 }
 
 const emitApplications = (value: unknown[]) =>
-  host.emit('applications.list', {ok: true, value} as ValueOf<'applications.list'>)
+  host.connections.subscribe((client) =>
+    client.emit('applications.list', {ok: true, value} as ValueOf<'applications.list'>),
+  )
 
 describe('useApplications', () => {
   beforeEach(() => {
@@ -218,7 +220,7 @@ describe('useApplications', () => {
   })
 
   it('returns an empty list when the dashboard clears its applications', () => {
-    host.emit('applications.list', null)
+    host.connections.subscribe((client) => client.emit('applications.list', null))
 
     const {result} = renderHook(() => useApplications())
 
@@ -226,7 +228,7 @@ describe('useApplications', () => {
   })
 
   it('throws a TopicError to the error boundary when the dashboard fails to load applications', () => {
-    host.emit('applications.list', {ok: false})
+    host.connections.subscribe((client) => client.emit('applications.list', {ok: false}))
     const onError = vi.fn()
 
     function Applications() {

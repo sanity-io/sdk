@@ -1,6 +1,6 @@
 import {type Application} from '@sanity/sdk'
 import {installMessageBus, resetMessageBus} from '@sanity/sdk/_internal'
-import {type MessageBus} from '@sanity/sdk/dashboard'
+import {type MessageBusHost} from '@sanity/sdk/dashboard'
 import {Suspense} from 'react'
 import {afterEach, beforeEach, describe, expect, expectTypeOf, it, vi} from 'vitest'
 
@@ -9,7 +9,7 @@ import {useApplicationForegroundId} from './useApplicationForegroundId'
 
 const MESSAGE_BUS_KEY = Symbol.for('sanity.os.bus')
 
-let host: MessageBus
+let host: MessageBusHost
 
 describe('useApplicationForegroundId', () => {
   beforeEach(() => {
@@ -40,11 +40,15 @@ describe('useApplicationForegroundId', () => {
 
     // Dashboard publishes `null` on boot when no application is in the foreground.
     await act(async () => {
-      host.emit('applications.foreground', null)
+      host.connections.subscribe((client) => client.emit('applications.foreground', null))
     })
     expect(await screen.findByText('none')).toBeInTheDocument()
 
-    act(() => host.emit('applications.foreground', 'application-1'))
+    act(() =>
+      host.connections.subscribe((client) =>
+        client.emit('applications.foreground', 'application-1'),
+      ),
+    )
     expect(screen.getByText('application-1')).toBeInTheDocument()
   })
 })

@@ -89,7 +89,10 @@ export interface DashboardTopics {
   'applications.foreground': StateTopicDef<Application['id'] | null>
   /** The dashboard applications available to the current user. */
   'applications.list': StateTopicDef<TopicResult<Application<ApplicationInclude>[]> | null>
-  /** The dashboard session token, or `null` while signed out. */
+  /**
+   * The session token for the reading connection, or `null` while signed out. The host
+   * writes it to each connection separately, so one application never sees another's token.
+   */
   'auth.token': StateTopicDef<string | null>
   /** Requests a dashboard session token. */
   'auth.token.refresh': EventTopicDef<void, string>
@@ -155,24 +158,16 @@ export type StateTopic = StateTopicsOf<Topics>
 
 type TopicOwnership = {readonly type: 'same_app'} | {readonly type: 'any_app'}
 
+// State is only ever written by the host, one connection at a time, so it carries no ownership.
 type TopicManifestEntry<T> = T extends {kind: 'state'; value: infer V}
-  ? {
-      readonly kind: 'state'
-      readonly ownership: TopicOwnership
-      readonly seed: V | undefined
-    }
+  ? {readonly kind: 'state'; readonly seed: V | undefined}
   : {readonly kind: 'event'; readonly ownership: TopicOwnership}
 
-const withOwnership =
-  <const Ownership extends TopicOwnership>(ownership: Ownership) =>
-  <const Topic extends {readonly kind: 'state'; readonly seed: unknown} | {readonly kind: 'event'}>(
-    topic: Topic,
-  ) => ({...topic, ownership})
+// The value a connection's copy of the topic starts with; `undefined` means unpublished.
+const stateTopic = <const V>(seed: V) => ({kind: 'state', seed}) as const
 
-// `same_app` restricts publishing and responding to the application that installed the bus.
-const dashboardTopic = withOwnership({type: 'same_app'})
-// `any_app` allows every connected application to publish and respond.
-const sharedTopic = withOwnership({type: 'any_app'})
+// `same_app` restricts responding to the application that installed the bus.
+const dashboardEvent = {kind: 'event', ownership: {type: 'same_app'}} as const
 
 /**
  * Defines the runtime kind, ownership, and initial value of dashboard topics.
@@ -181,28 +176,19 @@ const sharedTopic = withOwnership({type: 'any_app'})
 export const DASHBOARD_TOPIC_MANIFEST: {
   readonly [K in keyof DashboardTopics]: TopicManifestEntry<DashboardTopics[K]>
 } = {
-  'applications.config': dashboardTopic({kind: 'state', seed: undefined}),
-  'applications.foreground': dashboardTopic({kind: 'state', seed: undefined}),
-  'applications.list': dashboardTopic({kind: 'state', seed: undefined}),
-  'auth.token': dashboardTopic({kind: 'state', seed: undefined}),
-  'auth.token.refresh': dashboardTopic({kind: 'event'}),
-  'navigation.location': dashboardTopic({kind: 'state', seed: undefined}),
-  'navigation.location.update': dashboardTopic({kind: 'event'}),
-  'organizations.current': dashboardTopic({kind: 'state', seed: undefined}),
-  'panels.mode': sharedTopic({
-    kind: 'state',
-    seed: {ok: true, value: null},
-  }),
-  'panels.mode.set': dashboardTopic({kind: 'event'}),
-  'preferences.color-scheme': sharedTopic({
-    kind: 'state',
-    seed: undefined,
-  }),
-  'preferences.dock-locked': sharedTopic({
-    kind: 'state',
-    seed: undefined,
-  }),
-  'users.current': dashboardTopic({kind: 'state', seed: undefined}),
+  'applications.config': stateTopic(undefined),
+  'applications.foreground': stateTopic(undefined),
+  'applications.list': stateTopic(undefined),
+  'auth.token': stateTopic(undefined),
+  'auth.token.refresh': dashboardEvent,
+  'navigation.location': stateTopic(undefined),
+  'navigation.location.update': dashboardEvent,
+  'organizations.current': stateTopic(undefined),
+  'panels.mode': stateTopic({ok: true, value: null}),
+  'panels.mode.set': dashboardEvent,
+  'preferences.color-scheme': stateTopic(undefined),
+  'preferences.dock-locked': stateTopic(undefined),
+  'users.current': stateTopic(undefined),
 }
 
 /**
@@ -212,11 +198,7 @@ export const DASHBOARD_TOPIC_MANIFEST: {
 export type TopicManifest = Readonly<
   Record<
     string,
-    | {
-        readonly kind: 'state'
-        readonly ownership: TopicOwnership
-        readonly seed: unknown
-      }
+    | {readonly kind: 'state'; readonly seed: unknown}
     | {readonly kind: 'event'; readonly ownership: TopicOwnership}
   >
 >

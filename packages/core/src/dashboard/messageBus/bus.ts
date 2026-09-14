@@ -1,8 +1,11 @@
 /* eslint-disable no-console -- The bus can initialize before the SDK logger exists. */
 import {
   BehaviorSubject,
+  concat,
+  defer,
   filter,
   firstValueFrom,
+  from,
   map,
   type Observable,
   ReplaySubject,
@@ -138,12 +141,14 @@ export interface MessageBusEmitResult<R> extends PromiseLike<R> {
 }
 
 /**
- * Publishes, reads, and subscribes to typed state and event topics.
+ * Sends events and reads typed state and event topics.
+ *
+ * @remarks
+ * State topics are written by the host to each connection separately through
+ * {@link MessageBusClient.emit}; a connection only ever reads its own values.
  * @public
  */
 export interface MessageBus {
-  /** Publishes the current value of a state topic. */
-  emit<K extends StateTopic>(type: K, value: ValueOf<K>): void
   /** Emits an event topic and provides its reply when awaited. */
   emit<K extends EventTopic>(
     type: K,
@@ -184,6 +189,40 @@ export interface MessageBusConnection extends MessageBus {
   disconnect(): void
 }
 
+/**
+ * The host's handle to one connection: who it is, when it closes, and where to write its state.
+ * @public
+ */
+export interface MessageBusClient {
+  /** The application the connection belongs to. */
+  readonly appId: Application['id']
+  /** The federation module id of the connection. Equals `appId` when the host supplied none. */
+  readonly moduleId: string
+  /** Aborts when the connection disconnects. Drop per-client state here. */
+  readonly closed: AbortSignal
+  /** Writes a state value to this connection only. Ignored once the connection has closed. */
+  emit<K extends StateTopic>(type: K, value: ValueOf<K>): void
+}
+
+/**
+ * The host's connection to the bus.
+ *
+ * @remarks
+ * State reaches an application only through {@link MessageBusClient.emit}. There is no
+ * broadcast: sending the same value to everyone is a loop over `connections`, and giving a
+ * new connection the current values is done when it appears there, as an SSE server writes
+ * a snapshot to each new client.
+ * @public
+ */
+export interface MessageBusHost extends MessageBusConnection {
+  /**
+   * Every open application connection first, then each new one as it joins. The host's own
+   * connections are not included. The same {@link MessageBusClient} object is handed out for
+   * a connection across subscriptions, so it can be kept in a `Set`.
+   */
+  readonly connections: Observable<MessageBusClient>
+}
+
 const MESSAGE_BUS_KEY = Symbol.for('sanity.os.bus')
 const MESSAGE_BUS_PROTOCOL_KEY = Symbol.for('sanity.os.protocol')
 const MESSAGE_BUS_REGISTRY_KEY = Symbol.for('sanity.os.registry')
@@ -210,11 +249,19 @@ interface PendingReply {
   replyPromise?: Promise<unknown>
 }
 
+// One connection: its identity, its own copy of every state topic, and its lifetime.
+interface ConnectionRecord {
+  readonly appId: string
+  readonly moduleId: string
+  readonly stateSubjects: Map<string, BehaviorSubject<unknown>>
+  readonly abort: AbortController
+}
+
 interface MessageBusRegistry {
   readonly appId: string
   readonly topics: Map<string, TopicManifest[string]>
-  readonly stateSubjects: Map<string, BehaviorSubject<unknown>>
-  readonly stateSources: Map<string, MessageBusStateSource<unknown>>
+  readonly connections: Set<ConnectionRecord>
+  readonly connected$: Subject<ConnectionRecord>
   readonly eventSubjects: Map<string, Subject<MessageBusMessage<unknown, unknown>>>
   readonly responderCounts: Map<string, number>
   readonly migrations: ReadonlyMap<string, readonly TopicMigration[]>
@@ -227,14 +274,24 @@ type InternalMessageBus = MessageBus & {
   [MESSAGE_BUS_PROTOCOL_KEY]: number
 }
 
-function resolveStateSubject(registry: MessageBusRegistry, type: string): BehaviorSubject<unknown> {
-  let subject = registry.stateSubjects.get(type)
+// A connection's box for a state topic, created on first use from the topic's manifest seed.
+function resolveStateSubject(
+  registry: MessageBusRegistry,
+  connection: ConnectionRecord,
+  type: string,
+): BehaviorSubject<unknown> {
+  // Callers gate on the connection's lifetime; this keeps a slipped call from recreating a
+  // box on a closed connection that nothing would ever complete.
+  if (connection.abort.signal.aborted) throw new MessageBusError('ABORTED')
+  let subject = connection.stateSubjects.get(type)
   if (!subject) {
-    console.warn(
-      `[sanity-sdk:message-bus] state topic "${type}" read before any value was published`,
-    )
-    subject = new BehaviorSubject<unknown>(NO_VALUE)
-    registry.stateSubjects.set(type, subject)
+    const topic = registry.topics.get(type)
+    if (!topic) {
+      console.warn(`[sanity-sdk:message-bus] state topic "${type}" is not declared`)
+    }
+    const seed = topic?.kind === 'state' ? topic.seed : undefined
+    subject = new BehaviorSubject<unknown>(seed === undefined ? NO_VALUE : seed)
+    connection.stateSubjects.set(type, subject)
   }
   return subject
 }
@@ -253,23 +310,6 @@ function toStateSource(
   return source
 }
 
-function resolveStateSource(
-  registry: MessageBusRegistry,
-  type: string,
-): MessageBusStateSource<unknown> {
-  // React external-store snapshots require the source reference to remain stable until reset.
-  let source = registry.stateSources.get(type)
-  if (!source) {
-    const subject = resolveStateSubject(registry, type)
-    source = toStateSource(subject.pipe(filter((value) => value !== NO_VALUE)), () => {
-      const current = subject.getValue()
-      return current === NO_VALUE ? undefined : current
-    })
-    registry.stateSources.set(type, source)
-  }
-  return source
-}
-
 function assertCompatibleTopicManifest(
   registry: MessageBusRegistry,
   manifest: TopicManifest,
@@ -282,34 +322,19 @@ function assertCompatibleTopicManifest(
         `topic "${type}" is declared "${entry.kind}" but the installed bus knows it as "${existing.kind}"`,
       )
     }
-    if (existing && existing.ownership.type !== entry.ownership.type) {
+    if (
+      existing?.kind === 'event' &&
+      entry.kind === 'event' &&
+      existing.ownership.type !== entry.ownership.type
+    ) {
       throw new MessageBusError('OWNERSHIP_MISMATCH', `topic "${type}" has conflicting ownership`)
     }
   }
 }
 
-function mergeTopicManifest(
-  registry: MessageBusRegistry,
-  manifest: TopicManifest,
-  {reseed = false}: {reseed?: boolean} = {},
-): void {
+function mergeTopicManifest(registry: MessageBusRegistry, manifest: TopicManifest): void {
   assertCompatibleTopicManifest(registry, manifest)
-  for (const [type, entry] of Object.entries(manifest)) {
-    registry.topics.set(type, entry)
-    if (entry.kind !== 'state') continue
-
-    const subject = registry.stateSubjects.get(type)
-    if (!subject) {
-      registry.stateSubjects.set(
-        type,
-        new BehaviorSubject<unknown>(entry.seed === undefined ? NO_VALUE : entry.seed),
-      )
-      continue
-    }
-    if (reseed && entry.seed !== undefined && !Object.is(subject.getValue(), entry.seed)) {
-      subject.next(entry.seed)
-    }
-  }
+  for (const [type, entry] of Object.entries(manifest)) registry.topics.set(type, entry)
 }
 
 function resolveEventSubject(
@@ -445,9 +470,9 @@ function emitEvent(
 const isStateTopic = (registry: MessageBusRegistry, type: string): boolean =>
   registry.topics.get(type)?.kind === 'state'
 
-const canPublishOrRespond = (
+const canRespond = (
   registry: MessageBusRegistry,
-  ownership: TopicManifest[string]['ownership'],
+  ownership: {readonly type: 'same_app' | 'any_app'},
   appId: string,
 ): boolean => ownership.type === 'any_app' || appId === registry.appId
 
@@ -459,18 +484,12 @@ function emit(
   appId: string,
   moduleId: string,
   connectionSignal: AbortSignal,
-): MessageBusEmitResult<unknown> | undefined {
-  const topic = registry.topics.get(type)
-  if (topic?.kind === 'state') {
-    if (!canPublishOrRespond(registry, topic.ownership, appId)) {
-      throw new MessageBusError(
-        'OWNERSHIP_MISMATCH',
-        `Cannot emit state topic "${type}" from app "${appId}". Only the app that owns this topic can publish it. Other apps can read it with query() or subscribe().`,
-      )
-    }
-    const subject = resolveStateSubject(registry, type)
-    if (!Object.is(subject.getValue(), payload)) subject.next(payload)
-    return undefined
+): MessageBusEmitResult<unknown> {
+  if (isStateTopic(registry, type)) {
+    throw new MessageBusError(
+      'OWNERSHIP_MISMATCH',
+      `Cannot emit state topic "${type}" from app "${appId}". The host writes state to each connection through its client handle. Read it with query() or subscribe().`,
+    )
   }
   return emitEvent(
     registry,
@@ -485,18 +504,28 @@ function emit(
   )
 }
 
-function query(
+function emitState(
   registry: MessageBusRegistry,
+  connection: ConnectionRecord,
+  type: string,
+  value: unknown,
+): void {
+  const subject = resolveStateSubject(registry, connection, type)
+  if (!Object.is(subject.getValue(), value)) subject.next(value)
+}
+
+function query(
+  source: MessageBusStateSource<unknown>,
   type: string,
   options: MessageBusQueryOptions | undefined,
   connectionSignal: AbortSignal,
+  resetSignal: AbortSignal,
 ): Promise<unknown> {
-  const source = resolveStateSource(registry, type)
   const current = source.getCurrent()
   if (current !== undefined) return Promise.resolve(current)
 
-  const signal = scopeSignal(options?.signal, registry.resetAbort.signal, connectionSignal)
-  if (signal?.aborted) return Promise.reject(new MessageBusError('ABORTED'))
+  const signal = scopeSignal(options?.signal, resetSignal, connectionSignal)
+  if (signal.aborted) return Promise.reject(new MessageBusError('ABORTED'))
   const timeoutMs = options?.timeout === undefined ? DEFAULT_TIMEOUT_MS : options.timeout
   return new Promise((resolve, reject) => {
     const timer =
@@ -569,35 +598,16 @@ function invokeResponder(
   }
 }
 
-function subscribe(
+function respond(
   registry: MessageBusRegistry,
   type: string,
-  handler: ((arg: never) => void) | undefined,
+  handler: (message: MessageBusMessage<unknown, unknown>) => unknown,
   options: MessageBusAbortOptions | undefined,
   appId: string,
   connectionSignal: AbortSignal,
-): MessageBusStateSource<unknown> | Observable<unknown> | void {
-  const isState = isStateTopic(registry, type)
-
-  if (!handler) {
-    return isState
-      ? resolveStateSource(registry, type)
-      : resolveEventSubject(registry, type).pipe(map((message) => message.payload))
-  }
-
-  if (isState) {
-    const subscription = resolveStateSource(registry, type).subscribe(
-      handler as (value: unknown) => void,
-    )
-    unsubscribeOnAbort(
-      subscription,
-      scopeSignal(options?.signal, registry.resetAbort.signal, connectionSignal),
-    )
-    return
-  }
-
+): void {
   const topic = registry.topics.get(type)
-  if (topic && !canPublishOrRespond(registry, topic.ownership, appId)) {
+  if (topic?.kind === 'event' && !canRespond(registry, topic.ownership, appId)) {
     throw new MessageBusError(
       'OWNERSHIP_MISMATCH',
       `Cannot register a handler for event topic "${type}" from app "${appId}". Only the app that owns this topic can respond to it. Other apps can send it with emit().`,
@@ -606,7 +616,7 @@ function subscribe(
 
   registry.responderCounts.set(type, (registry.responderCounts.get(type) ?? 0) + 1)
   const subscription = resolveEventSubject(registry, type).subscribe((message) =>
-    invokeResponder(handler as (message: MessageBusMessage<unknown, unknown>) => unknown, message),
+    invokeResponder(handler, message),
   )
   subscription.add(() => {
     const count = registry.responderCounts.get(type) ?? 0
@@ -621,7 +631,8 @@ function subscribe(
 const bundledMigrations = () => new Map(Object.entries(topicMigrations))
 
 /**
- * Creates an isolated message bus without installing it globally.
+ * Creates an isolated message bus without installing it globally and returns the host's
+ * connection to it.
  * @internal
  */
 export function createIsolatedMessageBus(
@@ -629,14 +640,14 @@ export function createIsolatedMessageBus(
   config: {
     migrations?: ReadonlyMap<string, readonly TopicMigration[]>
   } = {},
-): MessageBus {
+): MessageBusHost {
   if (!appId) throwMissingAppId()
 
   const registry: MessageBusRegistry = {
     appId,
     topics: new Map(),
-    stateSubjects: new Map(),
-    stateSources: new Map(),
+    connections: new Set(),
+    connected$: new Subject(),
     eventSubjects: new Map(),
     responderCounts: new Map(),
     migrations: config.migrations ?? bundledMigrations(),
@@ -646,21 +657,7 @@ export function createIsolatedMessageBus(
 
   mergeTopicManifest(registry, DASHBOARD_TOPIC_MANIFEST)
 
-  // The installed bus has no per-connection lifetime, so its scope never aborts.
-  const scope = new AbortController().signal
-  const messageBus = {
-    emit: (type: string, payload: unknown, options?: MessageBusEmitOptions) =>
-      emit(registry, type, payload, options, registry.appId, registry.appId, scope),
-    query: (type: string, options?: MessageBusQueryOptions) =>
-      query(registry, type, options, scope),
-    subscribe: (type: string, handler?: (arg: never) => void, options?: MessageBusAbortOptions) =>
-      subscribe(registry, type, handler, options, registry.appId, scope),
-  }
-
-  const instance = messageBus as unknown as InternalMessageBus
-  instance[MESSAGE_BUS_REGISTRY_KEY] = registry
-  instance[MESSAGE_BUS_PROTOCOL_KEY] = MESSAGE_BUS_PROTOCOL
-  return instance
+  return createConnection(registry, {appId, migrations: config.migrations}) as MessageBusHost
 }
 
 type TopicVersionAdapter = {
@@ -788,15 +785,23 @@ function projectCurrent(input: () => unknown, project: (value: unknown) => unkno
   }
 }
 
-function mapStateSource(
-  source: MessageBusStateSource<unknown>,
+// The connection's view of one of its state boxes, in the connection's topic version.
+function createStateSource(
+  subject: BehaviorSubject<unknown>,
   project: (value: unknown) => unknown,
-  completeOn?: Observable<unknown>,
+  completeOn: Observable<unknown>,
 ): MessageBusStateSource<unknown> {
-  const projected = source.pipe(map(project))
+  const getCurrent = () => {
+    const current = subject.getValue()
+    return current === NO_VALUE ? undefined : current
+  }
   return toStateSource(
-    completeOn ? projected.pipe(takeUntil(completeOn)) : projected,
-    projectCurrent(source.getCurrent, project),
+    subject.pipe(
+      filter((value) => value !== NO_VALUE),
+      map(project),
+      takeUntil(completeOn),
+    ),
+    projectCurrent(getCurrent, project),
   )
 }
 
@@ -817,10 +822,9 @@ function migrateEventMessage(
 }
 
 function migrateEventReply(
-  result: MessageBusEmitResult<unknown> | undefined,
+  result: MessageBusEmitResult<unknown>,
   project: (value: unknown) => unknown,
-): MessageBusEmitResult<unknown> | undefined {
-  if (!result) return undefined
+): MessageBusEmitResult<unknown> {
   let projected: Promise<unknown> | undefined
   return createLazyReply(() => (projected ??= Promise.resolve(result).then(project)))
 }
@@ -862,15 +866,6 @@ export function connectApplicationToMessageBus(
   if (!config.appId) throwMissingAppId()
 
   const {appId} = config
-  const moduleId = config.moduleId ?? appId
-  // Each connection owns its lifetime; disconnect() aborts it without touching siblings.
-  const connectionAbort = new AbortController()
-  const connectionSignal = connectionAbort.signal
-  // ReplaySubject, not fromEvent: `abort` fires once, so a cold listener attached by a
-  // stream subscribed after disconnect() would never see it and never complete. Replaying
-  // the notification lets those late subscribers complete immediately.
-  const connectionAborted$ = new ReplaySubject<void>(1)
-  connectionSignal.addEventListener('abort', () => connectionAborted$.next(), {once: true})
   const installedProtocol = (installedMessageBus as Partial<InternalMessageBus>)[
     MESSAGE_BUS_PROTOCOL_KEY
   ]
@@ -899,20 +894,122 @@ export function connectApplicationToMessageBus(
     )
   }
 
-  const applicationMigrations = config.migrations ?? bundledMigrations()
-
   try {
     mergeTopicManifest(registry, DASHBOARD_TOPIC_MANIFEST)
   } catch (error) {
     console.error(`[sanity-sdk:message-bus] topic manifest conflict for "${appId}"`, {error})
     return createRejectedConnection(() => error)
   }
-  const compatibility = createTopicCompatibility(registry.migrations, applicationMigrations)
+
+  return createConnection(registry, config)
+}
+
+// Hands the host the same client object for a connection across `connections` subscriptions.
+function createClient(
+  registry: MessageBusRegistry,
+  record: ConnectionRecord,
+  compatibility: TopicCompatibility,
+): MessageBusClient {
+  return {
+    appId: record.appId,
+    moduleId: record.moduleId,
+    closed: record.abort.signal,
+    emit: (type: string, value: unknown) => {
+      if (record.abort.signal.aborted) {
+        console.warn(
+          `[sanity-sdk:message-bus] "${type}" not written: connection "${record.moduleId}" has closed`,
+        )
+        return
+      }
+      emitState(registry, record, type, compatibility.toInstalledEmission(type, value))
+    },
+  } as MessageBusClient
+}
+
+// Open application connections first, then each new one; one client object per connection so
+// the host can keep them in a Set. Completes when the host connection disconnects.
+function createConnectionsSource(
+  registry: MessageBusRegistry,
+  compatibility: TopicCompatibility,
+  completeOn: Observable<unknown>,
+): Observable<MessageBusClient> {
+  const clients = new WeakMap<ConnectionRecord, MessageBusClient>()
+  const clientFor = (record: ConnectionRecord) => {
+    let client = clients.get(record)
+    if (!client) {
+      client = createClient(registry, record, compatibility)
+      clients.set(record, client)
+    }
+    return client
+  }
+  return defer(() => concat(from([...registry.connections]), registry.connected$)).pipe(
+    filter((record) => record.appId !== registry.appId),
+    map(clientFor),
+    takeUntil(completeOn),
+  )
+}
+
+function createConnection(
+  registry: MessageBusRegistry,
+  config: ConnectApplicationToMessageBusOptions,
+): MessageBusConnection {
+  const {appId} = config
+  const moduleId = config.moduleId ?? appId
+  // Each connection owns its lifetime; disconnect() aborts it without touching siblings.
+  const connectionAbort = new AbortController()
+  const connectionSignal = connectionAbort.signal
+  // ReplaySubject, not fromEvent: `abort` fires once, so a cold listener attached by a
+  // stream subscribed after disconnect() would never see it and never complete. Replaying
+  // the notification lets those late subscribers complete immediately.
+  const connectionAborted$ = new ReplaySubject<void>(1)
+  connectionSignal.addEventListener('abort', () => connectionAborted$.next(), {once: true})
+
+  const record: ConnectionRecord = {
+    appId,
+    moduleId,
+    stateSubjects: new Map(),
+    abort: connectionAbort,
+  }
+
+  const compatibility = createTopicCompatibility(
+    registry.migrations,
+    config.migrations ?? bundledMigrations(),
+  )
   const isState = (type: string) => isStateTopic(registry, type)
 
   // Reuse topic streams because React external-store snapshots require stable references.
   const applicationStreams = new Map<string, MessageBusStateSource<unknown> | Observable<unknown>>()
   let streamGeneration = registry.generation
+  const cachedStream = <T extends MessageBusStateSource<unknown> | Observable<unknown>>(
+    type: string,
+    create: () => T,
+  ): T => {
+    if (streamGeneration !== registry.generation) {
+      applicationStreams.clear()
+      streamGeneration = registry.generation
+    }
+    let stream = applicationStreams.get(type)
+    if (!stream) {
+      stream = create()
+      applicationStreams.set(type, stream)
+    }
+    return stream as T
+  }
+  const stateSource = (type: string) =>
+    cachedStream(type, () =>
+      createStateSource(
+        resolveStateSubject(registry, record, type),
+        (value) => compatibility.toApplicationStateValue(type, value),
+        connectionAborted$,
+      ),
+    )
+  const eventStream = (type: string) =>
+    cachedStream(type, () =>
+      resolveEventSubject(registry, type).pipe(
+        map((message) => compatibility.toApplicationEventPayload(type, message.payload)),
+        takeUntil(connectionAborted$),
+      ),
+    )
 
   // A disconnected connection must not reach siblings, so its operations fail before touching
   // the shared registry rather than only tearing down pending requests and subscriptions.
@@ -938,80 +1035,75 @@ export function connectApplicationToMessageBus(
     },
     query: (type: string, options?: MessageBusQueryOptions) => {
       if (connectionSignal.aborted) return Promise.reject(new MessageBusError('ABORTED'))
-      return query(registry, type, options, connectionSignal).then((value) =>
-        compatibility.toApplicationStateValue(type, value),
-      )
+      return query(stateSource(type), type, options, connectionSignal, registry.resetAbort.signal)
     },
-    subscribe: (type: string, handler?: (arg: never) => void, options?: MessageBusAbortOptions) => {
+    subscribe: (
+      type: string,
+      handler?: (arg: never) => void,
+      options?: MessageBusAbortOptions,
+    ): MessageBusStateSource<unknown> | Observable<unknown> | undefined => {
       throwIfDisconnected()
-      if (!handler) {
-        if (streamGeneration !== registry.generation) {
-          applicationStreams.clear()
-          streamGeneration = registry.generation
-        }
-        let stream = applicationStreams.get(type)
-        if (!stream) {
-          const installedSource = subscribe(
-            registry,
-            type,
-            undefined,
-            options,
-            appId,
-            connectionSignal,
-          )
-          stream = isState(type)
-            ? mapStateSource(
-                installedSource as MessageBusStateSource<unknown>,
-                (value) => compatibility.toApplicationStateValue(type, value),
-                connectionAborted$,
-              )
-            : (installedSource as Observable<unknown>).pipe(
-                map((payload) => compatibility.toApplicationEventPayload(type, payload)),
-                takeUntil(connectionAborted$),
-              )
-          applicationStreams.set(type, stream)
-        }
-        return stream
+      if (isState(type)) {
+        const source = stateSource(type)
+        if (!handler) return source
+        unsubscribeOnAbort(
+          source.subscribe(handler as (value: unknown) => void),
+          scopeSignal(options?.signal, registry.resetAbort.signal, connectionSignal),
+        )
+        return undefined
       }
-      const applicationHandler = isState(type)
-        ? (value: unknown) =>
-            (handler as (value: unknown) => void)(
-              compatibility.toApplicationStateValue(type, value),
-            )
-        : (message: MessageBusMessage<unknown, unknown>) =>
-            (handler as (message: MessageBusMessage<unknown, unknown>) => void)(
-              migrateEventMessage(
-                message,
-                (value) => compatibility.toApplicationEventPayload(type, value),
-                (value) => compatibility.toInstalledEventReply(type, value),
-              ),
-            )
-      return subscribe(
+      if (!handler) return eventStream(type)
+      respond(
         registry,
         type,
-        applicationHandler as (arg: never) => void,
+        (message) =>
+          (handler as (message: MessageBusMessage<unknown, unknown>) => void)(
+            migrateEventMessage(
+              message,
+              (value) => compatibility.toApplicationEventPayload(type, value),
+              (value) => compatibility.toInstalledEventReply(type, value),
+            ),
+          ),
         options,
         appId,
         connectionSignal,
       )
+      return undefined
     },
-    disconnect: () => connectionAbort.abort(),
+    disconnect: () => {
+      if (connectionSignal.aborted) return
+      connectionAbort.abort()
+      for (const subject of record.stateSubjects.values()) subject.complete()
+      record.stateSubjects.clear()
+      registry.connections.delete(record)
+    },
+  }
+
+  if (appId === registry.appId) {
+    Object.assign(connection, {
+      connections: createConnectionsSource(registry, compatibility, connectionAborted$),
+    })
   }
 
   const instance = connection as unknown as InternalMessageBus
   instance[MESSAGE_BUS_REGISTRY_KEY] = registry
   instance[MESSAGE_BUS_PROTOCOL_KEY] = MESSAGE_BUS_PROTOCOL
+
+  // Announce last: a host subscriber may write to the new client synchronously.
+  registry.connections.add(record)
+  registry.connected$.next(record)
   return instance as unknown as MessageBusConnection
 }
 
 function reset(registry: MessageBusRegistry): void {
   registry.resetAbort.abort()
-  for (const subject of registry.stateSubjects.values()) subject.complete()
+  for (const connection of registry.connections) {
+    for (const subject of connection.stateSubjects.values()) subject.complete()
+    connection.stateSubjects.clear()
+  }
   for (const subject of registry.eventSubjects.values()) subject.complete()
 
   registry.topics.clear()
-  registry.stateSubjects.clear()
-  registry.stateSources.clear()
   registry.eventSubjects.clear()
   registry.responderCounts.clear()
   registry.resetAbort = new AbortController()
@@ -1103,13 +1195,25 @@ export interface InstallMessageBusOptions {
 }
 
 /**
- * Installs the shared message bus or connects to its existing installation.
+ * Installs the shared message bus and returns the host's connection, or connects to its
+ * existing installation. Only the host calls this; another app's ID is rejected because the
+ * connection it would get has no `connections`.
  * @internal
  */
-export function installMessageBus(options: InstallMessageBusOptions = {}): MessageBus {
+export function installMessageBus(options: InstallMessageBusOptions = {}): MessageBusHost {
   const appId = resolveAppId(options.appId) ?? throwMissingAppId()
   const installedMessageBus = getInstalledMessageBus()
-  if (installedMessageBus) return connectApplicationToMessageBus(installedMessageBus, {appId})
+  if (installedMessageBus) {
+    const installedAppId = (installedMessageBus as InternalMessageBus)[MESSAGE_BUS_REGISTRY_KEY]
+      .appId
+    if (installedAppId !== appId) {
+      throw new MessageBusError(
+        'OWNERSHIP_MISMATCH',
+        `Cannot install the message bus as "${appId}": it is already installed by "${installedAppId}". Applications connect with connectMessageBus().`,
+      )
+    }
+    return connectApplicationToMessageBus(installedMessageBus, {appId}) as MessageBusHost
+  }
 
   const globals = globalThis as {[MESSAGE_BUS_KEY]?: MessageBus}
   if (globals[MESSAGE_BUS_KEY]) {
@@ -1118,31 +1222,23 @@ export function installMessageBus(options: InstallMessageBusOptions = {}): Messa
       '[sanity-sdk:message-bus] overwriting an incompatible message bus already installed',
     )
   }
-  globals[MESSAGE_BUS_KEY] = createIsolatedMessageBus(appId)
-  return connectApplicationToMessageBus(globals[MESSAGE_BUS_KEY], {appId})
+  const host = createIsolatedMessageBus(appId)
+  globals[MESSAGE_BUS_KEY] = host
+  return host
 }
 
 /**
- * Registers or reseeds state topics, preserving existing ownership and sharing new topics by default.
+ * Declares state topics that are not in the bundled manifest, with the seed a new
+ * connection's box starts from.
  * @internal
  */
 export function registerStateTopics(
   target: MessageBus,
   topics: Partial<{[K in StateTopic]: ValueOf<K> | undefined}>,
-  options: {ownership?: 'same_app' | 'any_app'} = {},
 ): void {
   const registry = (target as InternalMessageBus)[MESSAGE_BUS_REGISTRY_KEY]
   const manifest: TopicManifest = Object.fromEntries(
-    Object.entries(topics).map(([name, seed]) => [
-      name,
-      {
-        kind: 'state',
-        ownership: registry.topics.get(name)?.ownership ?? {
-          type: options.ownership ?? 'any_app',
-        },
-        seed,
-      },
-    ]),
+    Object.entries(topics).map(([name, seed]) => [name, {kind: 'state', seed}]),
   )
-  mergeTopicManifest(registry, manifest, {reseed: true})
+  mergeTopicManifest(registry, manifest)
 }

@@ -1,13 +1,19 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {createSanityInstance, type SanityInstance} from '../../store/createSanityInstance'
-import {installMessageBus, type MessageBus, MessageBusError, resetMessageBus} from './bus'
+import {
+  installMessageBus,
+  type MessageBus,
+  MessageBusError,
+  type MessageBusHost,
+  resetMessageBus,
+} from './bus'
 import {getDashboardMessageBus} from './store'
 import {getTopicState, resolveTopic, TopicError} from './topicStore'
 
 const MESSAGE_BUS_KEY = Symbol.for('sanity.os.bus')
 
-let host: MessageBus
+let host: MessageBusHost
 let instance: SanityInstance
 
 const advance = (ms: number) => vi.advanceTimersByTimeAsync(ms)
@@ -30,13 +36,13 @@ describe('dashboard topic store', () => {
 
   it('reads the current value from the bus and unwraps topic results', () => {
     expect(getTopicState(instance, 'applications.foreground').getCurrent()).toBeUndefined()
-    host.emit('applications.foreground', null)
+    host.connections.subscribe((client) => client.emit('applications.foreground', null))
     expect(getTopicState(instance, 'applications.foreground').getCurrent()).toBeNull()
 
-    host.emit('applications.list', {ok: true, value: []})
+    host.connections.subscribe((client) => client.emit('applications.list', {ok: true, value: []}))
     expect(getTopicState(instance, 'applications.list').getCurrent()).toEqual([])
 
-    host.emit('applications.list', {ok: false})
+    host.connections.subscribe((client) => client.emit('applications.list', {ok: false}))
     expect(() => getTopicState(instance, 'applications.list').getCurrent()).toThrow(TopicError)
   })
 
@@ -44,7 +50,7 @@ describe('dashboard topic store', () => {
     const onChange = vi.fn()
     const unsubscribe = getTopicState(instance, 'auth.token').subscribe(onChange)
 
-    host.emit('auth.token', 'token')
+    host.connections.subscribe((client) => client.emit('auth.token', 'token'))
 
     expect(onChange).toHaveBeenCalledTimes(1)
     expect(getTopicState(instance, 'auth.token').getCurrent()).toBe('token')
@@ -83,7 +89,7 @@ describe('dashboard topic store', () => {
     expect(() => getTopicState(instance, 'auth.token').getCurrent()).toThrow(MessageBusError)
 
     // The temporary reader still holds the entry; a publish must win over its stale failure.
-    host.emit('auth.token', 'token')
+    host.connections.subscribe((client) => client.emit('auth.token', 'token'))
 
     expect(getTopicState(instance, 'auth.token').getCurrent()).toBe('token')
   })
@@ -132,10 +138,25 @@ describe('dashboard topic store', () => {
     // The failed subscriber is gone: a later publish no longer reaches it, and once the
     // temporary reader is released a fresh read sees the value cleanly.
     await advance(1000)
-    host.emit('auth.token', 'token')
+    host.connections.subscribe((client) => client.emit('auth.token', 'token'))
 
     expect(onChange).toHaveBeenCalledTimes(1)
     expect(getTopicState(instance, 'auth.token').getCurrent()).toBe('token')
+  })
+
+  it('reads the value written to this instance connection only', () => {
+    const other = createSanityInstance({projectId: 'p', dataset: 'd'})
+    // Connect both instances (module ids come from the first store call) before writing.
+    getDashboardMessageBus(instance, 'module-a')
+    getDashboardMessageBus(other, 'module-b')
+    host.connections.subscribe((client) => {
+      if (client.moduleId === 'module-a') client.emit('auth.token', 'tok-a')
+      if (client.moduleId === 'module-b') client.emit('auth.token', 'tok-b')
+    })
+
+    expect(getTopicState(instance, 'auth.token').getCurrent()).toBe('tok-a')
+    expect(getTopicState(other, 'auth.token').getCurrent()).toBe('tok-b')
+    other.dispose()
   })
 
   it('throws without an installed message bus', () => {
