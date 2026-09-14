@@ -28,22 +28,24 @@ export type DocumentSet<TDocument extends SanityDocument = SanityDocument> = {
 
 type SupportedPatchOperation = Exclude<keyof PatchOperations, 'merge'>
 
-// > If multiple patches are included, then the order of execution is as follows:
-// > - set, setIfMissing, unset, inc, dec, insert.
-// > https://www.sanity.io/docs/http-mutations#5b4db1396e56
 /**
  * Exposes the patch operations used by {@link processMutations}.
  *
  * @remarks
+ * Property order determines execution order in {@link processMutations}:
+ * `ifRevisionID`, `set`, `setIfMissing`, `unset`, `inc`, `dec`, `insert`,
+ * then `diffMatchPatch`. Reordering the properties changes mutation results.
  * Freezes the collection to prevent callers from replacing the functions
  * used by the SDK's mutation evaluator.
  *
+ * @see https://www.sanity.io/docs/http-mutations#5b4db1396e56
+ *
  * @example
  * ```ts
- * const updated = patchOperations.set(
- *   {items: [{_key: 'a', title: 'Before'}]},
- *   {'items[_key=="a"].title': 'After'},
- * )
+ * const document = {items: [{_key: 'a', title: 'Before'}]}
+ * const updated = patchOperations.set<typeof document>(document, {
+ *   'items[_key=="a"].title': 'After',
+ * })
  * ```
  *
  * @internal
@@ -131,6 +133,9 @@ export function getDocumentIds(selection: MutationSelection): string[] {
 /**
  * Applies mutations to an in-memory document set.
  * Deleted documents remain in the returned set with a value of `null`.
+ *
+ * Returns the input map when `mutations` is empty. Results can share document
+ * and nested-value references with the input.
  *
  * Sets `_rev` to `transactionId` on created, replaced, and patched documents.
  * Uses `timestamp` for timestamps unless the mutation preserves them.
