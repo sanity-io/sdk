@@ -125,7 +125,10 @@ export const startOAuthAuthorization = bindActionGlobally(authStore, async ({sta
  *
  * Returns the callback URL cleaned of OAuth params (for the caller to
  * `history.replaceState`) when a callback was processed, or `false` when there
- * was nothing to handle (no code, or an exchange already in progress).
+ * was nothing to handle (no code, or an exchange already in progress). A
+ * callback that fails validation while a session is already `LOGGED_IN` (e.g. a
+ * remount before the params were stripped) is ignored with a warning and still
+ * returns the cleaned URL, so a string result does not imply an exchange ran.
  *
  * @public
  */
@@ -179,13 +182,14 @@ export const handleOAuthCallback = bindActionGlobally(
     // established: a stale callback URL (e.g. remount before the params were
     // stripped, after the artifacts were cleared) must not clobber LOGGED_IN.
     const rejectCallback = (name: string, message: string): string => {
-      clearOAuthArtifacts(session)
       if (authState.type === AuthStateType.LOGGED_IN) {
+        // Leave PKCE artifacts alone: a re-authorization may be in flight.
         logger.warn(`${message} — ignoring callback, session already established`)
-      } else {
-        logger.error(`${message} — rejecting callback`)
-        state.set(name, {authState: {type: AuthStateType.ERROR, error: new Error(message)}})
+        return cleanedUrl
       }
+      logger.error(`${message} — rejecting callback`)
+      clearOAuthArtifacts(session)
+      state.set(name, {authState: {type: AuthStateType.ERROR, error: new Error(message)}})
       return cleanedUrl
     }
 
