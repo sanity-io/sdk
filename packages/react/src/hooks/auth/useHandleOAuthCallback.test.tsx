@@ -7,10 +7,10 @@ import {createCallbackHook} from '../helpers/createCallbackHook'
 vi.mock('../helpers/createCallbackHook', () => ({createCallbackHook: vi.fn(identity)}))
 vi.mock('@sanity/sdk', () => ({handleOAuthCallback: vi.fn()}))
 
-describe('useOAuthCallback', () => {
+describe('useHandleOAuthCallback', () => {
   it('calls `createCallbackHook` with `handleOAuthCallback`', async () => {
-    const {useOAuthCallback} = await import('./useOAuthCallback')
+    const {useHandleOAuthCallback} = await import('./useHandleOAuthCallback')
     expect(createCallbackHook).toHaveBeenCalledWith(handleOAuthCallback)
-    expect(useOAuthCallback).toBe(handleOAuthCallback)
+    expect(useHandleOAuthCallback).toBe(handleOAuthCallback)
   })
 })
