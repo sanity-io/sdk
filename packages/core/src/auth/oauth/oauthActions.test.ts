@@ -259,6 +259,25 @@ describe('handleOAuthCallback', () => {
     expect(getAuthState(instance!).getCurrent()).toMatchObject({type: AuthStateType.ERROR})
   })
 
+  it('ignores an ?error= callback when a session is already established', async () => {
+    setup({
+      storageSeed: {[OAUTH_TOKENS_KEY]: serializeTokens(seededTokens)},
+      sessionSeed: {[OAUTH_STATE_KEY]: 'state-next', [OAUTH_VERIFIER_KEY]: 'verifier-next'},
+    })
+
+    const result = await handleOAuthCallback(
+      instance!,
+      'https://app.example.com/callback?error=access_denied',
+    )
+
+    expect(result).toBe('https://app.example.com/callback')
+    expect(getAuthState(instance!).getCurrent()).toMatchObject({
+      type: AuthStateType.LOGGED_IN,
+      token: seededTokens.accessToken,
+    })
+    expect(sessionStorage.getItem(OAUTH_STATE_KEY)).toBe('state-next')
+  })
+
   it('surfaces an ?error= callback without a description', async () => {
     setup()
     await handleOAuthCallback(instance!, 'https://app.example.com/callback?error=access_denied')
