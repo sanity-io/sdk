@@ -161,26 +161,10 @@ export const handleOAuthCallback = bindActionGlobally(
     }
     const cleanedUrl = cleanedUrlObj.toString()
 
-    if (error) {
-      logger.warn('OAuth callback returned an error', {error, errorDescription})
-      clearOAuthArtifacts(session)
-      state.set('oauthCallbackError', {
-        authState: {
-          type: AuthStateType.ERROR,
-          error: new Error(errorDescription ? `${error}: ${errorDescription}` : error),
-        },
-      })
-      return cleanedUrl
-    }
-
-    if (!code) {
-      logger.debug('No OAuth code found in callback URL')
-      return false
-    }
-
-    // Validation failures move to ERROR, unless a session is already
+    // Callback failures move to ERROR, unless a session is already
     // established: a stale callback URL (e.g. remount before the params were
-    // stripped, after the artifacts were cleared) must not clobber LOGGED_IN.
+    // stripped, after the artifacts were cleared) or a denied re-authorization
+    // must not clobber LOGGED_IN.
     const rejectCallback = (name: string, message: string): string => {
       if (authState.type === AuthStateType.LOGGED_IN) {
         // Leave PKCE artifacts alone: a re-authorization may be in flight.
@@ -191,6 +175,18 @@ export const handleOAuthCallback = bindActionGlobally(
       clearOAuthArtifacts(session)
       state.set(name, {authState: {type: AuthStateType.ERROR, error: new Error(message)}})
       return cleanedUrl
+    }
+
+    if (error) {
+      return rejectCallback(
+        'oauthCallbackError',
+        errorDescription ? `${error}: ${errorDescription}` : error,
+      )
+    }
+
+    if (!code) {
+      logger.debug('No OAuth code found in callback URL')
+      return false
     }
 
     const storedState = session?.getItem(OAUTH_STATE_KEY) ?? null
