@@ -55,7 +55,8 @@ describe('useTopic', () => {
     vi.restoreAllMocks()
   })
 
-  it('reads a seeded value and follows topic updates', () => {
+  it('reads a published value and follows topic updates', () => {
+    host.emit('applications.foreground', null)
     const {result} = renderHook(() => useTopic('applications.foreground'))
 
     expectTypeOf(result.current).toEqualTypeOf<string | null>()
