@@ -14,9 +14,6 @@ import {createCallbackHook} from '../helpers/createCallbackHook'
  * (`code`, `state`, `error`, `error_description`) so the caller can strip them
  * with `history.replaceState`, or `false` when there was nothing to handle.
  *
- * `AuthBoundary` runs this for you when the app lands on the OAuth redirect
- * URI. Reach for this hook only when building a custom callback component.
- *
  * Concurrent calls are single-flight in core, so React StrictMode's double
  * invocation will not trigger a second code exchange. Calling it again after
  * the exchange has completed, with the OAuth params still in the URL, fails
@@ -26,10 +23,10 @@ import {createCallbackHook} from '../helpers/createCallbackHook'
  * @example
  * ```tsx
  * function OAuthCallback() {
- *   const handleOAuthCallback = useOAuthCallback()
+ *   const handleCallback = useHandleOAuthCallback()
  *
  *   useEffect(() => {
- *     handleOAuthCallback(window.location.href)
+ *     handleCallback(window.location.href)
  *       .then((cleanedUrl) => {
  *         if (cleanedUrl) {
  *           // Remove the OAuth params from the URL without a reload
@@ -37,7 +34,7 @@ import {createCallbackHook} from '../helpers/createCallbackHook'
  *         }
  *       })
  *       .catch(console.error)
- *   }, [handleOAuthCallback])
+ *   }, [handleCallback])
  *
  *   return <div>Completing sign-in…</div>
  * }
@@ -46,4 +43,4 @@ import {createCallbackHook} from '../helpers/createCallbackHook'
  * @returns A callback handler that processes the OAuth redirect
  * @public
  */
-export const useOAuthCallback = createCallbackHook(handleOAuthCallback)
+export const useHandleOAuthCallback = createCallbackHook(handleOAuthCallback)
