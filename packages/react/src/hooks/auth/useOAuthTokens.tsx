@@ -20,12 +20,13 @@ export interface UseOAuthTokensResult {
    * Returns whether the access token has expired, comparing `expiresAt` against
    * the current time at the moment it is called. Reading the clock does not
    * trigger a re-render, so call this in an event handler or effect rather than
-   * during render.
+   * during render. Returns `false` when there are no tokens.
    */
   isExpired: () => boolean
   /**
-   * Refresh via the OAuth `refresh_token` grant. Resolves `null` when there is
-   * no refresh token, and rejects on transient failures (network, 5xx, 429).
+   * Refresh via the OAuth `refresh_token` grant. When there is no refresh token,
+   * core clears the stored tokens, logs the user out, and this resolves `null`.
+   * Rejects on transient failures (network, 5xx, 429), leaving tokens unchanged.
    */
   refresh: () => Promise<OAuthTokens | null>
   /** Revoke and clear stored tokens */
@@ -59,7 +60,12 @@ function isOAuthTokenExpired(tokens: OAuthTokens | null, now: number = Date.now(
  *   if (!tokens) return <div>Not signed in</div>
  *
  *   const handleRefresh = async () => {
- *     if (isExpired()) await refresh()
+ *     if (!isExpired()) return
+ *     try {
+ *       await refresh()
+ *     } catch {
+ *       // transient failure; tokens are unchanged, retry later
+ *     }
  *   }
  *
  *   return (

@@ -152,13 +152,15 @@ describe('useOAuthTokens', () => {
     expect(result.current.tokens).toEqual(refreshed)
   })
 
-  it('resolves null from refresh when core has no refresh token, leaving tokens unchanged', async () => {
+  it('resolves null from refresh when core has no refresh token, and tokens become null', async () => {
     const existing = makeTokens({refreshToken: undefined})
     const source = createFakeTokenSource(existing)
     mockGetState.mockReturnValue(source)
-    // Core resolves null on the no-refresh-token path (it logs out separately);
-    // it does not push a new token value here.
-    mockRefresh.mockResolvedValue(null)
+    // Core clears stored tokens and logs out on the no-refresh-token path.
+    mockRefresh.mockImplementation(() => {
+      source.set(null)
+      return Promise.resolve(null)
+    })
 
     const {result} = renderHook(() => useOAuthTokens(), {wrapper})
 
@@ -168,6 +170,20 @@ describe('useOAuthTokens', () => {
     })
 
     expect(returned).toBeNull()
+    expect(result.current.tokens).toBeNull()
+  })
+
+  it('propagates a rejected refresh and leaves tokens unchanged', async () => {
+    const existing = makeTokens()
+    mockGetState.mockReturnValue(createFakeTokenSource(existing))
+    mockRefresh.mockRejectedValue(new Error('network'))
+
+    const {result} = renderHook(() => useOAuthTokens(), {wrapper})
+
+    await act(async () => {
+      await expect(result.current.refresh()).rejects.toThrow('network')
+    })
+
     expect(result.current.tokens).toEqual(existing)
   })
 
