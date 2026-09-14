@@ -1,9 +1,11 @@
 import {AuthStateType} from '@sanity/sdk'
+import {installMessageBus} from '@sanity/sdk/_internal'
 import {render, screen, waitFor} from '@testing-library/react'
 import React from 'react'
 import {type FallbackProps} from 'react-error-boundary'
 import {beforeEach, describe, expect, it, type MockInstance, vi} from 'vitest'
 
+import {DashboardTokenRefreshProvider} from '../../context/DashboardTokenRefresh'
 import {ResourceProvider} from '../../context/ResourceProvider'
 import {useAuthState} from '../../hooks/auth/useAuthState'
 import {useLoginUrl} from '../../hooks/auth/useLoginUrl'
@@ -140,6 +142,38 @@ describe('AuthBoundary', () => {
     await waitFor(() => {
       expect(window.location.href).toBe('https://sanity.io/login')
     })
+  })
+
+  it('does not redirect when a host bus is installed but the provider has not connected yet', () => {
+    // Workbench remotes start LOGGED_OUT (the host mints the token over the bus) and are not
+    // in an iframe, so the only thing standing between them and a login redirect is the
+    // dashboard check. AuthSwitch's effect runs before its parent provider's, so the check
+    // must not depend on the provider having connected first.
+    vi.mocked(useAuthState).mockReturnValue({
+      type: AuthStateType.LOGGED_OUT,
+      isDestroyingSession: false,
+    })
+    const originalLocation = window.location
+    const location = {href: 'http://remote.test/'}
+    Object.defineProperty(window, 'location', {value: location, writable: true})
+    vi.stubGlobal('__SANITY_APP_ID__', 'remote')
+    const globals = globalThis as {[key: symbol]: unknown}
+    const busKey = Symbol.for('sanity.os.bus')
+    installMessageBus({appId: 'dashboard'})
+    try {
+      render(
+        <ResourceProvider projectId="p" dataset="d" fallback={null}>
+          <DashboardTokenRefreshProvider>
+            <AuthBoundary projectIds={testProjectIds}>Protected Content</AuthBoundary>
+          </DashboardTokenRefreshProvider>
+        </ResourceProvider>,
+      )
+      expect(location.href).toBe('http://remote.test/')
+    } finally {
+      delete globals[busKey]
+      vi.unstubAllGlobals()
+      Object.defineProperty(window, 'location', {value: originalLocation, writable: true})
+    }
   })
 
   it('renders the empty LoginCallback component when authState="logging-in"', () => {

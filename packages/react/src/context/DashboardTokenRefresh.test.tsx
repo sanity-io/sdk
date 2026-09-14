@@ -1,9 +1,12 @@
 import {AuthStateType, setAuthToken} from '@sanity/sdk'
+import {getDashboardMessageBus} from '@sanity/sdk/_internal'
 import {act, render} from '@testing-library/react'
 import {of} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, type Mock, vi} from 'vitest'
 
+import {getDashboardModuleContext} from '../dashboard/module'
 import {useAuthState} from '../hooks/auth/useAuthState'
+import {useSanityInstance} from '../hooks/context/useSanityInstance'
 import {DashboardTokenRefreshProvider} from './DashboardTokenRefresh'
 import {ResourceProvider} from './ResourceProvider'
 
@@ -13,6 +16,8 @@ const messageBus = vi.hoisted(() => ({
     | {emit: ReturnType<typeof vi.fn>; subscribe: ReturnType<typeof vi.fn>},
   emit: vi.fn(),
   subscribe: vi.fn(),
+  // A spy so tests can observe the forwarded arguments.
+  getDashboardMessageBus: vi.fn(),
 }))
 
 vi.mock('@sanity/sdk', async () => {
@@ -29,7 +34,7 @@ vi.mock('../hooks/auth/useAuthState', () => ({
 
 vi.mock('@sanity/sdk/_internal', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@sanity/sdk/_internal')>()),
-  getDashboardMessageBus: () => messageBus.client,
+  getDashboardMessageBus: messageBus.getDashboardMessageBus,
 }))
 
 const mockSetAuthToken = setAuthToken as Mock
@@ -47,6 +52,8 @@ const renderProvider = () =>
 describe('DashboardTokenRefreshProvider', () => {
   beforeEach(() => {
     messageBus.client = undefined
+    messageBus.getDashboardMessageBus.mockReset()
+    messageBus.getDashboardMessageBus.mockImplementation(() => messageBus.client)
     mockUseAuthState.mockReturnValue({type: AuthStateType.LOGGED_IN})
   })
 
@@ -78,6 +85,66 @@ describe('DashboardTokenRefreshProvider', () => {
       })
 
       expect(mockSetAuthToken).toHaveBeenCalledWith(expect.anything(), 'dashboard-token')
+    })
+
+    it('renders children bare when no host bus is installed', () => {
+      messageBus.client = undefined
+
+      act(() => {
+        renderProvider()
+      })
+
+      expect(messageBus.getDashboardMessageBus).toHaveBeenCalledTimes(1)
+      expect(mockSetAuthToken).not.toHaveBeenCalled()
+    })
+
+    it('connects with the module id before any child reads the bus during render', () => {
+      // getDashboardMessageBus is first-caller-wins per instance. A hook reading the bus in
+      // its render runs before any parent effect, so the provider must connect during render
+      // or the connection is pinned to the app id.
+      const ModuleContext = getDashboardModuleContext()
+      function ReadsBus() {
+        getDashboardMessageBus(useSanityInstance())
+        return null
+      }
+
+      act(() => {
+        render(
+          <ModuleContext.Provider value="favorites/views/list/panel">
+            <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+              <DashboardTokenRefreshProvider>
+                <ReadsBus />
+              </DashboardTokenRefreshProvider>
+            </ResourceProvider>
+          </ModuleContext.Provider>,
+        )
+      })
+
+      expect(messageBus.getDashboardMessageBus.mock.calls[0]).toEqual([
+        expect.anything(),
+        'favorites/views/list/panel',
+      ])
+    })
+
+    it('forwards the module id from the dashboard module context', () => {
+      const ModuleContext = getDashboardModuleContext()
+
+      act(() => {
+        render(
+          <ModuleContext.Provider value="favorites/views/list/panel">
+            <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+              <DashboardTokenRefreshProvider>
+                <div>Test</div>
+              </DashboardTokenRefreshProvider>
+            </ResourceProvider>
+          </ModuleContext.Provider>,
+        )
+      })
+
+      expect(messageBus.getDashboardMessageBus).toHaveBeenCalledWith(
+        expect.anything(),
+        'favorites/views/list/panel',
+      )
     })
 
     it('treats subscription failures as a missing token', () => {
