@@ -31,3 +31,4 @@ export type {
   Topics,
   ValueOf,
 } from '../dashboard/messageBus/topics'
+export {type TopicData, TopicError} from '../dashboard/messageBus/topicStore'
