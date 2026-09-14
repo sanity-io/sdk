@@ -18,10 +18,7 @@ import {
 } from './patchOperations'
 
 /**
- * Represents a set of documents passed to {@link processMutations}. Before
- * applying a mutation, it's expected that all relevant documents that the
- * mutations affect are included, including those that do not exist yet.
- * Documents that don't exist have a `null` value.
+ * Maps document IDs to documents, using `null` for documents that do not exist.
  *
  * @beta
  */
@@ -35,18 +32,18 @@ type SupportedPatchOperation = Exclude<keyof PatchOperations, 'merge'>
 // > - set, setIfMissing, unset, inc, dec, insert.
 // > https://www.sanity.io/docs/http-mutations#5b4db1396e56
 /**
- * Individual patch operations used by {@link processMutations}.
+ * Exposes the patch operations used by {@link processMutations}.
  *
- * These operations apply patches to in-memory values. Use
- * {@link processMutations} to apply full mutations and update document
- * revisions and timestamps. Patch operations can generate missing array keys.
- *
- * The operation collection is frozen so callers cannot replace the functions
+ * @remarks
+ * Freezes the collection to prevent callers from replacing the functions
  * used by the SDK's mutation evaluator.
  *
  * @example
  * ```ts
- * const updated = patchOperations.set({title: 'Before'}, {title: 'After'})
+ * const updated = patchOperations.set(
+ *   {items: [{_key: 'a', title: 'Before'}]},
+ *   {'items[_key=="a"].title': 'After'},
+ * )
  * ```
  *
  * @internal
@@ -89,7 +86,7 @@ export function getId(id?: string): string {
 }
 
 /**
- * Options for applying mutations to an in-memory document set.
+ * Configures {@link processMutations}.
  *
  * @internal
  */
@@ -108,8 +105,8 @@ export interface ProcessMutationsOptions {
    */
   mutations: Mutation[]
   /**
-   * An optional timestamp that will be used for `_createdAt` and `_updatedAt`
-   * timestamp when applicable.
+   * Supplies the default `_createdAt` and `_updatedAt` timestamps.
+   * Uses the current time when omitted or empty.
    */
   timestamp?: string
 }
@@ -132,30 +129,24 @@ export function getDocumentIds(selection: MutationSelection): string[] {
 }
 
 /**
- * Applies mutations to an in-memory document set using the SDK's optimistic
- * mutation evaluator. No client or SDK instance is required.
+ * Applies mutations to an in-memory document set.
+ * Deleted documents remain in the returned set with a value of `null`.
  *
- * Include all documents affected by the mutations in `documents`. Represent
- * documents that do not exist with `null`. Deleted documents remain in the
- * returned set with a value of `null`.
- *
- * The given `transactionId` will be used as the resulting `_rev` for documents
- * affected by the given set of mutations.
- *
- * If a `timestamp` is given, it is used for the relevant `_updatedAt`
- * and `_createdAt` timestamps. Otherwise, the current time is used.
+ * Sets `_rev` to `transactionId` on created, replaced, and patched documents.
+ * Uses `timestamp` for timestamps unless the mutation preserves them.
+ * Ignores `merge` patches; `inc` and `dec` skip values that are not numbers.
+ * Generates document IDs when omitted or ending in `.`.
+ * Patch operations can generate missing array keys.
  *
  * @remarks
- * Supports `create`, `createIfNotExists`, `createOrReplace`, `delete`, and
- * ID-selected `patch` mutations. Query-based selections throw. The `merge`
- * patch operation is unsupported and ignored. Numeric patches skip missing
- * or nonnumeric values.
+ * Uses the SDK's evaluator so callers share its mutation semantics without
+ * starting a client or document store. Does not run Content Lake's server
+ * validation or persist documents.
  *
- * This function shares the SDK's optimistic behavior. It does not perform
- * Content Lake's full server-side validation or persist the result.
- * Document IDs are generated when omitted or when they end in a period.
- * Patch operations can also generate missing array keys. Supply explicit IDs
- * and array keys as well as a timestamp when repeatable results are required.
+ * @throws If a selection uses a query, a `create` targets an existing document,
+ * or a `patch` targets a document that does not exist.
+ * @throws If a patch operation fails, including a revision check failure or
+ * `diffMatchPatch` applied to a value other than a string or `undefined`.
  *
  * @internal
  */
