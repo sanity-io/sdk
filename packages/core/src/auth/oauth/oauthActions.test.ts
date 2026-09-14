@@ -221,6 +221,31 @@ describe('handleOAuthCallback', () => {
     expect(await first).toBe('https://app.example.com/callback')
   })
 
+  it('does not clobber LOGGED_IN when called again with a stale callback URL', async () => {
+    const {request} = setup({
+      sessionSeed: {[OAUTH_STATE_KEY]: 'state-xyz', [OAUTH_VERIFIER_KEY]: 'verifier-1'},
+    })
+
+    expect(await handleOAuthCallback(instance!, callbackHref)).toBe(
+      'https://app.example.com/callback',
+    )
+    // Artifacts are now cleared; a repeat with the same URL fails state validation.
+    // Seed fresh artifacts as if a re-authorization started in this tab: the
+    // ignored stale callback must not wipe them.
+    sessionStorage.setItem(OAUTH_STATE_KEY, 'state-next')
+    sessionStorage.setItem(OAUTH_VERIFIER_KEY, 'verifier-next')
+    const result = await handleOAuthCallback(instance!, callbackHref)
+
+    expect(result).toBe('https://app.example.com/callback')
+    expect(request).toHaveBeenCalledTimes(1)
+    expect(getAuthState(instance!).getCurrent()).toMatchObject({
+      type: AuthStateType.LOGGED_IN,
+      token: 'new-access',
+    })
+    expect(sessionStorage.getItem(OAUTH_STATE_KEY)).toBe('state-next')
+    expect(sessionStorage.getItem(OAUTH_VERIFIER_KEY)).toBe('verifier-next')
+  })
+
   it('surfaces an ?error= callback as ERROR without exchanging', async () => {
     const {request} = setup()
 
@@ -232,6 +257,25 @@ describe('handleOAuthCallback', () => {
     expect(result).toBe('https://app.example.com/callback')
     expect(request).not.toHaveBeenCalled()
     expect(getAuthState(instance!).getCurrent()).toMatchObject({type: AuthStateType.ERROR})
+  })
+
+  it('ignores an ?error= callback when a session is already established', async () => {
+    setup({
+      storageSeed: {[OAUTH_TOKENS_KEY]: serializeTokens(seededTokens)},
+      sessionSeed: {[OAUTH_STATE_KEY]: 'state-next', [OAUTH_VERIFIER_KEY]: 'verifier-next'},
+    })
+
+    const result = await handleOAuthCallback(
+      instance!,
+      'https://app.example.com/callback?error=access_denied',
+    )
+
+    expect(result).toBe('https://app.example.com/callback')
+    expect(getAuthState(instance!).getCurrent()).toMatchObject({
+      type: AuthStateType.LOGGED_IN,
+      token: seededTokens.accessToken,
+    })
+    expect(sessionStorage.getItem(OAUTH_STATE_KEY)).toBe('state-next')
   })
 
   it('surfaces an ?error= callback without a description', async () => {
