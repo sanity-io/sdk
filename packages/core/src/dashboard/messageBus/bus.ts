@@ -1093,10 +1093,20 @@ export function resetMessageBus(): void {
 }
 
 /**
+ * Options for installing the shared message bus. The host is the whole app, so it carries
+ * no `moduleId`.
+ * @internal
+ */
+export interface InstallMessageBusOptions {
+  /** The application ID. Defaults to the ID embedded by the Sanity CLI. */
+  appId?: string
+}
+
+/**
  * Installs the shared message bus or connects to its existing installation.
  * @internal
  */
-export function installMessageBus(options: ConnectMessageBusOptions = {}): MessageBus {
+export function installMessageBus(options: InstallMessageBusOptions = {}): MessageBus {
   const appId = resolveAppId(options.appId) ?? throwMissingAppId()
   const installedMessageBus = getInstalledMessageBus()
   if (installedMessageBus) return connectApplicationToMessageBus(installedMessageBus, {appId})

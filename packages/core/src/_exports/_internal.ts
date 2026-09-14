@@ -7,7 +7,11 @@ export {
   isProjectUserNotFoundClientError,
 } from '../auth/utils'
 export {getCommentsOptionsKey, parseCommentsOptionsKey} from '../comments/commentsStore' // only used for memoizing in React, not needed for actual functionality
-export {installMessageBus, resetMessageBus} from '../dashboard/messageBus/bus'
+export {
+  installMessageBus,
+  type InstallMessageBusOptions,
+  resetMessageBus,
+} from '../dashboard/messageBus/bus'
 export {
   getDashboardMessageBus,
   isDashboardEnvironment,
