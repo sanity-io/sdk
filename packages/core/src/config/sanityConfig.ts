@@ -1,4 +1,4 @@
-import {type ClientPerspective, type StackablePerspective} from '@sanity/client'
+import {type ClientConfig, type ClientPerspective, type StackablePerspective} from '@sanity/client'
 
 import {type AuthConfig} from './authConfig'
 
@@ -78,6 +78,20 @@ export interface DatasetHandle<TDataset extends string = string, TProjectId exte
    * `projectId`/`dataset`, this can also be a media library or canvas resource.
    */
   resource?: DocumentResource
+  /**
+   * Organization-scoped configuration.
+   *
+   * Comments are stored per organization rather than per dataset, so reading or
+   * writing one needs an `organizationId` on top of the resource. Set it on the
+   * `SanityConfig` to apply it everywhere, or per call to point one operation at
+   * a different organization — the same precedence as `projectId` and `dataset`.
+   *
+   * Typed off the client's own `collaboration` config, and passed through to it
+   * untouched, so the two cannot drift.
+   *
+   * @beta
+   */
+  collaboration?: ClientConfig['collaboration']
 }
 
 /**

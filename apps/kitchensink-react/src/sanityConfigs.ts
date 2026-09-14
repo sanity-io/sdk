@@ -9,6 +9,20 @@ export const isE2E = !!import.meta.env['SANITY_APP_E2E_MODE']
 // the Dashboard's sandboxed iframe), while chromium/firefox run inside the Dashboard.
 const isStandalone = window.self === window.top
 
+/**
+ * Comments live in an organization store rather than in the dataset, so the
+ * comments route needs an organization id on top of the resource.
+ *
+ * The e2e harness already sets one. A dev run needs `SANITY_APP_ORGANIZATION_ID`
+ * in `.env.local` — the organization owning `ppsg7ml5` — otherwise every comment
+ * call throws saying so.
+ */
+export const collaboration = {
+  organizationId: isE2E
+    ? import.meta.env['SANITY_APP_E2E_ORGANIZATION_ID']
+    : import.meta.env['SANITY_APP_ORGANIZATION_ID'],
+}
+
 export const devResources: Record<string, DocumentResource> = {
   default: {
     projectId: 'ppsg7ml5',

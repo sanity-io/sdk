@@ -15,7 +15,7 @@ import json from 'refractor/json'
 import {Spinner} from 'ui5'
 
 import {AppRoutes} from './AppRoutes'
-import {devResources, e2eResources, isE2E} from './sanityConfigs'
+import {collaboration, devResources, e2eResources, isE2E} from './sanityConfigs'
 
 // Sanity UI's Code renders plain text for any language refractor does not know
 // about, and it ships with none registered. Every Code on these pages is JSON.
@@ -53,7 +53,7 @@ export default function App(): JSX.Element {
     <ThemedApp>
       <SanityApp
         fallback={<Spinner />}
-        config={isE2E ? {auth: {apiHost: 'https://api.sanity.work'}} : {}}
+        config={{collaboration, ...(isE2E && {auth: {apiHost: 'https://api.sanity.work'}})}}
         resources={isE2E ? e2eResources : devResources}
         inferMediaLibraryAndCanvas
       >

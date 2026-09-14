@@ -1,8 +1,9 @@
 import {type GetUserOptions, getUsersState, resolveUsers, type SanityUser} from '@sanity/sdk'
 import {getUsersKey, parseUsersKey} from '@sanity/sdk/_internal'
-import {useEffect, useMemo, useState, useSyncExternalStore, useTransition} from 'react'
+import {useMemo, useSyncExternalStore} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
+import {useDeferredRequestKey} from '../helpers/useDeferredRequestKey'
 import {trackHookUsage} from '../helpers/useTrackHookUsage'
 
 /**
@@ -55,32 +56,11 @@ export interface UserResult {
 export function useUser(options: GetUserOptions): UserResult {
   const instance = useSanityInstance()
   trackHookUsage(instance, 'useUser')
-  // Use React's useTransition to avoid UI jank when user options change
-  const [isPending, startTransition] = useTransition()
 
   // Get the unique key for this user request and its options
-  const key = getUsersKey(instance, options)
-  // Use a deferred state to avoid immediate re-renders when the user request changes
-  const [deferredKey, setDeferredKey] = useState(key)
+  const {deferredKey, signal, isPending} = useDeferredRequestKey(getUsersKey(instance, options))
   // Parse the deferred user key back into user options
   const deferred = useMemo(() => parseUsersKey(deferredKey), [deferredKey])
-
-  // Create an AbortController to cancel in-flight requests when needed
-  const [ref, setRef] = useState<AbortController>(new AbortController())
-
-  // When the user request or options change, start a transition to update the request
-  useEffect(() => {
-    if (key === deferredKey) return
-
-    startTransition(() => {
-      if (!ref.signal.aborted) {
-        ref.abort()
-        setRef(new AbortController())
-      }
-
-      setDeferredKey(key)
-    })
-  }, [deferredKey, key, ref])
 
   // Get the state source for this user request from the users store
   // We pass the userId as part of options to getUsersState
@@ -92,7 +72,7 @@ export function useUser(options: GetUserOptions): UserResult {
   // This is the React Suspense integration - throwing a promise
   // will cause React to show the nearest Suspense fallback
   if (getCurrent() === undefined) {
-    throw resolveUsers(instance, {...(deferred as GetUserOptions), signal: ref.signal})
+    throw resolveUsers(instance, {...(deferred as GetUserOptions), signal})
   }
 
   // Subscribe to updates and get the current data

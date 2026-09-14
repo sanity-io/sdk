@@ -46,8 +46,11 @@ export {
   type WindowMessageHandler,
 } from '../hooks/comlink/useWindowConnection'
 export {type CommentActions, useCommentActions} from '../hooks/comments/useCommentActions'
-export {useComments, type UseCommentsResult} from '../hooks/comments/useComments'
-export {useCommentThreads, type UseCommentThreadsResult} from '../hooks/comments/useCommentThreads'
+export {useCommentsQuery, type UseCommentsQueryResult} from '../hooks/comments/useCommentsQuery'
+export {
+  useDocumentComments,
+  type UseDocumentCommentsResult,
+} from '../hooks/comments/useDocumentComments'
 export {useResource} from '../hooks/context/useResource'
 export {useSanityInstance} from '../hooks/context/useSanityInstance'
 export {useFavorite} from '../hooks/dashboard/useFavorite'
@@ -103,6 +106,11 @@ export {useApplyReleaseActions} from '../hooks/releases/useApplyReleaseActions'
 export {usePerspective} from '../hooks/releases/usePerspective'
 export {type UserResult, useUser} from '../hooks/users/useUser'
 export {type UsersResult, useUsers} from '../hooks/users/useUsers'
+export {
+  type UsersWithGrantsHookResult,
+  useUsersWithGrants,
+  type UseUsersWithGrantsOptions,
+} from '../hooks/users/useUsersWithGrants'
 export {REACT_SDK_VERSION} from '../version'
 export {type DatasetsResponse, type SanityProjectMember} from '@sanity/client'
 export type {Status as ComlinkStatus} from '@sanity/comlink'

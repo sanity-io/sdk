@@ -23,8 +23,9 @@ const config: KnipConfig = {
     },
     'apps/kitchensink-react': {
       // App SDK app entry (configured via `app.entry` in sanity.cli.ts); there is
-      // no index.html/main.tsx for knip to auto-detect.
-      entry: ['src/App.tsx', 'src/css/css.config.js'],
+      // no index.html/main.tsx for knip to auto-detect. The compat shim is
+      // reached through the `@sanity/sdk-react` Vite alias rather than an import.
+      entry: ['src/App.tsx', 'src/css/css.config.js', 'src/compat/sdkReact.ts'],
       // disable playwright plugin: playwright.config.ts imports @repo/e2e which
       // may not be built yet, and knip crashes trying to load it as an entry file
       playwright: false,
