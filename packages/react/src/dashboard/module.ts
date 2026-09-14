@@ -19,6 +19,11 @@ type ModuleSlot = WeakMap<typeof React.createContext, ModuleContext>
  * object: `import * as React` and `import React from 'react'` can yield
  * different wrapper objects for the same React copy under bundler interop,
  * whereas the `createContext` function is the same reference under both.
+ *
+ * The provider side lives in the CLI, which must not import the SDK:
+ * `packages/@sanity/workbench-cli/src/actions/build/render-remote.ts` in
+ * `sanity-io/cli` reconstructs this accessor (same symbol, same key) and
+ * wraps `App` in the context's `Provider`. Nothing in this repo exports it.
  * @internal
  */
 export function getDashboardModuleContext(): ModuleContext {

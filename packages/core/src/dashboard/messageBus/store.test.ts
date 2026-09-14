@@ -2,7 +2,7 @@ import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {createSanityInstance} from '../../store/createSanityInstance'
 import {type MessageBusConnection} from './bus'
-import {getDashboardEnvironmentState, getDashboardMessageBus, isDashboardEnvironment} from './store'
+import {getDashboardMessageBus, isDashboardEnvironment} from './store'
 
 const bus = vi.hoisted(() => ({
   connect: vi.fn(),
@@ -129,22 +129,6 @@ describe('dashboard message bus store', () => {
     expect(bus.connect).toHaveBeenCalledOnce()
 
     instance.dispose()
-  })
-
-  it('reflects connection state through the environment state source', () => {
-    const connected = createSanityInstance(config)
-    const disconnected = createSanityInstance(config)
-    bus.installed.mockReturnValue(false)
-    getDashboardMessageBus(disconnected)
-
-    bus.installed.mockReturnValue(true)
-    getDashboardMessageBus(connected)
-
-    expect(getDashboardEnvironmentState(connected).getCurrent()).toBe(true)
-    expect(getDashboardEnvironmentState(disconnected).getCurrent()).toBe(false)
-
-    connected.dispose()
-    disconnected.dispose()
   })
 
   it('reports the dashboard environment as soon as a host bus is installed', () => {

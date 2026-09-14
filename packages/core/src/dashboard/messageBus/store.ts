@@ -1,6 +1,5 @@
 import {createActionBinder} from '../../store/createActionBinder'
 import {type SanityInstance} from '../../store/createSanityInstance'
-import {createStateSourceAction} from '../../store/createStateSourceAction'
 import {defineStore} from '../../store/defineStore'
 import {connectMessageBus, isMessageBusInstalled, type MessageBusConnection} from './bus'
 
@@ -43,17 +42,6 @@ export const getDashboardMessageBus = bindActionByInstance(
     state.set('connect', {connection})
     return connection
   },
-)
-
-/**
- * A state source reporting whether this instance is connected to a dashboard bus.
- * @internal
- */
-export const getDashboardEnvironmentState = bindActionByInstance(
-  dashboardMessageBusStore,
-  createStateSourceAction(({state}: {state: DashboardMessageBusState}) =>
-    Boolean(state.connection),
-  ),
 )
 
 /**
