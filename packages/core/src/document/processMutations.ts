@@ -131,11 +131,16 @@ export function getDocumentIds(selection: MutationSelection): string[] {
 }
 
 /**
- * Applies mutations to an in-memory document set.
+ * Applies mutations to an in-memory set of Sanity documents.
  * Deleted documents remain in the returned set with a value of `null`.
  *
- * Returns the input map when `mutations` is empty. Results can share document
- * and nested-value references with the input.
+ * Include every document affected by `mutations` in `documents`, using `null`
+ * for documents that do not exist.
+ *
+ * Returns `documents` itself when `mutations` is empty. Otherwise, returns a
+ * shallow copy of that object. The result can reuse document objects and
+ * nested objects from `documents`. Mutating a reused object through the
+ * result also changes the input.
  *
  * Sets `_rev` to `transactionId` on created, replaced, and patched documents.
  * Uses `timestamp` for timestamps unless the mutation preserves them.
@@ -143,10 +148,7 @@ export function getDocumentIds(selection: MutationSelection): string[] {
  * Generates document IDs when omitted or ending in `.`.
  * Patch operations can generate missing array keys.
  *
- * @remarks
- * Uses the SDK's evaluator so callers share its mutation semantics without
- * starting a client or document store. Does not run Content Lake's server
- * validation or persist documents.
+ * Does not persist documents or run Content Lake's server validation.
  *
  * @throws If a selection uses a query, a `create` targets an existing document,
  * or a `patch` targets a document that does not exist.
