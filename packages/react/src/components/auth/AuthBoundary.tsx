@@ -187,7 +187,7 @@ function AuthSwitch({
   const isOAuth = !!instance.config.auth?.oauth
   const loginUrl = useLoginUrl()
   const authorize = useOAuthAuthorize()
-  const [authorizeError, setAuthorizeError] = useState<unknown>(null)
+  const [authorizeError, setAuthorizeError] = useState<{error: unknown} | null>(null)
 
   useEffect(() => {
     if (isLoggedOut && !isInIframe() && !isStudio && !isDashboardEnvironment()) {
@@ -196,7 +196,7 @@ function AuthSwitch({
       if (isOAuth) {
         // PKCE params and navigation are owned by core. LOGGED_OUT renders
         // null, so a rejection here must be surfaced or the user sees nothing.
-        authorize().catch(setAuthorizeError)
+        authorize().catch((error) => setAuthorizeError({error}))
       } else {
         window.location.href = loginUrl
       }
@@ -209,7 +209,7 @@ function AuthSwitch({
   }
 
   if (authorizeError) {
-    throw new AuthError(authorizeError)
+    throw new AuthError(authorizeError.error)
   }
 
   switch (authState.type) {

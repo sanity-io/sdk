@@ -110,6 +110,14 @@ describe('getOauthInitialState', () => {
     expect(result.authState).toEqual({type: AuthStateType.LOGGED_OUT, isDestroyingSession: false})
   })
 
+  it('returns LOGGED_OUT when the redirect URI only carries a stray state param', () => {
+    const storageArea = createMemoryStorage()
+    const result = getOauthInitialState(
+      baseOptions({storageArea, initialLocationHref: 'https://app/callback?state=s'}),
+    )
+    expect(result.authState).toEqual({type: AuthStateType.LOGGED_OUT, isDestroyingSession: false})
+  })
+
   it('returns LOGGED_OUT when there are no tokens and no callback', () => {
     const storageArea = createMemoryStorage()
     const result = getOauthInitialState(baseOptions({storageArea}))

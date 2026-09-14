@@ -55,7 +55,7 @@ export function deserializeTokens(raw: string | null): OAuthTokens | null {
  *
  * State discovery order:
  * 1. Persisted tokens in `__sanity_oauth_tokens` → `LOGGED_IN`
- * 2. Callback URL (contains `code`/`state`/`error` and matches `redirectUri`)
+ * 2. Callback URL (contains `code` or `error` and matches `redirectUri`)
  *    → `LOGGING_IN`
  * 3. Otherwise → `LOGGED_OUT`
  *
@@ -80,11 +80,12 @@ export function getOauthInitialState(options: AuthStrategyOptions): AuthStrategy
     }
   }
 
-  // Callback URL with code/state/error whose origin + pathname match our
-  // redirect URI (query and hash are ignored).
+  // Callback URL with code/error whose origin + pathname match our redirect
+  // URI (query and hash are ignored). `state` alone is not a callback: the
+  // server always sends `code` or `error`, and handleOAuthCallback would
+  // otherwise leave the app stuck in LOGGING_IN.
   const {searchParams} = new URL(initialLocationHref, DEFAULT_BASE)
-  const isCallback =
-    searchParams.has('code') || searchParams.has('state') || searchParams.has('error')
+  const isCallback = searchParams.has('code') || searchParams.has('error')
   if (redirectUri && isCallback) {
     const loc = new URL(initialLocationHref, DEFAULT_BASE)
     const redirect = new URL(redirectUri, DEFAULT_BASE)
