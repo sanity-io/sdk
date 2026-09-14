@@ -18,10 +18,9 @@ import {
 } from './patchOperations'
 
 /**
- * Represents a set of document that will go into `applyMutations`. Before
- * applying a mutation, it's expected that all relevant documents that the
- * mutations affect are included, including those that do not exist yet.
- * Documents that don't exist have a `null` value.
+ * Maps document IDs to documents, using `null` for documents that do not exist.
+ *
+ * @beta
  */
 export type DocumentSet<TDocument extends SanityDocument = SanityDocument> = {
   [TDocumentId in string]?: TDocument | null
@@ -29,10 +28,29 @@ export type DocumentSet<TDocument extends SanityDocument = SanityDocument> = {
 
 type SupportedPatchOperation = Exclude<keyof PatchOperations, 'merge'>
 
-// > If multiple patches are included, then the order of execution is as follows:
-// > - set, setIfMissing, unset, inc, dec, insert.
-// > https://www.sanity.io/docs/http-mutations#5b4db1396e56
-const patchOperations = {
+/**
+ * Exposes the patch operations used by {@link processMutations}.
+ *
+ * @remarks
+ * Property order determines execution order in {@link processMutations}:
+ * `ifRevisionID`, `set`, `setIfMissing`, `unset`, `inc`, `dec`, `insert`,
+ * then `diffMatchPatch`. Reordering the properties changes mutation results.
+ * Freezes the collection to prevent callers from replacing the functions
+ * used by the SDK's mutation evaluator.
+ *
+ * @see https://www.sanity.io/docs/http-mutations#5b4db1396e56
+ *
+ * @example
+ * ```ts
+ * const document = {items: [{_key: 'a', title: 'Before'}]}
+ * const updated = patchOperations.set<typeof document>(document, {
+ *   'items[_key=="a"].title': 'After',
+ * })
+ * ```
+ *
+ * @internal
+ */
+export const patchOperations = Object.freeze({
   ifRevisionID,
   set,
   setIfMissing,
@@ -46,7 +64,7 @@ const patchOperations = {
     input: unknown,
     pathExpressions: NonNullable<PatchOperations[K]>,
   ) => unknown
-}
+})
 
 /**
  * Implements ID generation:
@@ -69,7 +87,12 @@ export function getId(id?: string): string {
   return id
 }
 
-interface ProcessMutationsOptions {
+/**
+ * Configures {@link processMutations}.
+ *
+ * @internal
+ */
+export interface ProcessMutationsOptions {
   /**
    * The transaction ID that will become the next `_rev` for documents mutated
    * by the given mutations.
@@ -84,8 +107,8 @@ interface ProcessMutationsOptions {
    */
   mutations: Mutation[]
   /**
-   * An optional timestamp that will be used for `_createdAt` and `_updatedAt`
-   * timestamp when applicable.
+   * Supplies the default `_createdAt` and `_updatedAt` timestamps.
+   * Uses the current time when omitted or empty.
    */
   timestamp?: string
 }
@@ -108,18 +131,31 @@ export function getDocumentIds(selection: MutationSelection): string[] {
 }
 
 /**
- * Applies the given mutation to the given document set. Note, it is expected
- * that all relevant documents that the mutations affect should be within the
- * given `document` set. If a document does not exist, it should have the value
- * `null`. If a document is deleted as a result of the mutations, it will still
- * have its document ID present in the returns documents, but it will have a
- * value of `null`.
+ * Applies mutations to an in-memory set of Sanity documents.
+ * Deleted documents remain in the returned set with a value of `null`.
  *
- * The given `transactionId` will be used as the resulting `_rev` for documents
- * affected by the given set of mutations.
+ * Include every document affected by `mutations` in `documents`, using `null`
+ * for documents that do not exist.
  *
- * If a `timestamp` is given, that will be used as for the relevant `_updatedAt`
- * and `_createdAt` timestamps.
+ * Returns `documents` itself when `mutations` is empty. Otherwise, returns a
+ * shallow copy of that object. The result can reuse document objects and
+ * nested objects from `documents`. Mutating a reused object through the
+ * result also changes the input.
+ *
+ * Sets `_rev` to `transactionId` on created, replaced, and patched documents.
+ * Uses `timestamp` for timestamps unless the mutation preserves them.
+ * Ignores `merge` patches; `inc` and `dec` skip values that are not numbers.
+ * Generates document IDs when omitted or ending in `.`.
+ * Patch operations can generate missing array keys.
+ *
+ * Does not persist documents or run Content Lake's server validation.
+ *
+ * @throws If a selection uses a query, a `create` targets an existing document,
+ * or a `patch` targets a document that does not exist.
+ * @throws If a patch operation fails, including a revision check failure or
+ * `diffMatchPatch` applied to a value other than a string or `undefined`.
+ *
+ * @internal
  */
 export function processMutations({
   documents,
