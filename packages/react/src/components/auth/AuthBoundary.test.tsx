@@ -38,8 +38,8 @@ vi.mock('./AuthError', async (importOriginal) => {
   return {
     ...actual,
     AuthError: class MockAuthError extends Error {
-      constructor(error: Error) {
-        super(error.message)
+      constructor(error: unknown) {
+        super(error instanceof Error ? error.message : undefined)
         this.name = 'AuthError'
         this.cause = error
       }
@@ -222,9 +222,8 @@ describe('AuthBoundary', () => {
     })
 
     it('renders the error fallback when starting the OAuth flow rejects', async () => {
-      vi.mocked(useOAuthAuthorize).mockReturnValue(
-        vi.fn().mockRejectedValue(new Error('crypto.subtle unavailable')),
-      )
+      // A falsy rejection reason must still surface as an error, not a blank screen.
+      vi.mocked(useOAuthAuthorize).mockReturnValue(vi.fn().mockRejectedValue(undefined))
       vi.mocked(useAuthState).mockReturnValue({
         type: AuthStateType.LOGGED_OUT,
         isDestroyingSession: false,
