@@ -63,6 +63,7 @@ describe('normalizeComment', () => {
     expect('lastEditedAt' in normalized).toBe(false)
     expect('selection' in normalized).toBe(false)
     expect('contentSnapshot' in normalized).toBe(false)
+    expect('context' in normalized).toBe(false)
     expect('state' in normalized).toBe(false)
   })
 
@@ -137,6 +138,13 @@ describe('normalizeComment', () => {
     const comment = storedComment({_id: 'comment-1', contentSnapshot})
 
     expect(normalizeComment(comment).contentSnapshot).toEqual(contentSnapshot)
+  })
+
+  it('carries the writing app’s context through untouched', () => {
+    const context = {tool: 'kitchensink', nested: {revision: 2}}
+    const comment = storedComment({_id: 'comment-1', context})
+
+    expect(normalizeComment(comment).context).toEqual(context)
   })
 })
 

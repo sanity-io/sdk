@@ -158,6 +158,11 @@ export interface Comment {
    * each block the selection covers.
    */
   contentSnapshot?: CommentMessage
+  /**
+   * Free-form data the writing app stored with the comment, as passed to
+   * `createComment` or `replyToComment`. Absent when none was given.
+   */
+  context?: Record<string, unknown>
   reactions: CommentReaction[]
   /** Local only. Present while a create is failing or being retried. */
   state?: CommentLocalState

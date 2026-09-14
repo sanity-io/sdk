@@ -48,6 +48,7 @@ export function normalizeComment(stored: StoredComment): Comment {
     ...(stored.contentSnapshot === undefined
       ? {}
       : {contentSnapshot: toCommentMessage(stored.contentSnapshot)}),
+    ...(stored.context ? {context: stored.context} : {}),
     // Dropped: the stored `_key`, which only exists to address the array item.
     reactions: stored.reactions.map(({shortName, userId, addedAt}) => ({
       shortName,

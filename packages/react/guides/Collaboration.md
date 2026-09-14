@@ -122,7 +122,7 @@ function ResolveButton({commentId}: {commentId: string}) {
 | `addReaction`        | `commentId`, `shortName`                                         | Adds the current user's reaction.                                                        |
 | `removeReaction`     | `commentId`, `shortName`                                         | Removes the current user's reaction.                                                     |
 
-`createComment` also takes `commentId` and `threadId` to write against ids you chose, `documentRevisionId` to record which revision the comment was written about, and `context` for free-form data of your own.
+`createComment` also takes `commentId` and `threadId` to write against ids you chose, `documentRevisionId` to record which revision the comment was written about, and `context` for free-form data of your own. `replyToComment` takes `context` too, and both hand it back on the comment's `context`, so whatever you store there is readable wherever you read comments.
 
 ### Optimistic writes, and the one exception
 
@@ -247,7 +247,7 @@ Perspective works the same way: pass `perspective` per call, or let the surround
 
 Exported from `@sanity/sdk-react` and `@sanity/sdk`:
 
-- `Comment` — a single comment, with `threadId`, `fieldPath`, `status`, `reactions`, and the local-only `state`
+- `Comment` — a single comment, with `threadId`, `fieldPath`, `status`, `reactions`, whatever `context` it was written with, and the local-only `state`
 - `CommentThread` — a parent comment plus its `replies`, with `commentsCount` and `lastActivityAt`
 - `CommentStatus` — `'open' | 'resolved'`
 - `CommentMessage` — the Portable Text body

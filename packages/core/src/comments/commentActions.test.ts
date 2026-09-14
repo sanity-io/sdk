@@ -245,6 +245,19 @@ describe('createComment', () => {
     expect(created).toMatchObject({id: 'c1', status: 'resolved', authorId: 'user-1'})
   })
 
+  it('reads its own context back, before and after the server confirms it', async () => {
+    const context = {tool: 'kitchensink'}
+    const source = getDocumentCommentsState(instance, HANDLE)
+    source.subscribe()
+    seedComments(instance, {comments: []})
+    comments.create.mockResolvedValue(comment({_id: 'c1', context}))
+
+    const pending = createComment(instance, {...CREATE, commentId: 'c1', message: MESSAGE, context})
+
+    expect(source.getCurrent()![0].parentComment.context).toEqual(context)
+    expect((await pending).context).toEqual(context)
+  })
+
   it('leaves a failed comment in place carrying the error', async () => {
     const source = getDocumentCommentsState(instance, HANDLE)
     source.subscribe()
