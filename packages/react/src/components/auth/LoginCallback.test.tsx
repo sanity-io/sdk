@@ -15,6 +15,9 @@ vi.mock('../../hooks/auth/useHandleAuthCallback', () => ({
     if (sid === 'deep-link') {
       return 'http://localhost/documents/abc?x=1'
     }
+    if (sid === 'cross-origin') {
+      return 'https://evil.example.com/'
+    }
     return false
   }),
 }))
@@ -83,6 +86,23 @@ describe('LoginCallback', () => {
       expect(replace).toHaveBeenCalledWith('http://localhost/documents/abc?x=1')
     })
     expect(history.replaceState).not.toHaveBeenCalled()
+  })
+
+  it('does not navigate when the callback resolves to a different origin', async () => {
+    const replace = vi.fn()
+    vi.stubGlobal('location', {href: 'http://localhost/#sid=cross-origin', replace})
+    const {LoginCallback} = await import('./LoginCallback') // Reload after resetModules
+
+    render(
+      <ResourceProvider fallback={null}>
+        <LoginCallback />
+      </ResourceProvider>,
+    )
+
+    await waitFor(() => {
+      expect(replace).not.toHaveBeenCalled()
+      expect(history.replaceState).not.toHaveBeenCalled()
+    })
   })
 
   it('does not call history.replaceState on an unsuccessful callback', async () => {

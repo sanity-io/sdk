@@ -254,6 +254,20 @@ describe('handleOAuthCallback', () => {
     )
   })
 
+  it('ignores a stashed location that is not a URL', async () => {
+    setup({
+      sessionSeed: {
+        [OAUTH_STATE_KEY]: 'state-xyz',
+        [OAUTH_VERIFIER_KEY]: 'verifier-1',
+        [OAUTH_RETURN_TO_KEY]: 'not a url',
+      },
+    })
+
+    expect(await handleOAuthCallback(instance!, callbackHref)).toBe(
+      'https://app.example.com/callback',
+    )
+  })
+
   it('does not restore the stashed location on a state mismatch', async () => {
     const {session} = setup({
       sessionSeed: {
