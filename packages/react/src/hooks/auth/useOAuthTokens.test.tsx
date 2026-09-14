@@ -187,6 +187,24 @@ describe('useOAuthTokens', () => {
     expect(result.current.tokens).toEqual(existing)
   })
 
+  it('propagates an unrecoverable refresh rejection after core has cleared tokens', async () => {
+    const source = createFakeTokenSource(makeTokens())
+    mockGetState.mockReturnValue(source)
+    // Core clears stored tokens and logs out before rethrowing a 4xx.
+    mockRefresh.mockImplementation(() => {
+      source.set(null)
+      return Promise.reject(new Error('invalid_grant'))
+    })
+
+    const {result} = renderHook(() => useOAuthTokens(), {wrapper})
+
+    await act(async () => {
+      await expect(result.current.refresh()).rejects.toThrow('invalid_grant')
+    })
+
+    expect(result.current.tokens).toBeNull()
+  })
+
   it('calls core revokeOAuthTokens and re-renders with tokens=null', async () => {
     const source = createFakeTokenSource(makeTokens())
     mockGetState.mockReturnValue(source)

@@ -26,7 +26,10 @@ export interface UseOAuthTokensResult {
   /**
    * Refresh via the OAuth `refresh_token` grant. When there is no refresh token,
    * core clears the stored tokens, logs the user out, and this resolves `null`.
-   * Rejects on transient failures (network, 5xx, 429), leaving tokens unchanged.
+   * Rejects on transient failures (network, 5xx, 408, 429), leaving tokens
+   * unchanged so the call can be retried. Also rejects when the server rejects
+   * the refresh token itself (other 4xx); core clears the tokens and logs out
+   * first, so check `tokens` before retrying.
    */
   refresh: () => Promise<OAuthTokens | null>
   /**
@@ -67,7 +70,8 @@ function isOAuthTokenExpired(tokens: OAuthTokens | null): boolean {
  *     try {
  *       await refresh()
  *     } catch {
- *       // transient failure; tokens are unchanged, retry later
+ *       // Transient failure (tokens unchanged, retry later) or the refresh
+ *       // token was rejected (tokens now null, user is logged out).
  *     }
  *   }
  *
