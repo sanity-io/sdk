@@ -34,6 +34,7 @@ export type {
   EventTopicDef,
   MessageBus,
   MessageBusAbortOptions,
+  MessageBusConnection,
   MessageBusEmitOptions,
   MessageBusEmitResult,
   MessageBusErrorCode,

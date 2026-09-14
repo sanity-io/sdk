@@ -5,8 +5,10 @@ import {
   firstValueFrom,
   map,
   type Observable,
+  ReplaySubject,
   Subject,
   type Subscription,
+  takeUntil,
 } from 'rxjs'
 
 import {type Application} from '../../applications/applications'
@@ -59,6 +61,12 @@ export class MessageBusError extends Error {
 export interface MessageBusMeta {
   /** The application that produced the message. */
   appId: Application['id']
+  /**
+   * The federation module id of the connection that sent the message (e.g.
+   * `favorites/views/list/panel`). Absent from older copies and when the host
+   * supplied none, so readers normalise with `message.meta.moduleId ?? message.meta.appId`.
+   */
+  moduleId?: string
   /** The Unix timestamp in milliseconds when the message was produced. */
   timestamp: number
 }
@@ -161,6 +169,19 @@ export interface MessageBus {
   subscribe<K extends StateTopic>(type: K): MessageBusStateSource<ValueOf<K>>
   /** Returns an event topic as an observable of its payloads. */
   subscribe<K extends EventTopic>(type: K): Observable<PayloadOf<K>>
+}
+
+/**
+ * A message bus connection that can be torn down independently of its siblings.
+ * @public
+ */
+export interface MessageBusConnection extends MessageBus {
+  /**
+   * Tears down this connection: pending requests reject `ABORTED`, subscriptions
+   * complete, and later `emit`, `query`, and `subscribe` calls fail with `ABORTED`.
+   * Siblings and the shared bus are untouched.
+   */
+  disconnect(): void
 }
 
 const MESSAGE_BUS_KEY = Symbol.for('sanity.os.bus')
@@ -312,6 +333,7 @@ function settleReply(reply: PendingReply, outcome: ReplyOutcome): void {
 
 function createEventMessage(
   appId: string,
+  moduleId: string,
   type: string,
   payload: unknown,
   pendingReply: PendingReply,
@@ -321,7 +343,7 @@ function createEventMessage(
   } = {
     type: type as TopicName,
     payload,
-    meta: {appId, timestamp: Date.now()},
+    meta: {appId, moduleId, timestamp: Date.now()},
     reply: (value) => {
       if (pendingReply.settled) {
         console.warn(
@@ -398,6 +420,7 @@ function emitEvent(
   payload: unknown,
   options: MessageBusEmitOptions | undefined,
   appId: string,
+  moduleId: string,
 ): MessageBusEmitResult<unknown> {
   const hadResponderAtEmission = (registry.responderCounts.get(type) ?? 0) > 0
   const responderAbort = new AbortController()
@@ -407,7 +430,9 @@ function emitEvent(
     settled: false,
   }
 
-  resolveEventSubject(registry, type).next(createEventMessage(appId, type, payload, pendingReply))
+  resolveEventSubject(registry, type).next(
+    createEventMessage(appId, moduleId, type, payload, pendingReply),
+  )
 
   const awaitReply = () =>
     (pendingReply.replyPromise ??= createReplyPromise(pendingReply, {
@@ -432,6 +457,8 @@ function emit(
   payload: unknown,
   options: MessageBusEmitOptions | undefined,
   appId: string,
+  moduleId: string,
+  connectionSignal: AbortSignal,
 ): MessageBusEmitResult<unknown> | undefined {
   const topic = registry.topics.get(type)
   if (topic?.kind === 'state') {
@@ -451,9 +478,10 @@ function emit(
     payload,
     {
       ...options,
-      signal: scopeSignal(options?.signal, registry.resetAbort.signal),
+      signal: scopeSignal(options?.signal, registry.resetAbort.signal, connectionSignal),
     },
     appId,
+    moduleId,
   )
 }
 
@@ -461,12 +489,13 @@ function query(
   registry: MessageBusRegistry,
   type: string,
   options: MessageBusQueryOptions | undefined,
+  connectionSignal: AbortSignal,
 ): Promise<unknown> {
   const source = resolveStateSource(registry, type)
   const current = source.getCurrent()
   if (current !== undefined) return Promise.resolve(current)
 
-  const signal = scopeSignal(options?.signal, registry.resetAbort.signal)
+  const signal = scopeSignal(options?.signal, registry.resetAbort.signal, connectionSignal)
   if (signal?.aborted) return Promise.reject(new MessageBusError('ABORTED'))
   const timeoutMs = options?.timeout === undefined ? DEFAULT_TIMEOUT_MS : options.timeout
   return new Promise((resolve, reject) => {
@@ -511,8 +540,8 @@ function unsubscribeOnAbort(subscription: Subscription, signal: AbortSignal | un
   })
 }
 
-function scopeSignal(signal: AbortSignal | undefined, lifecycle: AbortSignal): AbortSignal {
-  return signal ? AbortSignal.any([signal, lifecycle]) : lifecycle
+function scopeSignal(signal: AbortSignal | undefined, ...lifecycles: AbortSignal[]): AbortSignal {
+  return signal ? AbortSignal.any([signal, ...lifecycles]) : AbortSignal.any(lifecycles)
 }
 
 function invokeResponder(
@@ -546,6 +575,7 @@ function subscribe(
   handler: ((arg: never) => void) | undefined,
   options: MessageBusAbortOptions | undefined,
   appId: string,
+  connectionSignal: AbortSignal,
 ): MessageBusStateSource<unknown> | Observable<unknown> | void {
   const isState = isStateTopic(registry, type)
 
@@ -559,7 +589,10 @@ function subscribe(
     const subscription = resolveStateSource(registry, type).subscribe(
       handler as (value: unknown) => void,
     )
-    unsubscribeOnAbort(subscription, scopeSignal(options?.signal, registry.resetAbort.signal))
+    unsubscribeOnAbort(
+      subscription,
+      scopeSignal(options?.signal, registry.resetAbort.signal, connectionSignal),
+    )
     return
   }
 
@@ -579,7 +612,10 @@ function subscribe(
     const count = registry.responderCounts.get(type) ?? 0
     if (count > 0) registry.responderCounts.set(type, count - 1)
   })
-  unsubscribeOnAbort(subscription, scopeSignal(options?.signal, registry.resetAbort.signal))
+  unsubscribeOnAbort(
+    subscription,
+    scopeSignal(options?.signal, registry.resetAbort.signal, connectionSignal),
+  )
 }
 
 const bundledMigrations = () => new Map(Object.entries(topicMigrations))
@@ -610,12 +646,15 @@ export function createIsolatedMessageBus(
 
   mergeTopicManifest(registry, DASHBOARD_TOPIC_MANIFEST)
 
+  // The installed bus has no per-connection lifetime, so its scope never aborts.
+  const scope = new AbortController().signal
   const messageBus = {
     emit: (type: string, payload: unknown, options?: MessageBusEmitOptions) =>
-      emit(registry, type, payload, options, registry.appId),
-    query: (type: string, options?: MessageBusQueryOptions) => query(registry, type, options),
+      emit(registry, type, payload, options, registry.appId, registry.appId, scope),
+    query: (type: string, options?: MessageBusQueryOptions) =>
+      query(registry, type, options, scope),
     subscribe: (type: string, handler?: (arg: never) => void, options?: MessageBusAbortOptions) =>
-      subscribe(registry, type, handler, options, registry.appId),
+      subscribe(registry, type, handler, options, registry.appId, scope),
   }
 
   const instance = messageBus as unknown as InternalMessageBus
@@ -752,8 +791,13 @@ function projectCurrent(input: () => unknown, project: (value: unknown) => unkno
 function mapStateSource(
   source: MessageBusStateSource<unknown>,
   project: (value: unknown) => unknown,
+  completeOn?: Observable<unknown>,
 ): MessageBusStateSource<unknown> {
-  return toStateSource(source.pipe(map(project)), projectCurrent(source.getCurrent, project))
+  const projected = source.pipe(map(project))
+  return toStateSource(
+    completeOn ? projected.pipe(takeUntil(completeOn)) : projected,
+    projectCurrent(source.getCurrent, project),
+  )
 }
 
 function migrateEventMessage(
@@ -781,7 +825,7 @@ function migrateEventReply(
   return createLazyReply(() => (projected ??= Promise.resolve(result).then(project)))
 }
 
-function createRejectedConnection(connectionError: () => unknown): MessageBus {
+function createRejectedConnection(connectionError: () => unknown): MessageBusConnection {
   const throwConnectionError = (): never => {
     throw connectionError()
   }
@@ -790,7 +834,8 @@ function createRejectedConnection(connectionError: () => unknown): MessageBus {
     // `query` is typed as a Promise, so it must reject rather than throw synchronously.
     query: () => Promise.reject(connectionError()),
     subscribe: throwConnectionError,
-  } as unknown as MessageBus
+    disconnect: () => {},
+  } as unknown as MessageBusConnection
 }
 
 /**
@@ -800,6 +845,8 @@ function createRejectedConnection(connectionError: () => unknown): MessageBus {
 export interface ConnectApplicationToMessageBusOptions {
   /** The application ID stamped on emitted messages. */
   appId: string
+  /** The federation module id stamped on emitted messages. Defaults to `appId`. */
+  moduleId?: string
   /** The topic migrations supported by the application. */
   migrations?: ReadonlyMap<string, readonly TopicMigration[]>
 }
@@ -811,10 +858,19 @@ export interface ConnectApplicationToMessageBusOptions {
 export function connectApplicationToMessageBus(
   installedMessageBus: MessageBus,
   config: ConnectApplicationToMessageBusOptions,
-): MessageBus {
+): MessageBusConnection {
   if (!config.appId) throwMissingAppId()
 
   const {appId} = config
+  const moduleId = config.moduleId ?? appId
+  // Each connection owns its lifetime; disconnect() aborts it without touching siblings.
+  const connectionAbort = new AbortController()
+  const connectionSignal = connectionAbort.signal
+  // ReplaySubject, not fromEvent: `abort` fires once, so a cold listener attached by a
+  // stream subscribed after disconnect() would never see it and never complete. Replaying
+  // the notification lets those late subscribers complete immediately.
+  const connectionAborted$ = new ReplaySubject<void>(1)
+  connectionSignal.addEventListener('abort', () => connectionAborted$.next(), {once: true})
   const installedProtocol = (installedMessageBus as Partial<InternalMessageBus>)[
     MESSAGE_BUS_PROTOCOL_KEY
   ]
@@ -858,17 +914,36 @@ export function connectApplicationToMessageBus(
   const applicationStreams = new Map<string, MessageBusStateSource<unknown> | Observable<unknown>>()
   let streamGeneration = registry.generation
 
+  // A disconnected connection must not reach siblings, so its operations fail before touching
+  // the shared registry rather than only tearing down pending requests and subscriptions.
+  const throwIfDisconnected = () => {
+    if (connectionSignal.aborted) throw new MessageBusError('ABORTED')
+  }
+
   const connection = {
-    emit: (type: string, payload: unknown, options?: MessageBusEmitOptions) =>
-      migrateEventReply(
-        emit(registry, type, compatibility.toInstalledEmission(type, payload), options, appId),
+    emit: (type: string, payload: unknown, options?: MessageBusEmitOptions) => {
+      throwIfDisconnected()
+      return migrateEventReply(
+        emit(
+          registry,
+          type,
+          compatibility.toInstalledEmission(type, payload),
+          options,
+          appId,
+          moduleId,
+          connectionSignal,
+        ),
         (value) => compatibility.toApplicationEventReply(type, value),
-      ),
-    query: (type: string, options?: MessageBusQueryOptions) =>
-      query(registry, type, options).then((value) =>
+      )
+    },
+    query: (type: string, options?: MessageBusQueryOptions) => {
+      if (connectionSignal.aborted) return Promise.reject(new MessageBusError('ABORTED'))
+      return query(registry, type, options, connectionSignal).then((value) =>
         compatibility.toApplicationStateValue(type, value),
-      ),
+      )
+    },
     subscribe: (type: string, handler?: (arg: never) => void, options?: MessageBusAbortOptions) => {
+      throwIfDisconnected()
       if (!handler) {
         if (streamGeneration !== registry.generation) {
           applicationStreams.clear()
@@ -876,13 +951,23 @@ export function connectApplicationToMessageBus(
         }
         let stream = applicationStreams.get(type)
         if (!stream) {
-          const installedSource = subscribe(registry, type, undefined, options, appId)
+          const installedSource = subscribe(
+            registry,
+            type,
+            undefined,
+            options,
+            appId,
+            connectionSignal,
+          )
           stream = isState(type)
-            ? mapStateSource(installedSource as MessageBusStateSource<unknown>, (value) =>
-                compatibility.toApplicationStateValue(type, value),
+            ? mapStateSource(
+                installedSource as MessageBusStateSource<unknown>,
+                (value) => compatibility.toApplicationStateValue(type, value),
+                connectionAborted$,
               )
             : (installedSource as Observable<unknown>).pipe(
                 map((payload) => compatibility.toApplicationEventPayload(type, payload)),
+                takeUntil(connectionAborted$),
               )
           applicationStreams.set(type, stream)
         }
@@ -901,14 +986,22 @@ export function connectApplicationToMessageBus(
                 (value) => compatibility.toInstalledEventReply(type, value),
               ),
             )
-      return subscribe(registry, type, applicationHandler as (arg: never) => void, options, appId)
+      return subscribe(
+        registry,
+        type,
+        applicationHandler as (arg: never) => void,
+        options,
+        appId,
+        connectionSignal,
+      )
     },
+    disconnect: () => connectionAbort.abort(),
   }
 
   const instance = connection as unknown as InternalMessageBus
   instance[MESSAGE_BUS_REGISTRY_KEY] = registry
   instance[MESSAGE_BUS_PROTOCOL_KEY] = MESSAGE_BUS_PROTOCOL
-  return instance
+  return instance as unknown as MessageBusConnection
 }
 
 function reset(registry: MessageBusRegistry): void {
@@ -960,13 +1053,17 @@ export function isMessageBusInstalled(): boolean {
 export interface ConnectMessageBusOptions {
   /** The application ID. Defaults to the ID embedded by the Sanity CLI. */
   appId?: string
+  /** The federation module id stamped on emitted messages. Defaults to `appId`. */
+  moduleId?: string
 }
 
 /**
  * Connects to the installed message bus, or returns `undefined` when no compatible connection exists.
  * @public
  */
-export function connectMessageBus(options: ConnectMessageBusOptions = {}): MessageBus | undefined {
+export function connectMessageBus(
+  options: ConnectMessageBusOptions = {},
+): MessageBusConnection | undefined {
   const installedMessageBus = getInstalledMessageBus()
   if (!installedMessageBus) return undefined
 
@@ -978,7 +1075,10 @@ export function connectMessageBus(options: ConnectMessageBusOptions = {}): Messa
     return undefined
   }
 
-  const connection = connectApplicationToMessageBus(installedMessageBus, {appId})
+  const connection = connectApplicationToMessageBus(installedMessageBus, {
+    appId,
+    moduleId: options.moduleId,
+  })
   return MESSAGE_BUS_REGISTRY_KEY in connection ? connection : undefined
 }
 

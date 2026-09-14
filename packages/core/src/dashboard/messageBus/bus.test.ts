@@ -1,5 +1,6 @@
 import './__fixtures__/test-topics'
 
+import {EmptyError, firstValueFrom} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {
@@ -489,6 +490,143 @@ describe('application connections', () => {
 
     expect(application.subscribe('panels.mode')).toBe(application.subscribe('panels.mode'))
     expect(application.subscribe('test.ping')).toBe(application.subscribe('test.ping'))
+  })
+})
+
+describe('connection identity and lifetime', () => {
+  it('stamps each connection module id on emitted messages', async () => {
+    const host = createMessageBus('dashboard')
+    const a = connectApplicationToMessageBus(host, {appId: 'app', moduleId: 'module-a'})
+    const b = connectApplicationToMessageBus(host, {appId: 'app', moduleId: 'module-b'})
+    const seen: (string | undefined)[] = []
+    host.subscribe('test.mint', (message) => {
+      seen.push(message.meta.moduleId)
+      message.reply('ok')
+    })
+
+    await a.emit('test.mint')
+    await b.emit('test.mint')
+
+    expect(seen).toEqual(['module-a', 'module-b'])
+  })
+
+  it('defaults the module id to the app id', async () => {
+    const host = createMessageBus('dashboard')
+    const application = connectApplicationToMessageBus(host, {appId: 'favorites'})
+    let meta: {appId: string; moduleId?: string} | undefined
+    host.subscribe('test.mint', (message) => {
+      meta = message.meta
+      message.reply('ok')
+    })
+
+    await application.emit('test.mint')
+
+    expect(meta?.moduleId).toBe('favorites')
+    expect(meta?.moduleId).toBe(meta?.appId)
+  })
+
+  it('returns a connection with disconnect from connectMessageBus', () => {
+    preserveMessageBusInstallation()
+    try {
+      installMessageBus({appId: 'dashboard'})
+      const connection = connectMessageBus({appId: 'favorites', moduleId: 'module'})
+      if (!connection) throw new Error('Expected a dashboard message bus')
+      expect(typeof connection.disconnect).toBe('function')
+    } finally {
+      restoreMessageBusInstallation()
+    }
+  })
+
+  it('tears down one connection while its siblings keep working', async () => {
+    const host = createMessageBus('dashboard')
+    const a = connectApplicationToMessageBus(host, {appId: 'app', moduleId: 'module-a'})
+    const b = connectApplicationToMessageBus(host, {appId: 'app', moduleId: 'module-b'})
+
+    host.subscribe('test.echo', () => {})
+    const pending = a.emit('test.echo', {n: 1}, {timeout: null})
+    pending.catch(() => {})
+
+    const handlerSeen: number[] = []
+    a.subscribe('test.ping', (message) => handlerSeen.push(message.payload.n))
+    const streamSeen: number[] = []
+    const streamComplete = firstValueFrom(a.subscribe('test.ping')).catch((error) => error)
+    a.subscribe('test.ping').subscribe({
+      next: (payload) => streamSeen.push(payload.n),
+    })
+
+    a.disconnect()
+
+    await expect(pending).rejects.toMatchObject({code: 'ABORTED'})
+    // A's subscriptions stop; the stream form completes without a value.
+    await expect(streamComplete).resolves.toBeInstanceOf(EmptyError)
+
+    host.emit('test.ping', {n: 5})
+    expect(handlerSeen).toEqual([])
+    expect(streamSeen).toEqual([])
+
+    // B is untouched and still delivers events.
+    const bSeen: number[] = []
+    b.subscribe('test.ping', (message) => bSeen.push(message.payload.n))
+    host.emit('test.ping', {n: 7})
+    expect(bSeen).toEqual([7])
+  })
+
+  it('completes a stream subscribed after disconnect() without delivering values', () => {
+    const host = createMessageBus('dashboard')
+    const a = connectApplicationToMessageBus(host, {appId: 'app', moduleId: 'module-a'})
+    // Obtain the stream before disconnect, then subscribe after: the abort notifier must replay.
+    const stream = a.subscribe('test.ping')
+
+    a.disconnect()
+
+    const seen: number[] = []
+    let completed = false
+    stream.subscribe({
+      next: (payload) => seen.push(payload.n),
+      complete: () => (completed = true),
+    })
+
+    expect(completed).toBe(true)
+    host.emit('test.ping', {n: 1})
+    expect(seen).toEqual([])
+  })
+
+  it('fails emit, state emit, query, and subscribe after disconnect()', async () => {
+    const host = createMessageBus('dashboard')
+    registerStateTopics(host, {'test.count': 0})
+    const a = connectApplicationToMessageBus(host, {appId: 'app', moduleId: 'module-a'})
+
+    const responderSeen: number[] = []
+    host.subscribe('test.ping', (message) => responderSeen.push(message.payload.n))
+
+    a.disconnect()
+
+    expect(() => a.emit('test.ping', {n: 1})).toThrowError(
+      expect.objectContaining({code: 'ABORTED'}),
+    )
+    expect(() => a.emit('test.count', 1)).toThrowError(expect.objectContaining({code: 'ABORTED'}))
+    await expect(a.query('test.count')).rejects.toMatchObject({code: 'ABORTED'})
+    expect(() => a.subscribe('test.ping', () => {})).toThrowError(
+      expect.objectContaining({code: 'ABORTED'}),
+    )
+
+    // The blocked emit never reached a sibling responder, and the state topic was not republished.
+    expect(responderSeen).toEqual([])
+    expect(host.subscribe('test.count').getCurrent()).toBe(0)
+  })
+
+  it('delivers a reply only to the requesting connection', async () => {
+    const host = createMessageBus('dashboard')
+    const a = connectApplicationToMessageBus(host, {appId: 'app', moduleId: 'module-a'})
+    const b = connectApplicationToMessageBus(host, {appId: 'app', moduleId: 'module-b'})
+    host.subscribe('test.mint', (message) => message.reply(`minted-for-${message.meta.moduleId}`))
+
+    const bReplies: unknown[] = []
+    b.subscribe('test.mint').subscribe(() => bReplies.push('b saw a payload'))
+
+    await expect(a.emit('test.mint')).resolves.toBe('minted-for-module-a')
+    // B observes the fire-and-forget payload but never A's private reply value.
+    expect(bReplies).not.toContain('minted-for-module-a')
   })
 })
 
