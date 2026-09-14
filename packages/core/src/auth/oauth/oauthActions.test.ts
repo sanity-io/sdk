@@ -229,7 +229,11 @@ describe('handleOAuthCallback', () => {
     expect(await handleOAuthCallback(instance!, callbackHref)).toBe(
       'https://app.example.com/callback',
     )
-    // Artifacts are now cleared; a repeat with the same URL fails state validation
+    // Artifacts are now cleared; a repeat with the same URL fails state validation.
+    // Seed fresh artifacts as if a re-authorization started in this tab: the
+    // ignored stale callback must not wipe them.
+    sessionStorage.setItem(OAUTH_STATE_KEY, 'state-next')
+    sessionStorage.setItem(OAUTH_VERIFIER_KEY, 'verifier-next')
     const result = await handleOAuthCallback(instance!, callbackHref)
 
     expect(result).toBe('https://app.example.com/callback')
@@ -238,6 +242,8 @@ describe('handleOAuthCallback', () => {
       type: AuthStateType.LOGGED_IN,
       token: 'new-access',
     })
+    expect(sessionStorage.getItem(OAUTH_STATE_KEY)).toBe('state-next')
+    expect(sessionStorage.getItem(OAUTH_VERIFIER_KEY)).toBe('verifier-next')
   })
 
   it('surfaces an ?error= callback as ERROR without exchanging', async () => {
