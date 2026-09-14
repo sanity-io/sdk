@@ -2,19 +2,16 @@ import {type ClientError} from '@sanity/client'
 import {AuthStateType, setAuthToken} from '@sanity/sdk'
 import {getDashboardEnvironmentState, getDashboardMessageBus} from '@sanity/sdk/_internal'
 import {type MessageBus} from '@sanity/sdk/dashboard'
-import React, {
-  type PropsWithChildren,
-  useContext,
-  useEffect,
-  useRef,
-  useSyncExternalStore,
-} from 'react'
+import React, {type PropsWithChildren, useContext, useEffect, useRef} from 'react'
 import {defer, of} from 'rxjs'
 import {catchError} from 'rxjs/operators'
 
 import {getDashboardModuleContext} from '../dashboard/module'
 import {useAuthState} from '../hooks/auth/useAuthState'
 import {useSanityInstance} from '../hooks/context/useSanityInstance'
+import {createStateSourceHook} from '../hooks/helpers/createStateSourceHook'
+
+const useDashboardEnvironment = createStateSourceHook(getDashboardEnvironmentState)
 
 /**
  * Keeps the SDK auth token in sync with the dashboard "OS".
@@ -108,8 +105,7 @@ export const DashboardTokenRefreshProvider: React.FC<PropsWithChildren> = ({chil
   // and deferring the attempt also gives a host that loads remotes before installing the bus
   // until mount to do so. A failed attempt is not cached, so any re-run of the effect (deps
   // changing) tries again; there is no polling.
-  const environment = getDashboardEnvironmentState(instance)
-  const connected = useSyncExternalStore(environment.subscribe, environment.getCurrent)
+  const connected = useDashboardEnvironment()
   useEffect(() => {
     if (!connected) getDashboardMessageBus(instance, moduleId)
   }, [instance, moduleId, connected])
