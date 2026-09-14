@@ -25,11 +25,9 @@ export interface EffectiveDocModel {
 const MEDIA_LIBRARY_DRAFTED_TYPES = new Set(['sanity.asset'])
 
 /**
- * Different resources have different "default" editing models.
- *
- * Canvas uses a liveEdit model.
- * Medial Library is mostly liveEdit except for `sanity.asset`, which retains the
- * draft/published model. Neither resource supports release perspectives.
+ * Returns the editing model a resource imposes. Canvas is liveEdit. Media
+ * Library is liveEdit except for `sanity.asset`, which retains the
+ * draft/published model. Neither supports release perspectives.
  */
 export function getEffectiveDocumentModel(
   resource: DocumentResource | undefined,
@@ -73,7 +71,7 @@ export function normalizeActionsForResource(
   actions: Action[],
   resource: DocumentResource | undefined,
 ): Action[] {
-  // collect actions that may have changed in unexpected ways
+  // actions whose release perspective was dropped, for the warning below
   const stripped: Array<{documentType: string; documentId: string}> = []
 
   const normalized = actions.map((action) => {

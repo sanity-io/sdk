@@ -50,7 +50,7 @@ export function createGrantsLookup(datasetAcl: DatasetAcl): Record<Grant, ExprNo
   ) as Record<Grant, ExprNode>
 }
 
-// Cache for documents based on an array of document objects.
+// Caches a computed DocumentSet, keyed on the document objects it was built from.
 const documentsCache = new MultiKeyWeakMap<DocumentSet>()
 // Use a WeakMap so that when a computed DocumentSet is no longer in use,
 // its nested cache for actions can be garbage-collected.
@@ -67,15 +67,13 @@ const documentsSelector = createSelector(
       actions,
   ],
   (documentStates, actions) => {
-    // Collect all document IDs needed for permission checks.
-    // Important: liveEdit documents don't have drafts, so we only fetch the single document to avoid waiting for non-existent draft documents.
+    // liveEdit documents have no drafts, so fetch only the single document
+    // rather than waiting on a draft that will never exist
     const documentIds = new Set(
       actions
         .map((action) => {
           if (typeof action.documentId !== 'string') return []
-          // For liveEdit documents, only fetch the single document
           if (action.liveEdit) return [action.documentId]
-          // For standard documents, fetch both draft and published
           const ids: string[] = [
             getPublishedId(DocumentId(action.documentId)),
             getDraftId(DocumentId(action.documentId)),
@@ -98,10 +96,9 @@ const documentsSelector = createSelector(
       documents[documentId] = local
     }
 
-    // Create a key from the documents values (using a nullReplacer when needed).
     const keys = Object.values(
-      // value in this record will be `undefined` because
-      // of the early return if undefined is found above
+      // no value in this record is `undefined`, because of the early return
+      // if undefined is found above
       documents as Record<string, SanityDocument | null>,
     ).map((doc) => (doc === null ? nullReplacer : doc))
     const cached = documentsCache.get(keys)
@@ -124,7 +121,7 @@ const memoizedActionsSelector = createSelector(
   (documents, actions) => {
     if (!documents) return undefined
 
-    // Get (or create) the nested Map for this computed documents.
+    // Get (or create) the nested Map for this computed document set.
     let nestedCache = actionsCache.get(documents)
     if (!nestedCache) {
       nestedCache = new Map<string, DocumentAction[]>()
@@ -133,8 +130,7 @@ const memoizedActionsSelector = createSelector(
 
     const normalizedActions = Array.isArray(actions) ? actions : [actions]
 
-    // Use JSON.stringify to get a serialized key for the actions.
-    // TODO: considering swapping thisfor a more efficient or stable hash
+    // TODO: consider swapping this for a more efficient or stable hash
     const actionsKey = JSON.stringify(normalizedActions)
     const cached = nestedCache.get(actionsKey)
     if (cached) return cached

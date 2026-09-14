@@ -1,9 +1,8 @@
 /**
- * When a document has no more subscribers, its state is cleaned up and removed
- * from the store. A delay used to prevent re-creating resources when the last
- * subscriber is removed quickly before another one is added. This is helpful
- * when used in a frontend where components may suspend or transition to
- * different views quickly.
+ * How long after a document's last subscriber is removed before its state is
+ * cleaned up and removed from the store. Absorbs the gap when a component
+ * suspends or transitions to a different view and resubscribes right away, so
+ * its resources are not re-created.
  */
 export const DOCUMENT_STATE_CLEAR_DELAY = 1000
 export const INITIAL_OUTGOING_THROTTLE_TIME = 1000

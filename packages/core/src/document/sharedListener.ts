@@ -87,8 +87,8 @@ export function createFetchDocument(instance: SanityInstance, resource?: Documen
       resource,
     }).observable.pipe(
       switchMap((client) => {
-        // creates a observable request to the /doc/{documentId} endpoint for a given document id
-        // should work across all kinds of document IDs (drafts.**, version.**., etc.)
+        // requests /doc/{documentId}, which works across all kinds of document
+        // IDs (drafts.**, versions.**, etc.)
         const loadDocument = createDocumentLoaderFromClient(client)
         return loadDocument(documentId)
       }),

@@ -29,7 +29,7 @@ export function handleDiscard(
     })
   }
 
-  // draft/published or version logic
+  // the id to discard: a release version, or the draft
   const versionId = isReleasePerspective(action.perspective)
     ? getVersionId(DocumentId(documentId), action.perspective.releaseName)
     : getDraftId(DocumentId(documentId))

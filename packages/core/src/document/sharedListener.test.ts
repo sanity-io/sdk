@@ -32,7 +32,7 @@ describe('createSharedListener', () => {
     fakeClient = {
       listen: vi.fn(() => fakeListenSubject.asObservable()),
     } as unknown as SanityClient
-    // Make getSubscribableClient return an observable that immediately emits fakeClient.
+    // Make getClientState return an observable that immediately emits fakeClient.
     vi.mocked(getClientState).mockReturnValue({
       observable: of(fakeClient),
     } as StateSource<SanityClient>)
