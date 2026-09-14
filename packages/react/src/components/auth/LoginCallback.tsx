@@ -10,6 +10,11 @@ import {useHandleAuthCallback} from '../../hooks/auth/useHandleAuthCallback'
  * where they started), a real navigation is performed instead so the app's
  * router picks it up.
  *
+ * A different route is detected by pathname only, so apps that route in the
+ * hash (`#/documents/abc`) will not be navigated to the deep link. Those apps
+ * should build a custom callback component with `useHandleOAuthCallback` and
+ * their router's `navigate`.
+ *
  * @alpha
  */
 export function LoginCallback(): React.ReactNode {
@@ -20,10 +25,13 @@ export function LoginCallback(): React.ReactNode {
     handleAuthCallback(url.toString()).then((replacementLocation) => {
       if (!replacementLocation) return
       const next = new URL(replacementLocation, url)
-      if (next.origin === url.origin && next.pathname === url.pathname) {
+      // Core only returns same-origin locations; guard here too since this is
+      // the code that navigates.
+      if (next.origin !== url.origin) return
+      if (next.pathname === url.pathname) {
         // Same document: `replaceState` strips the callback params without a
         // reload. Routers do not observe this, which is fine when only the
-        // query/hash changed. ponytail: a same-path return with different app
+        // query/hash changed. Caveat: a same-path return with different app
         // query params won't re-run router search-param hooks until the next
         // navigation.
         history.replaceState(null, '', replacementLocation)
