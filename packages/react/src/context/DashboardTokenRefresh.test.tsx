@@ -1,10 +1,12 @@
 import {AuthStateType, setAuthToken} from '@sanity/sdk'
+import {getDashboardMessageBus} from '@sanity/sdk/_internal'
 import {act, render} from '@testing-library/react'
 import {of} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, type Mock, vi} from 'vitest'
 
 import {getDashboardModuleContext} from '../dashboard/module'
 import {useAuthState} from '../hooks/auth/useAuthState'
+import {useSanityInstance} from '../hooks/context/useSanityInstance'
 import {DashboardTokenRefreshProvider} from './DashboardTokenRefresh'
 import {ResourceProvider} from './ResourceProvider'
 
@@ -115,17 +117,16 @@ describe('DashboardTokenRefreshProvider', () => {
       expect(mockSetAuthToken).toHaveBeenCalledWith(expect.anything(), 'dashboard-token')
     })
 
-    it('attempts the connection only from the effect, never during render', () => {
-      // With no host bus the store stays disconnected, so render must not call the action
-      // (a store write during render would notify subscribers mid-render). The single call
-      // observed is the effect's post-commit attempt.
+    it('retries from the effect when no host bus exists at first render', () => {
+      // The render-time attempt finds nothing and is not cached, so the effect tries again
+      // after commit. Two attempts, no token, children rendered bare.
       messageBus.client = undefined
 
       act(() => {
         renderProvider()
       })
 
-      expect(messageBus.getDashboardMessageBus).toHaveBeenCalledTimes(1)
+      expect(messageBus.getDashboardMessageBus).toHaveBeenCalledTimes(2)
       expect(mockSetAuthToken).not.toHaveBeenCalled()
     })
 
@@ -146,6 +147,34 @@ describe('DashboardTokenRefreshProvider', () => {
       })
 
       expect(mockSetAuthToken).toHaveBeenCalledWith(expect.anything(), 'dashboard-token')
+    })
+
+    it('connects with the module id before any child reads the bus during render', () => {
+      // getDashboardMessageBus is first-caller-wins per instance. A hook reading the bus in
+      // its render runs before any parent effect, so the provider must connect during render
+      // or the connection is pinned to the app id.
+      const ModuleContext = getDashboardModuleContext()
+      function ReadsBus() {
+        getDashboardMessageBus(useSanityInstance())
+        return null
+      }
+
+      act(() => {
+        render(
+          <ModuleContext.Provider value="favorites/views/list/panel">
+            <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+              <DashboardTokenRefreshProvider>
+                <ReadsBus />
+              </DashboardTokenRefreshProvider>
+            </ResourceProvider>
+          </ModuleContext.Provider>,
+        )
+      })
+
+      expect(messageBus.getDashboardMessageBus.mock.calls[0]).toEqual([
+        expect.anything(),
+        'favorites/views/list/panel',
+      ])
     })
 
     it('forwards the module id from the dashboard module context', () => {

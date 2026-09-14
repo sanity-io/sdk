@@ -2,7 +2,7 @@ import {type ClientError} from '@sanity/client'
 import {AuthStateType, setAuthToken} from '@sanity/sdk'
 import {getDashboardEnvironmentState, getDashboardMessageBus} from '@sanity/sdk/_internal'
 import {type MessageBus} from '@sanity/sdk/dashboard'
-import React, {type PropsWithChildren, useContext, useEffect, useRef} from 'react'
+import React, {type PropsWithChildren, useContext, useEffect, useRef, useState} from 'react'
 import {defer, of} from 'rxjs'
 import {catchError} from 'rxjs/operators'
 
@@ -99,12 +99,14 @@ function DashboardTokenRefresh({
 export const DashboardTokenRefreshProvider: React.FC<PropsWithChildren> = ({children}) => {
   const instance = useSanityInstance()
   const moduleId = useContext(getDashboardModuleContext())
+  // The connection is first-caller-wins per instance, and hooks below read it during their
+  // render, before any effect here could run. Connecting in the first render pins the module
+  // identity before they do; nothing has subscribed to the store yet, so the write is safe.
+  useState(() => getDashboardMessageBus(instance, moduleId))
   // The store owns the connection and exposes whether one exists as a state source, so React
-  // subscribes to that rather than mirroring it into local state. Connecting happens in an
-  // effect, after commit: a store write during render would notify subscribers mid-render,
-  // and deferring the attempt also gives a host that loads remotes before installing the bus
-  // until mount to do so. A failed attempt is not cached, so any re-run of the effect (deps
-  // changing) tries again; there is no polling.
+  // subscribes to that rather than mirroring it into local state. The effect retries for a
+  // host that installs the bus after the remote has rendered; a failed attempt is not cached,
+  // so any re-run (deps changing) tries again. There is no polling.
   const connected = useDashboardEnvironment()
   useEffect(() => {
     if (!connected) getDashboardMessageBus(instance, moduleId)
