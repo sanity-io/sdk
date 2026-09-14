@@ -4,7 +4,7 @@ import {createStateSourceAction} from '../../store/createStateSourceAction'
 import {defineStore} from '../../store/defineStore'
 import {setCleanupTimeout} from '../../utils/setCleanupTimeout'
 import {type MessageBus, type MessageBusStateSource} from './bus'
-import {getDashboardMessageBus} from './store'
+import {requireDashboardMessageBus} from './store'
 import {type StateTopic, type ValueOf} from './topics'
 
 /**
@@ -76,13 +76,8 @@ const dashboardTopicsStore = defineStore<DashboardTopicsState>({
   getInitialState: () => ({topics: {}}),
 })
 
-function getMessageBus(instance: SanityInstance, topic: StateTopic): MessageBus {
-  const messageBus = getDashboardMessageBus(instance)
-  if (!messageBus) {
-    throw new Error(`Cannot read topic "${topic}" without an installed dashboard message bus`)
-  }
-  return messageBus
-}
+const getMessageBus = (instance: SanityInstance, topic: StateTopic): MessageBus =>
+  requireDashboardMessageBus(instance, `read topic "${topic}"`)
 
 function getSource(instance: SanityInstance, topic: StateTopic): MessageBusStateSource<unknown> {
   return getMessageBus(instance, topic).subscribe(topic)

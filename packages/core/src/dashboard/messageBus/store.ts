@@ -45,6 +45,22 @@ export const getDashboardMessageBus = bindActionByInstance(
 )
 
 /**
+ * Returns the instance's message bus connection, or throws when no dashboard host has
+ * installed a bus. `action` names what the caller was about to do, e.g. `read topic "x"`.
+ * @internal
+ */
+export function requireDashboardMessageBus(
+  instance: SanityInstance,
+  action: string,
+): MessageBusConnection {
+  const messageBus = getDashboardMessageBus(instance)
+  if (!messageBus) {
+    throw new Error(`Cannot ${action} without an installed dashboard message bus`)
+  }
+  return messageBus
+}
+
+/**
  * Returns whether a dashboard host has installed a message bus.
  *
  * @remarks
