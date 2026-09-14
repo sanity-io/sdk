@@ -36,4 +36,5 @@ export {getTelemetryManager, initTelemetry, trackHookMounted} from '../telemetry
 export {getUsersKey, parseUsersKey} from '../users/reducers' // only used for memoizing in React, not needed for actual functionality
 export {createGroqSearchFilter} from '../utils/createGroqSearchFilter'
 export {randomId, randomUuid} from '../utils/ids'
+export {createLogger} from '../utils/logger'
 export {isDeepEqual, pickProperties} from '../utils/object'
