@@ -29,7 +29,10 @@ export interface UseOAuthTokensResult {
    * Rejects on transient failures (network, 5xx, 429), leaving tokens unchanged.
    */
   refresh: () => Promise<OAuthTokens | null>
-  /** Revoke and clear stored tokens */
+  /**
+   * Revoke the tokens at the OAuth server and clear them locally. For a normal
+   * sign-out use `useLogOut`, which also ends the Sanity session.
+   */
   revoke: () => Promise<void>
 }
 
@@ -37,8 +40,8 @@ const useOAuthTokensState = createStateSourceHook(getOAuthTokensState)
 const useRefreshOAuthTokens = createCallbackHook(refreshOAuthTokens)
 const useRevokeOAuthTokens = createCallbackHook(revokeOAuthTokens)
 
-function isOAuthTokenExpired(tokens: OAuthTokens | null, now: number = Date.now()): boolean {
-  return tokens ? tokens.expiresAt.getTime() <= now : false
+function isOAuthTokenExpired(tokens: OAuthTokens | null): boolean {
+  return tokens ? tokens.expiresAt.getTime() <= Date.now() : false
 }
 
 /**
@@ -72,7 +75,7 @@ function isOAuthTokenExpired(tokens: OAuthTokens | null, now: number = Date.now(
  *     <div>
  *       <p>Expires at {tokens.expiresAt.toLocaleTimeString()}</p>
  *       <button onClick={handleRefresh}>Refresh if expired</button>
- *       <button onClick={() => revoke()}>Sign out</button>
+ *       <button onClick={() => revoke()}>Revoke tokens</button>
  *     </div>
  *   )
  * }
