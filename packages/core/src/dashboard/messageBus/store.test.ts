@@ -86,19 +86,17 @@ describe('dashboard message bus store', () => {
     instance.dispose()
   })
 
-  it('does not report a dashboard environment when the connection fails', () => {
+  it('does not cache a failed connection', () => {
     const instance = createSanityInstance(config)
     bus.connect.mockReturnValue(undefined)
 
     expect(getDashboardMessageBus(instance)).toBeUndefined()
-    expect(isDashboardEnvironment(instance)).toBe(false)
 
     // A failed connect is not cached, so a later successful connect still lands.
     bus.connect.mockImplementation((options?: {moduleId?: string}) =>
       createFakeConnection(options?.moduleId),
     )
     expect(getDashboardMessageBus(instance)).toBeDefined()
-    expect(isDashboardEnvironment(instance)).toBe(true)
 
     instance.dispose()
   })
@@ -149,16 +147,12 @@ describe('dashboard message bus store', () => {
     disconnected.dispose()
   })
 
-  it('reports the dashboard environment once the instance connects', () => {
-    const instance = createSanityInstance(config)
-
+  it('reports the dashboard environment as soon as a host bus is installed', () => {
     bus.installed.mockReturnValue(false)
-    expect(isDashboardEnvironment(instance)).toBe(false)
+    expect(isDashboardEnvironment()).toBe(false)
 
+    // Before any instance connects: the host owns the session regardless.
     bus.installed.mockReturnValue(true)
-    getDashboardMessageBus(instance)
-    expect(isDashboardEnvironment(instance)).toBe(true)
-
-    instance.dispose()
+    expect(isDashboardEnvironment()).toBe(true)
   })
 })

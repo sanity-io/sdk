@@ -57,9 +57,14 @@ export const getDashboardEnvironmentState = bindActionByInstance(
 )
 
 /**
- * Returns whether this instance is connected to an installed dashboard message bus.
+ * Returns whether a dashboard host has installed a message bus.
+ *
+ * @remarks
+ * Answers "does a host own this session", not "has this instance connected yet". Callers
+ * such as the login redirect run before {@link getDashboardMessageBus} has been called for
+ * the instance, so this must not depend on the connection state.
  * @internal
  */
-export function isDashboardEnvironment(instance: SanityInstance): boolean {
-  return getDashboardEnvironmentState(instance).getCurrent()
+export function isDashboardEnvironment(): boolean {
+  return isMessageBusInstalled()
 }
