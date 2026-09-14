@@ -32,10 +32,7 @@ export interface UseOAuthTokensResult {
    * first, so check `tokens` before retrying.
    */
   refresh: () => Promise<OAuthTokens | null>
-  /**
-   * Revoke the tokens at the OAuth server and clear them locally. For a normal
-   * sign-out use `useLogOut`, which also ends the Sanity session.
-   */
+  /** Revoke the tokens at the OAuth server, clear them locally, and log out. */
   revoke: () => Promise<void>
 }
 
