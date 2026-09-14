@@ -4,9 +4,9 @@ import {
   editDocument,
   getDocumentState,
   type JsonMatch,
+  type ResolveDocument,
   resolveDocument,
 } from '@sanity/sdk'
-import {type SanityDocument} from 'groq'
 import {useCallback} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
@@ -34,8 +34,8 @@ export function useEditDocument<
 >(
   options: DocumentOptions<undefined, TDocumentType, TDataset, TProjectId>,
 ): (
-  nextValue: Updater<SanityDocument<TDocumentType, `${TProjectId}.${TDataset}`>>,
-) => Promise<ActionsResult<SanityDocument<TDocumentType, `${TProjectId}.${TDataset}`>>>
+  nextValue: Updater<ResolveDocument<TDocumentType, `${TProjectId}.${TDataset}`>>,
+) => Promise<ActionsResult<ResolveDocument<TDocumentType, `${TProjectId}.${TDataset}`>>>
 
 // Overload 2: Path provided, relies on Typegen
 /**
@@ -54,8 +54,8 @@ export function useEditDocument<
 >(
   options: DocumentOptions<TPath, TDocumentType, TDataset, TProjectId>,
 ): (
-  nextValue: Updater<JsonMatch<SanityDocument<TDocumentType, `${TProjectId}.${TDataset}`>, TPath>>,
-) => Promise<ActionsResult<SanityDocument<TDocumentType, `${TProjectId}.${TDataset}`>>>
+  nextValue: Updater<JsonMatch<ResolveDocument<TDocumentType, `${TProjectId}.${TDataset}`>, TPath>>,
+) => Promise<ActionsResult<ResolveDocument<TDocumentType, `${TProjectId}.${TDataset}`>>>
 
 // Overload 3: Explicit type, no path
 /**

@@ -76,4 +76,22 @@ export interface AuthConfig {
    * ignoring any storage or callback handling.
    */
   token?: string
+
+  oauth?: {
+    /**
+     * Opaque OAuth `client_id`.
+     */
+    clientId: string
+
+    /**
+     * The redirect URI registered for this client. The OAuth provider
+     * redirects back here with the authorization `code` and `state`.
+     */
+    redirectUri: string
+
+    /**
+     * Organisation id used for RFC 8707 resource scoping.
+     */
+    organizationId: string
+  }
 }

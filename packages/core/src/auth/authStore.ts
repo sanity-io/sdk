@@ -11,6 +11,8 @@ import {resolveAuthMode} from './authMode'
 import {AuthStateType} from './authStateType'
 import {type AuthStrategyOptions} from './authStrategy'
 import {getDashboardInitialState, initializeDashboardAuth} from './dashboardAuth'
+import {getOauthInitialState, initializeOauthAuth} from './oauth/oauthAuth'
+import {type OAuthTokens} from './oauth/types'
 import {getStandaloneInitialState, initializeStandaloneAuth} from './standaloneAuth'
 import {getStudioInitialState, initializeStudioAuth} from './studioAuth'
 import {createLoggedInAuthState, getCleanedUrl, getDefaultLocation} from './utils'
@@ -91,8 +93,10 @@ export interface AuthStoreState {
     callbackUrl: string | undefined
     providedToken: string | undefined
     authMethod: AuthMethodOptions
+    oauth: AuthConfig['oauth']
   }
   dashboardContext?: DashboardContext
+  oauthTokens?: OAuthTokens
 }
 
 // ---------------------------------------------------------------------------
@@ -155,6 +159,9 @@ export const authStore = defineStore<AuthStoreState>({
       case 'studio':
         result = getStudioInitialState(strategyOptions)
         break
+      case 'oauth':
+        result = getOauthInitialState(strategyOptions)
+        break
       case 'dashboard':
         result = getDashboardInitialState(strategyOptions)
         break
@@ -172,6 +179,7 @@ export const authStore = defineStore<AuthStoreState>({
     return {
       authState: result.authState,
       dashboardContext: result.dashboardContext,
+      oauthTokens: result.oauthTokens,
       options: {
         apiHost,
         loginUrl: loginUrl.toString(),
@@ -183,6 +191,7 @@ export const authStore = defineStore<AuthStoreState>({
         storageKey: result.storageKey,
         storageArea: result.storageArea,
         authMethod: result.authMethod,
+        oauth: authConfig.oauth,
       },
     }
   },
@@ -200,6 +209,9 @@ export const authStore = defineStore<AuthStoreState>({
     switch (mode) {
       case 'studio':
         initResult = initializeStudioAuth(context, tokenRefresherRunning)
+        break
+      case 'oauth':
+        initResult = initializeOauthAuth(context)
         break
       case 'dashboard':
         initResult = initializeDashboardAuth(context, tokenRefresherRunning)

@@ -12,6 +12,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -46,7 +49,7 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: blob-report-${{ github.run_id }}-${{ matrix.node-version }}
-          path: '.vitest-reports/*'
+          path: '.vitest/blob/*'
           include-hidden-files: true
           retention-days: 1
 
@@ -54,6 +57,9 @@ jobs:
     if: ${{ !cancelled() }}
     needs: test
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -65,7 +71,7 @@ jobs:
       - name: 'Download coverage artifacts'
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
-          path: .vitest-reports
+          path: .vitest/blob
           pattern: blob-report-${{ github.run_id }}-*
           merge-multiple: true
 

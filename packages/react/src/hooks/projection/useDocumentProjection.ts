@@ -1,5 +1,4 @@
-import {getProjectionState, resolveProjection} from '@sanity/sdk'
-import {type SanityProjectionResult} from 'groq'
+import {getProjectionState, resolveProjection, type ResolveProjectionResult} from '@sanity/sdk'
 import {useCallback, useMemo, useSyncExternalStore} from 'react'
 import {distinctUntilChanged, EMPTY, Observable, startWith, switchMap} from 'rxjs'
 
@@ -64,19 +63,19 @@ export interface useDocumentProjectionResults<TData> {
  * @param options - Options including the document handle properties (`documentId`, `documentType`, etc.) and the `projection`.
  * @returns The projected data, typed based on Typegen.
  *
- * @example Using Typegen for a book preview
+ * @example Using an existing experimental Typegen file for a book preview
  * ```tsx
  * // ProjectionComponent.tsx
- * import {useDocumentProjection, type DocumentHandle} from '@sanity/sdk-react'
+ * import {defineProjection, useDocumentProjection, type DocumentHandle} from '@sanity/sdk-react'
  * import {useRef} from 'react'
- * import {defineProjection} from 'groq'
  *
  * // Define props using DocumentHandle with the specific document type
  * type ProjectionComponentProps = {
  *   doc: DocumentHandle<'book'> // Typegen knows 'book'
  * }
  *
- * // This is required for typegen to generate the correct return type
+ * // Keep the projection string identical to its entry in the existing generated file.
+ * // Current Typegen does not scan defineProjection imported from the SDK.
  * const myProjection = defineProjection(`{
  *   title,
  *   'coverImage': cover.asset->url,
@@ -120,7 +119,7 @@ export function useDocumentProjection<
 >(
   options: useDocumentProjectionOptions<TProjection, TDocumentType, TDataset, TProjectId>,
 ): useDocumentProjectionResults<
-  SanityProjectionResult<TProjection, TDocumentType, `${TProjectId}.${TDataset}`>
+  ResolveProjectionResult<TProjection, TDocumentType, `${TProjectId}.${TDataset}`>
 >
 
 // Overload 2: Explicit type provided

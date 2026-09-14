@@ -21,7 +21,6 @@
     "CHANGELOG.md",
     "**/CHANGELOG.md",
     ".release-please-manifest.json",
-    ".env.example",
-    ".nvmrc"
+    ".env.example"
   ]
 }

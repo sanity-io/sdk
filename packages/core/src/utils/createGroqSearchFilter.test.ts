@@ -31,6 +31,14 @@ describe('createGroqSearchFilter', () => {
     )
   })
 
+  test('should escape backslashes so they cannot escape the closing quote', () => {
+    expect(createGroqSearchFilter('hello\\')).toBe('[@] match text::query("hello\\\\*")')
+  })
+
+  test('should escape backslashes inside an exact match phrase', () => {
+    expect(createGroqSearchFilter('"a\\b"')).toBe('[@] match text::query("\\"a\\\\b\\"")')
+  })
+
   test('should return empty string for empty input', () => {
     expect(createGroqSearchFilter('')).toBe('')
   })

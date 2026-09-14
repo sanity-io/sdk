@@ -1,11 +1,10 @@
 import {CorsOriginError} from '@sanity/client'
 import {AuthStateType, getCorsErrorProjectId, isImportError} from '@sanity/sdk'
-import {isStudioConfig} from '@sanity/sdk/_internal'
+import {isDashboardEnvironment, isStudioConfig} from '@sanity/sdk/_internal'
 import {useEffect, useMemo} from 'react'
 import {ErrorBoundary, type FallbackProps} from 'react-error-boundary'
 
 import {ComlinkTokenRefreshProvider} from '../../context/ComlinkTokenRefresh'
-import {isDashboardEnvironment} from '../../context/dashboardToken'
 import {DashboardTokenRefreshProvider} from '../../context/DashboardTokenRefresh'
 import {useAuthState} from '../../hooks/auth/useAuthState'
 import {useLoginUrl} from '../../hooks/auth/useLoginUrl'

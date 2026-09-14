@@ -50,17 +50,18 @@ Inventory of everything Renovate tracks. No action required.
 
 Rules are scoped by **package name** (or, for apps, by file path) — never by `matchFileNames` on the published packages. Everything automerges after CI passes and applicable release-age checks clear; the auto-approve workflow supplies the required approval.
 
-| Dependency type                                                                                          | Update type | Commit type                                 | Triggers release?     |
-| -------------------------------------------------------------------------------------------------------- | ----------- | ------------------------------------------- | --------------------- |
-| `@sanity/*` (grouped as `sanity`)                                                                        | any         | `fix(deps)`                                 | **Yes, patch**        |
-| Other production `dependencies` (catch-all)                                                              | any         | `fix(deps)`                                 | **Yes, patch**        |
-| Catalog non-`@sanity` runtime deps (`rxjs`, `groq-js`, `react-compiler-runtime`, `react-error-boundary`) | any         | `chore`                                     | No — see caveat below |
-| eslint / vitest / commitlint / react groups                                                              | any         | `chore(tooling)` / `chore(dev-deps)`        | No                    |
-| `devDependencies`                                                                                        | any         | `chore(dev-deps)`                           | No                    |
-| Anything under `apps/**`                                                                                 | any         | `chore(apps)`                               | No                    |
-| `groq`, `@sanity/codegen`                                                                                | —           | disabled (pinned to `typegen-experimental`) | —                     |
-| High-severity security                                                                                   | any         | varies                                      | varies                |
-| Trusted upstream (Sanity-maintained, React, Next, `@types/*`, etc.)                                      | inherits    | inherits                                    | inherits              |
+| Dependency type                                                                                          | Update type | Commit type                                   | Triggers release?    |
+| -------------------------------------------------------------------------------------------------------- | ----------- | --------------------------------------------- | -------------------- |
+| `@sanity/*` (grouped as `sanity`)                                                                        | any         | `fix(deps)`                                   | **Yes, patch**       |
+| Other production `dependencies` (catch-all)                                                              | any         | `fix(deps)`                                   | **Yes, patch**       |
+| Catalog non-`@sanity` runtime deps (`rxjs`, `groq-js`, `react-compiler-runtime`, `react-error-boundary`) | any         | `chore`                                       | No, see caveat below |
+| eslint / vitest / commitlint / react groups                                                              | any         | `chore(tooling)` / `chore(dev-deps)`          | No                   |
+| `devDependencies`                                                                                        | any         | `chore(dev-deps)`                             | No                   |
+| Anything under `apps/**`                                                                                 | any         | `chore(apps)`                                 | No                   |
+| `groq`                                                                                                   | any         | `fix(deps)`                                   | Yes                  |
+| `@sanity/codegen`                                                                                        | any         | disabled (kitchensink experimental generator) | No                   |
+| High-severity security                                                                                   | any         | varies                                        | varies               |
+| Trusted upstream (Sanity-maintained, React, Next, `@types/*`, etc.)                                      | inherits    | inherits                                      | inherits             |
 
 Majors are never grouped — each opens its own PR (`separateMajorMinor` is on by default), so a breaking bump is reviewed in isolation before it automerges.
 
@@ -134,6 +135,14 @@ pnpm run build:bundle                                 # bundle size
 ```
 
 ## Troubleshooting
+
+### Development Node updates
+
+Renovate tracks `devEngines.runtime.version` in the root `package.json` with a custom manager until [native support](https://github.com/renovatebot/renovate/pull/43369) is available. These updates use `chore(tooling)` commits.
+
+The Node update rule runs `pnpm install --lockfile-only --ignore-scripts --no-frozen-lockfile` before Renovate commits the update. The self-hosted runner allows this exact command, and the task includes `pnpm-lock.yaml` in the same commit. Updating the manifest alone would leave the runtime version in the lockfile out of sync.
+
+When native support handles both the runtime pin and its lockfile, remove the custom manager, its package rule, and the runner's `allowedCommands` entry together.
 
 ### A Renovate PR's lockfile looks broken
 

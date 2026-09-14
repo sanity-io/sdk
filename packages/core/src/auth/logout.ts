@@ -57,6 +57,7 @@ export const logout = bindActionGlobally(authStore, async ({state, instance}) =>
     logger.info('User logged out, clearing stored tokens')
     state.set('logoutSuccess', {
       authState: {type: AuthStateType.LOGGED_OUT, isDestroyingSession: false},
+      oauthTokens: undefined,
     })
     storageArea?.removeItem(storageKey)
     storageArea?.removeItem(`${storageKey}_last_refresh`)

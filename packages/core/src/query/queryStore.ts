@@ -1,5 +1,4 @@
 import {type ResponseQueryOptions} from '@sanity/client'
-import {type SanityQueryResult} from 'groq'
 import {
   catchError,
   combineLatest,
@@ -36,6 +35,7 @@ import {
 } from '../store/createStateSourceAction'
 import {type StoreState} from '../store/createStoreState'
 import {defineStore, type StoreContext} from '../store/defineStore'
+import {type ResolveQueryResult} from '../typegen/resolve'
 import {randomId} from '../utils/ids'
 import {setCleanupTimeout} from '../utils/setCleanupTimeout'
 import {
@@ -278,7 +278,7 @@ export function getQueryState<
 >(
   instance: SanityInstance,
   queryOptions: QueryOptions<TQuery, TDataset, TProjectId>,
-): StateSource<SanityQueryResult<TQuery, `${TProjectId}.${TDataset}`> | undefined>
+): StateSource<ResolveQueryResult<TQuery, `${TProjectId}.${TDataset}`> | undefined>
 
 /** @beta */
 export function getQueryState<TData>(
@@ -347,7 +347,7 @@ export function resolveQuery<
 >(
   instance: SanityInstance,
   queryOptions: ResolveQueryOptions<TQuery, TDataset, TProjectId>,
-): Promise<SanityQueryResult<TQuery, `${TProjectId}.${TDataset}`>>
+): Promise<ResolveQueryResult<TQuery, `${TProjectId}.${TDataset}`>>
 
 /** @beta */
 export function resolveQuery<TData>(

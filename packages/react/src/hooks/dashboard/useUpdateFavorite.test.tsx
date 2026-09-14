@@ -121,11 +121,18 @@ describe('useUpdateFavorite', () => {
     mockSetFavorite.mockRejectedValue(new Error('mutate failed'))
 
     const {result} = renderHook(() => useUpdateFavorite(handle), {wrapper})
+    let error: unknown
 
     await act(async () => {
-      await expect(result.current.favorite()).rejects.toThrow('mutate failed')
+      try {
+        await result.current.favorite()
+      } catch (caughtError) {
+        error = caughtError
+      }
     })
 
+    expect(error).toBeInstanceOf(Error)
+    expect((error as Error).message).toBe('mutate failed')
     await waitFor(() => expect(result.current.error).toBeInstanceOf(Error))
   })
 

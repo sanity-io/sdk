@@ -1,3 +1,4 @@
+import {defineProjection} from '@sanity/sdk'
 import {
   DatasetResource,
   type DocumentHandle,
@@ -9,15 +10,10 @@ import {
   useResource,
 } from '@sanity/sdk-react'
 import {Badge, Button, TextInput} from '@sanity/ui'
-import {defineProjection} from 'groq'
 import {type JSX, type ReactNode, type RefObject, Suspense, useRef} from 'react'
 import {useSearchParams} from 'react-router'
 import {Box, Card, Flex, Text, VStack} from 'ui5'
 
-import {
-  type MultiResourceAuthorProjectionProjectionResult,
-  MultiResourceMovieProjectionProjectionResult,
-} from '../../sanity.types'
 import {PageLayout} from '../components/PageLayout'
 import {devResources, e2eResources, isE2E} from '../sanityConfigs'
 
@@ -50,6 +46,22 @@ const multiResourceMovieProjection = defineProjection(`{
   release_date,
   "hasPoster": defined(hosted_poster_path)
   }`)
+
+// Hand-written because TypeGen cannot see these projections yet: its scanner recognizes
+// `defineProjection` imported from `groq`, and this app imports it from `@sanity/sdk`.
+// Delete both types once the scanner learns the SDK import, and let inference take over.
+type AuthorProjectionResult = {
+  name: string | null
+  role: 'designer' | 'developer' | 'ops' | null
+  awardCount: number | null
+  firstAward: string | null
+}
+
+type MovieProjectionResult = {
+  title: string | null
+  release_date: string | null
+  hasPoster: boolean
+}
 
 interface ProjectionCardProps<TData = unknown> {
   docHandle: DocumentHandle
@@ -238,7 +250,7 @@ function MovieEditor({docHandle}: {docHandle: DocumentHandle<'movie'>}) {
 
 function AuthorProjection({docHandle}: {docHandle: DocumentHandle<'author'>}) {
   return (
-    <ProjectionCard<MultiResourceAuthorProjectionProjectionResult>
+    <ProjectionCard<AuthorProjectionResult>
       docHandle={docHandle}
       projection={multiResourceAuthorProjection}
       title="Author Projection"
@@ -266,7 +278,7 @@ function AuthorProjection({docHandle}: {docHandle: DocumentHandle<'author'>}) {
 
 function MovieProjection({docHandle}: {docHandle: DocumentHandle<'movie'>}) {
   return (
-    <ProjectionCard<MultiResourceMovieProjectionProjectionResult>
+    <ProjectionCard<MovieProjectionResult>
       docHandle={docHandle}
       projection={multiResourceMovieProjection}
       title="Movie Projection"

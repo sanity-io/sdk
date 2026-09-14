@@ -13,6 +13,8 @@ export {
   parseCommentsQueryOptionsKey,
   parseDocumentCommentsOptionsKey,
 } from '../comments/commentsStore'
+export {installMessageBus, resetMessageBus} from '../dashboard/messageBus/bus'
+export {getDashboardMessageBus, isDashboardEnvironment} from '../dashboard/messageBus/client'
 export {PREVIEW_PROJECTION} from '../preview/previewConstants'
 export {transformProjectionToPreview} from '../preview/previewProjectionUtils'
 export {getQueryKey, parseQueryKey} from '../query/queryStore' // only used for memoizing in React, not needed for actual functionality

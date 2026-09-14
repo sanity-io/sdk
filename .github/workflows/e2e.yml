@@ -36,18 +36,20 @@ jobs:
       # see if the Playwright version we're using is already cached -- skip download if so
       - name: 🔍 Determine Playwright version
         id: pw-version
-        run: echo "version=$(npx playwright --version | sed 's/Version //')" >> "$GITHUB_OUTPUT"
+        run: |
+          version="$(pnpm exec playwright --version)"
+          echo "version=${version#Version }" >> "$GITHUB_OUTPUT"
 
       - name: 💾 Cache Playwright browsers
         id: cache-playwright-browsers
-        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ~/.cache/ms-playwright
           key: ${{ runner.os }}-${{ steps.pw-version.outputs.version }}-playwright-browsers
 
       - name: Install Playwright browsers
         if: steps.cache-playwright-browsers.outputs.cache-hit != 'true'
-        run: npx playwright install --with-deps
+        run: pnpm exec playwright install --with-deps
 
   playwright-tests:
     needs: setup
@@ -92,18 +94,20 @@ jobs:
 
       - name: 🔍 Determine Playwright version
         id: pw-version
-        run: echo "version=$(npx playwright --version | sed 's/Version //')" >> "$GITHUB_OUTPUT"
+        run: |
+          version="$(pnpm exec playwright --version)"
+          echo "version=${version#Version }" >> "$GITHUB_OUTPUT"
 
       - name: 💾 Restore cached Playwright browsers
         id: cache-playwright-browsers
-        uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25 # v5
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ~/.cache/ms-playwright
           key: ${{ runner.os }}-${{ steps.pw-version.outputs.version }}-playwright-browsers
 
       - name: Install Playwright browsers
         if: steps.cache-playwright-browsers.outputs.cache-hit != 'true'
-        run: npx playwright install --with-deps
+        run: pnpm exec playwright install --with-deps
 
       - name: Install WebKit Dependencies
         if: matrix.browser == 'webkit'

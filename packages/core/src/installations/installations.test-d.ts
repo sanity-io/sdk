@@ -1,5 +1,6 @@
 import {expectTypeOf, test} from 'vitest'
 
+import {type ApplicationInterface} from '../applications/applications'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {type StateSource} from '../store/createStateSourceAction'
 import {type FetcherSnapshot} from '../store/fetcherStore'
@@ -10,7 +11,6 @@ import {
   type InstallationActiveConfig,
   type InstallationBase,
   type InstallationInclude,
-  type InstallationInterface,
   installations,
   type InstallationsResponse,
 } from './installations'
@@ -40,7 +40,7 @@ test('Installation — each token adds its top-level field, required, others abs
     Extract<keyof Installation<'access'>, 'activeConfig' | 'interfaces'>
   >().toEqualTypeOf<never>()
 
-  expectTypeOf<Installation<'interfaces'>['interfaces']>().toEqualTypeOf<InstallationInterface[]>()
+  expectTypeOf<Installation<'interfaces'>['interfaces']>().toEqualTypeOf<ApplicationInterface[]>()
   expectTypeOf<
     Installation<'activeConfig'>['activeConfig']
   >().toEqualTypeOf<InstallationActiveConfig | null>()
@@ -49,7 +49,7 @@ test('Installation — each token adds its top-level field, required, others abs
 test('Installation — multiple tokens add each field', () => {
   type Both = Installation<'access' | 'interfaces'>
   expectTypeOf<Both['access']>().toEqualTypeOf<InstallationAccess[]>()
-  expectTypeOf<Both['interfaces']>().toEqualTypeOf<InstallationInterface[]>()
+  expectTypeOf<Both['interfaces']>().toEqualTypeOf<ApplicationInterface[]>()
   expectTypeOf<Extract<keyof Both, 'activeConfig'>>().toEqualTypeOf<never>()
 })
 

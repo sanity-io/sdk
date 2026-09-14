@@ -59,6 +59,10 @@ const config: KnipConfig = {
         'react-compiler-runtime',
         // Loaded via createRequire in package.config.ts when VISUALIZER=true
         'rolldown',
+        // Pinned so the version inlined into the declaration bundle (via
+        // @sanity/comlink's re-exported types) is declared and Renovate-tracked;
+        // it is never imported directly.
+        'xstate',
       ],
     },
     'packages/@repo/e2e': {

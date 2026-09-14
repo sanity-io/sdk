@@ -25,22 +25,39 @@ export type ApplicationInclude =
   | 'config.mfManifest'
   | 'activeDeployment'
 
+type ApplicationInterfaceBase = {
+  id: string
+  name: string
+  title: string
+  version: string
+  /** Module federation module ID; resolved from the host mf-manifest at runtime */
+  moduleId: string
+}
+
+/**
+ * Placement metadata for application and panel interfaces.
+ *
+ * @see https://www.sanity.io/docs/http-reference/applications-api
+ * @public
+ */
+export type ApplicationInterfacePlacementMetadata = {
+  dock?: {group?: string; order?: number}
+}
+
 /**
  * An interface exposed by a deployment, embedded when `interfaces` is included.
  *
  * @see https://www.sanity.io/docs/http-reference/applications-api
  * @public
  */
-export interface ApplicationInterface {
-  id: string
-  type: 'app' | 'worker' | 'asset_source' | 'panel'
-  name: string
-  title: string
-  version: string
-  /** Module federation module ID; resolved from the host mf-manifest at runtime */
-  moduleId: string
-  metadata: {group?: string; priority?: number} | null
-}
+export type ApplicationInterface = ApplicationInterfaceBase &
+  (
+    | {type: 'app'; metadata: ApplicationInterfacePlacementMetadata | null}
+    | {type: 'panel'; metadata: ApplicationInterfacePlacementMetadata | null}
+    | {type: 'asset_source'; metadata: null}
+    | {type: 'worker'; metadata: null}
+    | {type: 'tile'; metadata: {order?: number; size: 'small' | 'large' | 'banner'}}
+  )
 
 /**
  * A studio workspace of a deployment, embedded when `workspaces` is included.
@@ -136,16 +153,24 @@ export interface ApplicationBase {
 
 // Requesting any of these tokens forces the deployment summary into the response.
 type DeploymentToken = 'activeDeployment' | 'interfaces' | 'workspaces' | 'access'
+type ConfigToken = 'config.studio' | 'config.mfManifest'
 
-// `config` is present when either config child was requested; each child is
-// gated on its own token.
-type ApplicationConfigShape<Include extends ApplicationInclude> = Included<
+type ApplicationConfig<Include extends ApplicationInclude> = Included<
   ApplicationInclude,
   'config.studio',
   Include,
-  {config: {studio: ApplicationStudioConfig}}
+  {studio?: ApplicationStudioConfig}
 > &
-  Included<ApplicationInclude, 'config.mfManifest', Include, {config: {mfManifest: unknown}}>
+  Included<ApplicationInclude, 'config.mfManifest', Include, {mfManifest?: unknown}>
+
+// Brett returns `config: {}` when a requested config value is not stored.
+type ApplicationConfigShape<Include extends ApplicationInclude> = [ApplicationInclude] extends [
+  Include,
+]
+  ? {config?: ApplicationConfig<Include>}
+  : IncludesAny<Include, ConfigToken> extends true
+    ? {config: ApplicationConfig<Include>}
+    : unknown
 
 // `activeDeployment` is present when any deployment-related token was requested;
 // a wide include array makes it optional.

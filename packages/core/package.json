@@ -49,6 +49,10 @@
     "./comlink": {
       "source": "./src/_exports/comlink.ts",
       "default": "./dist/_exports/comlink.js"
+    },
+    "./dashboard": {
+      "source": "./src/_exports/dashboard.ts",
+      "default": "./dist/_exports/dashboard.js"
     }
   },
   "publishConfig": {
@@ -57,7 +61,8 @@
       "./package.json": "./package.json",
       "./_internal": "./dist/_exports/_internal.js",
       "./agent": "./dist/_exports/agent.js",
-      "./comlink": "./dist/_exports/comlink.js"
+      "./comlink": "./dist/_exports/comlink.js",
+      "./dashboard": "./dist/_exports/dashboard.js"
     },
     "access": "public"
   },
@@ -81,7 +86,7 @@
     "@sanity/comlink": "catalog:",
     "@sanity/diff-match-patch": "^3.2.0",
     "@sanity/diff-patch": "^6.0.0",
-    "@sanity/id-utils": "^1.0.0",
+    "@sanity/id-utils": "^1.1.0",
     "@sanity/image-url": "^2.1.1",
     "@sanity/json-match": "^1.0.5",
     "@sanity/message-protocol": "catalog:",
@@ -92,7 +97,7 @@
     "groq-js": "catalog:",
     "reselect": "^5.1.1",
     "rxjs": "catalog:",
-    "zustand": "^5.0.13"
+    "zustand": "^5.0.15"
   },
   "devDependencies": {
     "@repo/config-eslint": "workspace:*",
@@ -112,5 +117,5 @@
     "vitest": "catalog:"
   },
   "browserslist": "extends @sanity/browserslist-config",
-  "packageManager": "pnpm@10.34.5"
+  "packageManager": "pnpm@12.4.0"
 }

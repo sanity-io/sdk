@@ -1,7 +1,6 @@
 import {type Action, ClientError, CorsOriginError, type Mutation} from '@sanity/client'
 import {DocumentId, getDraftId, getPublishedId, getVersionId} from '@sanity/id-utils'
 import {jsonMatch} from '@sanity/json-match'
-import {type SanityDocument} from 'groq'
 import {type ExprNode} from 'groq-js'
 import {
   catchError,
@@ -46,6 +45,7 @@ import {
 import {type SanityInstance} from '../store/createSanityInstance'
 import {createStateSourceAction, type StateSource} from '../store/createStateSourceAction'
 import {defineStore, type StoreContext} from '../store/defineStore'
+import {type ResolveDocument} from '../typegen/resolve'
 import {type DocumentAction} from './actions'
 import {
   ACL_RETRY_BASE_DELAY,
@@ -98,7 +98,7 @@ export interface DocumentStoreState {
   identity?: string
   error?: unknown
   sharedListener: SharedListener
-  fetchDocument: (documentId: string) => Observable<SanityDocument | null>
+  fetchDocument: (documentId: string) => Observable<ResolveDocument | null>
   events: Subject<DocumentEvent>
 }
 
@@ -108,12 +108,12 @@ export interface DocumentState {
    * the "remote" local copy that matches the server. represents the last known
    * server state. this gets updated every time we confirm remote patches
    */
-  remote?: SanityDocument | null
+  remote?: ResolveDocument | null
   /**
    * the current ephemeral working copy that includes local optimistic changes
    * that have not yet been confirmed by the server
    */
-  local?: SanityDocument | null
+  local?: ResolveDocument | null
   /**
    * the revision that our remote document is at
    */
@@ -194,7 +194,7 @@ export function getDocumentState<
 >(
   instance: SanityInstance,
   options: DocumentOptions<undefined, TDocumentType, TDataset, TProjectId>,
-): StateSource<SanityDocument<TDocumentType, `${TProjectId}.${TDataset}`> | undefined | null>
+): StateSource<ResolveDocument<TDocumentType, `${TProjectId}.${TDataset}`> | undefined | null>
 
 /** @beta */
 export function getDocumentState<
@@ -206,7 +206,7 @@ export function getDocumentState<
   instance: SanityInstance,
   options: DocumentOptions<TPath, TDocumentType, TDataset, TProjectId>,
 ): StateSource<
-  JsonMatch<SanityDocument<TDocumentType, `${TProjectId}.${TDataset}`>, TPath> | undefined
+  JsonMatch<ResolveDocument<TDocumentType, `${TProjectId}.${TDataset}`>, TPath> | undefined
 >
 
 /** @beta */
@@ -229,12 +229,12 @@ const _getDocumentState = bindActionByResource(
       const {documentId: docId, path, liveEdit, perspective} = options
       const documentId = DocumentId(docId)
       if (error) throw error
-      let document: SanityDocument | null | undefined
+      let document: ResolveDocument | null | undefined
 
       if (liveEdit) {
         document = documentStates[documentId]?.local
       } else {
-        let version: SanityDocument | null | undefined
+        let version: ResolveDocument | null | undefined
         if (isReleasePerspective(perspective)) {
           const versionId = getVersionId(documentId, perspective.releaseName)
           version = documentStates[versionId]?.local
@@ -267,16 +267,16 @@ export function resolveDocument<
 >(
   instance: SanityInstance,
   docHandle: DocumentHandle<TDocumentType, TDataset, TProjectId>,
-): Promise<SanityDocument<TDocumentType, `${TProjectId}.${TDataset}`> | null>
+): Promise<ResolveDocument<TDocumentType, `${TProjectId}.${TDataset}`> | null>
 /** @beta */
-export function resolveDocument<TData extends SanityDocument>(
+export function resolveDocument<TData extends ResolveDocument>(
   instance: SanityInstance,
   docHandle: DocumentHandle<string, string, string>,
 ): Promise<TData | null>
 /** @beta */
 export function resolveDocument(
   ...args: Parameters<typeof _resolveDocument>
-): Promise<SanityDocument | null> {
+): Promise<ResolveDocument | null> {
   return _resolveDocument(...args)
 }
 const _resolveDocument = bindActionByResource(
@@ -287,7 +287,7 @@ const _resolveDocument = bindActionByResource(
         ...docHandle,
         path: undefined,
       }).observable.pipe(filter((i) => i !== undefined)),
-    ) as Promise<SanityDocument | null>
+    ) as Promise<ResolveDocument | null>
   },
 )
 

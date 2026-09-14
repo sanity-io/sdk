@@ -13,15 +13,19 @@ Before contributing, please read our [code of conduct](https://github.com/sanity
 
 ### Prerequisites
 
-- **Node.js**: see [`.nvmrc`](.nvmrc). Run `nvm use` (or your equivalent for [fnm](https://github.com/Schniz/fnm), [asdf](https://asdf-vm.com/), [Volta](https://volta.sh/), etc.) to match.
+- **Node.js and npm**: install Node.js 22.13 or newer to bootstrap the tools. The development runtime is pinned in `devEngines.runtime` in [`package.json`](package.json). `pnpm install` downloads that version, and `pnpm run` and `pnpm exec` use it automatically.
 - **pnpm**: pinned via the `packageManager` field in `package.json`. Run `corepack enable` once and pnpm will resolve to the correct version automatically.
 
-Check your versions:
+After installing dependencies, check your versions:
 
 ```bash
-node --version
+pnpm exec node --version
 pnpm --version
 ```
+
+Bare `node` commands may still use your shell's Node version. To make them follow the project pin too, use pnpm's [project-aware global bins](https://pnpm.io/blog/whats-different-in-pnpm-12#project-aware-global-bins). You can also keep your existing version manager and use `pnpm exec node` when you need the pinned runtime.
+
+CI installs dependencies with `--no-runtime` so the Node version selected by `actions/setup-node` takes precedence. The test and build matrices continue to cover Node 22 and 24.
 
 ## Setup
 
