@@ -216,9 +216,10 @@ export interface MessageBusClient {
  */
 export interface MessageBusHost extends MessageBusConnection {
   /**
-   * Every open application connection first, then each new one as it joins. The host's own
-   * connections are not included. The same {@link MessageBusClient} object is handed out for
-   * a connection across subscriptions, so it can be kept in a `Set`.
+   * Every open connection other than this one first, then each new one as it joins. The same
+   * {@link MessageBusClient} object is handed out for a connection across subscriptions, so it
+   * can be kept in a `Set`. A connection stays listed until it calls `disconnect()`; the SDK
+   * does that when the owning `SanityInstance` is disposed.
    */
   readonly connections: Observable<MessageBusClient>
 }
@@ -926,10 +927,11 @@ function createClient(
   } as MessageBusClient
 }
 
-// Open application connections first, then each new one; one client object per connection so
-// the host can keep them in a Set. Completes when the host connection disconnects.
+// Open connections other than the host's own first, then each new one; one client object per
+// connection so the host can keep them in a Set. Completes when the host connection disconnects.
 function createConnectionsSource(
   registry: MessageBusRegistry,
+  self: ConnectionRecord,
   compatibility: TopicCompatibility,
   completeOn: Observable<unknown>,
 ): Observable<MessageBusClient> {
@@ -943,7 +945,7 @@ function createConnectionsSource(
     return client
   }
   return defer(() => concat(from([...registry.connections]), registry.connected$)).pipe(
-    filter((record) => record.appId !== registry.appId),
+    filter((record) => record !== self),
     map(clientFor),
     takeUntil(completeOn),
   )
@@ -1081,7 +1083,7 @@ function createConnection(
 
   if (appId === registry.appId) {
     Object.assign(connection, {
-      connections: createConnectionsSource(registry, compatibility, connectionAborted$),
+      connections: createConnectionsSource(registry, record, compatibility, connectionAborted$),
     })
   }
 

@@ -128,8 +128,9 @@ describe('dashboard connection', () => {
     secondInstaller.connections.subscribe((client) => seen.push(client.appId)).unsubscribe()
     dashboard.connections.subscribe((client) => client.emit('auth.token', 'token'))
 
-    // Both installers share one bus: the second sees the connection, the first can write to it.
-    expect(seen).toEqual(['favorites'])
+    // Both installers share one bus: the second sees every other connection, the first can
+    // write to the application.
+    expect(seen).toEqual(['dashboard', 'favorites'])
     expect(application.subscribe('auth.token').getCurrent()).toBe('token')
   })
 
@@ -781,6 +782,18 @@ describe('per-connection state', () => {
     client.emit('test.profile', {name: 'Ada'} as never)
 
     await expect(app.query('test.profile')).resolves.toEqual({fullName: 'Ada', tags: []})
+  })
+
+  it('lists and writes to a sibling connection that shares the host app id', () => {
+    const host = createMessageBus('dashboard')
+    const {app, client} = connect(host, {appId: 'dashboard', moduleId: 'dashboard/views/dock'})
+
+    client.emit('auth.token', 'token')
+
+    expect(client.appId).toBe('dashboard')
+    expect(app.subscribe('auth.token').getCurrent()).toBe('token')
+    // Only the host's own connection is left out.
+    expect(host.subscribe('auth.token').getCurrent()).toBeUndefined()
   })
 
   it('does not expose connections to an application', () => {
