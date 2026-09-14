@@ -37,6 +37,14 @@ export default defineCliConfig({
     resolve: {
       ...prev.resolve,
       alias: [
+        // `@portabletext/plugin-sdk-value` still imports the removed
+        // `useComments`, so the bare specifier resolves to a shim that adds it
+        // back over `useDocumentComments`. Anchored, so `@sanity/sdk-react/dashboard`
+        // falls through to the prefix alias below. See src/compat/sdkReact.ts.
+        {
+          find: /^@sanity\/sdk-react$/,
+          replacement: resolve(import.meta.dirname, 'src/compat/sdkReact.ts'),
+        },
         ...Object.entries({
           ...prev.resolve?.alias,
           '@sanity/sdk': resolve(import.meta.dirname, '../../packages/core/src/_exports'),
