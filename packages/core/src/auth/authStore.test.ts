@@ -339,6 +339,24 @@ describe('authStore', () => {
       expect(options.authMethod).toBe('localstorage')
     })
 
+    it('only exposes oauth options when the resolved mode is oauth', () => {
+      const oauth = {
+        clientId: 'client-abc',
+        redirectUri: 'https://app.example.com/callback',
+        organizationId: 'org123',
+      }
+      vi.mocked(getStudioTokenFromLocalStorage).mockReturnValue(null)
+      vi.mocked(getTokenFromStorage).mockReturnValue(null)
+
+      // studio takes precedence over oauth, so oauth options must be dropped
+      instance = createSanityInstance({projectId: 'p', dataset: 'd', studio: {}, auth: {oauth}})
+      expect(authStore.getInitialState(instance, null).options.oauth).toBeUndefined()
+      instance.dispose()
+
+      instance = createSanityInstance({projectId: 'p', dataset: 'd', auth: {oauth}})
+      expect(authStore.getInitialState(instance, null).options.oauth).toEqual(oauth)
+    })
+
     it('logs auth initialized in logged out state when no token available', () => {
       instance = createSanityInstance({
         projectId: 'p',
