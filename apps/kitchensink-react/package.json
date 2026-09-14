@@ -18,14 +18,14 @@
     "types:generate": "node scripts/typegen.mjs"
   },
   "dependencies": {
-    "@portabletext/editor": "8.1.2",
+    "@portabletext/editor": "8.1.5",
     "@portabletext/keyboard-shortcuts": "^3.0.0",
-    "@portabletext/plugin-sdk-value": "8.1.1",
-    "@portabletext/toolbar": "^9.0.7",
-    "@sanity/icons": "^5.2.1",
+    "@portabletext/plugin-sdk-value": "8.1.4",
+    "@portabletext/toolbar": "^9.0.10",
+    "@sanity/icons": "^5.2.2",
     "@sanity/sdk": "workspace:*",
     "@sanity/sdk-react": "workspace:*",
-    "@sanity/ui": "^4.0.7",
+    "@sanity/ui": "^4.2.1",
     "groq": "catalog:",
     "inter-ui": "^4.1.1",
     "json-edit-react": "^1.30.2",
@@ -38,7 +38,7 @@
     "refractor": "^5.0.0",
     "styled-components": "^6.5.3",
     "typescript": "catalog:",
-    "ui5": "npm:@sanity/ui@5.0.0-alpha.8"
+    "ui5": "npm:@sanity/ui@5.0.0-alpha.10"
   },
   "devDependencies": {
     "@playwright/test": "catalog:",
