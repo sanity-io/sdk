@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.2.1](https://github.com/sanity-io/sdk/compare/sdk-v3.2.0...sdk-v3.2.1) (2026-09-15)
+
+
+### Bug Fixes
+
+* **deps:** update sanity ([#1245](https://github.com/sanity-io/sdk/issues/1245)) ([362b0f6](https://github.com/sanity-io/sdk/commit/362b0f691be5d5fc623215f12058693fbb5589db))
+
 ## [3.2.0](https://github.com/sanity-io/sdk/compare/sdk-v3.1.0...sdk-v3.2.0) (2026-09-15)
 
 

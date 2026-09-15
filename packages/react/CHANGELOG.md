@@ -1,5 +1,19 @@
 # Changelog
 
+## [3.2.1](https://github.com/sanity-io/sdk/compare/sdk-react-v3.2.0...sdk-react-v3.2.1) (2026-09-15)
+
+
+### Miscellaneous
+
+* **sdk-react:** Synchronize sdk versions
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk bumped to 3.2.1
+
 ## [3.2.0](https://github.com/sanity-io/sdk/compare/sdk-react-v3.1.0...sdk-react-v3.2.0) (2026-09-15)
 
 
