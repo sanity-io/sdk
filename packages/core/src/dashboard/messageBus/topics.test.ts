@@ -4,6 +4,7 @@ import {type Application, type ApplicationInclude} from '../../applications/appl
 import {type MessageBus} from './bus'
 import {
   type ApplicationConfig,
+  type ApplicationConfigAppType,
   type PayloadOf,
   type ReplyOf,
   type StateTopic,
@@ -40,6 +41,12 @@ describe('dashboard topic types', () => {
       dock?: {group?: string; order?: number}
     } | null>()
     expectTypeOf<ValueOf<'applications.foreground'>>().toEqualTypeOf<Application['id'] | null>()
+  })
+
+  it('keeps appType open for forward compatibility without collapsing to string', () => {
+    expectTypeOf<'media-library'>().toMatchTypeOf<ApplicationConfigAppType>()
+    // Guards the `& {}` trick: a plain `string` here would drop known-value autocomplete.
+    expectTypeOf<ApplicationConfigAppType>().not.toEqualTypeOf<string>()
   })
 
   it('exposes event payload and reply values', () => {
