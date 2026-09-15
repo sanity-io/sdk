@@ -44,6 +44,7 @@ export {
   useNavigateToStudioDocument,
 } from '../hooks/dashboard/useNavigateToStudioDocument'
 export {useOrganizationId} from '../hooks/dashboard/useOrganizationId'
+export {useRemoteClient} from '../hooks/dashboard/useRemoteClient'
 export {useTopic} from '../hooks/dashboard/useTopic'
 export {useWindowTitle} from '../hooks/dashboard/useWindowTitle'
 export type {
