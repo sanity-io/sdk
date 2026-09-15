@@ -71,9 +71,6 @@ jobs:
     needs: release-please
     if: ${{ needs.release-please.outputs.command == 'true' }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-
       - name: Mark SDK issues as done
         uses: sanity-labs/mark-issues-done-action@88e6a3e6bc5a9c86d45873c4dba3302a4cafcb65 # main
         with:
