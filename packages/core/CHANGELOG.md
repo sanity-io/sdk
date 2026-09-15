@@ -1,5 +1,30 @@
 # Changelog
 
+## [3.2.0](https://github.com/sanity-io/sdk/compare/sdk-v3.1.0...sdk-v3.2.0) (2026-09-15)
+
+
+### Features
+
+* **core:** add OAuth authorization-code + PKCE auth mode ([#1162](https://github.com/sanity-io/sdk/issues/1162)) ([1513fbf](https://github.com/sanity-io/sdk/commit/1513fbf1497c58634761a94e03b629c278681a7f))
+* **core:** connect one message bus per SanityInstance with module identity ([#1200](https://github.com/sanity-io/sdk/issues/1200)) ([c17f440](https://github.com/sanity-io/sdk/commit/c17f4409e0699e27a4e6f8306401794a21a41f94))
+* **core:** export internal mutation evaluator ([#1250](https://github.com/sanity-io/sdk/issues/1250)) ([70170a5](https://github.com/sanity-io/sdk/commit/70170a562ae99d126648d1a0e3e9639a82c05794))
+* **core:** give each message bus connection its own state ([#1251](https://github.com/sanity-io/sdk/issues/1251)) ([911ff88](https://github.com/sanity-io/sdk/commit/911ff8861d35fd1a75e45d6af6da2fc283e4fa16))
+* **core:** stamp moduleId on message bus meta and add per-connection disconnect ([#1199](https://github.com/sanity-io/sdk/issues/1199)) ([a265484](https://github.com/sanity-io/sdk/commit/a265484f24a01e4e9760636491a2c7c04857fc93))
+* **react:** `useApplicationConfig` ([#1148](https://github.com/sanity-io/sdk/issues/1148)) ([456d3fc](https://github.com/sanity-io/sdk/commit/456d3fc38e04288490e372100d638fdb9fba3537))
+* **react:** add `useApplicationForegroundId` ([#1128](https://github.com/sanity-io/sdk/issues/1128)) ([f50ecf0](https://github.com/sanity-io/sdk/commit/f50ecf0757211a850411ac7a43c17f621130c0c5))
+* **react:** add `useEmit` ([#1146](https://github.com/sanity-io/sdk/issues/1146)) ([3a788c9](https://github.com/sanity-io/sdk/commit/3a788c9c3b3496f609f6f2c1836910c059a409fe))
+* **react:** add `useTopic` ([#1212](https://github.com/sanity-io/sdk/issues/1212)) ([13c3e25](https://github.com/sanity-io/sdk/commit/13c3e2588fb9c7adf1ffc410d6fe0db18e2587c2))
+* **sdk-react:** expose federation setup through dashboard ([#1247](https://github.com/sanity-io/sdk/issues/1247)) ([8dcb416](https://github.com/sanity-io/sdk/commit/8dcb41603452317fa0343ebe1ea189166d5cbe30))
+* **typegen:** drop the experimental groq fork behind a compatibility shim ([#1179](https://github.com/sanity-io/sdk/issues/1179)) ([f19d95f](https://github.com/sanity-io/sdk/commit/f19d95f1c7e14bb5cc8f5fa71586d4d1d4713b82))
+
+
+### Bug Fixes
+
+* **core:** align application types with brett ([#1160](https://github.com/sanity-io/sdk/issues/1160)) ([115e74e](https://github.com/sanity-io/sdk/commit/115e74e0d7e3d1743699502dd1a15d1ac44d8926))
+* **core:** escape backslashes in GROQ search filter ([#1188](https://github.com/sanity-io/sdk/issues/1188)) ([90763ac](https://github.com/sanity-io/sdk/commit/90763acbcac18eb58596b74dc6886418a77b0952))
+* **deps:** update dependency zustand to ^5.0.15 ([#1237](https://github.com/sanity-io/sdk/issues/1237)) ([ef693ba](https://github.com/sanity-io/sdk/commit/ef693ba6495be152157eee034a0028d4b51e109d))
+* **deps:** update sanity ([#1204](https://github.com/sanity-io/sdk/issues/1204)) ([77c4748](https://github.com/sanity-io/sdk/commit/77c4748c490e79bbd8182dc10d55414f6a36b359))
+
 ## [3.1.0](https://github.com/sanity-io/sdk/compare/sdk-v3.0.0...sdk-v3.1.0) (2026-09-03)
 
 
