@@ -5,17 +5,31 @@ import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {
   connectApplicationToMessageBus,
+  type ConnectApplicationToMessageBusOptions,
   connectMessageBus,
   createIsolatedMessageBus as createRuntimeMessageBus,
   installMessageBus,
   type MessageBus,
+  type MessageBusClient,
   MessageBusError,
+  type MessageBusHost,
   registerStateTopics,
   resetMessageBus,
 } from './bus'
 import {type TopicManifest, type TopicMigration} from './topics'
 
 const createMessageBus = (appId = 'dashboard') => createRuntimeMessageBus(appId)
+
+// Connects an application and returns the host's client handle for it.
+function connect(host: MessageBusHost, options: ConnectApplicationToMessageBusOptions) {
+  const app = connectApplicationToMessageBus(host, options)
+  let client: MessageBusClient | undefined
+  host.connections.subscribe((candidate) => (client = candidate)).unsubscribe()
+  if (client?.moduleId !== (options.moduleId ?? options.appId)) {
+    throw new Error('Expected the new connection to be the latest client')
+  }
+  return {app, client}
+}
 
 const MESSAGE_BUS_KEY = Symbol.for('sanity.os.bus')
 const MESSAGE_BUS_REGISTRY_KEY = Symbol.for('sanity.os.registry')
@@ -32,15 +46,9 @@ const restoreMessageBusInstallation = () => {
 }
 
 const getRegistry = (messageBus: MessageBus) =>
-  (
-    messageBus as unknown as Record<
-      symbol,
-      {
-        topics: Map<string, TopicManifest[string]>
-        stateSubjects: Map<string, unknown>
-      }
-    >
-  )[MESSAGE_BUS_REGISTRY_KEY]
+  (messageBus as unknown as Record<symbol, {topics: Map<string, TopicManifest[string]>}>)[
+    MESSAGE_BUS_REGISTRY_KEY
+  ]
 
 type ProfileV1 = {name: string}
 type ProfileV2 = {name: string; tags: readonly string[]}
@@ -112,15 +120,26 @@ describe('dashboard connection', () => {
 
   it('reuses an existing installation', () => {
     const dashboard = installMessageBus({appId: 'dashboard'})
-    const secondInstaller = installMessageBus({appId: 'other'})
-    const panel = {
-      ok: true as const,
-      value: {appId: 'favorites', name: 'list', mode: 'full' as const},
-    }
+    const secondInstaller = installMessageBus({appId: 'dashboard'})
+    const application = connectMessageBus({appId: 'favorites'})
+    if (!application) throw new Error('Expected a dashboard message bus')
 
-    dashboard.emit('panels.mode', panel)
+    const seen: string[] = []
+    secondInstaller.connections.subscribe((client) => seen.push(client.appId)).unsubscribe()
+    dashboard.connections.subscribe((client) => client.emit('auth.token', 'token'))
 
-    expect(secondInstaller.subscribe('panels.mode').getCurrent()).toEqual(panel)
+    // Both installers share one bus: the second sees every other connection, the first can
+    // write to the application.
+    expect(seen).toEqual(['dashboard', 'favorites'])
+    expect(application.subscribe('auth.token').getCurrent()).toBe('token')
+  })
+
+  it('rejects installing as a different application than the installed host', () => {
+    installMessageBus({appId: 'dashboard'})
+
+    expect(() => installMessageBus({appId: 'favorites'})).toThrowError(
+      expect.objectContaining({code: 'OWNERSHIP_MISMATCH'}),
+    )
   })
 
   it('replaces a foreign value at the installation key and reports it as an error', () => {
@@ -151,15 +170,15 @@ describe('dashboard connection', () => {
     expect(callerId).toBe('favorites')
   })
 
-  it('shares state with connected applications', () => {
+  it('writes state to a connected application through its client', () => {
     const dashboard = installMessageBus({appId: 'dashboard'})
     const application = connectMessageBus({appId: 'favorites'})
     if (!application) throw new Error('Expected a dashboard message bus')
 
-    dashboard.emit('auth.token', 'token')
+    dashboard.connections.subscribe((client) => client.emit('auth.token', 'token'))
 
     expect(application.subscribe('auth.token').getCurrent()).toBe('token')
-    expect(() => application.emit('auth.token', 'spoofed')).toThrowError(
+    expect(() => application.emit('auth.token' as never, 'spoofed' as never)).toThrowError(
       expect.objectContaining({code: 'OWNERSHIP_MISMATCH'}),
     )
   })
@@ -198,32 +217,34 @@ describe('dashboard connection', () => {
 
 describe('state topics', () => {
   it('exposes the current value, first value, and subsequent updates', async () => {
-    const messageBus = createMessageBus()
-    registerStateTopics(messageBus, {'test.count': 0})
-    const source = messageBus.subscribe('test.count')
+    const host = createMessageBus()
+    registerStateTopics(host, {'test.count': 0})
+    const {app, client} = connect(host, {appId: 'favorites'})
+    const source = app.subscribe('test.count')
     const seen: number[] = []
     source.subscribe((value) => seen.push(value))
     const firstValue = source.firstValue
 
-    messageBus.emit('test.count', 1)
-    messageBus.emit('test.count', 2)
+    client.emit('test.count', 1)
+    client.emit('test.count', 2)
 
     expect(source.getCurrent()).toBe(2)
     await expect(firstValue).resolves.toBe(0)
     expect(seen).toEqual([0, 1, 2])
-    expect(messageBus.subscribe('test.count').getCurrent()).toBe(2)
+    expect(app.subscribe('test.count').getCurrent()).toBe(2)
   })
 
   it('waits for the first value of a suspending topic', async () => {
-    const messageBus = createMessageBus()
-    registerStateTopics(messageBus, {'test.suspending': undefined})
-    const source = messageBus.subscribe('test.suspending')
+    const host = createMessageBus()
+    registerStateTopics(host, {'test.suspending': undefined})
+    const {app, client} = connect(host, {appId: 'favorites'})
+    const source = app.subscribe('test.suspending')
     const seen: string[] = []
     source.subscribe((value) => seen.push(value))
 
     expect(source.getCurrent()).toBeUndefined()
-    const query = messageBus.query('test.suspending')
-    queueMicrotask(() => messageBus.emit('test.suspending', 'ready'))
+    const query = app.query('test.suspending')
+    queueMicrotask(() => client.emit('test.suspending', 'ready'))
 
     await expect(source.firstValue).resolves.toBe('ready')
     await expect(query).resolves.toBe('ready')
@@ -232,10 +253,11 @@ describe('state topics', () => {
 
   it('times out while a suspending topic has no value', async () => {
     vi.useFakeTimers()
-    const messageBus = createMessageBus()
-    registerStateTopics(messageBus, {'test.suspending': undefined})
+    const host = createMessageBus()
+    registerStateTopics(host, {'test.suspending': undefined})
+    const {app} = connect(host, {appId: 'favorites'})
 
-    const result = expect(messageBus.query('test.suspending')).rejects.toMatchObject({
+    const result = expect(app.query('test.suspending')).rejects.toMatchObject({
       code: 'TIMEOUT',
     })
     await vi.advanceTimersByTimeAsync(5000)
@@ -245,10 +267,11 @@ describe('state topics', () => {
 
   it('honours a custom query timeout', async () => {
     vi.useFakeTimers()
-    const messageBus = createMessageBus()
-    registerStateTopics(messageBus, {'test.suspending': undefined})
+    const host = createMessageBus()
+    registerStateTopics(host, {'test.suspending': undefined})
+    const {app} = connect(host, {appId: 'favorites'})
 
-    const result = expect(messageBus.query('test.suspending', {timeout: 1})).rejects.toMatchObject({
+    const result = expect(app.query('test.suspending', {timeout: 1})).rejects.toMatchObject({
       code: 'TIMEOUT',
     })
     // Rejects well before the 5s default, proving the timeout is configurable.
@@ -259,23 +282,25 @@ describe('state topics', () => {
 
   it('never times out when the query timeout is disabled', async () => {
     vi.useFakeTimers()
-    const messageBus = createMessageBus()
-    registerStateTopics(messageBus, {'test.suspending': undefined})
+    const host = createMessageBus()
+    registerStateTopics(host, {'test.suspending': undefined})
+    const {app, client} = connect(host, {appId: 'favorites'})
 
-    const query = messageBus.query('test.suspending', {timeout: null})
+    const query = app.query('test.suspending', {timeout: null})
     await vi.advanceTimersByTimeAsync(60_000)
-    messageBus.emit('test.suspending', 'ready')
+    client.emit('test.suspending', 'ready')
 
     await expect(query).resolves.toBe('ready')
   })
 
   it('aborts a pending query', async () => {
-    const messageBus = createMessageBus()
-    registerStateTopics(messageBus, {'test.suspending': undefined})
+    const host = createMessageBus()
+    registerStateTopics(host, {'test.suspending': undefined})
+    const {app} = connect(host, {appId: 'favorites'})
     const controller = new AbortController()
 
     const result = expect(
-      messageBus.query('test.suspending', {signal: controller.signal}),
+      app.query('test.suspending', {signal: controller.signal}),
     ).rejects.toMatchObject({code: 'ABORTED'})
     controller.abort()
 
@@ -283,59 +308,62 @@ describe('state topics', () => {
   })
 
   it('stops a subscription when its signal aborts', () => {
-    const messageBus = createMessageBus()
-    registerStateTopics(messageBus, {'test.count': 0})
+    const host = createMessageBus()
+    registerStateTopics(host, {'test.count': 0})
+    const {app, client} = connect(host, {appId: 'favorites'})
     const controller = new AbortController()
     const seen: number[] = []
-    messageBus.subscribe('test.count', (value) => seen.push(value), {
+    app.subscribe('test.count', (value) => seen.push(value), {
       signal: controller.signal,
     })
 
-    messageBus.emit('test.count', 1)
+    client.emit('test.count', 1)
     controller.abort()
-    messageBus.emit('test.count', 2)
+    client.emit('test.count', 2)
 
     expect(seen).toEqual([0, 1])
   })
 
-  it('does not publish the same state reference twice', () => {
-    const messageBus = createMessageBus()
-    registerStateTopics(messageBus, {'test.token': null})
-    const seen: (string | null)[] = []
-    messageBus.subscribe('test.token', (value) => seen.push(value))
+  it('skips a repeated value but delivers an equal object with a new reference', () => {
+    const host = createMessageBus()
+    registerStateTopics(host, {'test.token': null, 'test.profile': undefined})
+    const {app, client} = connect(host, {appId: 'favorites'})
+    const tokens: (string | null)[] = []
+    app.subscribe('test.token', (value) => tokens.push(value))
+    const profiles: unknown[] = []
+    app.subscribe('test.profile', (value) => profiles.push(value))
 
-    messageBus.emit('test.token', 'token')
-    messageBus.emit('test.token', 'token')
-    registerStateTopics(messageBus, {'test.token': 'token'})
+    client.emit('test.token', 'token')
+    client.emit('test.token', 'token')
+    const profile = {fullName: 'Ada', tags: []}
+    client.emit('test.profile', profile)
+    client.emit('test.profile', profile)
+    // React external-store snapshots compare by reference, so a new object must get through.
+    client.emit('test.profile', {...profile})
 
-    expect(seen).toEqual([null, 'token'])
+    expect(tokens).toEqual([null, 'token'])
+    expect(profiles).toHaveLength(2)
   })
 
-  it('updates an existing topic when it is registered with a new seed', () => {
-    const messageBus = createMessageBus()
-    registerStateTopics(messageBus, {'test.count': 1})
+  it('starts each connection from the manifest seed', () => {
+    const host = createMessageBus()
+    const {app} = connect(host, {appId: 'favorites'})
 
-    registerStateTopics(messageBus, {'test.count': 2})
-
-    expect(messageBus.subscribe('test.count').getCurrent()).toBe(2)
+    expect(app.subscribe('panels.mode').getCurrent()).toEqual({ok: true, value: null})
+    expect(app.subscribe('auth.token').getCurrent()).toBeUndefined()
   })
 
-  it('preserves ownership when seeding a manifest topic', async () => {
-    const messageBus = createMessageBus()
+  it('applies a re-registered seed to later connections only', () => {
+    const host = createMessageBus()
+    registerStateTopics(host, {'test.count': 1})
+    const {app: earlier} = connect(host, {appId: 'earlier'})
+    expect(earlier.subscribe('test.count').getCurrent()).toBe(1)
 
-    registerStateTopics(messageBus, {'users.current': null})
+    registerStateTopics(host, {'test.count': 2})
+    const {app: later} = connect(host, {appId: 'later'})
 
-    await expect(messageBus.query('users.current')).resolves.toBeNull()
-  })
-
-  it('assigns augmented state topics to the installing application', () => {
-    const messageBus = createMessageBus()
-    registerStateTopics(messageBus, {'test.count': 0}, {ownership: 'same_app'})
-    const application = connectApplicationToMessageBus(messageBus, {appId: 'favorites'})
-
-    expect(() => application.emit('test.count', 1)).toThrowError(
-      expect.objectContaining({code: 'OWNERSHIP_MISMATCH'}),
-    )
+    expect(later.subscribe('test.count').getCurrent()).toBe(2)
+    expect(earlier.subscribe('test.count').getCurrent()).toBe(1)
   })
 
   it('rejects an event registered as state', () => {
@@ -459,30 +487,30 @@ describe('application connections', () => {
   })
 
   it('enforces state and responder ownership', () => {
-    const installedMessageBus = createMessageBus('dashboard')
-    const application = connectApplicationToMessageBus(installedMessageBus, {appId: 'favorites'})
-    installedMessageBus.emit('auth.token', 'trusted')
+    const host = createMessageBus('dashboard')
+    const {app, client} = connect(host, {appId: 'favorites'})
+    client.emit('auth.token', 'trusted')
 
-    expect(() => application.emit('auth.token', 'spoofed')).toThrowError(
+    expect(() => app.emit('auth.token' as never, 'spoofed' as never)).toThrowError(
       expect.objectContaining({code: 'OWNERSHIP_MISMATCH'}),
     )
     expect(() =>
-      application.subscribe('auth.token.refresh', (message) => message.reply('spoofed')),
+      app.subscribe('auth.token.refresh', (message) => message.reply('spoofed')),
     ).toThrowError(expect.objectContaining({code: 'OWNERSHIP_MISMATCH'}))
-    expect(application.subscribe('auth.token').getCurrent()).toBe('trusted')
+    expect(app.subscribe('auth.token').getCurrent()).toBe('trusted')
   })
 
-  it('allows applications to publish shared state topics', () => {
-    const installedMessageBus = createMessageBus('dashboard')
-    const application = connectApplicationToMessageBus(installedMessageBus, {appId: 'favorites'})
+  it('rejects state emits from every connection, including the host', () => {
+    const host = createMessageBus('dashboard')
     const panel = {
       ok: true as const,
       value: {appId: 'favorites', name: 'list', mode: 'full' as const},
     }
 
-    application.emit('panels.mode', panel)
-
-    expect(installedMessageBus.subscribe('panels.mode').getCurrent()).toEqual(panel)
+    expect(() => host.emit('panels.mode' as never, panel as never)).toThrowError(
+      expect.objectContaining({code: 'OWNERSHIP_MISMATCH'}),
+    )
+    expect(host.subscribe('panels.mode').getCurrent()).toEqual({ok: true, value: null})
   })
 
   it('returns stable state and event streams', () => {
@@ -604,7 +632,9 @@ describe('connection identity and lifetime', () => {
     expect(() => a.emit('test.ping', {n: 1})).toThrowError(
       expect.objectContaining({code: 'ABORTED'}),
     )
-    expect(() => a.emit('test.count', 1)).toThrowError(expect.objectContaining({code: 'ABORTED'}))
+    expect(() => a.emit('test.count' as never, 1 as never)).toThrowError(
+      expect.objectContaining({code: 'ABORTED'}),
+    )
     await expect(a.query('test.count')).rejects.toMatchObject({code: 'ABORTED'})
     expect(() => a.subscribe('test.ping', () => {})).toThrowError(
       expect.objectContaining({code: 'ABORTED'}),
@@ -627,6 +657,150 @@ describe('connection identity and lifetime', () => {
     await expect(a.emit('test.mint')).resolves.toBe('minted-for-module-a')
     // B observes the fire-and-forget payload but never A's private reply value.
     expect(bReplies).not.toContain('minted-for-module-a')
+  })
+})
+
+describe('per-connection state', () => {
+  it('delivers a state value only to the connection it was written to', async () => {
+    const host = createMessageBus('dashboard')
+    const a = connect(host, {appId: 'app', moduleId: 'module-a'})
+    const b = connect(host, {appId: 'app', moduleId: 'module-b'})
+    const aHandler: (string | null)[] = []
+    const bHandler: (string | null)[] = []
+    a.app.subscribe('auth.token', (token) => aHandler.push(token))
+    b.app.subscribe('auth.token', (token) => bHandler.push(token))
+
+    a.client.emit('auth.token', 'tok-a')
+    b.client.emit('auth.token', 'tok-b')
+
+    expect(a.app.subscribe('auth.token').getCurrent()).toBe('tok-a')
+    expect(b.app.subscribe('auth.token').getCurrent()).toBe('tok-b')
+    expect(aHandler).toEqual(['tok-a'])
+    expect(bHandler).toEqual(['tok-b'])
+    await expect(a.app.query('auth.token')).resolves.toBe('tok-a')
+    await expect(b.app.query('auth.token')).resolves.toBe('tok-b')
+    // The host's own copy was never written.
+    expect(host.subscribe('auth.token').getCurrent()).toBeUndefined()
+  })
+
+  it('starts a later connection without values written to earlier ones', () => {
+    const host = createMessageBus('dashboard')
+    const a = connect(host, {appId: 'app', moduleId: 'module-a'})
+    a.client.emit('auth.token', 'tok-a')
+
+    const late = connect(host, {appId: 'app', moduleId: 'module-late'})
+
+    expect(late.app.subscribe('auth.token').getCurrent()).toBeUndefined()
+  })
+
+  it('lists open connections first, then new ones, with one client object per connection', () => {
+    const host = createMessageBus('dashboard')
+    const a = connect(host, {appId: 'app', moduleId: 'module-a'})
+    const seen: MessageBusClient[] = []
+    host.connections.subscribe((client) => seen.push(client))
+
+    expect(seen.map((client) => client.moduleId)).toEqual(['module-a'])
+    expect(seen[0]).toBe(a.client)
+
+    connectApplicationToMessageBus(host, {appId: 'app', moduleId: 'module-b'})
+
+    expect(seen.map((client) => client.moduleId)).toEqual(['module-a', 'module-b'])
+    expect(seen[1]).toMatchObject({appId: 'app', moduleId: 'module-b'})
+  })
+
+  it('closes the client and stops writes when its connection disconnects', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const host = createMessageBus('dashboard')
+    const a = connect(host, {appId: 'app', moduleId: 'module-a'})
+    const b = connect(host, {appId: 'app', moduleId: 'module-b'})
+    b.client.emit('auth.token', 'tok-b')
+    const bStream = b.app.subscribe('auth.token')
+    expect(a.client.closed.aborted).toBe(false)
+
+    a.app.disconnect()
+
+    expect(a.client.closed.aborted).toBe(true)
+    expect(() => a.client.emit('auth.token', 'tok-a')).not.toThrow()
+    expect(warn).toHaveBeenCalledWith(
+      '[sanity-sdk:message-bus] "auth.token" not written: connection "module-a" has closed',
+    )
+    // B keeps its value and stream.
+    expect(bStream.getCurrent()).toBe('tok-b')
+    b.client.emit('auth.token', 'tok-b2')
+    expect(bStream.getCurrent()).toBe('tok-b2')
+
+    const remaining: string[] = []
+    host.connections.subscribe((client) => remaining.push(client.moduleId)).unsubscribe()
+    expect(remaining).toEqual(['module-b'])
+  })
+
+  it('ends pending state reads and streams of a disconnected connection', async () => {
+    const host = createMessageBus('dashboard')
+    const a = connect(host, {appId: 'app', moduleId: 'module-a'})
+    const pending = a.app.query('auth.token', {timeout: null})
+    pending.catch(() => {})
+    let completed = false
+    a.app.subscribe('auth.token').subscribe({complete: () => (completed = true)})
+
+    a.app.disconnect()
+
+    await expect(pending).rejects.toMatchObject({code: 'ABORTED'})
+    expect(completed).toBe(true)
+  })
+
+  it('completes connections when the host disconnects', () => {
+    const host = createMessageBus('dashboard')
+    let completed = false
+    host.connections.subscribe({complete: () => (completed = true)})
+
+    host.disconnect()
+
+    expect(completed).toBe(true)
+  })
+
+  it('lets a host subscriber write to a connection as soon as it is announced', () => {
+    const host = createMessageBus('dashboard')
+    host.connections.subscribe((client) =>
+      client.emit('auth.token', `token-for-${client.moduleId}`),
+    )
+
+    const application = connectApplicationToMessageBus(host, {appId: 'app', moduleId: 'module-a'})
+
+    expect(application.subscribe('auth.token').getCurrent()).toBe('token-for-module-a')
+  })
+
+  it('writes through the client owner’s topic version', async () => {
+    // The registry speaks the latest version; this host copy is older and writes v1 profiles.
+    const dashboard = createRuntimeMessageBus('dashboard', {migrations: latestMigrations})
+    registerStateTopics(dashboard, {'test.profile': undefined})
+    const olderHost = connectApplicationToMessageBus(dashboard, {
+      appId: 'dashboard',
+      migrations: new Map(),
+    }) as MessageBusHost
+    const {app, client} = connect(olderHost, {appId: 'favorites', migrations: latestMigrations})
+
+    client.emit('test.profile', {name: 'Ada'} as never)
+
+    await expect(app.query('test.profile')).resolves.toEqual({fullName: 'Ada', tags: []})
+  })
+
+  it('lists and writes to a sibling connection that shares the host app id', () => {
+    const host = createMessageBus('dashboard')
+    const {app, client} = connect(host, {appId: 'dashboard', moduleId: 'dashboard/views/dock'})
+
+    client.emit('auth.token', 'token')
+
+    expect(client.appId).toBe('dashboard')
+    expect(app.subscribe('auth.token').getCurrent()).toBe('token')
+    // Only the host's own connection is left out.
+    expect(host.subscribe('auth.token').getCurrent()).toBeUndefined()
+  })
+
+  it('does not expose connections to an application', () => {
+    const host = createMessageBus('dashboard')
+    const application = connectApplicationToMessageBus(host, {appId: 'favorites'})
+
+    expect('connections' in application).toBe(false)
   })
 })
 
@@ -666,8 +840,19 @@ describe('reset', () => {
       ok: true as const,
       value: {appId: 'favorites', name: 'list', mode: 'full' as const},
     }
-    application.emit('panels.mode', panel)
+    installedMessageBus.connections.subscribe((client) => client.emit('panels.mode', panel))
     expect(seen).toEqual([{ok: true, value: null}, panel])
+  })
+
+  it('keeps announcing new connections to a host subscribed before the reset', () => {
+    const host = installMessageBus({appId: 'dashboard'})
+    const seen: string[] = []
+    host.connections.subscribe((client) => seen.push(client.moduleId))
+
+    resetMessageBus()
+    connectMessageBus({appId: 'favorites', moduleId: 'module-late'})
+
+    expect(seen).toEqual(['module-late'])
   })
 })
 
@@ -714,37 +899,29 @@ describe('compatibility', () => {
     registerStateTopics(dashboard, {
       'test.profile': {fullName: 'Initial', tags: ['one']},
     })
-    const application = connectApplicationToMessageBus(dashboard, {
-      appId: 'favorites',
-      migrations: new Map(),
-    })
-    const source = application.subscribe('test.profile')
+    const {app, client} = connect(dashboard, {appId: 'favorites', migrations: new Map()})
+    const source = app.subscribe('test.profile')
 
     expect(source.getCurrent() as unknown).toEqual({name: 'Initial'})
     await expect(source.firstValue as Promise<unknown>).resolves.toEqual({name: 'Initial'})
     expect(source.getCurrent()).toBe(source.getCurrent())
 
-    application.emit('test.profile', {name: 'Ada'} as never)
+    client.emit('test.profile', {fullName: 'Ada', tags: []})
 
-    await expect(dashboard.query('test.profile')).resolves.toEqual({fullName: 'Ada', tags: []})
-    expect((await application.query('test.profile')) as unknown).toEqual({name: 'Ada'})
+    expect((await app.query('test.profile')) as unknown).toEqual({name: 'Ada'})
   })
 
   it('adapts an application newer than the installed message bus', async () => {
     const dashboard = createMessageBus()
     registerStateTopics(dashboard, {'test.profile': undefined})
-    const application = connectApplicationToMessageBus(dashboard, {
+    const {app, client} = connect(dashboard, {
       appId: 'favorites',
       migrations: new Map([['test.profile', [profileMigrations[1]]]]),
     })
 
-    application.emit('test.profile', {fullName: 'Ada', tags: []})
+    client.emit('test.profile', {name: 'Ada', tags: []} as never)
 
-    expect((await dashboard.query('test.profile')) as unknown).toEqual({
-      name: 'Ada',
-      tags: [],
-    })
-    await expect(application.query('test.profile')).resolves.toEqual({fullName: 'Ada', tags: []})
+    await expect(app.query('test.profile')).resolves.toEqual({fullName: 'Ada', tags: []})
   })
 
   it('adapts event payloads in both directions', () => {
@@ -826,7 +1003,6 @@ describe('compatibility', () => {
       ownership: {type: 'any_app'},
     })
     registry.topics.delete('auth.token')
-    registry.stateSubjects.delete('auth.token')
 
     const application = connectApplicationToMessageBus(dashboard, {appId: 'favorites'})
 

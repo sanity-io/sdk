@@ -45,9 +45,7 @@ import {useWindowConnection} from '../comlink/useWindowConnection'
  * }
  * ```
  */
-export function useNavigate(
-  navigateFn: (options: PathChangeMessage['data']) => void,
-): void {
+export function useNavigate(navigateFn: (options: PathChangeMessage['data']) => void): void {
   useWindowConnection<PathChangeMessage, never>({
     name: SDK_NODE_NAME,
     connectTo: SDK_CHANNEL_NAME,

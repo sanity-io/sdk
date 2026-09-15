@@ -1,5 +1,5 @@
 import {installMessageBus, resetMessageBus} from '@sanity/sdk/_internal'
-import {type ApplicationConfig, type MessageBus} from '@sanity/sdk/dashboard'
+import {type ApplicationConfig, type MessageBusHost} from '@sanity/sdk/dashboard'
 import {Suspense} from 'react'
 import {afterEach, beforeEach, describe, expect, expectTypeOf, it, vi} from 'vitest'
 
@@ -8,7 +8,11 @@ import {useApplicationConfigs} from './useApplicationConfigs'
 
 const MESSAGE_BUS_KEY = Symbol.for('sanity.os.bus')
 
-let host: MessageBus
+let host: MessageBusHost
+
+// The host writes state to each connection, so publish by emitting to every connection's client.
+const emitConfigs = (value: ApplicationConfig[] | null) =>
+  host.connections.subscribe((client) => client.emit('applications.config', value))
 
 const configs: ApplicationConfig[] = [
   {
@@ -40,7 +44,7 @@ describe('useApplicationConfigs', () => {
   })
 
   it('returns every published application config', () => {
-    host.emit('applications.config', configs)
+    emitConfigs(configs)
 
     const {result} = renderHook(() => useApplicationConfigs())
 
@@ -61,13 +65,13 @@ describe('useApplicationConfigs', () => {
     expect(screen.getByText('Loading')).toBeInTheDocument()
 
     await act(async () => {
-      host.emit('applications.config', configs)
+      emitConfigs(configs)
     })
     expect(await screen.findByText('2 configs')).toBeInTheDocument()
   })
 
   it('returns an empty list when the dashboard clears its configs', () => {
-    host.emit('applications.config', null)
+    emitConfigs(null)
 
     const {result} = renderHook(() => useApplicationConfigs())
 
@@ -75,11 +79,11 @@ describe('useApplicationConfigs', () => {
   })
 
   it('follows topic updates', () => {
-    host.emit('applications.config', null)
+    emitConfigs(null)
     const {result} = renderHook(() => useApplicationConfigs())
     expect(result.current).toEqual([])
 
-    act(() => host.emit('applications.config', configs))
+    act(() => emitConfigs(configs))
     expect(result.current).toEqual(configs)
   })
 })

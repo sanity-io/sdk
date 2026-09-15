@@ -1,5 +1,5 @@
 import {installMessageBus, resetMessageBus} from '@sanity/sdk/_internal'
-import {type ApplicationConfig, type MessageBus} from '@sanity/sdk/dashboard'
+import {type ApplicationConfig, type MessageBusHost} from '@sanity/sdk/dashboard'
 import {Suspense} from 'react'
 import {afterEach, beforeEach, describe, expect, expectTypeOf, it, vi} from 'vitest'
 
@@ -8,7 +8,11 @@ import {type ApplicationConfigSelector, useApplicationConfig} from './useApplica
 
 const MESSAGE_BUS_KEY = Symbol.for('sanity.os.bus')
 
-let host: MessageBus
+let host: MessageBusHost
+
+// The host writes state to each connection, so publish by emitting to every connection's client.
+const emitConfigs = (value: ApplicationConfig[] | null) =>
+  host.connections.subscribe((client) => client.emit('applications.config', value))
 
 const typeConfig: ApplicationConfig = {
   appType: 'media-library',
@@ -39,7 +43,7 @@ describe('useApplicationConfig', () => {
   })
 
   it('selects a config by application type or application id', () => {
-    host.emit('applications.config', [typeConfig, appConfig])
+    emitConfigs([typeConfig, appConfig])
 
     const {result, rerender} = renderHook<
       {selector: ApplicationConfigSelector},
@@ -57,7 +61,7 @@ describe('useApplicationConfig', () => {
 
   it('selects the type-level config for an appType query regardless of emit order', () => {
     // App-scoped config first: a naive find() would return it for a type query.
-    host.emit('applications.config', [appConfig, typeConfig])
+    emitConfigs([appConfig, typeConfig])
 
     const {result} = renderHook(() => useApplicationConfig({appType: 'media-library'}))
 
@@ -65,7 +69,7 @@ describe('useApplicationConfig', () => {
   })
 
   it('returns null when no config matches the selector', () => {
-    host.emit('applications.config', [typeConfig, appConfig])
+    emitConfigs([typeConfig, appConfig])
 
     const {result} = renderHook(() => useApplicationConfig({appId: 'missing'}))
 
@@ -86,17 +90,17 @@ describe('useApplicationConfig', () => {
     expect(screen.getByText('Loading')).toBeInTheDocument()
 
     await act(async () => {
-      host.emit('applications.config', [typeConfig])
+      emitConfigs([typeConfig])
     })
     expect(await screen.findByText('configs/installation_config')).toBeInTheDocument()
   })
 
   it('follows topic updates', () => {
-    host.emit('applications.config', [typeConfig])
+    emitConfigs([typeConfig])
     const {result} = renderHook(() => useApplicationConfig({appId: 'application-1'}))
     expect(result.current).toBeNull()
 
-    act(() => host.emit('applications.config', [typeConfig, appConfig]))
+    act(() => emitConfigs([typeConfig, appConfig]))
     expect(result.current).toBe(appConfig)
   })
 })

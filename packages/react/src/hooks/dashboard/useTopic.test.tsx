@@ -1,7 +1,7 @@
 import {installMessageBus, resetMessageBus} from '@sanity/sdk/_internal'
 import {
-  type MessageBus,
   MessageBusError,
+  type MessageBusHost,
   type TopicData,
   TopicError,
   type ValueOf,
@@ -17,7 +17,7 @@ type Applications = Extract<NonNullable<ValueOf<'applications.list'>>, {ok: true
 
 const MESSAGE_BUS_KEY = Symbol.for('sanity.os.bus')
 
-let host: MessageBus
+let host: MessageBusHost
 
 function Token() {
   return <span>{useTopic('auth.token')}</span>
@@ -56,13 +56,17 @@ describe('useTopic', () => {
   })
 
   it('reads a published value and follows topic updates', () => {
-    host.emit('applications.foreground', null)
+    host.connections.subscribe((client) => client.emit('applications.foreground', null))
     const {result} = renderHook(() => useTopic('applications.foreground'))
 
     expectTypeOf(result.current).toEqualTypeOf<string | null>()
     expect(result.current).toBeNull()
 
-    act(() => host.emit('applications.foreground', 'application-2'))
+    act(() =>
+      host.connections.subscribe((client) =>
+        client.emit('applications.foreground', 'application-2'),
+      ),
+    )
 
     expect(result.current).toBe('application-2')
   })
@@ -73,7 +77,7 @@ describe('useTopic', () => {
     expect(screen.getByText('Loading')).toBeInTheDocument()
 
     await act(async () => {
-      host.emit('auth.token', 'token')
+      host.connections.subscribe((client) => client.emit('auth.token', 'token'))
     })
 
     expect(await screen.findByText('token')).toBeInTheDocument()
@@ -81,7 +85,9 @@ describe('useTopic', () => {
 
   it('unwraps a successful topic result to its value', () => {
     const applications = [{id: 'application-1'}] as Applications
-    host.emit('applications.list', {ok: true, value: applications})
+    host.connections.subscribe((client) =>
+      client.emit('applications.list', {ok: true, value: applications}),
+    )
 
     const {result} = renderHook(() => useTopic('applications.list'))
 
@@ -91,7 +97,7 @@ describe('useTopic', () => {
   })
 
   it('throws a TopicError to the error boundary when a topic result fails', () => {
-    host.emit('applications.list', {ok: false})
+    host.connections.subscribe((client) => client.emit('applications.list', {ok: false}))
 
     const onError = renderInBoundary(<ApplicationCount />)
 
@@ -106,7 +112,7 @@ describe('useTopic', () => {
     expect(screen.getByText('Loading')).toBeInTheDocument()
 
     await act(async () => {
-      host.emit('applications.list', {ok: false})
+      host.connections.subscribe((client) => client.emit('applications.list', {ok: false}))
     })
 
     expect(await screen.findByText('Retry')).toBeInTheDocument()
@@ -114,11 +120,13 @@ describe('useTopic', () => {
   })
 
   it('throws a TopicError when a later result fails', () => {
-    host.emit('applications.list', {ok: true, value: [] as Applications})
+    host.connections.subscribe((client) =>
+      client.emit('applications.list', {ok: true, value: [] as Applications}),
+    )
     const onError = renderInBoundary(<ApplicationCount />)
     expect(screen.getByText('0 applications')).toBeInTheDocument()
 
-    act(() => host.emit('applications.list', {ok: false}))
+    act(() => host.connections.subscribe((client) => client.emit('applications.list', {ok: false})))
 
     expect(screen.getByText('Retry')).toBeInTheDocument()
     expect(onError.mock.calls[0][0]).toBeInstanceOf(TopicError)
@@ -158,7 +166,7 @@ describe('useTopic', () => {
     expect(screen.getByText('Loading')).toBeInTheDocument()
 
     await act(async () => {
-      host.emit('auth.token', 'token')
+      host.connections.subscribe((client) => client.emit('auth.token', 'token'))
     })
 
     expect(screen.getByText('token')).toBeInTheDocument()

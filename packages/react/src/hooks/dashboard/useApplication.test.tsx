@@ -1,5 +1,5 @@
 import {installMessageBus, resetMessageBus} from '@sanity/sdk/_internal'
-import {type MessageBus, type ValueOf} from '@sanity/sdk/dashboard'
+import {type MessageBusHost, type ValueOf} from '@sanity/sdk/dashboard'
 import {afterEach, beforeEach, describe, expect, expectTypeOf, it, vi} from 'vitest'
 
 import {renderHook} from '../../../test/test-utils'
@@ -8,7 +8,7 @@ import {type DashboardApplication} from './useApplications'
 
 const MESSAGE_BUS_KEY = Symbol.for('sanity.os.bus')
 
-let host: MessageBus
+let host: MessageBusHost
 
 const application = {
   id: 'application-1',
@@ -31,7 +31,12 @@ describe('useApplication', () => {
     // The SDK resolves its own app ID from the CLI-embedded global.
     vi.stubGlobal('__SANITY_APP_ID__', 'app')
     host = installMessageBus({appId: 'dashboard'})
-    host.emit('applications.list', {ok: true, value: [application]} as ValueOf<'applications.list'>)
+    host.connections.subscribe((client) =>
+      client.emit('applications.list', {
+        ok: true,
+        value: [application],
+      } as ValueOf<'applications.list'>),
+    )
   })
 
   afterEach(() => {

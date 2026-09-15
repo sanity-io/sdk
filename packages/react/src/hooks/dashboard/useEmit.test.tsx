@@ -1,8 +1,8 @@
 import {installMessageBus, resetMessageBus} from '@sanity/sdk/_internal'
 import {
-  type MessageBus,
   type MessageBusEmitOptions,
   type MessageBusEmitResult,
+  type MessageBusHost,
   type PayloadOf,
   type ReplyOf,
 } from '@sanity/sdk/dashboard'
@@ -14,7 +14,7 @@ import {useEmit} from './useEmit'
 
 const MESSAGE_BUS_KEY = Symbol.for('sanity.os.bus')
 
-let host: MessageBus
+let host: MessageBusHost
 
 describe('useEmit', () => {
   beforeEach(() => {
