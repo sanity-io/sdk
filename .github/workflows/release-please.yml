@@ -1,7 +1,4 @@
 name: Release Please
-env:
-  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-  VERCEL_PROJECT_ID: ${{ secrets.DOCS_VERCEL_PRODUCTION_PROJECT_ID }}
 
 on:
   push:
@@ -74,15 +71,6 @@ jobs:
     needs: release-please
     if: ${{ needs.release-please.outputs.command == 'true' }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-
-      - name: Install Vercel CLI
-        run: npm install --global vercel@latest
-
-      - name: Deploy Docs to Vercel
-        run: vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }}
-
       - name: Mark SDK issues as done
         uses: sanity-labs/mark-issues-done-action@88e6a3e6bc5a9c86d45873c4dba3302a4cafcb65 # main
         with:
