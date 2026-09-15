@@ -1,56 +1,102 @@
-import {act, renderHook} from '@testing-library/react'
-import {beforeEach, describe, expect, expectTypeOf, it, vi} from 'vitest'
+import {installMessageBus, resetMessageBus} from '@sanity/sdk/_internal'
+import {type ApplicationConfig, type MessageBus} from '@sanity/sdk/dashboard'
+import {Suspense} from 'react'
+import {afterEach, beforeEach, describe, expect, expectTypeOf, it, vi} from 'vitest'
 
-import {createIsolatedMessageBus, type MessageBus} from '../../dashboard/messageBus/bus'
-import {type ApplicationConfig} from '../../dashboard/messageBus/topics'
+import {act, render, renderHook, screen} from '../../../test/test-utils'
 import {type ApplicationConfigSelector, useApplicationConfig} from './useApplicationConfig'
-import {type UseTopicResult} from './useTopic'
 
-const mocks = vi.hoisted(() => ({
-  client: undefined as MessageBus | undefined,
-}))
+const MESSAGE_BUS_KEY = Symbol.for('sanity.os.bus')
 
-vi.mock('../../dashboard/messageBus/client', () => ({
-  getDashboardMessageBus: () => mocks.client,
-}))
+let host: MessageBus
 
-const localConfig: ApplicationConfig = {
+const typeConfig: ApplicationConfig = {
   appType: 'media-library',
-  entry: 'http://localhost:3333',
-  moduleId: 'configs/installation_config',
-  version: 'local',
-}
-
-const applicationConfig: ApplicationConfig = {
-  appId: 'application-1',
-  appType: 'media-library',
-  entry: 'https://application-config.sanity.run',
+  entry: 'https://media-library-config.sanity.run',
   moduleId: 'configs/installation_config',
   version: '1',
 }
 
+const appConfig: ApplicationConfig = {
+  appId: 'application-1',
+  appType: 'media-library',
+  entry: 'https://application-config.sanity.run',
+  moduleId: 'configs/installation_config',
+  version: '2',
+}
+
 describe('useApplicationConfig', () => {
   beforeEach(() => {
-    mocks.client = createIsolatedMessageBus('dashboard')
+    vi.stubGlobal('__SANITY_APP_ID__', 'app')
+    host = installMessageBus({appId: 'dashboard'})
   })
 
-  it('returns a config by application type or application id', () => {
-    const {result, rerender} = renderHook(
-      ({selector}: {selector: ApplicationConfigSelector}) =>
-        useApplicationConfig(selector, {suspend: false}),
-      {initialProps: {selector: {appType: 'media-library'}}},
-    )
+  afterEach(() => {
+    resetMessageBus()
+    delete (globalThis as {[MESSAGE_BUS_KEY]?: unknown})[MESSAGE_BUS_KEY]
+    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
+  })
 
-    expectTypeOf(result.current).toEqualTypeOf<UseTopicResult<ApplicationConfig | null, false>>()
+  it('selects a config by application type or application id', () => {
+    host.emit('applications.config', [typeConfig, appConfig])
 
-    act(() => mocks.client?.emit('applications.config', [localConfig, applicationConfig]))
+    const {result, rerender} = renderHook<
+      {selector: ApplicationConfigSelector},
+      ApplicationConfig | null
+    >(({selector}) => useApplicationConfig(selector), {
+      initialProps: {selector: {appType: 'media-library'}},
+    })
 
-    expect(result.current.data).toBe(localConfig)
+    expectTypeOf(result.current).toEqualTypeOf<ApplicationConfig | null>()
+    expect(result.current).toBe(typeConfig)
 
     rerender({selector: {appId: 'application-1'}})
-    expect(result.current.data).toBe(applicationConfig)
+    expect(result.current).toBe(appConfig)
+  })
 
-    rerender({selector: {appId: 'missing'}})
-    expect(result.current).toEqual({data: null, isPending: false})
+  it('selects the type-level config for an appType query regardless of emit order', () => {
+    // App-scoped config first: a naive find() would return it for a type query.
+    host.emit('applications.config', [appConfig, typeConfig])
+
+    const {result} = renderHook(() => useApplicationConfig({appType: 'media-library'}))
+
+    expect(result.current).toBe(typeConfig)
+  })
+
+  it('returns null when no config matches the selector', () => {
+    host.emit('applications.config', [typeConfig, appConfig])
+
+    const {result} = renderHook(() => useApplicationConfig({appId: 'missing'}))
+
+    expect(result.current).toBeNull()
+  })
+
+  it('suspends until the dashboard publishes its configs', async () => {
+    function MediaLibrary() {
+      const config = useApplicationConfig({appType: 'media-library'})
+      return <span>{config?.moduleId ?? 'none'}</span>
+    }
+    render(
+      <Suspense fallback="Loading">
+        <MediaLibrary />
+      </Suspense>,
+    )
+
+    expect(screen.getByText('Loading')).toBeInTheDocument()
+
+    await act(async () => {
+      host.emit('applications.config', [typeConfig])
+    })
+    expect(await screen.findByText('configs/installation_config')).toBeInTheDocument()
+  })
+
+  it('follows topic updates', () => {
+    host.emit('applications.config', [typeConfig])
+    const {result} = renderHook(() => useApplicationConfig({appId: 'application-1'}))
+    expect(result.current).toBeNull()
+
+    act(() => host.emit('applications.config', [typeConfig, appConfig]))
+    expect(result.current).toBe(appConfig)
   })
 })

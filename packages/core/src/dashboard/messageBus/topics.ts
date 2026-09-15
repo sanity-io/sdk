@@ -15,9 +15,12 @@ export interface RemoteModuleRef {
 
 /**
  * Application types that can receive configuration modules.
+ *
+ * The dashboard supplies this value over the message bus, so any string is accepted; known
+ * types are listed for autocomplete. `& {}` keeps the literal from collapsing into `string`.
  * @public
  */
-export type ApplicationConfigAppType = 'media-library'
+export type ApplicationConfigAppType = 'media-library' | (string & {})
 
 /**
  * Identifies a configuration module for an application or application type.

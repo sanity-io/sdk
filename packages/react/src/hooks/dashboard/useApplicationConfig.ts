@@ -1,12 +1,7 @@
 import {type Application} from '@sanity/sdk'
-import {useMemo} from 'react'
+import {type ApplicationConfig, type ApplicationConfigAppType} from '@sanity/sdk/dashboard'
 
-import {
-  type ApplicationConfig,
-  type ApplicationConfigAppType,
-} from '../../dashboard/messageBus/topics'
 import {useApplicationConfigs} from './useApplicationConfigs'
-import {type UseTopicOptions, type UseTopicResult} from './useTopic'
 
 /**
  * Selects an application configuration by application id or application type.
@@ -17,29 +12,34 @@ export type ApplicationConfigSelector =
   | {appId?: never; appType: ApplicationConfigAppType}
 
 /**
- * Returns an application configuration by application id or application type.
+ * Returns an application configuration by application id or application type, or `null` when
+ * none matches.
  *
- * Pass `{suspend: false}` to receive a pending result instead of suspending.
+ * An `appType` query matches the type-level config only (the one without an `appId`), so it is
+ * independent of the order the dashboard published configs in. An `appId` query matches that
+ * application's config.
+ *
+ * Suspends until the dashboard publishes its application configs.
+ *
+ * @example
+ * ```tsx
+ * function MediaLibraryConfig() {
+ *   const config = useApplicationConfig({appType: 'media-library'})
+ *   return config ? <span>{config.moduleId}</span> : <p>Not installed</p>
+ * }
+ * ```
+ *
  * @public
  */
-export function useApplicationConfig<Suspend extends boolean = true>(
+export function useApplicationConfig(
   selector: ApplicationConfigSelector,
-  options: UseTopicOptions<Suspend> = {},
-): UseTopicResult<ApplicationConfig | null, Suspend> {
-  const result = useApplicationConfigs(options)
-  return useMemo(
-    () =>
-      result.isPending
-        ? result
-        : {
-            data:
-              result.data.find((config) =>
-                selector.appId === undefined
-                  ? config.appType === selector.appType
-                  : config.appId === selector.appId,
-              ) ?? null,
-            isPending: false,
-          },
-    [result, selector.appId, selector.appType],
-  ) as UseTopicResult<ApplicationConfig | null, Suspend>
+): ApplicationConfig | null {
+  const configs = useApplicationConfigs()
+  return (
+    configs.find((config) =>
+      selector.appId === undefined
+        ? config.appType === selector.appType && config.appId === undefined
+        : config.appId === selector.appId,
+    ) ?? null
+  )
 }

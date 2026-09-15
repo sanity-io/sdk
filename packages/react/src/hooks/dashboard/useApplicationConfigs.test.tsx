@@ -1,18 +1,14 @@
-import {act, renderHook} from '@testing-library/react'
-import {beforeEach, describe, expect, expectTypeOf, it, vi} from 'vitest'
+import {installMessageBus, resetMessageBus} from '@sanity/sdk/_internal'
+import {type ApplicationConfig, type MessageBus} from '@sanity/sdk/dashboard'
+import {Suspense} from 'react'
+import {afterEach, beforeEach, describe, expect, expectTypeOf, it, vi} from 'vitest'
 
-import {createIsolatedMessageBus, type MessageBus} from '../../dashboard/messageBus/bus'
-import {type ApplicationConfig} from '../../dashboard/messageBus/topics'
+import {act, render, renderHook, screen} from '../../../test/test-utils'
 import {useApplicationConfigs} from './useApplicationConfigs'
-import {type UseTopicResult} from './useTopic'
 
-const mocks = vi.hoisted(() => ({
-  client: undefined as MessageBus | undefined,
-}))
+const MESSAGE_BUS_KEY = Symbol.for('sanity.os.bus')
 
-vi.mock('../../dashboard/messageBus/client', () => ({
-  getDashboardMessageBus: () => mocks.client,
-}))
+let host: MessageBus
 
 const configs: ApplicationConfig[] = [
   {
@@ -32,25 +28,58 @@ const configs: ApplicationConfig[] = [
 
 describe('useApplicationConfigs', () => {
   beforeEach(() => {
-    mocks.client = createIsolatedMessageBus('dashboard')
+    vi.stubGlobal('__SANITY_APP_ID__', 'app')
+    host = installMessageBus({appId: 'dashboard'})
+  })
+
+  afterEach(() => {
+    resetMessageBus()
+    delete (globalThis as {[MESSAGE_BUS_KEY]?: unknown})[MESSAGE_BUS_KEY]
+    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
   })
 
   it('returns every published application config', () => {
-    const {result} = renderHook(() => useApplicationConfigs({suspend: false}))
+    host.emit('applications.config', configs)
 
-    expectTypeOf(result.current).toEqualTypeOf<UseTopicResult<ApplicationConfig[], false>>()
-    expect(result.current).toEqual({data: undefined, isPending: true})
+    const {result} = renderHook(() => useApplicationConfigs())
 
-    act(() => mocks.client?.emit('applications.config', configs))
+    expectTypeOf(result.current).toEqualTypeOf<readonly ApplicationConfig[]>()
+    expect(result.current).toEqual(configs)
+  })
 
-    expect(result.current).toEqual({data: configs, isPending: false})
+  it('suspends until the dashboard publishes its configs', async () => {
+    function Configs() {
+      return <span>{useApplicationConfigs().length} configs</span>
+    }
+    render(
+      <Suspense fallback="Loading">
+        <Configs />
+      </Suspense>,
+    )
+
+    expect(screen.getByText('Loading')).toBeInTheDocument()
+
+    await act(async () => {
+      host.emit('applications.config', configs)
+    })
+    expect(await screen.findByText('2 configs')).toBeInTheDocument()
   })
 
   it('returns an empty list when the dashboard clears its configs', () => {
-    mocks.client?.emit('applications.config', null)
+    host.emit('applications.config', null)
 
-    const {result} = renderHook(() => useApplicationConfigs({suspend: false}))
+    const {result} = renderHook(() => useApplicationConfigs())
 
-    expect(result.current).toEqual({data: [], isPending: false})
+    expect(result.current).toEqual([])
+  })
+
+  it('follows topic updates', () => {
+    host.emit('applications.config', null)
+    const {result} = renderHook(() => useApplicationConfigs())
+    expect(result.current).toEqual([])
+
+    act(() => host.emit('applications.config', configs))
+    expect(result.current).toEqual(configs)
   })
 })
