@@ -1,5 +1,11 @@
 export {DashboardTokenRefreshProvider as TokenRefreshProvider} from '../context/DashboardTokenRefresh'
 export {
+  createRemoteInstance,
+  type CreateRemoteInstanceOptions,
+  type FederationRemote,
+  type RemoteInstance,
+} from '../dashboard/createRemoteInstance'
+export {
   type CanvasUrl,
   type CoreApplicationUrl,
   type CreateIntentParameters,
