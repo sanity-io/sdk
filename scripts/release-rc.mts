@@ -77,11 +77,16 @@ echo`found ${chalk.blue(publishable.length)} workspace(s) to publish ${
   isMajor ? 'major ' : ''
 }release candidate ${chalk.green(targetVersion)} for`
 
-for (const {name, version} of publishable) {
-  await spinner(`bumping ${chalk.blue(name)} from ${chalk.yellow(version)}`, async () => {
-    // `pnpm version` is really just an alias for `npm version` atm, so we have to jump through some hoops
-    await $`pnpm --filter="${name}" exec pnpm version --no-commit-hooks --no-git-tag-version ${targetVersion}`
-  })
+for (const {workspace, name, version} of publishable) {
+  // Write the version directly instead of shelling out to `pnpm version`.
+  // In pnpm 12 `version` is a native workspace command that syncs the lockfile
+  // and refuses to run on a dirty git tree, so the second bump in this loop
+  // aborts once the first has changed a package.json. Cross-package refs use
+  // `workspace:*`, so no dependent ranges or lockfile entries need updating.
+  const pkgPath = `./${workspace}/package.json`
+  const pkg = await fs.readJson(pkgPath)
+  pkg.version = targetVersion
+  await fs.writeJson(pkgPath, pkg, {spaces: 2})
   echo`bumped ${chalk.blue(name)} from ${chalk.yellow(version)} to ${chalk.green(targetVersion)}`
 }
 
