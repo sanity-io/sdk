@@ -162,23 +162,29 @@ export interface DashboardTopics {
  * @public
  */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type -- Declaration merging extends the SDK manifest.
-export interface Topics extends Omit<DashboardTopics, 'applications.status.update'> {}
+export interface Topics extends DashboardTopics {}
+
+/**
+ * Hides provisional topics from the public message bus methods.
+ * @internal
+ */
+export type MessageBusTopics = Omit<Topics, 'applications.status.update'>
 
 /**
  * Every declared topic name.
  * @public
  */
-export type TopicName = keyof Topics
+export type TopicName<TTopics = Topics> = keyof TTopics
 
 type StateTopicsOf<T> = {
   [K in keyof T]: T[K] extends {kind: 'state'} ? K : never
 }[keyof T]
 
 /**
- * Names of all declared state topics.
+ * Names of state topics exposed by message bus methods.
  * @public
  */
-export type StateTopic = StateTopicsOf<Topics>
+export type StateTopic<TTopics = MessageBusTopics> = StateTopicsOf<TTopics>
 
 type TopicOwnership = {readonly type: 'same_app'} | {readonly type: 'any_app'}
 
@@ -232,32 +238,33 @@ export type TopicManifest = Readonly<
 >
 
 /**
- * Names of all declared event topics.
+ * Names of event topics exposed by message bus methods.
  * @public
  */
-export type EventTopic = {
-  [K in TopicName]: Topics[K] extends {kind: 'event'} ? K : never
-}[TopicName]
+export type EventTopic<TTopics = MessageBusTopics> = {
+  [K in keyof TTopics]: TTopics[K] extends {kind: 'event'} ? K : never
+}[keyof TTopics]
 
 /**
  * The value type of a state topic.
  * @public
  */
-export type ValueOf<K extends StateTopic> = Topics[K] extends StateTopicDef<infer T> ? T : never
+export type ValueOf<K extends StateTopic<TTopics>, TTopics = Topics> =
+  TTopics[K] extends StateTopicDef<infer T> ? T : never
 
 /**
  * The payload type of an event topic.
  * @public
  */
-export type PayloadOf<K extends EventTopic> =
-  Topics[K] extends EventTopicDef<infer P, infer _R> ? P : never
+export type PayloadOf<K extends EventTopic<TTopics>, TTopics = Topics> =
+  TTopics[K] extends EventTopicDef<infer P, infer _R> ? P : never
 
 /**
  * The reply type of an event topic (`never` if it declares none).
  * @public
  */
-export type ReplyOf<K extends EventTopic> =
-  Topics[K] extends EventTopicDef<infer _P, infer R> ? R : never
+export type ReplyOf<K extends EventTopic<TTopics>, TTopics = Topics> =
+  TTopics[K] extends EventTopicDef<infer _P, infer R> ? R : never
 
 /**
  * Converts a topic value between 2 adjacent versions.
@@ -285,6 +292,4 @@ export interface TopicMigration {
  * Defines the bundled migration chain for each topic.
  * @internal
  */
-export const topicMigrations: Partial<
-  Record<keyof DashboardTopics | TopicName, readonly TopicMigration[]>
-> = {}
+export const topicMigrations: Partial<Record<TopicName, readonly TopicMigration[]>> = {}

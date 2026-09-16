@@ -7,6 +7,8 @@ import {
   type ApplicationConfigAppType,
   type ApplicationStatusUpdate,
   DASHBOARD_TOPIC_MANIFEST,
+  type DashboardTopics,
+  type EventTopic,
   type PayloadOf,
   type ReplyOf,
   type StateTopic,
@@ -40,11 +42,17 @@ describe('dashboard topic types', () => {
       kind: 'event',
       ownership: {type: 'same_app'},
     })
-    expectTypeOf<'applications.status.update'>().not.toMatchTypeOf<TopicName>()
+    expectTypeOf<'applications.status.update'>().toMatchTypeOf<TopicName>()
+    expectTypeOf<'applications.status.update'>().not.toMatchTypeOf<EventTopic>()
+    expectTypeOf<PayloadOf<'applications.status.update'>>().toEqualTypeOf<ApplicationStatusUpdate>()
+    expectTypeOf<ReplyOf<'applications.status.update'>>().toBeNever()
   })
 
   it('exposes application state values', () => {
     expectTypeOf<ValueOf<'applications.base-path'>>().toEqualTypeOf<TopicResult<string>>()
+    expectTypeOf<ValueOf<'applications.foreground', DashboardTopics>>().toEqualTypeOf<
+      Application['id'] | null
+    >()
     expectTypeOf<ValueOf<'applications.config'>>().toEqualTypeOf<ApplicationConfig[] | null>()
     expectTypeOf<ValueOf<'applications.list'>>().toEqualTypeOf<TopicResult<
       Application<ApplicationInclude>[]
@@ -89,8 +97,6 @@ describe('dashboard topic types', () => {
     messageBus.emit('navigation.location.update')
     // @ts-expect-error applications.status.update is internal
     messageBus.emit('applications.status.update', {name: 'media', value: {label: null}})
-    // @ts-expect-error applications.status.update is internal
-    messageBus.query('applications.status.update')
     // @ts-expect-error applications.status.update is internal
     messageBus.subscribe('applications.status.update')
     // @ts-expect-error applications.status.update is internal

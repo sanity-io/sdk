@@ -46,7 +46,7 @@ test('dashboard entrypoint exposes the message bus public types', () => {
 
   // Topic declarations are reachable for declaration merging.
   expectTypeOf<TopicName>().toEqualTypeOf<keyof Topics>()
-  expectTypeOf<Exclude<keyof DashboardTopics, 'applications.status.update'>>().toExtend<TopicName>()
+  expectTypeOf<keyof DashboardTopics>().toExtend<TopicName>()
   expectTypeOf<StateTopicDef<number>['value']>().toBeNumber()
   expectTypeOf<EventTopicDef<{n: number}, string>['payload']>().toEqualTypeOf<{n: number}>()
 
@@ -71,6 +71,7 @@ test('internal entrypoint exposes dashboard internals', () => {
     name: string
     value: ApplicationStatus
   }>()
+  expectTypeOf<PayloadOf<'applications.status.update'>>().toEqualTypeOf<ApplicationStatusUpdate>()
   const emitApplicationStatus = (messageBus: ReturnType<typeof installMessageBus>) => {
     messageBus.emit('applications.status.update', {name: 'list', value: {label: null}})
     // @ts-expect-error application statuses always carry a label field
