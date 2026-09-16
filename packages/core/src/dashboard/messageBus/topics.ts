@@ -83,6 +83,8 @@ export type NavigationLocation = NavigationTarget & {
  * @public
  */
 export interface DashboardTopics {
+  /** Requests the base path for an application. */
+  'applications.basepath': EventTopicDef<void, string | null>
   /** The available application configuration modules. */
   'applications.config': StateTopicDef<ApplicationConfig[] | null>
   /** The foreground application ID, or `null` on dashboard-level routes. */
@@ -176,6 +178,7 @@ const dashboardEvent = {kind: 'event', ownership: {type: 'same_app'}} as const
 export const DASHBOARD_TOPIC_MANIFEST: {
   readonly [K in keyof DashboardTopics]: TopicManifestEntry<DashboardTopics[K]>
 } = {
+  'applications.basepath': dashboardEvent,
   'applications.config': stateTopic(undefined),
   'applications.foreground': stateTopic(undefined),
   'applications.list': stateTopic(undefined),

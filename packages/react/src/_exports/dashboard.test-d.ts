@@ -18,6 +18,7 @@ import {
   type StateTopicDef,
   type TopicName,
   type Topics,
+  useBasePath,
 } from './dashboard'
 import {type installMessageBus, type resetMessageBus} from './dashboard-internal'
 
@@ -54,6 +55,7 @@ test('dashboard entrypoint exposes the message bus public types', () => {
   expectTypeOf<MessageBusQueryOptions['timeout']>().toEqualTypeOf<number | null | undefined>()
   expectTypeOf<MessageBusEmitResult<string>>().toExtend<PromiseLike<string>>()
   expectTypeOf<MessageBus['query']>().toBeFunction()
+  expectTypeOf<ReturnType<typeof useBasePath>>().toEqualTypeOf<string | null>()
 })
 
 // Guards issue #3: the test-isolation helpers stay on the internal entrypoint,
