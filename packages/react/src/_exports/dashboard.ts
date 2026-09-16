@@ -37,6 +37,8 @@ export {
   type DashboardWebWorker,
   useApplications,
 } from '../hooks/dashboard/useApplications'
+export {useAuthToken} from '../hooks/dashboard/useAuthToken'
+export {useCurrentUser} from '../hooks/dashboard/useCurrentUser'
 export {type TopicEmitter, useEmit} from '../hooks/dashboard/useEmit'
 export {useNavigate} from '../hooks/dashboard/useNavigate'
 export {
