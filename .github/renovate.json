@@ -67,7 +67,7 @@
       "minimumReleaseAge": null
     },
     {
-      "description": "Group @sanity/* deps; production. Changeset written by the published-packages rule below",
+      "description": "Group @sanity/* deps; production. Changeset written by the changeset rules below",
       "matchPackageNames": ["@sanity/*"],
       "groupName": "sanity",
       "rangeStrategy": "bump",
@@ -75,7 +75,7 @@
       "semanticCommitScope": "deps"
     },
     {
-      "description": "All other production deps; changeset written by the published-packages rule below",
+      "description": "All other production deps; changeset written by the changeset rules below",
       "matchDepTypes": ["dependencies"],
       "rangeStrategy": "bump",
       "semanticCommitType": "chore",
@@ -130,7 +130,7 @@
       "semanticCommitScope": "apps"
     },
     {
-      "description": "Update released groq; production dependency. Changeset written by the published-packages rule below",
+      "description": "Update released groq; production dependency. Changeset written by the changeset rules below",
       "matchDepNames": ["groq"],
       "rangeStrategy": "bump",
       "semanticCommitType": "chore",
@@ -142,9 +142,31 @@
       "enabled": false
     },
     {
-      "description": "Production deps of the published packages ship a patch release via changeset",
+      "description": "Inline (non-catalog) production deps of the published packages ship a patch release via changeset",
       "matchFileNames": ["packages/core/package.json", "packages/react/package.json"],
       "matchDepTypes": ["dependencies"],
+      "postUpgradeTasks": {
+        "commands": [
+          "pnpm changeset:renovate '{{{branchName}}}' {{#each upgrades}}'{{{depName}}}@{{{newVersion}}}' {{/each}}"
+        ],
+        "fileFilters": [".changeset/renovate-*.md"],
+        "executionMode": "branch",
+        "installTools": {"pnpm": {}}
+      }
+    },
+    {
+      "description": "Catalog runtime deps of the published packages; ship a patch release via changeset. Add new catalog runtime deps of core/react here",
+      "matchPackageNames": [
+        "@sanity/client",
+        "@sanity/comlink",
+        "@sanity/message-protocol",
+        "@sanity/types",
+        "groq",
+        "groq-js",
+        "rxjs",
+        "react-compiler-runtime",
+        "react-error-boundary"
+      ],
       "postUpgradeTasks": {
         "commands": [
           "pnpm changeset:renovate '{{{branchName}}}' {{#each upgrades}}'{{{depName}}}@{{{newVersion}}}' {{/each}}"

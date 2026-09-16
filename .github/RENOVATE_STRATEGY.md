@@ -48,30 +48,28 @@ Inventory of everything Renovate tracks. No action required.
 
 ## Automerge policy
 
-Rules are scoped by **package name** (or, for apps, by file path) — never by `matchFileNames` on the published packages. Everything automerges after CI passes and applicable release-age checks clear; the auto-approve workflow supplies the required approval.
+Automerge rules are scoped by **package name** (or, for apps, by file path). Everything automerges after CI passes and applicable release-age checks clear; the auto-approve workflow supplies the required approval. The changeset-writing rules that decide what releases are separate: a file-scoped rule for inline prod deps of core/react, and a name-matched rule for their catalog runtime deps (see below).
 
-A file-scoped rule matches any update to a production dependency of `packages/core` or `packages/react` and runs a `postUpgradeTasks` hook (`pnpm changeset:renovate`) that writes a patch changeset into the PR branch, so merging the PR ships a release through Changesets. Because rule matching is cumulative, this fires regardless of which group the update lands in, while apps-only branches never match it. The commits themselves are `chore(deps)` — Changesets, not the commit type, decides the release.
+Two changeset-writing rules run a `postUpgradeTasks` hook (`pnpm changeset:renovate`) that writes a patch changeset into the PR branch, so merging the PR ships a release through Changesets. A file-scoped rule (`matchFileNames` on `packages/core` / `packages/react`, `matchDepTypes: ["dependencies"]`) covers **inline** (non-catalog) prod deps like `@sanity/mutate`, `zustand`, `reselect`, `@module-federation/runtime`. Catalog prod deps report `packageFile: pnpm-workspace.yaml` and never match a file path, so a second rule matches the catalog runtime deps of core/react by name. Because rule matching is cumulative, a changeset is written regardless of which group the update lands in, while apps-only branches never match either rule. The commits themselves are `chore(deps)` — Changesets, not the commit type, decides the release.
 
-| Dependency type                                                                                          | Update type | Commit type                                   | Triggers release?    |
-| -------------------------------------------------------------------------------------------------------- | ----------- | --------------------------------------------- | -------------------- |
-| `@sanity/*` (grouped as `sanity`)                                                                        | any         | `chore(deps)` + patch changeset               | **Yes, patch**       |
-| Other production `dependencies` (catch-all)                                                              | any         | `chore(deps)` + patch changeset               | **Yes, patch**       |
-| Catalog non-`@sanity` runtime deps (`rxjs`, `groq-js`, `react-compiler-runtime`, `react-error-boundary`) | any         | `chore`                                       | No, see caveat below |
-| eslint / vitest / commitlint / react groups                                                              | any         | `chore(tooling)` / `chore(dev-deps)`          | No                   |
-| `devDependencies`                                                                                        | any         | `chore(dev-deps)`                             | No                   |
-| Anything under `apps/**`                                                                                 | any         | `chore(apps)`                                 | No                   |
-| `groq`                                                                                                   | any         | `chore(deps)` + patch changeset               | Yes                  |
-| `@sanity/codegen`                                                                                        | any         | disabled (kitchensink experimental generator) | No                   |
-| High-severity security                                                                                   | any         | varies                                        | varies               |
-| Trusted upstream (Sanity-maintained, React, Next, `@types/*`, etc.)                                      | inherits    | inherits                                      | inherits             |
+| Dependency type                                                                                                                                                                                                       | Update type | Commit type                                   | Triggers release? |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | --------------------------------------------- | ----------------- |
+| Inline (non-catalog) prod `dependencies` of core/react (file-scoped rule)                                                                                                                                             | any         | `chore(deps)` + patch changeset               | **Yes, patch**    |
+| Catalog runtime deps of core/react (name-matched rule: `@sanity/client`, `@sanity/comlink`, `@sanity/message-protocol`, `@sanity/types`, `groq`, `groq-js`, `rxjs`, `react-compiler-runtime`, `react-error-boundary`) | any         | `chore(deps)` + patch changeset               | **Yes, patch**    |
+| eslint / vitest / commitlint / react groups                                                                                                                                                                           | any         | `chore(tooling)` / `chore(dev-deps)`          | No                |
+| `devDependencies`                                                                                                                                                                                                     | any         | `chore(dev-deps)`                             | No                |
+| Anything under `apps/**`                                                                                                                                                                                              | any         | `chore(apps)`                                 | No                |
+| `@sanity/codegen`                                                                                                                                                                                                     | any         | disabled (kitchensink experimental generator) | No                |
+| High-severity security                                                                                                                                                                                                | any         | varies                                        | varies            |
+| Trusted upstream (Sanity-maintained, React, Next, `@types/*`, etc.)                                                                                                                                                   | inherits    | inherits                                      | inherits          |
 
 Majors are never grouped — each opens its own PR (`separateMajorMinor` is on by default), so a breaking bump is reviewed in isolation before it automerges.
 
 ### Why rules are scoped by package name
 
-pnpm catalog deps live in `pnpm-workspace.yaml`; Renovate reports their `packageFile` as that file and their `depType` as `pnpm.catalog.<name>` — never `dependencies`. So `matchFileNames` on the published packages and a `matchDepTypes: ["dependencies"]` catch-all both **miss catalog deps**. Matching `@sanity/*` by name catches the bulk of our runtime deps (catalog or not) and auto-covers new ones, and the production `dependencies` catch-all covers the inline (non-catalog) deps.
+pnpm catalog deps live in `pnpm-workspace.yaml`; Renovate reports their `packageFile` as that file and their `depType` as `pnpm.catalog.<name>` — never `dependencies`. So the file-scoped `matchFileNames` + `matchDepTypes: ["dependencies"]` changeset rule **misses catalog deps**. Most runtime deps of core/react are `catalog:`, so a second changeset rule matches them by an explicit name list.
 
-**Caveat — catalog non-`@sanity` runtime deps.** A few runtime deps of core/react live in the catalog but aren't `@sanity`-scoped: `rxjs`, `groq-js`, `react-compiler-runtime`, `react-error-boundary`. The catch-all can't see them (catalog depType) and the `@sanity/*` rule doesn't match them, so their PRs match no production rule, get no `postUpgradeTasks` changeset, and **don't release** on their own. If a fix in one of them needs to ship, add a changeset by hand on the PR branch (`pnpm changeset`) or extend the changeset-writing rules to match it by name. The `/review` command flags dep changes that should be reconsidered here.
+**Caveat — a new catalog runtime dep must be added to the name list.** The name-matched changeset rule in `.github/renovate.json` lists the current catalog runtime deps of core/react. A NEW catalog runtime dep added to core/react must also be added to that list, or its bumps match no changeset rule, get no `postUpgradeTasks` changeset, and **don't release** on their own. Inline (non-catalog) prod deps are safe — the file-scoped rule covers them without maintenance. The `/review` command flags a catalog runtime dep that is missing from the list.
 
 ### Why we follow the shared release age
 
@@ -93,9 +91,9 @@ Lock file maintenance has no single release timestamp, so Renovate's age check d
 
 ## Commit messages and releases
 
-Releases run through [Changesets](../../.changeset/config.json), not commit types. A production dep update ships because its PR carries a changeset, written by the `postUpgradeTasks` hook (`pnpm changeset:renovate`), not because the commit is `fix`:
+Releases run through [Changesets](../../.changeset/config.json), not commit types. A production dep update ships because its PR carries a changeset, written by the `postUpgradeTasks` hook (`pnpm changeset:renovate`), not because of the commit type:
 
-- A file-scoped rule (prod deps of `packages/core` / `packages/react`, any group) runs the hook, which writes `.changeset/renovate-<branch>.md` with a patch bump for both published packages. The commit is `chore(deps)`.
+- The file-scoped rule (inline prod deps of `packages/core` / `packages/react`) and the name-matched rule (catalog runtime deps of core/react) each run the hook, which writes `.changeset/renovate-<branch>.md` with a patch bump for both published packages. The commit is `chore(deps)`.
 - Everything else (dev deps, tooling groups, apps) is `chore(*)` with no changeset, so it does not release.
 
 If a production major dep breaks our public API, edit the generated changeset under `.changeset/` on the PR branch to declare a `major` bump before merging.
