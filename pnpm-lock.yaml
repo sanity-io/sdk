@@ -355,9 +355,6 @@ importers:
       vitest:
         specifier: 'catalog:'
         version: 5.0.1(@opentelemetry/api@1.9.1)(@types/node@24.13.5)(@vitest/coverage-v8@5.0.1)(jsdom@29.1.1(@noble/hashes@2.0.1))(vite@8.3.0(@types/node@24.13.5)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.36.0)(tsx@4.23.13)(yaml@2.9.0))
-      zx:
-        specifier: ^8.8.5
-        version: 8.8.5
 
   apps/kitchensink-react:
     dependencies:
@@ -8550,11 +8547,6 @@ packages:
         optional: true
       use-sync-external-store:
         optional: true
-
-  zx@8.8.5:
-    resolution: {integrity: sha512-SNgDF5L0gfN7FwVOdEFguY3orU5AkfFZm9B5YSHog/UDHv+lvmd82ZAsOenOkQixigwH2+yyH198AwNdKhj+RA==}
-    engines: {node: '>= 12.17.0'}
-    hasBin: true
 
 snapshots:
 
@@ -16994,5 +16986,3 @@ snapshots:
       immer: 10.1.1
       react: 19.3.0
       use-sync-external-store: 1.7.0(react@19.3.0)
-
-  zx@8.8.5: {}

@@ -7,5 +7,6 @@
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
   "ignore": [],
-  "privatePackages": {"version": false, "tag": false}
+  "privatePackages": {"version": false, "tag": false},
+  "snapshot": {"useCalculatedVersion": true, "prereleaseTemplate": "{tag}.{datetime}"}
 }
