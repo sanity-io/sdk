@@ -76,7 +76,11 @@ describe('dashboard topic types', () => {
   })
 
   it('requires payloads only for events that declare one', () => {
-    const messageBus = {emit: () => undefined} as unknown as MessageBus
+    const messageBus = {
+      emit: () => undefined,
+      query: () => undefined,
+      subscribe: () => undefined,
+    } as unknown as MessageBus
 
     messageBus.emit('auth.token.refresh')
     messageBus.emit('auth.token.refresh', undefined, {timeout: null})
@@ -85,5 +89,11 @@ describe('dashboard topic types', () => {
     messageBus.emit('navigation.location.update')
     // @ts-expect-error applications.status.update is internal
     messageBus.emit('applications.status.update', {name: 'media', value: {label: null}})
+    // @ts-expect-error applications.status.update is internal
+    messageBus.query('applications.status.update')
+    // @ts-expect-error applications.status.update is internal
+    messageBus.subscribe('applications.status.update')
+    // @ts-expect-error applications.status.update is internal
+    messageBus.subscribe('applications.status.update', () => {})
   })
 })

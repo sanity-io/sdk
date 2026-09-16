@@ -112,6 +112,7 @@ export interface DashboardTopics {
   'applications.foreground': StateTopicDef<Application['id'] | null>
   /** The dashboard applications available to the current user. */
   'applications.list': StateTopicDef<TopicResult<Application<ApplicationInclude>[]> | null>
+  'applications.status.update': EventTopicDef<ApplicationStatusUpdate>
   /**
    * The session token for the reading connection, or `null` while signed out. The host
    * writes it to each connection separately, so one application never sees another's token.
@@ -161,7 +162,7 @@ export interface DashboardTopics {
  * @public
  */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type -- Declaration merging extends the SDK manifest.
-export interface Topics extends DashboardTopics {}
+export interface Topics extends Omit<DashboardTopics, 'applications.status.update'> {}
 
 /**
  * Every declared topic name.
@@ -192,18 +193,8 @@ const stateTopic = <const V>(seed: V) => ({kind: 'state', seed}) as const
 // `same_app` restricts responding to the application that installed the bus.
 const dashboardEvent = {kind: 'event', ownership: {type: 'same_app'}} as const
 
-/**
- * Dashboard topics reserved for internal application code.
- * @internal
- */
-export interface InternalDashboardTopics {
-  'applications.status.update': EventTopicDef<ApplicationStatusUpdate>
-}
-
-type BundledDashboardTopics = DashboardTopics & InternalDashboardTopics
-
 type DashboardTopicManifest = {
-  readonly [K in keyof BundledDashboardTopics]: TopicManifestEntry<BundledDashboardTopics[K]>
+  readonly [K in keyof DashboardTopics]: TopicManifestEntry<DashboardTopics[K]>
 }
 
 /**
@@ -295,5 +286,5 @@ export interface TopicMigration {
  * @internal
  */
 export const topicMigrations: Partial<
-  Record<TopicName | keyof InternalDashboardTopics, readonly TopicMigration[]>
+  Record<keyof DashboardTopics | TopicName, readonly TopicMigration[]>
 > = {}

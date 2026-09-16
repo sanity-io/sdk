@@ -23,7 +23,6 @@ import {
 } from './dashboard'
 import {
   type ApplicationStatus,
-  type ApplicationStatusBus,
   type ApplicationStatusUpdate,
   type installMessageBus,
   type resetMessageBus,
@@ -47,7 +46,7 @@ test('dashboard entrypoint exposes the message bus public types', () => {
 
   // Topic declarations are reachable for declaration merging.
   expectTypeOf<TopicName>().toEqualTypeOf<keyof Topics>()
-  expectTypeOf<keyof DashboardTopics>().toExtend<TopicName>()
+  expectTypeOf<Exclude<keyof DashboardTopics, 'applications.status.update'>>().toExtend<TopicName>()
   expectTypeOf<StateTopicDef<number>['value']>().toBeNumber()
   expectTypeOf<EventTopicDef<{n: number}, string>['payload']>().toEqualTypeOf<{n: number}>()
 
@@ -63,23 +62,22 @@ test('dashboard entrypoint exposes the message bus public types', () => {
   expectTypeOf<MessageBusEmitResult<string>>().toExtend<PromiseLike<string>>()
   expectTypeOf<MessageBus['query']>().toBeFunction()
   expectTypeOf<ReturnType<typeof useApplicationBasePath>>().toEqualTypeOf<string>()
+  expectTypeOf<MessageBusHost['connections']['subscribe']>().toBeFunction()
 })
 
-// Guards issue #3: the test-isolation helpers stay on the internal entrypoint,
-// not the public one.
 test('internal entrypoint exposes dashboard internals', () => {
   expectTypeOf<ApplicationStatus>().toEqualTypeOf<{label: string | null}>()
   expectTypeOf<ApplicationStatusUpdate>().toEqualTypeOf<{
     name: string
     value: ApplicationStatus
   }>()
-  expectTypeOf<ApplicationStatusBus['emit']>().toBeFunction()
-  const emitApplicationStatus = (messageBus: ApplicationStatusBus) => {
+  const emitApplicationStatus = (messageBus: ReturnType<typeof installMessageBus>) => {
     messageBus.emit('applications.status.update', {name: 'list', value: {label: null}})
     // @ts-expect-error application statuses always carry a label field
     messageBus.emit('applications.status.update', {name: 'list', value: null})
   }
-  const subscribeToApplicationStatus = (messageBus: ApplicationStatusBus<MessageBusHost>) => {
+  const subscribeToApplicationStatus = (messageBus: ReturnType<typeof installMessageBus>) => {
+    messageBus.subscribe('applications.status.update')
     messageBus.subscribe('applications.status.update', (message) => {
       expectTypeOf(message.type).toEqualTypeOf<'applications.status.update'>()
     })

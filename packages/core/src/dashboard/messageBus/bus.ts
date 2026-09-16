@@ -17,15 +17,15 @@ import {
 import {type Application} from '../../applications/applications'
 import {
   DASHBOARD_TOPIC_MANIFEST,
-  type EventTopic,
-  type InternalDashboardTopics,
-  type PayloadOf,
-  type ReplyOf,
+  type DashboardTopics,
+  type EventTopicDef,
   type StateTopic,
+  type StateTopicDef,
   type TopicManifest,
   type TopicMigration,
   topicMigrations,
   type TopicName,
+  type Topics,
   type ValueOf,
 } from './topics'
 
@@ -79,9 +79,9 @@ export interface MessageBusMeta {
  * A message delivered to an event topic responder.
  * @public
  */
-export interface MessageBusMessage<T, R = never> {
+export interface MessageBusMessage<T, R = never, K extends PropertyKey = TopicName> {
   /** The topic that carries the message. */
-  type: TopicName
+  type: K
   /** The event payload. */
   payload: T
   /** The message provenance. */
@@ -141,6 +141,25 @@ export interface MessageBusEmitResult<R> extends PromiseLike<R> {
   finally(onFinally?: () => void): Promise<R>
 }
 
+type StateTopicOf<TTopics> = Extract<
+  {[K in keyof TTopics]: TTopics[K] extends {kind: 'state'} ? K : never}[keyof TTopics],
+  string
+>
+
+type EventTopicOf<TTopics> = Extract<
+  {[K in keyof TTopics]: TTopics[K] extends {kind: 'event'} ? K : never}[keyof TTopics],
+  string
+>
+
+type TopicValueOf<TTopics, K extends StateTopicOf<TTopics>> =
+  TTopics[K] extends StateTopicDef<infer T> ? T : never
+
+type TopicPayloadOf<TTopics, K extends EventTopicOf<TTopics>> =
+  TTopics[K] extends EventTopicDef<infer P, infer _R> ? P : never
+
+type TopicReplyOf<TTopics, K extends EventTopicOf<TTopics>> =
+  TTopics[K] extends EventTopicDef<infer _P, infer R> ? R : never
+
 /**
  * Sends events and reads typed state and event topics.
  *
@@ -149,67 +168,46 @@ export interface MessageBusEmitResult<R> extends PromiseLike<R> {
  * {@link MessageBusClient.emit}; a connection only ever reads its own values.
  * @public
  */
-export interface MessageBus {
+export interface MessageBus<TTopics = Topics> {
   /** Emits an event topic and provides its reply when awaited. */
-  emit<K extends EventTopic>(
+  emit<K extends EventTopicOf<TTopics>>(
     type: K,
-    ...rest: PayloadOf<K> extends void
+    ...rest: TopicPayloadOf<TTopics, K> extends void
       ? [payload?: void, options?: MessageBusEmitOptions]
-      : [payload: PayloadOf<K>, options?: MessageBusEmitOptions]
-  ): MessageBusEmitResult<ReplyOf<K>>
+      : [payload: TopicPayloadOf<TTopics, K>, options?: MessageBusEmitOptions]
+  ): MessageBusEmitResult<TopicReplyOf<TTopics, K>>
   /** Reads the current or next value of a state topic. */
-  query<K extends StateTopic>(type: K, options?: MessageBusQueryOptions): Promise<ValueOf<K>>
-  /** Runs a responder for each event until its signal aborts. */
-  subscribe<K extends EventTopic>(
+  query<K extends StateTopicOf<TTopics>>(
     type: K,
-    handler: (message: MessageBusMessage<PayloadOf<K>, ReplyOf<K>>) => void,
+    options?: MessageBusQueryOptions,
+  ): Promise<TopicValueOf<TTopics, K>>
+  /** Runs a responder for each event until its signal aborts. */
+  subscribe<K extends EventTopicOf<TTopics>>(
+    type: K,
+    handler: (
+      message: MessageBusMessage<TopicPayloadOf<TTopics, K>, TopicReplyOf<TTopics, K>, K>,
+    ) => void,
     options?: MessageBusAbortOptions,
   ): void
   /** Runs a handler for each state value until its signal aborts. */
-  subscribe<K extends StateTopic>(
+  subscribe<K extends StateTopicOf<TTopics>>(
     type: K,
-    handler: (value: ValueOf<K>) => void,
+    handler: (value: TopicValueOf<TTopics, K>) => void,
     options?: MessageBusAbortOptions,
   ): void
   /** Returns a state topic as a `MessageBusStateSource`. */
-  subscribe<K extends StateTopic>(type: K): MessageBusStateSource<ValueOf<K>>
+  subscribe<K extends StateTopicOf<TTopics>>(
+    type: K,
+  ): MessageBusStateSource<TopicValueOf<TTopics, K>>
   /** Returns an event topic as an observable of its payloads. */
-  subscribe<K extends EventTopic>(type: K): Observable<PayloadOf<K>>
+  subscribe<K extends EventTopicOf<TTopics>>(type: K): Observable<TopicPayloadOf<TTopics, K>>
 }
-
-type ApplicationStatusTopic = InternalDashboardTopics['applications.status.update']
-type ApplicationStatusPayload = ApplicationStatusTopic['payload']
-type ApplicationStatusReply = NonNullable<ApplicationStatusTopic['reply']>
-type ApplicationStatusMessage = Omit<
-  MessageBusMessage<ApplicationStatusPayload, ApplicationStatusReply>,
-  'type'
-> & {type: 'applications.status.update'}
-
-/**
- * A message bus with access to the internal application status topic.
- * @internal
- */
-export type ApplicationStatusBus<T extends MessageBus = MessageBus> = T & {
-  emit(
-    type: 'applications.status.update',
-    payload: ApplicationStatusPayload,
-    options?: MessageBusEmitOptions,
-  ): MessageBusEmitResult<ApplicationStatusReply>
-} & (T extends MessageBusHost
-    ? {
-        subscribe(
-          type: 'applications.status.update',
-          handler: (message: ApplicationStatusMessage) => void,
-          options?: MessageBusAbortOptions,
-        ): void
-      }
-    : unknown)
 
 /**
  * A message bus connection that can be torn down independently of its siblings.
  * @public
  */
-export interface MessageBusConnection extends MessageBus {
+export interface MessageBusConnection<TTopics = Topics> extends MessageBus<TTopics> {
   /**
    * Tears down this connection: pending requests reject `ABORTED`, subscriptions
    * complete, and later `emit`, `query`, and `subscribe` calls fail with `ABORTED`.
@@ -243,7 +241,7 @@ export interface MessageBusClient {
  * a snapshot to each new client.
  * @public
  */
-export interface MessageBusHost extends MessageBusConnection {
+export interface MessageBusHost<TTopics = Topics> extends MessageBusConnection<TTopics> {
   /**
    * Every open connection other than this one first, then each new one as it joins. The same
    * {@link MessageBusClient} object is handed out for a connection across subscriptions, so it
@@ -670,7 +668,7 @@ export function createIsolatedMessageBus(
   config: {
     migrations?: ReadonlyMap<string, readonly TopicMigration[]>
   } = {},
-): MessageBusHost {
+): MessageBusHost<DashboardTopics & Topics> {
   if (!appId) throwMissingAppId()
 
   const registry: MessageBusRegistry = {
@@ -687,7 +685,10 @@ export function createIsolatedMessageBus(
 
   mergeTopicManifest(registry, DASHBOARD_TOPIC_MANIFEST)
 
-  return createConnection(registry, {appId, migrations: config.migrations}) as MessageBusHost
+  return createConnection(registry, {
+    appId,
+    migrations: config.migrations,
+  }) as MessageBusHost<DashboardTopics & Topics>
 }
 
 type TopicVersionAdapter = {
@@ -892,7 +893,7 @@ export interface ConnectApplicationToMessageBusOptions {
 export function connectApplicationToMessageBus(
   installedMessageBus: MessageBus,
   config: ConnectApplicationToMessageBusOptions,
-): MessageBusConnection {
+): MessageBusConnection<DashboardTopics & Topics> {
   if (!config.appId) throwMissingAppId()
 
   const {appId} = config
@@ -931,7 +932,7 @@ export function connectApplicationToMessageBus(
     return createRejectedConnection(() => error)
   }
 
-  return createConnection(registry, config)
+  return createConnection(registry, config) as MessageBusConnection<DashboardTopics & Topics>
 }
 
 // Hands the host the same client object for a connection across `connections` subscriptions.
@@ -1231,7 +1232,9 @@ export interface InstallMessageBusOptions {
  * connection it would get has no `connections`.
  * @internal
  */
-export function installMessageBus(options: InstallMessageBusOptions = {}): MessageBusHost {
+export function installMessageBus(
+  options: InstallMessageBusOptions = {},
+): MessageBusHost<DashboardTopics & Topics> {
   const appId = resolveAppId(options.appId) ?? throwMissingAppId()
   const installedMessageBus = getInstalledMessageBus()
   if (installedMessageBus) {
@@ -1243,7 +1246,9 @@ export function installMessageBus(options: InstallMessageBusOptions = {}): Messa
         `Cannot install the message bus as "${appId}": it is already installed by "${installedAppId}". Applications connect with connectMessageBus().`,
       )
     }
-    return connectApplicationToMessageBus(installedMessageBus, {appId}) as MessageBusHost
+    return connectApplicationToMessageBus(installedMessageBus, {
+      appId,
+    }) as MessageBusHost<DashboardTopics & Topics>
   }
 
   const globals = globalThis as {[MESSAGE_BUS_KEY]?: MessageBus}

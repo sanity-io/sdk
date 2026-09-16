@@ -1,6 +1,5 @@
 export {
   type ApplicationStatus,
-  type ApplicationStatusBus,
   type ApplicationStatusUpdate,
   installMessageBus,
   resetMessageBus,

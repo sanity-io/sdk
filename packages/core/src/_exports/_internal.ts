@@ -8,7 +8,6 @@ export {
 } from '../auth/utils'
 export {getCommentsOptionsKey, parseCommentsOptionsKey} from '../comments/commentsStore' // only used for memoizing in React, not needed for actual functionality
 export {
-  type ApplicationStatusBus,
   installMessageBus,
   type InstallMessageBusOptions,
   resetMessageBus,

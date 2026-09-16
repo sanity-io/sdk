@@ -4,7 +4,6 @@ import {EmptyError, firstValueFrom} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {
-  type ApplicationStatusBus,
   connectApplicationToMessageBus,
   type ConnectApplicationToMessageBusOptions,
   connectMessageBus,
@@ -12,7 +11,6 @@ import {
   installMessageBus,
   type MessageBus,
   type MessageBusClient,
-  type MessageBusConnection,
   MessageBusError,
   type MessageBusHost,
   registerStateTopics,
@@ -503,14 +501,13 @@ describe('application connections', () => {
   })
 
   it('delivers application status events to the host and rejects app responders', () => {
-    const statusHost = createMessageBus('dashboard') as ApplicationStatusBus<MessageBusHost>
+    const statusHost = createMessageBus('dashboard')
     const application = connectApplicationToMessageBus(statusHost, {
       appId: 'favorites',
-    }) as ApplicationStatusBus<MessageBusConnection>
+    })
     const responder = vi.fn()
 
     statusHost.subscribe('applications.status.update', responder)
-    // @ts-expect-error application connections cannot respond to host-owned topics
     expect(() => application.subscribe('applications.status.update', vi.fn())).toThrowError(
       expect.objectContaining({code: 'OWNERSHIP_MISMATCH'}),
     )
