@@ -29,6 +29,7 @@ describe('dashboard topic types', () => {
   })
 
   it('exposes application state values', () => {
+    expectTypeOf<ValueOf<'applications.base-path'>>().toEqualTypeOf<TopicResult<string>>()
     expectTypeOf<ValueOf<'applications.config'>>().toEqualTypeOf<ApplicationConfig[] | null>()
     expectTypeOf<ValueOf<'applications.list'>>().toEqualTypeOf<TopicResult<
       Application<ApplicationInclude>[]
