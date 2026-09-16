@@ -1,3 +1,4 @@
+import {installMessageBus, resetMessageBus} from '@sanity/sdk/_internal'
 import {renderHook, waitFor} from '@testing-library/react'
 import {afterEach, describe, expect, it, vi} from 'vitest'
 
@@ -7,6 +8,8 @@ import {useWindowTitle} from './useWindowTitle'
 vi.mock('../comlink/useWindowConnection', () => ({
   useWindowConnection: vi.fn(),
 }))
+
+const MESSAGE_BUS_KEY = Symbol.for('sanity.os.bus')
 
 function createContextResponse(resource: Record<string, unknown>) {
   return {context: {resource}}
@@ -240,5 +243,25 @@ describe('useWindowTitle', () => {
     })
 
     consoleSpy.mockRestore()
+  })
+})
+
+describe('useWindowTitle (message bus)', () => {
+  afterEach(() => {
+    resetMessageBus()
+    delete (globalThis as {[MESSAGE_BUS_KEY]?: unknown})[MESSAGE_BUS_KEY]
+    vi.unstubAllGlobals()
+    document.title = ''
+  })
+
+  it('no-ops without suspending under the message bus', () => {
+    vi.stubGlobal('__SANITY_APP_ID__', 'app')
+    installMessageBus({appId: 'dashboard'})
+    document.title = 'Host Owned Title'
+
+    renderHook(() => useWindowTitle('Movies'))
+
+    expect(document.title).toBe('Host Owned Title')
+    expect(useWindowConnection).not.toHaveBeenCalled()
   })
 })
