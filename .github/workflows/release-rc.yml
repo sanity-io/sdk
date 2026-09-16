@@ -5,7 +5,7 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 permissions:
   contents: read # for checkout
@@ -88,9 +88,12 @@ jobs:
       # Commit pre.json, the bumped package.json files and CHANGELOGs back to the
       # dispatched branch. [skip ci] so the push does not retrigger workflows.
       - name: Commit and push the rc versions
+        env:
+          BRANCH: ${{ github.ref_name }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add .
           git commit -m "chore(release): publish rc [skip ci]"
+          git pull --rebase origin "$BRANCH"
           git push
