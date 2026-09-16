@@ -21,16 +21,17 @@ Paths are referenced from [`.fallowrc.json`](../.fallowrc.json) under the `audit
 
 The baselines hold backlog: findings we intend to burn down. Permanent false positives go in the `ignoreDependencies` array in [`.fallowrc.json`](../.fallowrc.json) instead, so the baselines don't accumulate entries that can never be resolved. No dependency findings are baselined today.
 
-Six packages are listed there:
+Seven packages are listed there:
 
-| Package                       | Actually used in                                                               |
-| ----------------------------- | ------------------------------------------------------------------------------ |
-| `@sanity/browserslist-config` | `browserslist` field of the `packages/core` and `packages/react` manifests     |
-| `@sanity/tsconfig`            | `extends` in `packages/@repo/tsconfig/base.json`                               |
-| `babel-plugin-react-compiler` | `reactCompilerPreset` in `packages/@repo/package.bundle/src/package.bundle.ts` |
-| `react-compiler-runtime`      | Injected into React Compiler output at build time                              |
-| `@google-cloud/storage`       | `scripts/uploadBundles.mts`                                                    |
-| `read-package-up`             | `scripts/uploadBundles.mts`                                                    |
+| Package                       | Actually used in                                                                                                                                                |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@sanity/browserslist-config` | `browserslist` field of the `packages/core` and `packages/react` manifests                                                                                      |
+| `@sanity/tsconfig`            | `extends` in `packages/@repo/tsconfig/base.json`                                                                                                                |
+| `babel-plugin-react-compiler` | `reactCompilerPreset` in `packages/@repo/package.bundle/src/package.bundle.ts`                                                                                  |
+| `react-compiler-runtime`      | Injected into React Compiler output at build time                                                                                                               |
+| `@google-cloud/storage`       | `scripts/uploadBundles.mts`                                                                                                                                     |
+| `read-package-up`             | `scripts/uploadBundles.mts`                                                                                                                                     |
+| `xstate`                      | Pinned so the version inlined into the declaration bundle (via `@sanity/comlink`'s re-exported types) is declared and Renovate-tracked; never imported directly |
 
 The first four are referenced from config rather than imported, so Fallow cannot see the usage at all. The last two are imported normally, but only from `scripts/`, which Fallow classifies as production code and so reports as `dev-dependencies-in-production`.
 

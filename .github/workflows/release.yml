@@ -111,13 +111,6 @@ jobs:
         if: steps.changesets.outputs['has-changesets'] == 'false' && steps.version.outputs.already-published == 'false'
         run: |
           pnpm changeset publish --no-git-tag
-          # Point `next` at this stable release so it never trails `latest`. The
-          # snapshot job below only ever moves `next` forward from here. One
-          # VERSION for both packages relies on the `fixed` group in
-          # .changeset/config.json.
-          VERSION=$(node -p "require('./packages/core/package.json').version")
-          pnpm dist-tag add "@sanity/sdk@$VERSION" next
-          pnpm dist-tag add "@sanity/sdk-react@$VERSION" next
           echo "published=true" >> "$GITHUB_OUTPUT"
         env:
           NPM_CONFIG_PROVENANCE: true
@@ -142,6 +135,18 @@ jobs:
             awk '/^## /{n++} n==1' packages/react/CHANGELOG.md
           } > notes.md
           gh release create "sdk-v$VERSION" --target "$GITHUB_SHA" --title "sdk-v$VERSION" --notes-file notes.md
+
+      # Point `next` at this stable release so it never trails `latest`. The
+      # snapshot job below only ever moves `next` forward from here. One VERSION
+      # for both packages relies on the `fixed` group in .changeset/config.json.
+      - name: Move the next dist-tag to the stable release
+        if: steps.publish.outputs.published == 'true'
+        continue-on-error: true
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          pnpm dist-tag add "@sanity/sdk@$VERSION" next
+          pnpm dist-tag add "@sanity/sdk-react@$VERSION" next
 
   # Publish a `next` snapshot on every push to main that still has pending
   # changesets. Once the Version PR merges the changesets are gone,
@@ -182,7 +187,12 @@ jobs:
       # `changeset version --snapshot` is a silent no-op when there are no
       # changesets. Fail loudly if the gate and this job's config ever disagree.
       - name: Guard against empty snapshot
-        run: grep -q -- '-next\.' packages/core/package.json || exit 1
+        run: |
+          VERSION=$(node -p "require('./packages/core/package.json').version")
+          case "$VERSION" in
+            *-next.*) ;;
+            *) echo "::error::Expected a -next snapshot version, got $VERSION. The job gate and the changeset config disagree."; exit 1 ;;
+          esac
 
       - name: Build packages
         run: pnpm build:packages
