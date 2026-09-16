@@ -8,6 +8,7 @@ export {
 } from '../auth/utils'
 export {getCommentsOptionsKey, parseCommentsOptionsKey} from '../comments/commentsStore' // only used for memoizing in React, not needed for actual functionality
 export {
+  type ApplicationStatusBus,
   installMessageBus,
   type InstallMessageBusOptions,
   resetMessageBus,
@@ -17,6 +18,7 @@ export {
   isDashboardEnvironment,
   requireDashboardMessageBus,
 } from '../dashboard/messageBus/store'
+export type {ApplicationStatus, ApplicationStatusUpdate} from '../dashboard/messageBus/topics'
 export {getTopicState, resolveTopic} from '../dashboard/messageBus/topicStore'
 export {PREVIEW_PROJECTION} from '../preview/previewConstants'
 export {transformProjectionToPreview} from '../preview/previewProjectionUtils'

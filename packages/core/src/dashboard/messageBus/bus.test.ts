@@ -4,6 +4,7 @@ import {EmptyError, firstValueFrom} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {
+  type ApplicationStatusBus,
   connectApplicationToMessageBus,
   type ConnectApplicationToMessageBusOptions,
   connectMessageBus,
@@ -11,6 +12,7 @@ import {
   installMessageBus,
   type MessageBus,
   type MessageBusClient,
+  type MessageBusConnection,
   MessageBusError,
   type MessageBusHost,
   registerStateTopics,
@@ -498,6 +500,46 @@ describe('application connections', () => {
       app.subscribe('auth.token.refresh', (message) => message.reply('spoofed')),
     ).toThrowError(expect.objectContaining({code: 'OWNERSHIP_MISMATCH'}))
     expect(app.subscribe('auth.token').getCurrent()).toBe('trusted')
+  })
+
+  it('delivers application status events to the host and rejects app responders', () => {
+    const statusHost = createMessageBus('dashboard') as ApplicationStatusBus<MessageBusHost>
+    const application = connectApplicationToMessageBus(statusHost, {
+      appId: 'favorites',
+    }) as ApplicationStatusBus<MessageBusConnection>
+    const responder = vi.fn()
+
+    statusHost.subscribe('applications.status.update', responder)
+    // @ts-expect-error application connections cannot respond to host-owned topics
+    expect(() => application.subscribe('applications.status.update', vi.fn())).toThrowError(
+      expect.objectContaining({code: 'OWNERSHIP_MISMATCH'}),
+    )
+
+    application.emit('applications.status.update', {
+      name: 'list',
+      value: {label: 'Syncing'},
+    })
+    application.emit('applications.status.update', {
+      name: 'list',
+      value: {label: null},
+    })
+
+    expect(responder).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        type: 'applications.status.update',
+        payload: {name: 'list', value: {label: 'Syncing'}},
+        meta: expect.objectContaining({appId: 'favorites'}),
+      }),
+    )
+    expect(responder).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        type: 'applications.status.update',
+        payload: {name: 'list', value: {label: null}},
+        meta: expect.objectContaining({appId: 'favorites'}),
+      }),
+    )
   })
 
   it('rejects state emits from every connection, including the host', () => {

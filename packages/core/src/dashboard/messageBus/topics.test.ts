@@ -1,13 +1,16 @@
-import {describe, expectTypeOf, it} from 'vitest'
+import {describe, expect, expectTypeOf, it} from 'vitest'
 
 import {type Application, type ApplicationInclude} from '../../applications/applications'
 import {type MessageBus} from './bus'
 import {
   type ApplicationConfig,
   type ApplicationConfigAppType,
+  type ApplicationStatusUpdate,
+  DASHBOARD_TOPIC_MANIFEST,
   type PayloadOf,
   type ReplyOf,
   type StateTopic,
+  type TopicName,
   type TopicResult,
   type ValueOf,
 } from './topics'
@@ -26,6 +29,18 @@ describe('dashboard topic types', () => {
     expectTypeOf<IsStateTopic<'applications.foreground'>>().toEqualTypeOf<true>()
     expectTypeOf<IsStateTopic<'auth.token.refresh'>>().toEqualTypeOf<false>()
     expectTypeOf<Parameters<MessageBus['query']>[0]>().toEqualTypeOf<StateTopic>()
+  })
+
+  it('keeps application status internal', () => {
+    expectTypeOf<ApplicationStatusUpdate>().toEqualTypeOf<{
+      name: string
+      value: {label: string | null}
+    }>()
+    expect(DASHBOARD_TOPIC_MANIFEST['applications.status.update']).toEqual({
+      kind: 'event',
+      ownership: {type: 'same_app'},
+    })
+    expectTypeOf<'applications.status.update'>().not.toMatchTypeOf<TopicName>()
   })
 
   it('exposes application state values', () => {
@@ -68,5 +83,7 @@ describe('dashboard topic types', () => {
     messageBus.emit('navigation.location.update', {url: '/'})
     // @ts-expect-error navigation.location.update requires a payload
     messageBus.emit('navigation.location.update')
+    // @ts-expect-error applications.status.update is internal
+    messageBus.emit('applications.status.update', {name: 'media', value: {label: null}})
   })
 })

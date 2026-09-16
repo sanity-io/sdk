@@ -32,6 +32,23 @@ export interface ApplicationConfig extends RemoteModuleRef {
 }
 
 /**
+ * A label rendered for an application interface; `null` clears it.
+ * @internal
+ */
+export type ApplicationStatus = {label: string | null}
+
+/**
+ * Updates the status rendered for an application interface.
+ * @internal
+ */
+export type ApplicationStatusUpdate = {
+  /** The application interface name. */
+  name: string
+  /** The status to render. */
+  value: ApplicationStatus
+}
+
+/**
  * Declares a topic that stores and replays its current value.
  * @public
  */
@@ -176,16 +193,29 @@ const stateTopic = <const V>(seed: V) => ({kind: 'state', seed}) as const
 const dashboardEvent = {kind: 'event', ownership: {type: 'same_app'}} as const
 
 /**
+ * Dashboard topics reserved for internal application code.
+ * @internal
+ */
+export interface InternalDashboardTopics {
+  'applications.status.update': EventTopicDef<ApplicationStatusUpdate>
+}
+
+type BundledDashboardTopics = DashboardTopics & InternalDashboardTopics
+
+type DashboardTopicManifest = {
+  readonly [K in keyof BundledDashboardTopics]: TopicManifestEntry<BundledDashboardTopics[K]>
+}
+
+/**
  * Defines the runtime kind, ownership, and initial value of dashboard topics.
  * @internal
  */
-export const DASHBOARD_TOPIC_MANIFEST: {
-  readonly [K in keyof DashboardTopics]: TopicManifestEntry<DashboardTopics[K]>
-} = {
+export const DASHBOARD_TOPIC_MANIFEST: DashboardTopicManifest = {
   'applications.base-path': stateTopic(undefined),
   'applications.config': stateTopic(undefined),
   'applications.foreground': stateTopic(undefined),
   'applications.list': stateTopic(undefined),
+  'applications.status.update': dashboardEvent,
   'auth.token': stateTopic(undefined),
   'auth.token.refresh': dashboardEvent,
   'navigation.location': stateTopic(undefined),
@@ -264,4 +294,6 @@ export interface TopicMigration {
  * Defines the bundled migration chain for each topic.
  * @internal
  */
-export const topicMigrations: Partial<Record<TopicName, readonly TopicMigration[]>> = {}
+export const topicMigrations: Partial<
+  Record<TopicName | keyof InternalDashboardTopics, readonly TopicMigration[]>
+> = {}

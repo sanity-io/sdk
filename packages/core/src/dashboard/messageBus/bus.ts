@@ -18,6 +18,7 @@ import {type Application} from '../../applications/applications'
 import {
   DASHBOARD_TOPIC_MANIFEST,
   type EventTopic,
+  type InternalDashboardTopics,
   type PayloadOf,
   type ReplyOf,
   type StateTopic,
@@ -175,6 +176,34 @@ export interface MessageBus {
   /** Returns an event topic as an observable of its payloads. */
   subscribe<K extends EventTopic>(type: K): Observable<PayloadOf<K>>
 }
+
+type ApplicationStatusTopic = InternalDashboardTopics['applications.status.update']
+type ApplicationStatusPayload = ApplicationStatusTopic['payload']
+type ApplicationStatusReply = NonNullable<ApplicationStatusTopic['reply']>
+type ApplicationStatusMessage = Omit<
+  MessageBusMessage<ApplicationStatusPayload, ApplicationStatusReply>,
+  'type'
+> & {type: 'applications.status.update'}
+
+/**
+ * A message bus with access to the internal application status topic.
+ * @internal
+ */
+export type ApplicationStatusBus<T extends MessageBus = MessageBus> = T & {
+  emit(
+    type: 'applications.status.update',
+    payload: ApplicationStatusPayload,
+    options?: MessageBusEmitOptions,
+  ): MessageBusEmitResult<ApplicationStatusReply>
+} & (T extends MessageBusHost
+    ? {
+        subscribe(
+          type: 'applications.status.update',
+          handler: (message: ApplicationStatusMessage) => void,
+          options?: MessageBusAbortOptions,
+        ): void
+      }
+    : unknown)
 
 /**
  * A message bus connection that can be torn down independently of its siblings.
