@@ -105,6 +105,32 @@ You can also add the package at the specific SHA to a package.json file:
 - Preview packages remain available as long as the PR is open
 - Preview packages are automatically cleaned up after the PR is closed
 
+## Releasing
+
+Releases are managed with [Changesets](https://github.com/changesets/changesets). Both published packages — `@sanity/sdk` and `@sanity/sdk-react` — always ship the same version.
+
+### Adding a changeset
+
+A change that users should receive needs a changeset. From the repo root:
+
+```bash
+pnpm changeset
+```
+
+Pick the bump for the change:
+
+- `feat` → **minor**
+- `fix` / `perf` / `revert` → **patch**
+- a breaking change → **major**
+
+`chore` / `docs` / `test` / `ci` changes, and changes that only touch `apps/*`, carry no changeset and do not release. You can pick either published package when prompted — they are version-fixed, so both bump together. Commit the generated file under `.changeset/`.
+
+To preview the version bump and changelog entries locally, run `GITHUB_TOKEN=$(gh auth token) pnpm changeset version` — the `GITHUB_TOKEN` is required because `@changesets/changelog-github` calls the GitHub API to enrich each entry. Discard the result afterwards; the Version PR does this in CI.
+
+### The Version PR
+
+When your PR merges to `main`, Changesets opens (or updates) a `chore: release` "Version PR" that collects the pending bumps and updates each `CHANGELOG.md`. Merging that Version PR bumps the versions, publishes both packages to npm, and cuts a single `sdk-vX.Y.Z` tag and GitHub release.
+
 ## Contributing
 
 ### Branch Guidelines

@@ -1,6 +1,6 @@
 # Changelog
 
-## [3.3.0](https://github.com/sanity-io/sdk/compare/sdk-v3.2.0...sdk-v3.3.0) (2026-09-17)
+## 3.3.0 (2026-09-17)
 
 
 ### Features
