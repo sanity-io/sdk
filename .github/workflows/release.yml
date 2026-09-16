@@ -61,6 +61,15 @@ jobs:
           # changelog-github reads GITHUB_TOKEN when the action runs changeset version.
           GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
 
+      - name: Assert changesets action output
+        env:
+          HAS_CHANGESETS: ${{ steps.changesets.outputs['has-changesets'] }}
+        run: |
+          if [ -z "$HAS_CHANGESETS" ]; then
+            echo "::error::changesets/action did not set the has-changesets output; check the pinned action version's output names."
+            exit 1
+          fi
+
       # Publish once no changesets remain (i.e. the Version PR just merged). Each
       # step is idempotent: a rerun or a no-op push that is already on the
       # registry sets published=false and skips the rest.
@@ -70,8 +79,10 @@ jobs:
         run: |
           VERSION=$(node -p "require('./packages/core/package.json').version")
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          # Both packages share the version (fixed), so checking core is enough.
-          if npm view "@sanity/sdk@$VERSION" version > /dev/null 2>&1; then
+          # `changeset publish` skips packages already on the registry, so a rerun
+          # after a partial publish republishes only the missing one. Only treat the
+          # version as fully published when BOTH packages are already on the registry.
+          if npm view "@sanity/sdk@$VERSION" version > /dev/null 2>&1 && npm view "@sanity/sdk-react@$VERSION" version > /dev/null 2>&1; then
             echo "already-published=true" >> "$GITHUB_OUTPUT"
           else
             echo "already-published=false" >> "$GITHUB_OUTPUT"
