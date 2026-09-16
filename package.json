@@ -39,7 +39,6 @@
     "lint": "turbo run lint -- --fix && eslint . --fix",
     "prepare": "husky",
     "release:current-branch": "tsx scripts/release-branch.mts",
-    "release:rc": "tsx scripts/release-rc.mts",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:coverage:open": "open coverage/index.html",

@@ -131,6 +131,22 @@ To preview the version bump and changelog entries locally, run `GITHUB_TOKEN=$(g
 
 When your PR merges to `main`, Changesets opens (or updates) a `chore: release` "Version PR" that collects the pending bumps and updates each `CHANGELOG.md`. Merging that Version PR bumps the versions, publishes both packages to npm, and cuts a single `sdk-vX.Y.Z` tag and GitHub release.
 
+### Release candidates
+
+To publish an rc from your branch, dispatch the **Release - Release Candidate** workflow on it. The branch needs at least one changeset — the rc version comes from the pending changesets, not from an input (a minor changeset yields `3.3.0-rc.0`, a major `4.0.0-rc.0`). The workflow enters pre-release mode, publishes to the `rc` dist-tag, then commits `.changeset/pre.json` and the version bumps back to your branch.
+
+To cut the next rc (`rc.N+1`), push a follow-up fix with its own changeset and dispatch the workflow again. Versioning consumes each changeset into `.changeset/pre/`, so a re-dispatch with no new top-level changeset is rejected by the "Require a changeset" guard rather than advancing the rc number.
+
+Before opening the PR to `main`, leave pre-release mode:
+
+```bash
+pnpm changeset pre exit
+git commit -am "chore: exit rc pre-release mode"
+git push
+```
+
+`pnpm changeset pre exit` does not delete `.changeset/pre.json`; it sets its `"mode"` to `"exit"` and moves the consumed changesets back to the top-level `.changeset/`. Commit that. Never merge a branch whose `pre.json` still has `"mode": "pre"` — it would put `main` into pre-release mode. The Version PR on `main` removes `pre.json` when it runs `changeset version`, turns `3.3.0-rc.N` into `3.3.0`, and collapses the rc changelog entries into the final release.
+
 ## Contributing
 
 ### Branch Guidelines
