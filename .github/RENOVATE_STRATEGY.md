@@ -7,7 +7,7 @@ For Renovate's own docs, see [Dependency Dashboard](https://docs.renovatebot.com
 ## Key principles
 
 1. **Automerge by default**, with CI as the safety net. Nothing is gated behind manual dashboard approval (except security alerts, which we review).
-2. **Production dep updates trigger a patch release** via `fix(deps)` commits, aligning with release-please.
+2. **Production dep updates ship a patch release** via a changeset. A `postUpgradeTasks` hook writes `.changeset/renovate-<branch>.md` into the Renovate PR branch; merging it to `main` triggers the release through Changesets. Commits are `chore(deps)` — the changeset, not the commit type, drives the release.
 3. **Scope rules by package name, not file path** — pnpm catalogs make file paths unreliable for deciding what releases (see below).
 4. **Follow Sanity's shared release-age policy.** External dependencies use the delay from the shared preset. Trusted upstream packages (Sanity-maintained, React, Next, `@types/*`, and the rest of the [preset exemption list](https://github.com/sanity-io/renovate-config/blob/main/min-age-exceptions.json)) have no delay. We do not override the company default locally.
 
@@ -50,15 +50,17 @@ Inventory of everything Renovate tracks. No action required.
 
 Rules are scoped by **package name** (or, for apps, by file path) — never by `matchFileNames` on the published packages. Everything automerges after CI passes and applicable release-age checks clear; the auto-approve workflow supplies the required approval.
 
+A file-scoped rule matches any update to a production dependency of `packages/core` or `packages/react` and runs a `postUpgradeTasks` hook (`pnpm changeset:renovate`) that writes a patch changeset into the PR branch, so merging the PR ships a release through Changesets. Because rule matching is cumulative, this fires regardless of which group the update lands in, while apps-only branches never match it. The commits themselves are `chore(deps)` — Changesets, not the commit type, decides the release.
+
 | Dependency type                                                                                          | Update type | Commit type                                   | Triggers release?    |
 | -------------------------------------------------------------------------------------------------------- | ----------- | --------------------------------------------- | -------------------- |
-| `@sanity/*` (grouped as `sanity`)                                                                        | any         | `fix(deps)`                                   | **Yes, patch**       |
-| Other production `dependencies` (catch-all)                                                              | any         | `fix(deps)`                                   | **Yes, patch**       |
+| `@sanity/*` (grouped as `sanity`)                                                                        | any         | `chore(deps)` + patch changeset               | **Yes, patch**       |
+| Other production `dependencies` (catch-all)                                                              | any         | `chore(deps)` + patch changeset               | **Yes, patch**       |
 | Catalog non-`@sanity` runtime deps (`rxjs`, `groq-js`, `react-compiler-runtime`, `react-error-boundary`) | any         | `chore`                                       | No, see caveat below |
 | eslint / vitest / commitlint / react groups                                                              | any         | `chore(tooling)` / `chore(dev-deps)`          | No                   |
 | `devDependencies`                                                                                        | any         | `chore(dev-deps)`                             | No                   |
 | Anything under `apps/**`                                                                                 | any         | `chore(apps)`                                 | No                   |
-| `groq`                                                                                                   | any         | `fix(deps)`                                   | Yes                  |
+| `groq`                                                                                                   | any         | `chore(deps)` + patch changeset               | Yes                  |
 | `@sanity/codegen`                                                                                        | any         | disabled (kitchensink experimental generator) | No                   |
 | High-severity security                                                                                   | any         | varies                                        | varies               |
 | Trusted upstream (Sanity-maintained, React, Next, `@types/*`, etc.)                                      | inherits    | inherits                                      | inherits             |
@@ -69,7 +71,7 @@ Majors are never grouped — each opens its own PR (`separateMajorMinor` is on b
 
 pnpm catalog deps live in `pnpm-workspace.yaml`; Renovate reports their `packageFile` as that file and their `depType` as `pnpm.catalog.<name>` — never `dependencies`. So `matchFileNames` on the published packages and a `matchDepTypes: ["dependencies"]` catch-all both **miss catalog deps**. Matching `@sanity/*` by name catches the bulk of our runtime deps (catalog or not) and auto-covers new ones, and the production `dependencies` catch-all covers the inline (non-catalog) deps.
 
-**Caveat — catalog non-`@sanity` runtime deps.** A few runtime deps of core/react live in the catalog but aren't `@sanity`-scoped: `rxjs`, `groq-js`, `react-compiler-runtime`, `react-error-boundary`. The catch-all can't see them (catalog depType) and the `@sanity/*` rule doesn't match them, so they bump as `chore` and **don't trigger a release** on their own. If a fix in one of them needs to ship, either trigger a release another way or add it to a name-matched `fix` rule. The `/review` command flags dep changes that should be reconsidered here.
+**Caveat — catalog non-`@sanity` runtime deps.** A few runtime deps of core/react live in the catalog but aren't `@sanity`-scoped: `rxjs`, `groq-js`, `react-compiler-runtime`, `react-error-boundary`. The catch-all can't see them (catalog depType) and the `@sanity/*` rule doesn't match them, so their PRs match no production rule, get no `postUpgradeTasks` changeset, and **don't release** on their own. If a fix in one of them needs to ship, add a changeset by hand on the PR branch (`pnpm changeset`) or extend the changeset-writing rules to match it by name. The `/review` command flags dep changes that should be reconsidered here.
 
 ### Why we follow the shared release age
 
@@ -91,12 +93,12 @@ Lock file maintenance has no single release timestamp, so Renovate's age check d
 
 ## Commit messages and releases
 
-Our rules align Renovate's commit types with release-please:
+Releases run through [Changesets](../../.changeset/config.json), not commit types. A production dep update ships because its PR carries a changeset, written by the `postUpgradeTasks` hook (`pnpm changeset:renovate`), not because the commit is `fix`:
 
-- `fix(deps)`: triggers a patch release. Used for `@sanity/*` and other production `dependencies`.
-- `chore(*)`: hidden from the changelog. Used for dev deps, tooling groups, and apps.
+- A file-scoped rule (prod deps of `packages/core` / `packages/react`, any group) runs the hook, which writes `.changeset/renovate-<branch>.md` with a patch bump for both published packages. The commit is `chore(deps)`.
+- Everything else (dev deps, tooling groups, apps) is `chore(*)` with no changeset, so it does not release.
 
-If a production major dep breaks our public API, override the commit type at squash time from `fix(deps)` to `feat(deps)!` or add a `BREAKING CHANGE:` footer so release-please produces a minor/major release.
+If a production major dep breaks our public API, edit the generated changeset under `.changeset/` on the PR branch to declare a `major` bump before merging.
 
 ## pnpm version
 
@@ -114,20 +116,20 @@ Renovate PRs are identified by a `renovate/` branch in this repository, rather t
 
 **Mon–Thu**: Renovate opens PRs before 5am UTC. CI runs. PRs automerge as release age elapses and CI goes green.
 
-**Release cadence**: 1–2 releases per week via release-please, driven by `fix(deps)` commits merging in.
+**Release cadence**: 1–2 releases per week via Changesets, driven by dep-update changesets merging in.
 
 ## Monitoring & maintenance
 
 ### Weekly checklist
 
 - Skim the [Dependency Dashboard](../../issues/1166) for anything stuck (errored, or repeatedly failing automerge).
-- Merge the release-please PR if ready.
+- Merge the Changesets "Version PR" if ready.
 - Note any major updates that need planning.
 
 ### Pre-release checklist
 
 ```bash
-git log v2.4.0..HEAD --oneline --grep="fix(deps)"   # dependency changes since last release
+git log sdk-v3.2.0..HEAD --oneline --grep="chore(deps)"   # dependency changes since last release
 pnpm run all                                          # full suite
 pnpm run test:e2e                                     # E2E
 pnpm run dev:kitchensink                              # smoke-test in the app
@@ -140,7 +142,7 @@ pnpm run build:bundle                                 # bundle size
 
 Renovate tracks `devEngines.runtime.version` in the root `package.json` with a custom manager until [native support](https://github.com/renovatebot/renovate/pull/43369) is available. These updates use `chore(tooling)` commits.
 
-The Node update rule runs `pnpm install --lockfile-only --ignore-scripts --no-frozen-lockfile` before Renovate commits the update. The self-hosted runner allows this exact command, and the task includes `pnpm-lock.yaml` in the same commit. Updating the manifest alone would leave the runtime version in the lockfile out of sync.
+The Node update rule runs `pnpm install --lockfile-only --ignore-scripts --no-frozen-lockfile` before Renovate commits the update. The self-hosted runner's `allowedCommands` lists this exact command (alongside `^pnpm changeset:renovate .*$`, which the published-packages changeset rule uses), and the task includes `pnpm-lock.yaml` in the same commit. Updating the manifest alone would leave the runtime version in the lockfile out of sync.
 
 When native support handles both the runtime pin and its lockfile, remove the custom manager, its package rule, and the runner's `allowedCommands` entry together.
 
