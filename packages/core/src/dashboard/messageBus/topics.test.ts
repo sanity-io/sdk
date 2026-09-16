@@ -29,6 +29,7 @@ describe('dashboard topic types', () => {
   })
 
   it('exposes application state values', () => {
+    expectTypeOf<ValueOf<'applications.base-path'>>().toEqualTypeOf<TopicResult<string>>()
     expectTypeOf<ValueOf<'applications.config'>>().toEqualTypeOf<ApplicationConfig[] | null>()
     expectTypeOf<ValueOf<'applications.list'>>().toEqualTypeOf<TopicResult<
       Application<ApplicationInclude>[]
@@ -50,8 +51,6 @@ describe('dashboard topic types', () => {
   })
 
   it('exposes event payload and reply values', () => {
-    expectTypeOf<PayloadOf<'applications.basepath'>>().toEqualTypeOf<void>()
-    expectTypeOf<ReplyOf<'applications.basepath'>>().toEqualTypeOf<string | null>()
     expectTypeOf<PayloadOf<'navigation.location.update'>>().toEqualTypeOf<{
       url: string
       history?: 'push' | 'replace'
@@ -64,7 +63,6 @@ describe('dashboard topic types', () => {
   it('requires payloads only for events that declare one', () => {
     const messageBus = {emit: () => undefined} as unknown as MessageBus
 
-    messageBus.emit('applications.basepath')
     messageBus.emit('auth.token.refresh')
     messageBus.emit('auth.token.refresh', undefined, {timeout: null})
     messageBus.emit('navigation.location.update', {url: '/'})

@@ -25,6 +25,7 @@ export {
   useAgentResourceContext,
 } from '../hooks/dashboard/useAgentResourceContext'
 export {useApplication} from '../hooks/dashboard/useApplication'
+export {useApplicationBasePath} from '../hooks/dashboard/useApplicationBasePath'
 export {
   type ApplicationConfigSelector,
   useApplicationConfig,
@@ -38,7 +39,6 @@ export {
   useApplications,
 } from '../hooks/dashboard/useApplications'
 export {useAuthToken} from '../hooks/dashboard/useAuthToken'
-export {useBasePath} from '../hooks/dashboard/useBasePath'
 export {useCurrentUser} from '../hooks/dashboard/useCurrentUser'
 export {type TopicEmitter, useEmit} from '../hooks/dashboard/useEmit'
 export {useNavigate} from '../hooks/dashboard/useNavigate'
