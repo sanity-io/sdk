@@ -100,7 +100,7 @@
     "eslint": "catalog:",
     "groq": "catalog:",
     "groq-js": "catalog:",
-    "jsdom": "^30.0.1",
+    "jsdom": "catalog:",
     "oxfmt": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",

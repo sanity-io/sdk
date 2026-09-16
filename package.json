@@ -68,6 +68,7 @@
     "eslint": "catalog:",
     "fallow": "^3.24.1",
     "husky": "^9.1.7",
+    "jsdom": "catalog:",
     "knip": "^6.35.1",
     "lint-staged": "^17.5.1",
     "npm-run-all2": "^9.0.3",
