@@ -8,6 +8,10 @@ permissions:
   contents: read
   pull-requests: write
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   remind:
     # The Version PR deletes changesets by design, so never remind on it.
@@ -23,8 +27,13 @@ jobs:
         env:
           BASE_REF: ${{ github.base_ref }}
         run: |
-          changed=$(git diff --name-only "origin/${BASE_REF}...HEAD" -- packages/core packages/react)
-          has_changeset=$(git diff --name-only "origin/${BASE_REF}...HEAD" -- '.changeset/*.md' ':!.changeset/README.md')
+          changed=$(git diff --name-only "origin/${BASE_REF}...HEAD" -- \
+            packages/core packages/react \
+            ':!packages/*/src/**/*.test.ts' ':!packages/*/src/**/*.test.tsx' ':!packages/*/src/**/*.test-d.ts' \
+            ':!packages/*/**/__snapshots__/**' ':!packages/*/**/*.md')
+          # git's default pathspec '*' also crosses '/', so '.changeset/*.md' intentionally
+          # matches '.changeset/pre/*.md' too (rc branches); do not change to ':(glob)'.
+          has_changeset=$(git diff --name-only --diff-filter=d "origin/${BASE_REF}...HEAD" -- '.changeset/*.md' ':!.changeset/README.md')
           if [ -n "$changed" ] && [ -z "$has_changeset" ]; then
             echo "remind=true" >> "$GITHUB_OUTPUT"
           else
