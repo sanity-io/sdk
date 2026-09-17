@@ -18,8 +18,6 @@
     "packages/react/src/components/auth/AuthError.ts:12-25|packages/react/src/components/auth/ConfigurationError.ts:7-20",
     "packages/react/src/hooks/documents/useDocuments.ts:240-263|packages/react/src/hooks/paginatedDocuments/usePaginatedDocuments.ts:269-291",
     "packages/react/src/hooks/documents/useDocuments.ts:263-276|packages/react/src/hooks/paginatedDocuments/usePaginatedDocuments.ts:291-304",
-    "packages/react/src/hooks/users/useUser.ts:68-94|packages/react/src/hooks/users/useUsers.ts:110-135",
-    "scripts/release-branch.mts:18-24|scripts/release-rc.mts:14-20",
-    "scripts/release-branch.mts:26-52|scripts/release-rc.mts:25-36"
+    "packages/react/src/hooks/users/useUser.ts:68-94|packages/react/src/hooks/users/useUsers.ts:110-135"
   ]
 }

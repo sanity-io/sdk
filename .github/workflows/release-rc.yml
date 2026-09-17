@@ -2,15 +2,10 @@ name: Release - Release Candidate
 
 on:
   workflow_dispatch:
-    inputs:
-      major:
-        description: 'Publish a major release candidate (e.g. 3.0.0-rc.0). Defaults to minor (e.g. 2.9.0-rc.0).'
-        type: boolean
-        default: false
 
 concurrency:
   group: ${{ github.workflow }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 permissions:
   contents: read # for checkout
@@ -25,6 +20,13 @@ jobs:
       TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
       TURBO_TEAM: ${{ vars.TURBO_TEAM }}
     steps:
+      # Dispatching on main would enter pre-release mode there, dragging the
+      # Version PR and next snapshots into rc mode. Refuse.
+      - name: Guard against dispatch on main
+        if: github.ref_name == 'main'
+        run: |
+          echo "::error::Release candidates must be cut from a branch, not main. Dispatch this workflow from your feature branch."
+          exit 1
       - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
         id: generate-token
         with:
@@ -35,6 +37,9 @@ jobs:
           # Run against the branch the workflow was dispatched from, and push
           # the version-bump commit back to it, rather than a hardcoded branch.
           ref: ${{ github.ref_name }}
+          # fetch-depth: 0 so @changesets/changelog-github can look up the commit
+          # that added each changeset file.
+          fetch-depth: 0
           token: ${{ steps.generate-token.outputs.token }}
       - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
@@ -42,14 +47,53 @@ jobs:
           cache: pnpm
           node-version: lts/*
       - run: pnpm install --ignore-scripts --no-runtime
+      # Without a changeset `changeset version` bumps nothing, publish is a no-op
+      # and the commit step fails with nothing to commit. Fail early with a
+      # clearer message instead.
+      - name: Require a changeset
+        run: |
+          if [ -z "$(find .changeset -maxdepth 1 -name '*.md' ! -name 'README.md' -print -quit)" ]; then
+            echo "::error::No changeset found. Add a changeset first (pnpm changeset)."
+            exit 1
+          fi
       - run: pnpm config set '//registry.npmjs.org/:_authToken' "${NODE_AUTH_TOKEN}"
         env:
-          NODE_AUTH_TOKEN: ${{secrets.NPM_PUBLISH_TOKEN}}
-      - name: release rc & commit + push the changed versions
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
+      # Enter pre-release mode unless already in it. A leftover pre.json with
+      # mode "exit" (what `changeset pre exit` commits) must NOT be treated as
+      # "already in pre mode": versioning from it emits a stable version and
+      # publish would target `latest`. Re-entering rewrites mode back to "pre".
+      - name: Enter rc pre-release mode
         run: |
-          pnpm release:rc ${{ inputs.major && '--major' || '' }}
+          if [ "$(node -p "try{require('./.changeset/pre.json').mode}catch{''}")" != "pre" ]; then
+            pnpm changeset pre enter rc
+          fi
+      # In pre mode consumed changesets move to .changeset/pre/ rather than being
+      # deleted, and each CHANGELOG gets an rc entry.
+      - name: Version rc
+        run: pnpm changeset version
+        env:
+          # changelog-github reads GITHUB_TOKEN when it runs changeset version.
+          GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
+      - name: Build packages
+        run: pnpm build:packages
+      - name: Smoke test packed tarballs
+        run: pnpm test:pack
+      # In pre mode publish targets the dist-tag named in pre.json (`rc`), so no
+      # --tag is needed. --no-git-tag stops the per-package tags.
+      - name: Publish to npm
+        run: pnpm changeset publish --no-git-tag
+        env:
+          NPM_CONFIG_PROVENANCE: true
+      # Commit pre.json, the bumped package.json files and CHANGELOGs back to the
+      # dispatched branch. [skip ci] so the push does not retrigger workflows.
+      - name: Commit and push the rc versions
+        env:
+          BRANCH: ${{ github.ref_name }}
+        run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add .
           git commit -m "chore(release): publish rc [skip ci]"
+          git pull --rebase origin "$BRANCH"
           git push

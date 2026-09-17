@@ -31,7 +31,7 @@ Seven packages are listed there:
 | `react-compiler-runtime`      | Injected into React Compiler output at build time                              |
 | `@google-cloud/storage`       | `scripts/uploadBundles.mts`                                                    |
 | `read-package-up`             | `scripts/uploadBundles.mts`                                                    |
-| `zx`                          | `scripts/release-branch.mts`, `scripts/release-rc.mts`                         |
+| `zx`                          | `scripts/release-branch.mts`                                                   |
 
 The first four are referenced from config rather than imported, so Fallow cannot see the usage at all. The last three are imported normally, but only from `scripts/`, which Fallow classifies as production code and so reports as `dev-dependencies-in-production`.
 
