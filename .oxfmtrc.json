@@ -20,7 +20,6 @@
     "pnpm-lock.yaml",
     "CHANGELOG.md",
     "**/CHANGELOG.md",
-    ".release-please-manifest.json",
     ".env.example"
   ]
 }

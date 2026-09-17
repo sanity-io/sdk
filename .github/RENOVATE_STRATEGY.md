@@ -91,7 +91,7 @@ Lock file maintenance has no single release timestamp, so Renovate's age check d
 
 ## Commit messages and releases
 
-Our rules align Renovate's commit types with [release-please](../release-please-config.json):
+Our rules align Renovate's commit types with release-please:
 
 - `fix(deps)`: triggers a patch release. Used for `@sanity/*` and other production `dependencies`.
 - `chore(*)`: hidden from the changelog. Used for dev deps, tooling groups, and apps.
