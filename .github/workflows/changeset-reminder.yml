@@ -25,12 +25,18 @@ jobs:
       - name: Detect missing changeset
         id: detect
         env:
-          BASE_REF: ${{ github.base_ref }}
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
+          # github.base_ref reports the stack's base (main) for PRs in a GitHub Stack, which
+          # would diff the whole stack instead of this PR's layer. The PR API has the real base.
+          BASE_REF=$(gh pr view "$PR_NUMBER" --json baseRefName -q .baseRefName)
+          # Non-glob pathspec: '**' needs a directory between, so 'packages/*/*.md' is required
+          # to exclude package-root files such as CHANGELOG.md.
           changed=$(git diff --name-only "origin/${BASE_REF}...HEAD" -- \
             packages/core packages/react \
             ':!packages/*/src/**/*.test.ts' ':!packages/*/src/**/*.test.tsx' ':!packages/*/src/**/*.test-d.ts' \
-            ':!packages/*/**/__snapshots__/**' ':!packages/*/**/*.md')
+            ':!packages/*/**/__snapshots__/**' ':!packages/*/*.md' ':!packages/*/**/*.md')
           # git's default pathspec '*' also crosses '/', so '.changeset/*.md' intentionally
           # matches '.changeset/pre/*.md' too (rc branches); do not change to ':(glob)'.
           has_changeset=$(git diff --name-only --diff-filter=d "origin/${BASE_REF}...HEAD" -- '.changeset/*.md' ':!.changeset/README.md')
