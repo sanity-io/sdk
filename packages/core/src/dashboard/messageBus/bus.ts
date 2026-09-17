@@ -193,6 +193,8 @@ export interface MessageBus<TTopics = MessageBusTopics> {
  * @public
  */
 export interface MessageBusConnection<TTopics = MessageBusTopics> extends MessageBus<TTopics> {
+  /** The application this connection belongs to. */
+  readonly appId: Application['id']
   /**
    * Tears down this connection: pending requests reject `ABORTED`, subscriptions
    * complete, and later `emit`, `query`, and `subscribe` calls fail with `ABORTED`.
@@ -887,11 +889,15 @@ function migrateEventReply(
   return createLazyReply(() => (projected ??= Promise.resolve(result).then(project)))
 }
 
-function createRejectedConnection(connectionError: () => unknown): MessageBusConnection {
+function createRejectedConnection(
+  appId: string,
+  connectionError: () => unknown,
+): MessageBusConnection {
   const throwConnectionError = (): never => {
     throw connectionError()
   }
   return {
+    appId,
     emit: throwConnectionError,
     // `query` is typed as a Promise, so it must reject rather than throw synchronously.
     query: () => Promise.reject(connectionError()),
@@ -932,6 +938,7 @@ export function connectApplicationToMessageBus(
       `[sanity-sdk:message-bus] protocol mismatch for "${appId}": installed ${String(installedProtocol)}, this copy speaks ${MESSAGE_BUS_PROTOCOL}`,
     )
     return createRejectedConnection(
+      appId,
       () =>
         new MessageBusError(
           'PROTOCOL_MISMATCH',
@@ -944,6 +951,7 @@ export function connectApplicationToMessageBus(
   if (!registry) {
     console.error(`[sanity-sdk:message-bus] incompatible message bus for "${appId}"`)
     return createRejectedConnection(
+      appId,
       () =>
         new MessageBusError(
           'PROTOCOL_MISMATCH',
@@ -956,7 +964,7 @@ export function connectApplicationToMessageBus(
     mergeTopicManifest(registry, DASHBOARD_TOPIC_MANIFEST)
   } catch (error) {
     console.error(`[sanity-sdk:message-bus] topic manifest conflict for "${appId}"`, {error})
-    return createRejectedConnection(() => error)
+    return createRejectedConnection(appId, () => error)
   }
 
   return createConnection(registry, config) as MessageBusConnection<Topics>
@@ -1084,6 +1092,7 @@ function createConnection(
   }
 
   const connection = {
+    appId,
     emit: (type: string, payload: unknown, options?: MessageBusEmitOptions) => {
       throwIfDisconnected()
       return migrateEventReply(

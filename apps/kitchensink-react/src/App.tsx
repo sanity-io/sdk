@@ -8,9 +8,9 @@ import {configureLogging, SanityApp} from '@sanity/sdk-react'
 import {useNavigate} from '@sanity/sdk-react/dashboard'
 import {ThemeProvider, usePrefersDark} from '@sanity/ui'
 import {buildTheme} from '@sanity/ui/theme'
-import {type JSX, type ReactNode, Suspense} from 'react'
+import {type JSX, type ReactNode, Suspense, useEffect} from 'react'
 import {registerLanguage} from 'react-refractor'
-import {BrowserRouter, useNavigate as useRouterNavigate} from 'react-router'
+import {BrowserRouter, useLocation, useNavigate as useRouterNavigate} from 'react-router'
 import json from 'refractor/json'
 import {Spinner} from 'ui5'
 
@@ -32,10 +32,14 @@ configureLogging({
 const theme = buildTheme({})
 
 function NavigationHandler() {
-  const navigate = useRouterNavigate()
-  useNavigate(({path, type}) => {
-    navigate(path, {replace: type === 'replace'})
+  const routerNavigate = useRouterNavigate()
+  const {pathname, search, hash} = useLocation()
+  const navigate = useNavigate(({path, type}) => {
+    routerNavigate(path, {replace: type === 'replace'})
   })
+  useEffect(() => {
+    navigate({path: `${pathname.slice(1)}${search}${hash}`})
+  }, [navigate, pathname, search, hash])
   return null
 }
 
