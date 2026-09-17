@@ -1,5 +1,21 @@
 # Changelog
 
+## [3.3.0](https://github.com/sanity-io/sdk/compare/sdk-v3.2.0...sdk-v3.3.0) (2026-09-17)
+
+
+### Features
+
+* **dashboard:** add new topic `applications.base-path` ([#1265](https://github.com/sanity-io/sdk/issues/1265)) ([7168c5f](https://github.com/sanity-io/sdk/commit/7168c5f8d800822301702eaaea313a9ba2411014))
+* **dashboard:** add new topic `applications.status.update` ([#1266](https://github.com/sanity-io/sdk/issues/1266)) ([336e854](https://github.com/sanity-io/sdk/commit/336e8543e93755923386a95a692cd9b591562896))
+* **installations:** expose federated manifests in application config ([#1256](https://github.com/sanity-io/sdk/issues/1256)) ([bbabcb8](https://github.com/sanity-io/sdk/commit/bbabcb8fe27e4bc50c18f6bbeb9f59043f05d775))
+* **react:** add useAuthToken and useCurrentUser to the dashboard entry ([#1263](https://github.com/sanity-io/sdk/issues/1263)) ([7bd6253](https://github.com/sanity-io/sdk/commit/7bd6253b3645f1a65c21e89b0524c148c535ceb2))
+* **react:** make useStudioWorkspacesByProjectIdDataset work under the message bus ([#1270](https://github.com/sanity-io/sdk/issues/1270)) ([ad3e2fa](https://github.com/sanity-io/sdk/commit/ad3e2fac41d0e74208a766fd9c8c5578f7fedfd8))
+
+
+### Bug Fixes
+
+* **deps:** update sanity ([#1245](https://github.com/sanity-io/sdk/issues/1245)) ([362b0f6](https://github.com/sanity-io/sdk/commit/362b0f691be5d5fc623215f12058693fbb5589db))
+
 ## [3.2.0](https://github.com/sanity-io/sdk/compare/sdk-v3.1.0...sdk-v3.2.0) (2026-09-15)
 
 
