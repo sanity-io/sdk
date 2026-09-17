@@ -160,34 +160,34 @@ describe('useNavigate (message bus)', () => {
     expect(navigateFn).not.toHaveBeenCalled()
   })
 
-  it('emits navigation.location.update with the joined path and history for an outbound report', () => {
+  it('emits navigation.location.update with the joined path and history for an outbound report', async () => {
     publishBasePath()
     emitLocation({appId: 'app', path: 'documents/abc', transition: null})
 
     const navigateFn = vi.fn()
     const {result} = renderHookWithInstance(() => useNavigate(navigateFn))
 
-    act(() => {
+    await act(async () => {
       result.current({path: 'documents/def', type: 'replace'})
     })
 
     expect(updates).toEqual([{url: '/applications/app/documents/def', history: 'replace'}])
   })
 
-  it('defaults the outbound history to push when no type is given', () => {
+  it('defaults the outbound history to push when no type is given', async () => {
     publishBasePath()
     emitLocation({appId: 'app', path: 'documents/abc', transition: null})
 
     const {result} = renderHookWithInstance(() => useNavigate(vi.fn()))
 
-    act(() => {
+    await act(async () => {
       result.current({path: 'documents/def'})
     })
 
     expect(updates).toEqual([{url: '/applications/app/documents/def', history: 'push'}])
   })
 
-  it('joins a trailing-slash base and a leading-slash path into a single separator', () => {
+  it('joins a trailing-slash base and a leading-slash path into a single separator', async () => {
     host.connections.subscribe((client) =>
       client.emit('applications.base-path', {ok: true, value: '/applications/app/'}),
     )
@@ -195,7 +195,7 @@ describe('useNavigate (message bus)', () => {
 
     const {result} = renderHookWithInstance(() => useNavigate(vi.fn()))
 
-    act(() => {
+    await act(async () => {
       result.current({path: '/documents/def'})
     })
 
@@ -336,6 +336,85 @@ describe('useNavigate (message bus)', () => {
     })
 
     expect(navigateFn).not.toHaveBeenCalled()
+  })
+
+  it('suppresses the echo of an own report made with a leading slash', () => {
+    publishBasePath()
+    emitLocation({appId: 'app', path: 'documents/abc', transition: null})
+
+    const navigateFn = vi.fn()
+    const {result} = renderHookWithInstance(() => useNavigate(navigateFn))
+
+    const own = {appId: 'app', path: 'documents/def'}
+    act(() => {
+      result.current({path: '/documents/def'})
+      emitLocation({
+        appId: 'app',
+        path: 'documents/abc',
+        transition: {navigationType: 'push', to: own},
+      })
+      emitLocation({
+        appId: 'app',
+        path: 'documents/def',
+        transition: {navigationType: 'push', to: own},
+      })
+      emitLocation({appId: 'app', path: 'documents/def', transition: null})
+    })
+
+    expect(navigateFn).not.toHaveBeenCalled()
+  })
+
+  it('fires host-mediated commits while the base path is unpublished', () => {
+    emitLocation({appId: 'dashboard', path: 'dashboard', transition: null})
+
+    const navigateFn = vi.fn()
+    renderHookWithInstance(() => useNavigate(navigateFn))
+
+    const to = {appId: 'app', path: 'documents/abc'}
+    act(() => {
+      emitLocation({
+        appId: 'dashboard',
+        path: 'dashboard',
+        transition: {navigationType: 'push', to},
+      })
+      emitLocation({appId: 'app', path: 'documents/abc', transition: {navigationType: 'push', to}})
+      emitLocation({appId: 'app', path: 'documents/abc', transition: null})
+    })
+
+    expect(navigateFn).toHaveBeenCalledTimes(1)
+    expect(navigateFn).toHaveBeenCalledWith({path: 'documents/abc', type: 'push'})
+  })
+
+  it('drops an outbound report when the base path is not ok and still fires a later host commit to that path', async () => {
+    host.connections.subscribe((client) => client.emit('applications.base-path', {ok: false}))
+    emitLocation({appId: 'app', path: 'documents/abc', transition: null})
+
+    const navigateFn = vi.fn()
+    const {result} = renderHookWithInstance(() => useNavigate(navigateFn))
+
+    await act(async () => {
+      result.current({path: 'documents/def'})
+    })
+
+    expect(updates).toEqual([])
+
+    const hostTo = {appId: 'app', path: 'documents/def'}
+    act(() => {
+      emitLocation({
+        appId: 'app',
+        path: 'documents/abc',
+        transition: {navigationType: 'push', to: hostTo},
+      })
+      emitLocation({
+        appId: 'app',
+        path: 'documents/def',
+        transition: {navigationType: 'push', to: hostTo},
+      })
+      emitLocation({appId: 'app', path: 'documents/def', transition: null})
+    })
+
+    expect(navigateFn).toHaveBeenCalledTimes(1)
+    expect(navigateFn).toHaveBeenCalledWith({path: 'documents/def', type: 'push'})
   })
 
   it('returns a referentially stable function across re-renders', () => {

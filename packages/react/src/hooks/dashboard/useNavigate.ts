@@ -6,13 +6,12 @@ import {
   SDK_NODE_NAME,
 } from '@sanity/message-protocol'
 import {isDashboardEnvironment, requireDashboardMessageBus} from '@sanity/sdk/_internal'
-import {type NavigationLocation} from '@sanity/sdk/dashboard'
+import {type NavigationLocation, TopicError} from '@sanity/sdk/dashboard'
 import {useCallback, useEffect, useEffectEvent, useRef} from 'react'
 import {filter, map, pairwise} from 'rxjs'
 
 import {useWindowConnection} from '../comlink/useWindowConnection'
 import {useSanityInstance} from '../context/useSanityInstance'
-import {useTopic} from './useTopic'
 
 type UpdateURLMessage = Bridge.Listeners.History.UpdateURLMessage
 
@@ -26,7 +25,8 @@ export type DashboardNavigation = PathChangeMessage['data']
 
 /**
  * Reports an in-app navigation to the Dashboard so the browser URL and the Dashboard's own
- * router follow the app. `type` defaults to `'push'`.
+ * router follow the app. `type` defaults to `'push'` and only applies in the federated runtime;
+ * see {@link useNavigate}.
  * @public
  */
 export type NavigateToDashboardPath = (options: {path: string; type?: 'push' | 'replace'}) => void
@@ -40,10 +40,17 @@ export type NavigateToDashboardPath = (options: {path: string; type?: 'push' | '
  * own in-app navigations back to the Dashboard so the browser URL and the Dashboard's router
  * follow along.
  *
- * A navigation the app reports is not echoed back through `navigateFn`.
+ * A navigation the app reports is not echoed back through `navigateFn`. The returned function is
+ * referentially stable.
  *
- * The returned function is referentially stable while the app's base path is unchanged; its
- * identity follows `basePath`.
+ * The two Dashboard runtimes differ:
+ * - In an iframe (Comlink), inbound `type` may be `'push'`, `'replace'` or `'pop'`. Reporting is
+ *   optional because the bridge already forwards the iframe's own `pushState`; a reported `type`
+ *   is ignored and the host applies the URL as a `replace`.
+ * - In a federated app (message bus), inbound `type` is `'push'` or `'replace'`; `'pop'` is never
+ *   sent. Reporting is required because the app's router does not reach the host, and `type` is
+ *   honoured. Until the Dashboard publishes the app's base path, reports are dropped with a
+ *   console warning.
  *
  * @param navigateFn - Function to handle navigation; should accept:
  * - `path`: a string, which will be a relative path (for example, 'my-route')
@@ -107,8 +114,7 @@ function useComlinkNavigate(
 
 function joinPath(base: string, path: string): string {
   const root = base.replace(/\/$/, '')
-  if (!path) return root
-  return `${root}/${path.replace(/^\//, '')}`
+  return path ? `${root}/${path}` : root
 }
 
 function useBusNavigate(
@@ -116,7 +122,6 @@ function useBusNavigate(
 ): NavigateToDashboardPath {
   const instance = useSanityInstance()
   const bus = requireDashboardMessageBus(instance, 'navigate')
-  const basePath = useTopic('applications.base-path')
   const navigate = useEffectEvent(navigateFn)
   // The path of this app's latest outbound request, used to suppress the echo of our own commit.
   const ownRequest = useRef<string | null>(null)
@@ -161,18 +166,36 @@ function useBusNavigate(
 
   return useCallback<NavigateToDashboardPath>(
     ({path, type = 'push'}) => {
-      ownRequest.current = path
-      // A reply that is not ok means our request never landed, so its suppression must go or a
-      // later host navigation to the same path would be dropped. Best-effort: never throws.
+      // The host commits paths without a leading slash; store the same form so the echo matches.
+      const own = path.replace(/^\//, '')
+      ownRequest.current = own
+      // A request that never landed must drop its suppression, or a later host navigation to the
+      // same path would be dropped. Best-effort: never throws.
       const clearIfStale = () => {
-        if (ownRequest.current === path) ownRequest.current = null
+        if (ownRequest.current === own) ownRequest.current = null
       }
+      // The base path is read per call, not in render, so a host that has not published it only
+      // loses outbound reporting; the inbound subscription above still installs.
       bus
-        .emit('navigation.location.update', {url: joinPath(basePath, path), history: type})
-        .then((reply) => {
-          if (reply.ok === false) clearIfStale()
-        }, clearIfStale)
+        .query('applications.base-path')
+        .then((base) => {
+          if (!base.ok) throw new TopicError('applications.base-path')
+          return bus.emit('navigation.location.update', {
+            url: joinPath(base.value, own),
+            history: type,
+          })
+        })
+        .then(
+          (reply) => {
+            if (!reply.ok) clearIfStale()
+          },
+          (error) => {
+            // eslint-disable-next-line no-console
+            console.warn('Failed to report navigation to the Dashboard', error)
+            clearIfStale()
+          },
+        )
     },
-    [bus, basePath],
+    [bus],
   )
 }
