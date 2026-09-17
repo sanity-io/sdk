@@ -1,4 +1,5 @@
 import {type ApplicationBase} from '@sanity/sdk'
+import {getApplicationOrigin} from '@sanity/sdk/_internal'
 import {type RemoteModuleRef, type ValueOf} from '@sanity/sdk/dashboard'
 import {useMemo} from 'react'
 
@@ -43,26 +44,6 @@ export type DashboardApplication = DashboardTopicApplication & {
   readonly webWorkers: DashboardWebWorker[]
 }
 
-type SanityGlobal = typeof globalThis & {__SANITY_STAGING__?: boolean}
-
-// `null` when neither address exists: the caller exposes no modules for that application
-// rather than failing the whole list on one bad record.
-const applicationOrigin = (application: ApplicationBase): string | null => {
-  if (application.externalUrl !== null) return new URL(application.externalUrl).origin
-  if (application.slug === null) return null
-
-  // Read at runtime, not via a bundler define: a remote is built once and runs in whichever
-  // host page loaded it, and the host sets this flag. Mirrors workbench's `getSanityEnv`.
-  const staging = (globalThis as SanityGlobal).__SANITY_STAGING__ === true
-  if (application.isSingleton) {
-    const domain = staging ? 'run.sanity.work' : 'sanity.run'
-    return `https://${application.slug}-apps-${application.organizationId}.${domain}`
-  }
-
-  const domain = staging ? 'studio.sanity.work' : 'sanity.studio'
-  return `https://${application.slug}.${domain}`
-}
-
 // Only a federated deployment (one with a module federation manifest) exposes loadable modules.
 const loadableInterfaces = ({
   activeDeployment,
@@ -74,7 +55,7 @@ const toApplication = (application: DashboardTopicApplication): DashboardApplica
   const {activeDeployment: _activeDeployment, config: _config, ...applicationBase} = application
   const interfaces = loadableInterfaces(application)
   // Nothing to load without interfaces or an origin to load them from.
-  const entry = interfaces.length === 0 ? null : applicationOrigin(applicationBase)
+  const entry = interfaces.length === 0 ? null : getApplicationOrigin(applicationBase)
   if (entry === null) return {...application, views: [], webWorkers: []}
 
   const views: DashboardView[] = []

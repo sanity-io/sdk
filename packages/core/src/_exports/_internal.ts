@@ -1,3 +1,4 @@
+export {getApplicationOrigin} from '../applications/applicationOrigin'
 export {isStudioConfig} from '../auth/authMode'
 export {
   type ApiErrorBody,
