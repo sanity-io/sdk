@@ -38,7 +38,7 @@ export type DashboardWebWorker = Extract<DashboardApplicationInterface, {type: '
  * The minimal Brett application fields with its loadable views and web workers.
  * @public
  */
-export type DashboardApplication = ApplicationBase & {
+export type DashboardApplication = DashboardTopicApplication & {
   readonly views: DashboardView[]
   readonly webWorkers: DashboardWebWorker[]
 }
@@ -75,7 +75,7 @@ const toApplication = (application: DashboardTopicApplication): DashboardApplica
   const interfaces = loadableInterfaces(application)
   // Nothing to load without interfaces or an origin to load them from.
   const entry = interfaces.length === 0 ? null : applicationOrigin(applicationBase)
-  if (entry === null) return {...applicationBase, views: [], webWorkers: []}
+  if (entry === null) return {...application, views: [], webWorkers: []}
 
   const views: DashboardView[] = []
   const webWorkers: DashboardWebWorker[] = []
@@ -103,7 +103,7 @@ const toApplication = (application: DashboardTopicApplication): DashboardApplica
     } as DashboardView)
   }
 
-  return {...applicationBase, views, webWorkers}
+  return {...application, views, webWorkers}
 }
 
 /**

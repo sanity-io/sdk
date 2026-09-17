@@ -134,15 +134,24 @@ describe('useApplications', () => {
     vi.restoreAllMocks()
   })
 
-  it('returns minimal applications with loadable views and web workers', () => {
+  it('returns full applications with loadable views and web workers', () => {
     emitApplications([application, nonFederatedApplication, nonSingletonApplication])
 
     const {result} = renderHook(() => useApplications())
 
     expectTypeOf(result.current).toEqualTypeOf<DashboardApplication[]>()
+    expectTypeOf<
+      Extract<keyof DashboardApplication, 'activeDeployment' | 'config'>
+    >().toEqualTypeOf<'activeDeployment' | 'config'>()
     const [federated, nonFederated, nonSingleton] = result.current
-    expect(federated).not.toHaveProperty('activeDeployment')
-    expect(federated).not.toHaveProperty('config')
+    expect(federated).toMatchObject({
+      activeDeployment: {id: 'deployment-1'},
+      config: {mfManifest: {}},
+    })
+    expect(federated?.views[0]?.application).not.toHaveProperty('activeDeployment')
+    expect(federated?.views[0]?.application).not.toHaveProperty('config')
+    expect(federated?.webWorkers[0]?.application).not.toHaveProperty('activeDeployment')
+    expect(federated?.webWorkers[0]?.application).not.toHaveProperty('config')
     expect(federated?.views).toEqual([
       expect.objectContaining({
         application: expect.objectContaining({id: 'application-1'}),
