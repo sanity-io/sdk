@@ -1,5 +1,29 @@
 # Changelog
 
+## [3.3.0](https://github.com/sanity-io/sdk/compare/sdk-react-v3.2.0...sdk-react-v3.3.0) (2026-09-17)
+
+
+### Features
+
+* **dashboard:** add new topic `applications.base-path` ([#1265](https://github.com/sanity-io/sdk/issues/1265)) ([7168c5f](https://github.com/sanity-io/sdk/commit/7168c5f8d800822301702eaaea313a9ba2411014))
+* **dashboard:** add new topic `applications.status.update` ([#1266](https://github.com/sanity-io/sdk/issues/1266)) ([336e854](https://github.com/sanity-io/sdk/commit/336e8543e93755923386a95a692cd9b591562896))
+* **installations:** expose federated manifests in application config ([#1256](https://github.com/sanity-io/sdk/issues/1256)) ([bbabcb8](https://github.com/sanity-io/sdk/commit/bbabcb8fe27e4bc50c18f6bbeb9f59043f05d775))
+* **react:** add useAuthToken and useCurrentUser to the dashboard entry ([#1263](https://github.com/sanity-io/sdk/issues/1263)) ([7bd6253](https://github.com/sanity-io/sdk/commit/7bd6253b3645f1a65c21e89b0524c148c535ceb2))
+* **react:** make useOrganizationId and useWindowTitle work under the message bus ([#1264](https://github.com/sanity-io/sdk/issues/1264)) ([341b63d](https://github.com/sanity-io/sdk/commit/341b63d815d509d3d6e90837427a71a973d01f10))
+* **react:** make useStudioWorkspacesByProjectIdDataset work under the message bus ([#1270](https://github.com/sanity-io/sdk/issues/1270)) ([ad3e2fa](https://github.com/sanity-io/sdk/commit/ad3e2fac41d0e74208a766fd9c8c5578f7fedfd8))
+
+
+### Bug Fixes
+
+* **react:** preserve full applications in useApplications (SDK-2591) ([#1269](https://github.com/sanity-io/sdk/issues/1269)) ([b649384](https://github.com/sanity-io/sdk/commit/b6493845a8223d0c3e2ed7f940528118183c56fc))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk bumped to 3.3.0
+
 ## [3.2.0](https://github.com/sanity-io/sdk/compare/sdk-react-v3.1.0...sdk-react-v3.2.0) (2026-09-15)
 
 
