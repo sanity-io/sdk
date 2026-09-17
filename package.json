@@ -22,6 +22,7 @@
     "build:docs": "turbo run docs && typedoc",
     "build:packages": "turbo run build --filter='./packages/*' --filter='!./packages/@repo/*'",
     "build:visualizer": "VISUALIZER=true turbo run build --filter='./packages/*'",
+    "changeset:renovate": "node scripts/changeset-renovate.mjs",
     "clean": "run-s clean:build clean:deps",
     "clean:build": "turbo run clean",
     "clean:deps": "rimraf packages/*/node_modules apps/*/node_modules node_modules",
