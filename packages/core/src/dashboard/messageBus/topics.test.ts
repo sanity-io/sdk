@@ -1,13 +1,18 @@
-import {describe, expectTypeOf, it} from 'vitest'
+import {describe, expect, expectTypeOf, it} from 'vitest'
 
 import {type Application, type ApplicationInclude} from '../../applications/applications'
 import {type MessageBus} from './bus'
 import {
   type ApplicationConfig,
   type ApplicationConfigAppType,
+  type ApplicationStatusUpdate,
+  DASHBOARD_TOPIC_MANIFEST,
+  type DashboardTopics,
+  type EventTopic,
   type PayloadOf,
   type ReplyOf,
   type StateTopic,
+  type TopicName,
   type TopicResult,
   type ValueOf,
 } from './topics'
@@ -28,8 +33,26 @@ describe('dashboard topic types', () => {
     expectTypeOf<Parameters<MessageBus['query']>[0]>().toEqualTypeOf<StateTopic>()
   })
 
+  it('keeps application status internal', () => {
+    expectTypeOf<ApplicationStatusUpdate>().toEqualTypeOf<{
+      name: string
+      value: {label: string | null}
+    }>()
+    expect(DASHBOARD_TOPIC_MANIFEST['applications.status.update']).toEqual({
+      kind: 'event',
+      ownership: {type: 'same_app'},
+    })
+    expectTypeOf<'applications.status.update'>().toMatchTypeOf<TopicName>()
+    expectTypeOf<'applications.status.update'>().not.toMatchTypeOf<EventTopic>()
+    expectTypeOf<PayloadOf<'applications.status.update'>>().toEqualTypeOf<ApplicationStatusUpdate>()
+    expectTypeOf<ReplyOf<'applications.status.update'>>().toBeNever()
+  })
+
   it('exposes application state values', () => {
     expectTypeOf<ValueOf<'applications.base-path'>>().toEqualTypeOf<TopicResult<string>>()
+    expectTypeOf<ValueOf<'applications.foreground', DashboardTopics>>().toEqualTypeOf<
+      Application['id'] | null
+    >()
     expectTypeOf<ValueOf<'applications.config'>>().toEqualTypeOf<ApplicationConfig[] | null>()
     expectTypeOf<ValueOf<'applications.list'>>().toEqualTypeOf<TopicResult<
       Application<ApplicationInclude>[]
@@ -61,12 +84,22 @@ describe('dashboard topic types', () => {
   })
 
   it('requires payloads only for events that declare one', () => {
-    const messageBus = {emit: () => undefined} as unknown as MessageBus
+    const messageBus = {
+      emit: () => undefined,
+      query: () => undefined,
+      subscribe: () => undefined,
+    } as unknown as MessageBus
 
     messageBus.emit('auth.token.refresh')
     messageBus.emit('auth.token.refresh', undefined, {timeout: null})
     messageBus.emit('navigation.location.update', {url: '/'})
     // @ts-expect-error navigation.location.update requires a payload
     messageBus.emit('navigation.location.update')
+    // @ts-expect-error applications.status.update is internal
+    messageBus.emit('applications.status.update', {name: 'media', value: {label: null}})
+    // @ts-expect-error applications.status.update is internal
+    messageBus.subscribe('applications.status.update')
+    // @ts-expect-error applications.status.update is internal
+    messageBus.subscribe('applications.status.update', () => {})
   })
 })

@@ -500,6 +500,45 @@ describe('application connections', () => {
     expect(app.subscribe('auth.token').getCurrent()).toBe('trusted')
   })
 
+  it('delivers application status events to the host and rejects app responders', () => {
+    const statusHost = createMessageBus('dashboard')
+    const application = connectApplicationToMessageBus(statusHost, {
+      appId: 'favorites',
+    })
+    const responder = vi.fn()
+
+    statusHost.subscribe('applications.status.update', responder)
+    expect(() => application.subscribe('applications.status.update', vi.fn())).toThrowError(
+      expect.objectContaining({code: 'OWNERSHIP_MISMATCH'}),
+    )
+
+    application.emit('applications.status.update', {
+      name: 'list',
+      value: {label: 'Syncing'},
+    })
+    application.emit('applications.status.update', {
+      name: 'list',
+      value: {label: null},
+    })
+
+    expect(responder).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        type: 'applications.status.update',
+        payload: {name: 'list', value: {label: 'Syncing'}},
+        meta: expect.objectContaining({appId: 'favorites'}),
+      }),
+    )
+    expect(responder).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        type: 'applications.status.update',
+        payload: {name: 'list', value: {label: null}},
+        meta: expect.objectContaining({appId: 'favorites'}),
+      }),
+    )
+  })
+
   it('rejects state emits from every connection, including the host', () => {
     const host = createMessageBus('dashboard')
     const panel = {

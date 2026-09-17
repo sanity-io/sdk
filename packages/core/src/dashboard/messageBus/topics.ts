@@ -32,6 +32,23 @@ export interface ApplicationConfig extends RemoteModuleRef {
 }
 
 /**
+ * A label rendered for an application interface; `null` clears it.
+ * @internal
+ */
+export type ApplicationStatus = {label: string | null}
+
+/**
+ * Updates the status rendered for an application interface.
+ * @internal
+ */
+export type ApplicationStatusUpdate = {
+  /** The application interface name. */
+  name: string
+  /** The status to render. */
+  value: ApplicationStatus
+}
+
+/**
  * Declares a topic that stores and replays its current value.
  * @public
  */
@@ -95,6 +112,7 @@ export interface DashboardTopics {
   'applications.foreground': StateTopicDef<Application['id'] | null>
   /** The dashboard applications available to the current user. */
   'applications.list': StateTopicDef<TopicResult<Application<ApplicationInclude>[]> | null>
+  'applications.status.update': EventTopicDef<ApplicationStatusUpdate>
   /**
    * The session token for the reading connection, or `null` while signed out. The host
    * writes it to each connection separately, so one application never sees another's token.
@@ -147,20 +165,26 @@ export interface DashboardTopics {
 export interface Topics extends DashboardTopics {}
 
 /**
+ * Hides provisional topics from the public message bus methods.
+ * @internal
+ */
+export type MessageBusTopics = Omit<Topics, 'applications.status.update'>
+
+/**
  * Every declared topic name.
  * @public
  */
-export type TopicName = keyof Topics
+export type TopicName<TTopics = Topics> = keyof TTopics
 
 type StateTopicsOf<T> = {
   [K in keyof T]: T[K] extends {kind: 'state'} ? K : never
 }[keyof T]
 
 /**
- * Names of all declared state topics.
+ * Names of state topics exposed by message bus methods.
  * @public
  */
-export type StateTopic = StateTopicsOf<Topics>
+export type StateTopic<TTopics = MessageBusTopics> = StateTopicsOf<TTopics>
 
 type TopicOwnership = {readonly type: 'same_app'} | {readonly type: 'any_app'}
 
@@ -175,17 +199,20 @@ const stateTopic = <const V>(seed: V) => ({kind: 'state', seed}) as const
 // `same_app` restricts responding to the application that installed the bus.
 const dashboardEvent = {kind: 'event', ownership: {type: 'same_app'}} as const
 
+type DashboardTopicManifest = {
+  readonly [K in keyof DashboardTopics]: TopicManifestEntry<DashboardTopics[K]>
+}
+
 /**
  * Defines the runtime kind, ownership, and initial value of dashboard topics.
  * @internal
  */
-export const DASHBOARD_TOPIC_MANIFEST: {
-  readonly [K in keyof DashboardTopics]: TopicManifestEntry<DashboardTopics[K]>
-} = {
+export const DASHBOARD_TOPIC_MANIFEST: DashboardTopicManifest = {
   'applications.base-path': stateTopic(undefined),
   'applications.config': stateTopic(undefined),
   'applications.foreground': stateTopic(undefined),
   'applications.list': stateTopic(undefined),
+  'applications.status.update': dashboardEvent,
   'auth.token': stateTopic(undefined),
   'auth.token.refresh': dashboardEvent,
   'navigation.location': stateTopic(undefined),
@@ -211,32 +238,33 @@ export type TopicManifest = Readonly<
 >
 
 /**
- * Names of all declared event topics.
+ * Names of event topics exposed by message bus methods.
  * @public
  */
-export type EventTopic = {
-  [K in TopicName]: Topics[K] extends {kind: 'event'} ? K : never
-}[TopicName]
+export type EventTopic<TTopics = MessageBusTopics> = {
+  [K in keyof TTopics]: TTopics[K] extends {kind: 'event'} ? K : never
+}[keyof TTopics]
 
 /**
  * The value type of a state topic.
  * @public
  */
-export type ValueOf<K extends StateTopic> = Topics[K] extends StateTopicDef<infer T> ? T : never
+export type ValueOf<K extends StateTopic<TTopics>, TTopics = Topics> =
+  TTopics[K] extends StateTopicDef<infer T> ? T : never
 
 /**
  * The payload type of an event topic.
  * @public
  */
-export type PayloadOf<K extends EventTopic> =
-  Topics[K] extends EventTopicDef<infer P, infer _R> ? P : never
+export type PayloadOf<K extends EventTopic<TTopics>, TTopics = Topics> =
+  TTopics[K] extends EventTopicDef<infer P, infer _R> ? P : never
 
 /**
  * The reply type of an event topic (`never` if it declares none).
  * @public
  */
-export type ReplyOf<K extends EventTopic> =
-  Topics[K] extends EventTopicDef<infer _P, infer R> ? R : never
+export type ReplyOf<K extends EventTopic<TTopics>, TTopics = Topics> =
+  TTopics[K] extends EventTopicDef<infer _P, infer R> ? R : never
 
 /**
  * Converts a topic value between 2 adjacent versions.

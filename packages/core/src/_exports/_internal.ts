@@ -17,6 +17,7 @@ export {
   isDashboardEnvironment,
   requireDashboardMessageBus,
 } from '../dashboard/messageBus/store'
+export type {ApplicationStatus, ApplicationStatusUpdate} from '../dashboard/messageBus/topics'
 export {getTopicState, resolveTopic} from '../dashboard/messageBus/topicStore'
 export {PREVIEW_PROJECTION} from '../preview/previewConstants'
 export {transformProjectionToPreview} from '../preview/previewProjectionUtils'
