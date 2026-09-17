@@ -42,6 +42,7 @@ export type MessageBusErrorCode =
   | 'PROTOCOL_MISMATCH'
   | 'OWNERSHIP_MISMATCH'
   | 'MISSING_APP_ID'
+  | 'REFUSED'
 
 /**
  * An error raised by the message bus protocol.
@@ -89,6 +90,12 @@ export interface MessageBusMessage<T, R = never, K extends PropertyKey = TopicNa
   meta: MessageBusMeta
   /** Replies to an awaiting sender. */
   reply(value: R): void
+  /**
+   * Refuses the message: the sender's awaited `emit()` rejects with a
+   * {@link MessageBusError} whose `code` is `'REFUSED'`. Ignored, with a warning,
+   * once the reply has already settled.
+   */
+  reject(message?: string): void
   /** Aborts when the sender stops waiting for a reply. */
   readonly signal: AbortSignal
 }
@@ -207,6 +214,19 @@ export interface MessageBusClient {
   readonly closed: AbortSignal
   /** Writes a state value to this connection only. Ignored once the connection has closed. */
   emit<K extends StateTopic>(type: K, value: ValueOf<K>): void
+  /**
+   * Refuses a state topic for this connection: its pending and later {@link MessageBus.query}
+   * calls reject with a {@link MessageBusError} whose `code` is `'REFUSED'`, until the host next
+   * writes a value with {@link MessageBusClient.emit}, which clears the refusal.
+   *
+   * @remarks
+   * A rejected promise cannot be un-rejected and an errored subject cannot resume, so the refusal
+   * is tracked per connection alongside the topic's subject rather than by erroring it: `query`
+   * consults the refusal before awaiting, and {@link MessageBus.subscribe} and the topic's
+   * {@link MessageBusStateSource} stay silent (they never error) until a value is written.
+   * Ignored once the connection has closed, the same as {@link MessageBusClient.emit}.
+   */
+  refuse<K extends StateTopic>(type: K, message?: string): void
 }
 
 /**
@@ -260,6 +280,10 @@ interface ConnectionRecord {
   readonly appId: string
   readonly moduleId: string
   readonly stateSubjects: Map<string, BehaviorSubject<unknown>>
+  // Topics the host has refused for this connection, with the reason, until the next write.
+  readonly refusedReasons: Map<string, string | undefined>
+  // Fires the refused topic name so pending queries on that topic can reject at once.
+  readonly refused$: Subject<string>
   readonly abort: AbortController
 }
 
@@ -383,6 +407,15 @@ function createEventMessage(
         return
       }
       settleReply(pendingReply, {ok: true, value})
+    },
+    reject: (reason) => {
+      if (pendingReply.settled) {
+        console.warn(
+          `[sanity-sdk:message-bus] reject ignored for "${type}": no waiting caller or already replied`,
+        )
+        return
+      }
+      settleReply(pendingReply, {ok: false, error: new MessageBusError('REFUSED', reason)})
     },
     get signal() {
       return pendingReply.responderSignal
@@ -516,6 +549,8 @@ function emitState(
   type: string,
   value: unknown,
 ): void {
+  // A written value clears any refusal so later queries resolve normally.
+  connection.refusedReasons.delete(type)
   const subject = resolveStateSubject(registry, connection, type)
   if (!Object.is(subject.getValue(), value)) subject.next(value)
 }
@@ -526,7 +561,11 @@ function query(
   options: MessageBusQueryOptions | undefined,
   connectionSignal: AbortSignal,
   resetSignal: AbortSignal,
+  connection: ConnectionRecord,
 ): Promise<unknown> {
+  const refusal = () => new MessageBusError('REFUSED', connection.refusedReasons.get(type))
+  // A refusal outranks any earlier value: it is cleared only when the host writes a new one.
+  if (connection.refusedReasons.has(type)) return Promise.reject(refusal())
   const current = source.getCurrent()
   if (current !== undefined) return Promise.resolve(current)
 
@@ -537,12 +576,21 @@ function query(
     const timer =
       timeoutMs === null
         ? undefined
-        : setTimeout(
-            () => reject(new MessageBusError('TIMEOUT', `query("${type}") timed out`)),
-            timeoutMs,
-          )
+        : setTimeout(() => {
+            clear()
+            signal?.removeEventListener('abort', onAbort)
+            reject(new MessageBusError('TIMEOUT', `query("${type}") timed out`))
+          }, timeoutMs)
+    // A refusal that arrives while waiting rejects the pending query at once.
+    const refusedSub = connection.refused$.subscribe((refusedType) => {
+      if (refusedType !== type) return
+      clear()
+      signal?.removeEventListener('abort', onAbort)
+      reject(refusal())
+    })
     const clear = () => {
       if (timer !== undefined) clearTimeout(timer)
+      refusedSub.unsubscribe()
     }
     const onAbort = () => {
       clear()
@@ -824,6 +872,7 @@ function migrateEventMessage(
     payload: payload(message.payload),
     meta: message.meta,
     reply: (value) => message.reply(reply(value)),
+    reject: (refusal) => message.reject(refusal),
     get signal() {
       return message.signal
     },
@@ -932,6 +981,11 @@ function createClient(
       }
       emitState(registry, record, type, compatibility.toInstalledEmission(type, value))
     },
+    refuse: (type: string, message?: string) => {
+      if (record.abort.signal.aborted) return
+      record.refusedReasons.set(type, message)
+      record.refused$.next(type)
+    },
   } as MessageBusClient
 }
 
@@ -978,6 +1032,8 @@ function createConnection(
     appId,
     moduleId,
     stateSubjects: new Map(),
+    refusedReasons: new Map(),
+    refused$: new Subject<string>(),
     abort: connectionAbort,
   }
 
@@ -1045,7 +1101,14 @@ function createConnection(
     },
     query: (type: string, options?: MessageBusQueryOptions) => {
       if (connectionSignal.aborted) return Promise.reject(new MessageBusError('ABORTED'))
-      return query(stateSource(type), type, options, connectionSignal, registry.resetAbort.signal)
+      return query(
+        stateSource(type),
+        type,
+        options,
+        connectionSignal,
+        registry.resetAbort.signal,
+        record,
+      )
     },
     subscribe: (
       type: string,
@@ -1085,6 +1148,7 @@ function createConnection(
       connectionAbort.abort()
       for (const subject of record.stateSubjects.values()) subject.complete()
       record.stateSubjects.clear()
+      record.refused$.complete()
       registry.connections.delete(record)
     },
   }
