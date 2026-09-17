@@ -38,7 +38,6 @@
     "format:check": "oxfmt --check",
     "lint": "turbo run lint -- --fix && eslint . --fix",
     "prepare": "husky",
-    "release:current-branch": "tsx scripts/release-branch.mts",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:coverage:open": "open coverage/index.html",
@@ -79,8 +78,7 @@
     "turbo": "^2.10.12",
     "typedoc": "^0.28.20",
     "typescript": "catalog:",
-    "vitest": "catalog:",
-    "zx": "^8.8.5"
+    "vitest": "catalog:"
   },
   "devEngines": {
     "runtime": {

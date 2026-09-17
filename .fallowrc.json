@@ -9,8 +9,7 @@
     "babel-plugin-react-compiler",
     "react-compiler-runtime",
     "read-package-up",
-    "xstate",
-    "zx"
+    "xstate"
   ],
   "audit": {
     "deadCodeBaseline": "fallow-baselines/dead-code.json",

@@ -9,10 +9,9 @@ const config: KnipConfig = {
         config: 'tsconfig.tsdoc.json',
       },
       // `open` is invoked by the test:coverage:open script.
-      // `prerelease` is a positional argument to `pnpm version` in
-      // scripts/release-branch.mts that knip's shell parser misidentifies
-      // as a binary.
-      ignoreBinaries: ['open', 'prerelease'],
+      // `dist-tag` is the `pnpm dist-tag` subcommand in the release workflow
+      // that knip's shell parser misreads as a standalone binary.
+      ignoreBinaries: ['open', 'dist-tag'],
       entry: ['package.config.ts', 'bundle-stats.config.ts'],
     },
     'scripts/*': {

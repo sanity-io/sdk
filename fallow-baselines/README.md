@@ -23,19 +23,19 @@ The baselines hold backlog: findings we intend to burn down. Permanent false pos
 
 Seven packages are listed there:
 
-| Package                       | Actually used in                                                               |
-| ----------------------------- | ------------------------------------------------------------------------------ |
-| `@sanity/browserslist-config` | `browserslist` field of the `packages/core` and `packages/react` manifests     |
-| `@sanity/tsconfig`            | `extends` in `packages/@repo/tsconfig/base.json`                               |
-| `babel-plugin-react-compiler` | `reactCompilerPreset` in `packages/@repo/package.bundle/src/package.bundle.ts` |
-| `react-compiler-runtime`      | Injected into React Compiler output at build time                              |
-| `@google-cloud/storage`       | `scripts/uploadBundles.mts`                                                    |
-| `read-package-up`             | `scripts/uploadBundles.mts`                                                    |
-| `zx`                          | `scripts/release-branch.mts`                                                   |
+| Package                       | Actually used in                                                                                                                                                |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@sanity/browserslist-config` | `browserslist` field of the `packages/core` and `packages/react` manifests                                                                                      |
+| `@sanity/tsconfig`            | `extends` in `packages/@repo/tsconfig/base.json`                                                                                                                |
+| `babel-plugin-react-compiler` | `reactCompilerPreset` in `packages/@repo/package.bundle/src/package.bundle.ts`                                                                                  |
+| `react-compiler-runtime`      | Injected into React Compiler output at build time                                                                                                               |
+| `@google-cloud/storage`       | `scripts/uploadBundles.mts`                                                                                                                                     |
+| `read-package-up`             | `scripts/uploadBundles.mts`                                                                                                                                     |
+| `xstate`                      | Pinned so the version inlined into the declaration bundle (via `@sanity/comlink`'s re-exported types) is declared and Renovate-tracked; never imported directly |
 
-The first four are referenced from config rather than imported, so Fallow cannot see the usage at all. The last three are imported normally, but only from `scripts/`, which Fallow classifies as production code and so reports as `dev-dependencies-in-production`.
+The first four are referenced from config rather than imported, so Fallow cannot see the usage at all. The last two are imported normally, but only from `scripts/`, which Fallow classifies as production code and so reports as `dev-dependencies-in-production`.
 
-Scoping an `overrides` entry to `scripts/**` does not suppress that, because Fallow attributes the finding to the root `package.json` rather than to the importing script. Setting `rules: {"dev-dependencies-in-production": "off"}` does work, but it would also stop Fallow catching a devDependency imported from `packages/core` or `packages/react`, which breaks for consumers who never install devDependencies. Naming the three packages keeps that check alive.
+Scoping an `overrides` entry to `scripts/**` does not suppress that, because Fallow attributes the finding to the root `package.json` rather than to the importing script. Setting `rules: {"dev-dependencies-in-production": "off"}` does work, but it would also stop Fallow catching a devDependency imported from `packages/core` or `packages/react`, which breaks for consumers who never install devDependencies. Naming the two packages keeps that check alive.
 
 [`knip.config.ts`](../knip.config.ts) carries per-workspace `ignoreDependencies` for some of the same packages. Keep the two roughly in sync.
 

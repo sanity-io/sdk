@@ -131,6 +131,16 @@ To preview the version bump and changelog entries locally, run `GITHUB_TOKEN=$(g
 
 When your PR merges to `main`, Changesets opens (or updates) a `chore: release` "Version PR" that collects the pending bumps and updates each `CHANGELOG.md`. Merging that Version PR bumps the versions, publishes both packages to npm, and cuts a single `sdk-vX.Y.Z` tag and GitHub release.
 
+### Installing unreleased changes
+
+```bash
+pnpm add @sanity/sdk@next @sanity/sdk-react@next
+```
+
+A snapshot is a throwaway prerelease published to the `next` dist-tag. One is published on every push to `main` that still has pending changesets — that is, after your PR merges but before the Version PR does. Its version is the upcoming calculated version with a timestamp, e.g. `3.2.1-next.<datetime>` while `3.2.0` is on `latest`. Snapshots carry no changelog and are never a commit on `main`.
+
+To test changes before they merge, request a `pkg.pr.new` preview package (see [Testing with Preview Packages](#testing-with-preview-packages)). To pick up merged-but-unreleased changes, install `@next`.
+
 ### Release candidates
 
 To publish an rc from your branch, dispatch the **Release - Release Candidate** workflow on it. The branch needs at least one changeset — the rc version comes from the pending changesets, not from an input (a minor changeset yields `3.3.0-rc.0`, a major `4.0.0-rc.0`). The workflow enters pre-release mode, publishes to the `rc` dist-tag, then commits `.changeset/pre.json` and the version bumps back to your branch.
