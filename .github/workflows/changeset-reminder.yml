@@ -1,0 +1,79 @@
+name: Changeset Reminder
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  remind:
+    # The Version PR deletes changesets by design, so never remind on it.
+    if: github.head_ref != 'changeset-release/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+
+      - name: Detect missing changeset
+        id: detect
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          # github.base_ref reports the stack's base (main) for PRs in a GitHub Stack, which
+          # would diff the whole stack instead of this PR's layer. The PR API has the real base.
+          BASE_REF=$(gh pr view "$PR_NUMBER" --json baseRefName -q .baseRefName)
+          # Non-glob pathspec: '**' needs a directory between, so 'packages/*/*.md' is required
+          # to exclude package-root files such as CHANGELOG.md.
+          changed=$(git diff --name-only "origin/${BASE_REF}...HEAD" -- \
+            packages/core packages/react \
+            ':!packages/*/src/**/*.test.ts' ':!packages/*/src/**/*.test.tsx' ':!packages/*/src/**/*.test-d.ts' \
+            ':!packages/*/**/__snapshots__/**' ':!packages/*/*.md' ':!packages/*/**/*.md')
+          # git's default pathspec '*' also crosses '/', so '.changeset/*.md' intentionally
+          # matches '.changeset/pre/*.md' too (rc branches); do not change to ':(glob)'.
+          has_changeset=$(git diff --name-only --diff-filter=d "origin/${BASE_REF}...HEAD" -- '.changeset/*.md' ':!.changeset/README.md')
+          if [ -n "$changed" ] && [ -z "$has_changeset" ]; then
+            echo "remind=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "remind=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Remind (upsert)
+        if: steps.detect.outputs.remind == 'true' && github.event.pull_request.head.repo.full_name == github.repository
+        # A reminder must never turn the PR red; ignore transient API failures.
+        continue-on-error: true
+        uses: thollander/actions-comment-pull-request@24bffb9b452ba05a4f3f77933840a6a841d1b32b # v3
+        with:
+          comment-tag: changeset-reminder
+          mode: upsert
+          message: |
+            This PR changes a published package (`packages/core` or `packages/react`) but has no changeset.
+
+            Run `pnpm changeset`, pick the bump (`feat` = minor, `fix`/`perf`/`revert` = patch, breaking = major), and commit the generated `.changeset/*.md`.
+
+            If the change is not user-facing (tests, internal refactor, CI), you can ignore this comment.
+
+            See [CONTRIBUTING.md, Releasing](https://github.com/${{ github.repository }}/blob/main/CONTRIBUTING.md#releasing).
+
+      - name: Remind (log only, fork PR)
+        if: steps.detect.outputs.remind == 'true' && github.event.pull_request.head.repo.full_name != github.repository
+        run: |
+          echo "This PR changes a published package but has no changeset."
+          echo "Run 'pnpm changeset', pick the bump, and commit the generated .changeset/*.md."
+          echo "See CONTRIBUTING.md#releasing."
+
+      - name: Clear reminder (delete)
+        if: steps.detect.outputs.remind != 'true' && github.event.pull_request.head.repo.full_name == github.repository
+        continue-on-error: true
+        uses: thollander/actions-comment-pull-request@24bffb9b452ba05a4f3f77933840a6a841d1b32b # v3
+        with:
+          comment-tag: changeset-reminder
+          mode: delete
