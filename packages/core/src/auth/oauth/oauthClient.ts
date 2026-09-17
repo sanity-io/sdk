@@ -18,8 +18,21 @@ type AuthOptions = AuthStoreState['options']
 export type ConfiguredOAuthOptions = AuthOptions & {oauth: NonNullable<AuthOptions['oauth']>}
 
 /** Builds the RFC 8707 resource indicator for an organisation. */
-export function getResourceIndicator(organizationId: string): string {
+function getResourceIndicator(organizationId: string): string {
   return `urn:io.sanity:organization:${organizationId}`
+}
+
+/**
+ * Appends the RFC 8707 `resource` indicator to `params` when an organisation
+ * id is configured. Without one, the request is left unscoped.
+ */
+export function appendResourceIndicator(
+  params: URLSearchParams,
+  oauth: ConfiguredOAuthOptions['oauth'],
+): void {
+  if (oauth.organizationId) {
+    params.append('resource', getResourceIndicator(oauth.organizationId))
+  }
 }
 
 /**
@@ -57,6 +70,21 @@ export function createOAuthClient(options: AuthOptions): SanityClient {
     useProjectHostname: false,
     useCdn: false,
     ...(options.apiHost && {apiHost: options.apiHost}),
+  })
+}
+
+/** POSTs form-encoded params to the OAuth token endpoint. */
+export function postTokenRequest(
+  client: SanityClient,
+  params: URLSearchParams,
+  tag: string,
+): Promise<TokenEndpointResponse> {
+  return client.request<TokenEndpointResponse>({
+    method: 'POST',
+    url: '/auth/oauth/token',
+    headers: {'content-type': 'application/x-www-form-urlencoded'},
+    body: params.toString(),
+    tag,
   })
 }
 

@@ -6,11 +6,11 @@ import {AuthStateType} from '../authStateType'
 import {type AuthStoreState} from '../authStore'
 import {createLoggedInAuthState} from '../utils'
 import {
+  appendResourceIndicator,
   createOAuthClient,
   getOAuthOptions,
-  getResourceIndicator,
+  postTokenRequest,
   serializeTokens,
-  type TokenEndpointResponse,
   toOAuthTokens,
 } from './oauthClient'
 import {type OAuthTokens} from './types'
@@ -78,15 +78,9 @@ async function doRefreshOAuthTokens({
       grant_type: 'refresh_token',
       refresh_token: current.refreshToken,
       client_id: options.oauth.clientId,
-      resource: getResourceIndicator(options.oauth.organizationId),
     })
-    const response = await client.request<TokenEndpointResponse>({
-      method: 'POST',
-      url: '/auth/oauth/token',
-      headers: {'content-type': 'application/x-www-form-urlencoded'},
-      body: params.toString(),
-      tag: 'oauth.refresh',
-    })
+    appendResourceIndicator(params, options.oauth)
+    const response = await postTokenRequest(client, params, 'oauth.refresh')
 
     const tokens = toOAuthTokens(response)
     if (!tokens.refreshToken) tokens.refreshToken = current.refreshToken
