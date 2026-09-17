@@ -41,7 +41,8 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           cache: pnpm
-          node-version: lts/*
+          # devEngines.runtime pins node; npm 11 refuses to run under a mismatched version.
+          node-version-file: package.json
       - run: pnpm install --ignore-scripts --no-runtime
 
       # Maintains a "chore: release" Version PR. When that PR merges the pending
@@ -82,11 +83,18 @@ jobs:
           # `changeset publish` skips packages already on the registry, so a rerun
           # after a partial publish republishes only the missing one. Only treat the
           # version as fully published when BOTH packages are already on the registry.
-          if npm view "@sanity/sdk@$VERSION" version > /dev/null 2>&1 && npm view "@sanity/sdk-react@$VERSION" version > /dev/null 2>&1; then
-            echo "already-published=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "already-published=false" >> "$GITHUB_OUTPUT"
-          fi
+          # Only E404 means "not published"; any other npm error must fail the job
+          # rather than be read as a missing version.
+          published=true
+          for pkg in @sanity/sdk @sanity/sdk-react; do
+            if ! out=$(npm view "$pkg@$VERSION" version 2>&1); then
+              case "$out" in
+                *E404*) published=false ;;
+                *) echo "$out"; echo "::error::npm view $pkg@$VERSION failed"; exit 1 ;;
+              esac
+            fi
+          done
+          echo "already-published=$published" >> "$GITHUB_OUTPUT"
 
       - name: Build packages
         if: steps.changesets.outputs['has-changesets'] == 'false' && steps.version.outputs.already-published == 'false'
@@ -110,8 +118,15 @@ jobs:
         id: publish
         if: steps.changesets.outputs['has-changesets'] == 'false' && steps.version.outputs.already-published == 'false'
         run: |
-          pnpm changeset publish --no-git-tag
-          echo "published=true" >> "$GITHUB_OUTPUT"
+          # changeset publish exits 0 when there is nothing to publish; only cut a tag
+          # and release when it actually published something.
+          set -o pipefail
+          pnpm changeset publish --no-git-tag | tee publish.log
+          if grep -q 'No unpublished projects to publish' publish.log; then
+            echo "published=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "published=true" >> "$GITHUB_OUTPUT"
+          fi
         env:
           NPM_CONFIG_PROVENANCE: true
 
@@ -173,7 +188,8 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           cache: pnpm
-          node-version: lts/*
+          # devEngines.runtime pins node; npm 11 refuses to run under a mismatched version.
+          node-version-file: package.json
       - run: pnpm install --ignore-scripts --no-runtime
 
       # Calculate the snapshot version from the pending changesets, e.g.
