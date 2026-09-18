@@ -5,7 +5,6 @@ packages:
   - apps/*
   - '@repo/package.config'
 
-
 allowBuilds:
   esbuild: true
   unrs-resolver: false
@@ -35,7 +34,10 @@ minimumReleaseAgeExclude:
 catalog:
   '@playwright/test': '^1.63.0'
   '@sanity/browserslist-config': '^1.0.5'
-  '@sanity/client': '^8.6.2'
+  # Client PR 1334 adds the resource registries used by the SDK resolvers.
+  # Pin its preview for development and CI. Before merging, replace this URL with
+  # the released client version containing those registries.
+  '@sanity/client': https://pkg.pr.new/@sanity/client@47ce4647585bd85aacc0ab58b8c71128f473b64b
   '@sanity/comlink': '^4.0.3'
   '@sanity/message-protocol': '^0.24.0'
   '@sanity/pkg-utils': '^13.0.0'
