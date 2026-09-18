@@ -43,6 +43,11 @@ const oauthConfig = {
   organizationId: 'org123',
 }
 
+const oauthConfigNoOrg = {
+  clientId: 'client-abc',
+  redirectUri: 'https://app.example.com/callback',
+}
+
 const seededTokens: OAuthTokens = {
   accessToken: 'stored-access',
   tokenType: 'bearer',
@@ -94,6 +99,7 @@ interface SetupOptions {
   sessionSeed?: Record<string, string>
   initialLocationHref?: string
   withOAuthConfig?: boolean
+  oauthConfig?: {clientId: string; redirectUri: string; organizationId?: string}
   apiHost?: string
 }
 
@@ -112,7 +118,7 @@ function setup(options: SetupOptions = {}) {
       storageArea,
       initialLocationHref: options.initialLocationHref ?? 'https://app.example.com/',
       ...(options.apiHost && {apiHost: options.apiHost}),
-      ...(options.withOAuthConfig === false ? {} : {oauth: oauthConfig}),
+      ...(options.withOAuthConfig === false ? {} : {oauth: options.oauthConfig ?? oauthConfig}),
     },
   })
 
@@ -177,6 +183,17 @@ describe('startOAuthAuthorization', () => {
     await startOAuthAuthorization(instance!)
 
     expect(session.getItem(OAUTH_RETURN_TO_KEY)).toBe('https://app.example.com/callback?x=1')
+  })
+
+  it('omits the resource param when no organizationId is configured', async () => {
+    const assign = vi.fn()
+    vi.stubGlobal('window', {location: {assign}})
+    setup({initialLocationHref: 'https://app.example.com/', oauthConfig: oauthConfigNoOrg})
+
+    await startOAuthAuthorization(instance!)
+
+    const url = new URL(assign.mock.calls[0][0])
+    expect(url.searchParams.has('resource')).toBe(false)
   })
 
   it('throws when OAuth is not configured', async () => {
@@ -405,6 +422,18 @@ describe('handleOAuthCallback', () => {
     expect(request).not.toHaveBeenCalled()
   })
 
+  it('omits the resource param when no organizationId is configured', async () => {
+    const {request} = setup({
+      oauthConfig: oauthConfigNoOrg,
+      sessionSeed: {[OAUTH_STATE_KEY]: 'state-xyz', [OAUTH_VERIFIER_KEY]: 'verifier-1'},
+    })
+
+    await handleOAuthCallback(instance!, callbackHref)
+
+    const body = parseBody(request.mock.calls[0][0].body)
+    expect(body.has('resource')).toBe(false)
+  })
+
   it('sets ERROR when the token exchange fails', async () => {
     const request = vi.fn().mockRejectedValue(new Error('boom'))
     const {session} = setup({
@@ -437,6 +466,18 @@ describe('refreshOAuthTokens', () => {
 
     expect(result).toMatchObject({accessToken: 'new-access', refreshToken: 'new-refresh'})
     expect(readStored(storageArea)).toMatchObject({accessToken: 'new-access'})
+  })
+
+  it('omits the resource param when no organizationId is configured', async () => {
+    const {request} = setup({
+      oauthConfig: oauthConfigNoOrg,
+      storageSeed: {[OAUTH_TOKENS_KEY]: serializeTokens(seededTokens)},
+    })
+
+    await refreshOAuthTokens(instance!)
+
+    const body = parseBody(request.mock.calls[0][0].body)
+    expect(body.has('resource')).toBe(false)
   })
 
   it('shares a single in-flight request across concurrent callers', async () => {

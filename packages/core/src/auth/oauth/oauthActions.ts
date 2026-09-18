@@ -49,6 +49,19 @@ function getResourceIndicator(organizationId: string): string {
 }
 
 /**
+ * Appends the RFC 8707 `resource` indicator to `params` when an organisation
+ * id is configured. Without one, the request is left unscoped.
+ */
+function appendResourceIndicator(
+  params: URLSearchParams,
+  oauth: NonNullable<AuthOptions['oauth']>,
+): void {
+  if (oauth.organizationId) {
+    params.append('resource', getResourceIndicator(oauth.organizationId))
+  }
+}
+
+/**
  * Serialises tokens for storage, converting `expiresAt` to an ISO string.
  *
  * @internal
@@ -86,6 +99,21 @@ function createOAuthClient(options: AuthOptions): SanityClient {
     useProjectHostname: false,
     useCdn: false,
     ...(options.apiHost && {apiHost: options.apiHost}),
+  })
+}
+
+/** POSTs form-encoded params to the OAuth token endpoint. */
+function postTokenRequest(
+  client: SanityClient,
+  params: URLSearchParams,
+  tag: string,
+): Promise<TokenEndpointResponse> {
+  return client.request<TokenEndpointResponse>({
+    method: 'POST',
+    url: '/auth/oauth/token',
+    headers: {'content-type': 'application/x-www-form-urlencoded'},
+    body: params.toString(),
+    tag,
   })
 }
 
@@ -140,7 +168,7 @@ export const startOAuthAuthorization = bindActionGlobally(authStore, async ({sta
   authorizeUrl.searchParams.set('state', oauthState)
   authorizeUrl.searchParams.set('code_challenge', codeChallenge)
   authorizeUrl.searchParams.set('code_challenge_method', 'S256')
-  authorizeUrl.searchParams.append('resource', getResourceIndicator(options.oauth.organizationId))
+  appendResourceIndicator(authorizeUrl.searchParams, options.oauth)
 
   logger.info('Starting OAuth authorization')
   if (typeof window !== 'undefined' && typeof window.location?.assign === 'function') {
@@ -240,15 +268,9 @@ export const handleOAuthCallback = bindActionGlobally(
         code_verifier: codeVerifier,
         redirect_uri: options.oauth.redirectUri,
         client_id: options.oauth.clientId,
-        resource: getResourceIndicator(options.oauth.organizationId),
       })
-      const response = await client.request<TokenEndpointResponse>({
-        method: 'POST',
-        url: '/auth/oauth/token',
-        headers: {'content-type': 'application/x-www-form-urlencoded'},
-        body: params.toString(),
-        tag: 'oauth.token',
-      })
+      appendResourceIndicator(params, options.oauth)
+      const response = await postTokenRequest(client, params, 'oauth.token')
 
       const tokens = toOAuthTokens(response)
       options.storageArea?.setItem(options.storageKey, serializeTokens(tokens))
@@ -329,15 +351,9 @@ async function doRefreshOAuthTokens({
       grant_type: 'refresh_token',
       refresh_token: current.refreshToken,
       client_id: options.oauth.clientId,
-      resource: getResourceIndicator(options.oauth.organizationId),
     })
-    const response = await client.request<TokenEndpointResponse>({
-      method: 'POST',
-      url: '/auth/oauth/token',
-      headers: {'content-type': 'application/x-www-form-urlencoded'},
-      body: params.toString(),
-      tag: 'oauth.refresh',
-    })
+    appendResourceIndicator(params, options.oauth)
+    const response = await postTokenRequest(client, params, 'oauth.refresh')
 
     const tokens = toOAuthTokens(response)
     if (!tokens.refreshToken) tokens.refreshToken = current.refreshToken
