@@ -1809,3 +1809,42 @@ beforeEach(() => {
   } as SanityClient
   client$.next(client)
 })
+
+it('resolves a readable document while another in the same dataset is inaccessible due to permissions', async () => {
+  const readableId = DocumentId('doc-readable')
+  const blockedId = DocumentId('doc-blocked')
+
+  vi.mocked(createFetchDocument).mockReturnValue(
+    vi.fn((id) =>
+      (id === blockedId
+        ? throwError(
+            () =>
+              new Error(`Document with ID \`${blockedId}\` is inaccessible due to permissions.`),
+          )
+        : of({_id: id, _type: 'article', _rev: 'rev-1'} as SanityDocument)
+      ).pipe(delay(0)),
+    ),
+  )
+
+  const readable = getDocumentState<TestDocument>(instance, {
+    documentId: readableId,
+    documentType: 'article',
+    liveEdit: true,
+  })
+  const blocked = getDocumentState<TestDocument>(instance, {
+    documentId: blockedId,
+    documentType: 'article',
+    liveEdit: true,
+  })
+
+  const unsubscribeReadable = readable.subscribe()
+  const unsubscribeBlocked = blocked.subscribe()
+
+  await vi.waitFor(() => expect(readable.getCurrent()).toMatchObject({_id: readableId}))
+  await expect(firstValueFrom(blocked.observable)).rejects.toThrow(
+    'Document with ID `doc-blocked` is inaccessible due to permissions.',
+  )
+
+  unsubscribeReadable()
+  unsubscribeBlocked()
+})
