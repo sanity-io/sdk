@@ -1872,3 +1872,27 @@ it('reports an inaccessible draft to the document that reads it', async () => {
     ),
   ).rejects.toThrow(message)
 })
+
+it('fails a write to a document it cannot read instead of waiting for it', async () => {
+  const documentId = DocumentId('doc-with-blocked-draft-write')
+  const draftId = getDraftId(documentId)
+  const message = `Document with ID \`${draftId}\` is inaccessible due to permissions.`
+
+  vi.mocked(createFetchDocument).mockReturnValue(
+    vi.fn((id) =>
+      (id === draftId
+        ? throwError(() => new Error(message))
+        : of({_id: id, _type: 'article', _rev: 'rev-1'} as SanityDocument)
+      ).pipe(delay(0)),
+    ),
+  )
+
+  const doc = createDocumentHandle({documentId, documentType: 'article'})
+
+  await expect(
+    applyDocumentActions(instance, {
+      actions: [editDocument(doc, {set: {title: 'Edited'}})],
+      resource,
+    }),
+  ).rejects.toThrow(message)
+})
