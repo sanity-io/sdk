@@ -104,6 +104,7 @@ export interface DocumentStoreState {
 
 export interface DocumentState {
   id: string
+  error?: unknown
   /**
    * the "remote" local copy that matches the server. represents the last known
    * server state. this gets updated every time we confirm remote patches
@@ -229,6 +230,8 @@ const _getDocumentState = bindActionByResource(
       const {documentId: docId, path, liveEdit, perspective} = options
       const documentId = DocumentId(docId)
       if (error) throw error
+      const documentError = documentStates[documentId]?.error
+      if (documentError) throw documentError
       let document: ResolveDocument | null | undefined
 
       if (liveEdit) {
@@ -301,6 +304,8 @@ export const getDocumentSyncStatus = bindActionByResource(
     ) => {
       const documentId = DocumentId(typeof doc === 'string' ? doc : doc.documentId)
       if (error) throw error
+      const documentError = documents[documentId]?.error
+      if (documentError) throw documentError
 
       if (doc.liveEdit) {
         // For liveEdit documents, only check the single document
@@ -535,6 +540,21 @@ const subscribeToSubscriptionsAndListenToDocuments = (
                   applyRemoteDocument(prev, remote, events),
                 ),
               ),
+              catchError((error) => {
+                state.set('setDocumentError', (prev) => ({
+                  ...prev,
+                  documentStates: {
+                    ...prev.documentStates,
+                    [e.id]: {
+                      ...prev.documentStates[e.id],
+                      id: e.id,
+                      subscriptions: prev.documentStates[e.id]?.subscriptions ?? [],
+                      error,
+                    },
+                  },
+                }))
+                return EMPTY
+              }),
             )
           }),
         ),
