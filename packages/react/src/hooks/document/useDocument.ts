@@ -61,7 +61,7 @@ interface UseDocument {
     TDataset extends string = string,
     TProjectId extends string = string,
   >(
-    options: UseDocumentOptions<TPath, TDocumentType>,
+    options: UseDocumentOptions<TPath, TDocumentType, TDataset, TProjectId>,
   ): {
     data: JsonMatch<ResolveDocument<TDocumentType, `${TProjectId}.${TDataset}`>, TPath> | undefined
   }
@@ -139,7 +139,7 @@ interface UseDocument {
     TDataset extends string = string,
     TProjectId extends string = string,
   >(
-    options: UseDocumentOptions<TPath, TDocumentType>,
+    options: UseDocumentOptions<TPath, TDocumentType, TDataset, TProjectId>,
   ): TPath extends string
     ? {
         data:

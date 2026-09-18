@@ -171,8 +171,8 @@ catalogs:
       specifier: ^1.0.5
       version: 1.0.5
     '@sanity/client':
-      specifier: ^8.6.2
-      version: 8.6.2
+      specifier: https://pkg.pr.new/@sanity/client@47ce4647585bd85aacc0ab58b8c71128f473b64b
+      version: https://pkg.pr.new/@sanity/client@47ce4647585bd85aacc0ab58b8c71128f473b64b
     '@sanity/comlink':
       specifier: ^4.0.3
       version: 4.0.3
@@ -584,7 +584,7 @@ importers:
     dependencies:
       '@sanity/client':
         specifier: 'catalog:'
-        version: 8.6.2(vitest@5.0.1)
+        version: https://pkg.pr.new/@sanity/client@47ce4647585bd85aacc0ab58b8c71128f473b64b(vitest@5.0.1)
       dotenv:
         specifier: ^17.4.2
         version: 17.4.2
@@ -675,7 +675,7 @@ importers:
         version: 1.0.0
       '@sanity/client':
         specifier: 'catalog:'
-        version: 8.6.2(vitest@5.0.1)
+        version: https://pkg.pr.new/@sanity/client@47ce4647585bd85aacc0ab58b8c71128f473b64b(vitest@5.0.1)
       '@sanity/comlink':
         specifier: 'catalog:'
         version: 4.0.3
@@ -775,7 +775,7 @@ importers:
         version: 2.9.0
       '@sanity/client':
         specifier: 'catalog:'
-        version: 8.6.2(vitest@5.0.1)
+        version: https://pkg.pr.new/@sanity/client@47ce4647585bd85aacc0ab58b8c71128f473b64b(vitest@5.0.1)
       '@sanity/message-protocol':
         specifier: 'catalog:'
         version: 0.24.0
@@ -3320,6 +3320,11 @@ packages:
 
   '@sanity/client@8.6.2':
     resolution: {integrity: sha512-e/rKvOxMy3hP+4p1fdVfONKrdmlNQQyjzHai/cQYPTe/CLLsxVQZWcPsXOq+rgZ3gitxXHtqx1H4nrYmBG97Qg==}
+    engines: {node: '>=22.12.0'}
+
+  '@sanity/client@https://pkg.pr.new/@sanity/client@47ce4647585bd85aacc0ab58b8c71128f473b64b':
+    resolution: {integrity: sha512-1LDA/WVcHYxruRtkz+ovIYvpUqj6fMuGM7YLuEYINnzUStddk4b1L+Q0sr+OCo0H2PcaeF06SujHZIiNtrXTmA==, tarball: https://pkg.pr.new/@sanity/client@47ce4647585bd85aacc0ab58b8c71128f473b64b}
+    version: 8.6.2
     engines: {node: '>=22.12.0'}
 
   '@sanity/codegen@3.88.1-typegen-experimental.0':
@@ -11248,6 +11253,15 @@ snapshots:
       rxjs: 7.8.2
 
   '@sanity/client@8.6.2(vitest@5.0.1)':
+    dependencies:
+      eventsource: 5.1.1
+      get-it: 9.5.4(vitest@5.0.1)
+      obug: 3.0.0
+      rxjs: 7.8.2
+    transitivePeerDependencies:
+      - vitest
+
+  '@sanity/client@https://pkg.pr.new/@sanity/client@47ce4647585bd85aacc0ab58b8c71128f473b64b(vitest@5.0.1)':
     dependencies:
       eventsource: 5.1.1
       get-it: 9.5.4(vitest@5.0.1)
