@@ -22,7 +22,7 @@ export const UNVERIFIED_REVISION_RETENTION_TIME = 30_000
  * Base delay (ms) before retrying a document listener after a transient failure
  * (an `OutOfSyncError`, a 5xx response, 408 or 429). Backoff doubles on each
  * successive retry, capped at {@link OUT_OF_SYNC_RETRY_MAX_DELAY}, and gives up
- * after {@link OUT_OF_SYNC_RETRY_COUNT} attempts so a lasting failure surfaces.
+ * after {@link OUT_OF_SYNC_RETRY_COUNT} retries so a lasting failure surfaces.
  */
 export const OUT_OF_SYNC_RETRY_BASE_DELAY = 500
 export const OUT_OF_SYNC_RETRY_MAX_DELAY = 10_000
