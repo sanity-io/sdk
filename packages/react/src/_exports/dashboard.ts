@@ -39,6 +39,7 @@ export {
   useApplications,
 } from '../hooks/dashboard/useApplications'
 export {useAuthToken} from '../hooks/dashboard/useAuthToken'
+export {useCapabilities} from '../hooks/dashboard/useCapabilities'
 export {useCurrentUser} from '../hooks/dashboard/useCurrentUser'
 export {type TopicEmitter, useEmit} from '../hooks/dashboard/useEmit'
 export {useNavigate} from '../hooks/dashboard/useNavigate'
@@ -53,6 +54,8 @@ export {useWindowTitle} from '../hooks/dashboard/useWindowTitle'
 export type {
   ApplicationConfig,
   ApplicationConfigAppType,
+  Capability,
+  CapabilityRecord,
   ConnectMessageBusOptions,
   DashboardTopics,
   EventTopic,
@@ -82,4 +85,4 @@ export type {
   Topics,
   ValueOf,
 } from '@sanity/sdk/dashboard'
-export {connectMessageBus, MessageBusError, TopicError} from '@sanity/sdk/dashboard'
+export {capabilities, connectMessageBus, MessageBusError, TopicError} from '@sanity/sdk/dashboard'

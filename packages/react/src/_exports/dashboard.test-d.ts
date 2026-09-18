@@ -1,6 +1,7 @@
 import {expectTypeOf, test} from 'vitest'
 
 import {
+  type CapabilityRecord,
   type DashboardTopics,
   type EventTopic,
   type EventTopicDef,
@@ -20,6 +21,7 @@ import {
   type TopicName,
   type Topics,
   useApplicationBasePath,
+  useCapabilities,
 } from './dashboard'
 import {
   type ApplicationStatus,
@@ -62,6 +64,7 @@ test('dashboard entrypoint exposes the message bus public types', () => {
   expectTypeOf<MessageBusEmitResult<string>>().toExtend<PromiseLike<string>>()
   expectTypeOf<MessageBus['query']>().toBeFunction()
   expectTypeOf<ReturnType<typeof useApplicationBasePath>>().toEqualTypeOf<string>()
+  expectTypeOf<ReturnType<typeof useCapabilities>>().toEqualTypeOf<CapabilityRecord>()
   expectTypeOf<MessageBusHost['connections']['subscribe']>().toBeFunction()
 })
 

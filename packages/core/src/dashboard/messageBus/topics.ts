@@ -32,6 +32,27 @@ export interface ApplicationConfig extends RemoteModuleRef {
 }
 
 /**
+ * The capabilities a host can provide.
+ *
+ * Reuses the Studio's rendering-context identifiers so an application can hide its own
+ * implementation of anything the host provides.
+ * @public
+ */
+export const capabilities = ['globalUserMenu', 'favorites', 'history'] as const
+
+/**
+ * A capability a host can provide.
+ * @public
+ */
+export type Capability = (typeof capabilities)[number]
+
+/**
+ * The capabilities the host provides. A missing key means the host does not provide it.
+ * @public
+ */
+export type CapabilityRecord = Partial<Record<Capability, boolean>>
+
+/**
  * A label rendered for an application interface; `null` clears it.
  * @internal
  */
@@ -106,6 +127,8 @@ export interface DashboardTopics {
    * An unknown application returns `{ok: false}`.
    */
   'applications.base-path': StateTopicDef<TopicResult<string>>
+  /** The capabilities the host provides. A missing key means the host does not provide it. */
+  'applications.capabilities': StateTopicDef<CapabilityRecord>
   /** The available application configuration modules. */
   'applications.config': StateTopicDef<ApplicationConfig[] | null>
   /** The foreground application ID, or `null` on dashboard-level routes. */
@@ -209,6 +232,7 @@ type DashboardTopicManifest = {
  */
 export const DASHBOARD_TOPIC_MANIFEST: DashboardTopicManifest = {
   'applications.base-path': stateTopic(undefined),
+  'applications.capabilities': stateTopic(undefined),
   'applications.config': stateTopic(undefined),
   'applications.foreground': stateTopic(undefined),
   'applications.list': stateTopic(undefined),
