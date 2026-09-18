@@ -1,4 +1,4 @@
-import {type Action, ClientError, CorsOriginError, type Mutation} from '@sanity/client'
+import {type Action, ClientError, CorsOriginError, type Mutation, ServerError} from '@sanity/client'
 import {DocumentId, getDraftId, getPublishedId, getVersionId} from '@sanity/id-utils'
 import {jsonMatch} from '@sanity/json-match'
 import {type ExprNode} from 'groq-js'
@@ -53,6 +53,7 @@ import {
   API_VERSION,
   INITIAL_OUTGOING_THROTTLE_TIME,
   OUT_OF_SYNC_RETRY_BASE_DELAY,
+  OUT_OF_SYNC_RETRY_COUNT,
   OUT_OF_SYNC_RETRY_MAX_DELAY,
 } from './documentConstants'
 import {
@@ -70,7 +71,7 @@ import {
   type Grant,
 } from './permissions'
 import {ActionError} from './processActions/processActions'
-import {isReleaseAction} from './processActions/releaseUtil'
+import {getReleaseDocumentId, isReleaseAction} from './processActions/releaseUtil'
 import {
   type AppliedTransaction,
   applyFirstQueuedTransaction,
@@ -104,6 +105,7 @@ export interface DocumentStoreState {
 
 export interface DocumentState {
   id: string
+  error?: unknown
   /**
    * the "remote" local copy that matches the server. represents the last known
    * server state. this gets updated every time we confirm remote patches
@@ -222,31 +224,59 @@ export function getDocumentState(
   return _getDocumentState(...args)
 }
 
+function readDocumentIds(
+  documentId: DocumentId,
+  options: {liveEdit?: boolean; perspective?: DocumentOptions<string | undefined>['perspective']},
+): string[] {
+  if (options.liveEdit) return [documentId]
+  const versionIds = isReleasePerspective(options.perspective)
+    ? [getVersionId(documentId, options.perspective.releaseName)]
+    : []
+  return [...versionIds, getDraftId(documentId), getPublishedId(documentId)]
+}
+
+function throwDocumentError(
+  documentStates: DocumentStoreState['documentStates'],
+  documentIds: string[],
+): void {
+  for (const documentId of documentIds) {
+    const documentError = documentStates[documentId]?.error
+    if (documentError) throw documentError
+  }
+}
+
+/** Version wins over draft, and draft over published. Undefined until every read has arrived. */
+function selectLocalDocument(
+  documentStates: DocumentStoreState['documentStates'],
+  documentIds: string[],
+): ResolveDocument | null | undefined {
+  throwDocumentError(documentStates, documentIds)
+  let selected: ResolveDocument | null = null
+  for (const documentId of documentIds) {
+    const local = documentStates[documentId]?.local
+    if (local === undefined) return undefined
+    if (selected === null) selected = local
+  }
+  return selected
+}
+
+function hasEveryDocumentArrived(
+  documentStates: DocumentStoreState['documentStates'],
+  documentIds: string[],
+): boolean {
+  throwDocumentError(documentStates, documentIds)
+  return documentIds.every((documentId) => documentStates[documentId] !== undefined)
+}
+
 const _getDocumentState = bindActionByResource(
   documentStore,
   createStateSourceAction({
     selector: ({state: {error, documentStates}}, options: DocumentOptions<string | undefined>) => {
-      const {documentId: docId, path, liveEdit, perspective} = options
+      const {documentId: docId, path} = options
       const documentId = DocumentId(docId)
       if (error) throw error
-      let document: ResolveDocument | null | undefined
-
-      if (liveEdit) {
-        document = documentStates[documentId]?.local
-      } else {
-        let version: ResolveDocument | null | undefined
-        if (isReleasePerspective(perspective)) {
-          const versionId = getVersionId(documentId, perspective.releaseName)
-          version = documentStates[versionId]?.local
-          // early exit if we don't have the version document and we're in a release perspective
-          if (version === undefined) return undefined
-        }
-        const draft = documentStates[getDraftId(documentId)]?.local
-        const published = documentStates[getPublishedId(documentId)]?.local
-        // early exit if we don't have all the documents for draft/published logic
-        if (draft === undefined || published === undefined) return undefined
-        document = version ?? draft ?? published
-      }
+      const document = selectLocalDocument(documentStates, readDocumentIds(documentId, options))
+      if (document === undefined) return undefined
 
       if (!path) return document
       const result = jsonMatch(document, path).next()
@@ -301,20 +331,7 @@ export const getDocumentSyncStatus = bindActionByResource(
     ) => {
       const documentId = DocumentId(typeof doc === 'string' ? doc : doc.documentId)
       if (error) throw error
-
-      if (doc.liveEdit) {
-        // For liveEdit documents, only check the single document
-        if (documents[documentId] === undefined) return undefined
-      } else {
-        const version = isReleasePerspective(doc.perspective)
-          ? documents[getVersionId(documentId, doc.perspective.releaseName)]
-          : undefined
-        if (isReleasePerspective(doc.perspective) && version === undefined) return undefined
-        // Standard draft/published logic
-        const draft = documents[getDraftId(documentId)]
-        const published = documents[getPublishedId(documentId)]
-        if (draft === undefined || published === undefined) return undefined
-      }
+      if (!hasEveryDocumentArrived(documents, readDocumentIds(documentId, doc))) return undefined
       return !queued.length && !applied.length && !outgoing
     },
     onSubscribe: (context, doc: DocumentHandle) => {
@@ -363,12 +380,35 @@ export const subscribeDocumentEvents = bindActionByResource(
   },
 )
 
+function actionDocumentIds(action: QueuedTransaction['actions'][number]): string[] {
+  if (isReleaseAction(action)) return [getReleaseDocumentId(action.releaseId)]
+  if (!('documentId' in action) || !action.documentId) return []
+  return readDocumentIds(DocumentId(action.documentId), action)
+}
+
+function failTransactionOnUnreadableDocument({queued, documentStates}: DocumentStoreState): void {
+  const transaction = queued.at(0)
+  if (!transaction) return
+  const ids = transaction.actions.flatMap(actionDocumentIds)
+  const unreadableId = ids.find((id) => documentStates[id]?.error)
+  if (unreadableId === undefined) return
+  const error = documentStates[unreadableId]?.error
+  const actionError = new ActionError({
+    message: error instanceof Error ? error.message : String(error),
+    documentId: unreadableId,
+    transactionId: transaction.transactionId,
+  })
+  actionError.cause = error
+  throw actionError
+}
+
 const subscribeToQueuedAndApplyNextTransaction = ({
   state,
 }: StoreContext<DocumentStoreState, BoundResourceKey>) => {
   const {events} = state.get()
   return state.observable
     .pipe(
+      tap(failTransactionOnUnreadableDocument),
       map(applyFirstQueuedTransaction),
       distinctUntilChanged(),
       tap((next) => state.set('applyFirstQueuedTransaction', next)),
@@ -521,14 +561,32 @@ const subscribeToSubscriptionsAndListenToDocuments = (
             if (!e.add) return EMPTY
             return listen(context, e.id).pipe(
               retry({
+                count: OUT_OF_SYNC_RETRY_COUNT,
+                resetOnSuccess: true,
                 delay: (error, retryCount) => {
-                  if (!(error instanceof OutOfSyncError)) return throwError(() => error)
+                  const isTransient =
+                    error instanceof OutOfSyncError ||
+                    error instanceof ServerError ||
+                    (error instanceof ClientError &&
+                      (error.statusCode === 408 || error.statusCode === 429))
+                  if (!isTransient) return throwError(() => error)
                   const backoff = Math.min(
                     OUT_OF_SYNC_RETRY_BASE_DELAY * 2 ** (retryCount - 1),
                     OUT_OF_SYNC_RETRY_MAX_DELAY,
                   )
                   return timer(backoff)
                 },
+              }),
+              catchError((error) => {
+                state.set('setDocumentError', (prev) => {
+                  const documentState = prev.documentStates[e.id]
+                  if (!documentState) return prev
+                  return {
+                    ...prev,
+                    documentStates: {...prev.documentStates, [e.id]: {...documentState, error}},
+                  }
+                })
+                return EMPTY
               }),
               tap((remote) =>
                 state.set('applyRemoteDocument', (prev) =>
