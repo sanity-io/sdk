@@ -223,6 +223,14 @@ export function getDocumentState(
   return _getDocumentState(...args)
 }
 
+function throwDocumentError(
+  documentStates: DocumentStoreState['documentStates'],
+  documentId: string,
+): void {
+  const documentError = documentStates[documentId]?.error
+  if (documentError) throw documentError
+}
+
 const _getDocumentState = bindActionByResource(
   documentStore,
   createStateSourceAction({
@@ -230,8 +238,7 @@ const _getDocumentState = bindActionByResource(
       const {documentId: docId, path, liveEdit, perspective} = options
       const documentId = DocumentId(docId)
       if (error) throw error
-      const documentError = documentStates[documentId]?.error
-      if (documentError) throw documentError
+      throwDocumentError(documentStates, documentId)
       let document: ResolveDocument | null | undefined
 
       if (liveEdit) {
@@ -304,8 +311,7 @@ export const getDocumentSyncStatus = bindActionByResource(
     ) => {
       const documentId = DocumentId(typeof doc === 'string' ? doc : doc.documentId)
       if (error) throw error
-      const documentError = documents[documentId]?.error
-      if (documentError) throw documentError
+      throwDocumentError(documents, documentId)
 
       if (doc.liveEdit) {
         // For liveEdit documents, only check the single document
