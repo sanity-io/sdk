@@ -1405,6 +1405,7 @@ vi.mock('./documentConstants.ts', async (importOriginal) => {
     DOCUMENT_STATE_CLEAR_DELAY: 25,
     OUT_OF_SYNC_RETRY_BASE_DELAY: 0,
     OUT_OF_SYNC_RETRY_MAX_DELAY: 0,
+    OUT_OF_SYNC_RETRY_COUNT: 2,
     ACL_RETRY_BASE_DELAY: 0,
     ACL_RETRY_MAX_DELAY: 0,
   }
@@ -1942,4 +1943,25 @@ it('fails a release action whose release document cannot be read', async () => {
       resource,
     }),
   ).rejects.toThrow(message)
+})
+
+it('gives up on a read that keeps failing rather than loading forever', async () => {
+  const documentId = DocumentId('doc-with-failing-read')
+  const draftId = getDraftId(documentId)
+  let attempts = 0
+
+  vi.mocked(createFetchDocument).mockReturnValue(
+    vi.fn((id) =>
+      defer(() => {
+        if (id !== draftId) return of({_id: id, _type: 'article', _rev: 'rev-1'} as SanityDocument)
+        attempts++
+        return throwError(() => new ServerError({statusCode: 503, headers: {}, body: {}}))
+      }).pipe(delay(0)),
+    ),
+  )
+
+  const doc = createDocumentHandle({documentId, documentType: 'article'})
+
+  await expect(resolveDocument(instance, doc)).rejects.toThrow(ServerError)
+  expect(attempts).toBe(3)
 })

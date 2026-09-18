@@ -53,6 +53,7 @@ import {
   API_VERSION,
   INITIAL_OUTGOING_THROTTLE_TIME,
   OUT_OF_SYNC_RETRY_BASE_DELAY,
+  OUT_OF_SYNC_RETRY_COUNT,
   OUT_OF_SYNC_RETRY_MAX_DELAY,
 } from './documentConstants'
 import {
@@ -560,6 +561,7 @@ const subscribeToSubscriptionsAndListenToDocuments = (
             if (!e.add) return EMPTY
             return listen(context, e.id).pipe(
               retry({
+                count: OUT_OF_SYNC_RETRY_COUNT,
                 delay: (error, retryCount) => {
                   const isTransient =
                     error instanceof OutOfSyncError ||
