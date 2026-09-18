@@ -1,4 +1,4 @@
-import {type Action, ClientError, CorsOriginError, type Mutation} from '@sanity/client'
+import {type Action, ClientError, CorsOriginError, type Mutation, ServerError} from '@sanity/client'
 import {DocumentId, getDraftId, getPublishedId, getVersionId} from '@sanity/id-utils'
 import {jsonMatch} from '@sanity/json-match'
 import {type ExprNode} from 'groq-js'
@@ -555,7 +555,16 @@ const subscribeToSubscriptionsAndListenToDocuments = (
             return listen(context, e.id).pipe(
               retry({
                 delay: (error, retryCount) => {
-                  if (!(error instanceof OutOfSyncError)) return throwError(() => error)
+                  // the same split the dataset ACL read makes below: 408 and 429
+                  // resolve on their own and 5xx is the server's to fix, so those
+                  // are worth another attempt. anything else keeps failing, and
+                  // latching it on the document beats retrying it forever
+                  const isTransient =
+                    error instanceof OutOfSyncError ||
+                    error instanceof ServerError ||
+                    (error instanceof ClientError &&
+                      (error.statusCode === 408 || error.statusCode === 429))
+                  if (!isTransient) return throwError(() => error)
                   const backoff = Math.min(
                     OUT_OF_SYNC_RETRY_BASE_DELAY * 2 ** (retryCount - 1),
                     OUT_OF_SYNC_RETRY_MAX_DELAY,
