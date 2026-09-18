@@ -14,6 +14,9 @@ import {createCallbackHook} from '../helpers/createCallbackHook'
  * (`code`, `state`, `error`, `error_description`) so the caller can strip them
  * with `history.replaceState`, or `false` when there was nothing to handle.
  *
+ * `AuthBoundary` runs this for you when the app lands on the OAuth redirect
+ * URI. Reach for this hook only when building a custom callback component.
+ *
  * Concurrent calls are single-flight in core, so React StrictMode's double
  * invocation will not trigger a second code exchange. Calling it again after
  * the exchange has completed, with the OAuth params still in the URL, fails
