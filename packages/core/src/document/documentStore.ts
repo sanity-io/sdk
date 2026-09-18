@@ -104,10 +104,6 @@ export interface DocumentStoreState {
 
 export interface DocumentState {
   id: string
-  /**
-   * Why this document could not be read. Set when the read failed for a reason that will not
-   * resolve on its own, and cleared only when the state is evicted on last unsubscribe.
-   */
   error?: unknown
   /**
    * the "remote" local copy that matches the server. represents the last known
@@ -238,7 +234,6 @@ function readDocumentIds(
   return [...versionIds, getDraftId(documentId), getPublishedId(documentId)]
 }
 
-/** An id still loading must not hide an error on one of the others. */
 function throwDocumentError(
   documentStates: DocumentStoreState['documentStates'],
   documentIds: string[],
@@ -384,17 +379,12 @@ export const subscribeDocumentEvents = bindActionByResource(
   },
 )
 
-/** The documents an action waits on, matching what the queued transaction resolves. */
 function actionDocumentIds(action: QueuedTransaction['actions'][number]): string[] {
   if (isReleaseAction(action)) return [getReleaseDocumentId(action.releaseId)]
   if (!('documentId' in action) || !action.documentId) return []
   return readDocumentIds(DocumentId(action.documentId), action)
 }
 
-/**
- * A document that failed to read never loads, so a transaction waiting on it would hold back
- * everything queued behind it. Fail the transaction with that error instead.
- */
 function failTransactionOnUnreadableDocument({queued, documentStates}: DocumentStoreState): void {
   const transaction = queued.at(0)
   if (!transaction) return
@@ -569,10 +559,6 @@ const subscribeToSubscriptionsAndListenToDocuments = (
             return listen(context, e.id).pipe(
               retry({
                 delay: (error, retryCount) => {
-                  // the same split the dataset ACL read makes below: 408 and 429
-                  // resolve on their own and 5xx is the server's to fix, so those
-                  // are worth another attempt. anything else keeps failing, and
-                  // latching it on the document beats retrying it forever
                   const isTransient =
                     error instanceof OutOfSyncError ||
                     error instanceof ServerError ||
