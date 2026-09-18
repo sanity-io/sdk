@@ -44,6 +44,7 @@ import {
   discardDocument,
   editDocument,
   publishDocument,
+  publishRelease,
   unpublishDocument,
 } from './actions'
 import {applyDocumentActions} from './applyDocumentActions'
@@ -1919,4 +1920,26 @@ it('reads a document again after the server fails once', async () => {
 
   await expect(resolveDocument(instance, doc)).resolves.toMatchObject({_id: draftId})
   expect(thrown).toBe(1)
+})
+
+it('fails a release action whose release document cannot be read', async () => {
+  const releaseId = 'blocked-release'
+  const releaseDocumentId = `_.releases.${releaseId}`
+  const message = `Document with ID \`${releaseDocumentId}\` is inaccessible due to permissions.`
+
+  vi.mocked(createFetchDocument).mockReturnValue(
+    vi.fn((id) =>
+      (id === releaseDocumentId
+        ? throwError(() => new Error(message))
+        : of({_id: id, _type: 'article', _rev: 'rev-1'} as SanityDocument)
+      ).pipe(delay(0)),
+    ),
+  )
+
+  await expect(
+    applyDocumentActions(instance, {
+      actions: [publishRelease({releaseId})],
+      resource,
+    }),
+  ).rejects.toThrow(message)
 })

@@ -70,7 +70,7 @@ import {
   type Grant,
 } from './permissions'
 import {ActionError} from './processActions/processActions'
-import {isReleaseAction} from './processActions/releaseUtil'
+import {getReleaseDocumentId, isReleaseAction} from './processActions/releaseUtil'
 import {
   type AppliedTransaction,
   applyFirstQueuedTransaction,
@@ -104,6 +104,10 @@ export interface DocumentStoreState {
 
 export interface DocumentState {
   id: string
+  /**
+   * Why this document could not be read. Set when the read failed for a reason that will not
+   * resolve on its own, and cleared only when the state is evicted on last unsubscribe.
+   */
   error?: unknown
   /**
    * the "remote" local copy that matches the server. represents the last known
@@ -234,17 +238,28 @@ function readDocumentIds(
   return [...versionIds, getDraftId(documentId), getPublishedId(documentId)]
 }
 
+/** An id still loading must not hide an error on one of the others. */
+function throwDocumentError(
+  documentStates: DocumentStoreState['documentStates'],
+  documentIds: string[],
+): void {
+  for (const documentId of documentIds) {
+    const documentError = documentStates[documentId]?.error
+    if (documentError) throw documentError
+  }
+}
+
 /** Version wins over draft, and draft over published. Undefined until every read has arrived. */
 function selectLocalDocument(
   documentStates: DocumentStoreState['documentStates'],
   documentIds: string[],
 ): ResolveDocument | null | undefined {
+  throwDocumentError(documentStates, documentIds)
   let selected: ResolveDocument | null = null
   for (const documentId of documentIds) {
-    const documentState = documentStates[documentId]
-    if (documentState?.error) throw documentState.error
-    if (documentState?.local === undefined) return undefined
-    if (selected === null) selected = documentState.local
+    const local = documentStates[documentId]?.local
+    if (local === undefined) return undefined
+    if (selected === null) selected = local
   }
   return selected
 }
@@ -253,12 +268,8 @@ function hasEveryDocumentArrived(
   documentStates: DocumentStoreState['documentStates'],
   documentIds: string[],
 ): boolean {
-  for (const documentId of documentIds) {
-    const documentState = documentStates[documentId]
-    if (documentState?.error) throw documentState.error
-    if (documentState === undefined) return false
-  }
-  return true
+  throwDocumentError(documentStates, documentIds)
+  return documentIds.every((documentId) => documentStates[documentId] !== undefined)
 }
 
 const _getDocumentState = bindActionByResource(
@@ -373,6 +384,13 @@ export const subscribeDocumentEvents = bindActionByResource(
   },
 )
 
+/** The documents an action waits on, matching what the queued transaction resolves. */
+function actionDocumentIds(action: QueuedTransaction['actions'][number]): string[] {
+  if (isReleaseAction(action)) return [getReleaseDocumentId(action.releaseId)]
+  if (!('documentId' in action) || !action.documentId) return []
+  return readDocumentIds(DocumentId(action.documentId), action)
+}
+
 /**
  * A document that failed to read never loads, so a transaction waiting on it would hold back
  * everything queued behind it. Fail the transaction with that error instead.
@@ -380,19 +398,15 @@ export const subscribeDocumentEvents = bindActionByResource(
 function failTransactionOnUnreadableDocument({queued, documentStates}: DocumentStoreState): void {
   const transaction = queued.at(0)
   if (!transaction) return
-  for (const action of transaction.actions) {
-    if (!('documentId' in action) || !action.documentId) continue
-    for (const id of readDocumentIds(DocumentId(action.documentId), action)) {
-      const error = documentStates[id]?.error
-      if (error) {
-        throw new ActionError({
-          message: error instanceof Error ? error.message : String(error),
-          documentId: id,
-          transactionId: transaction.transactionId,
-        })
-      }
-    }
-  }
+  const ids = transaction.actions.flatMap(actionDocumentIds)
+  const unreadableId = ids.find((id) => documentStates[id]?.error)
+  if (unreadableId === undefined) return
+  const error = documentStates[unreadableId]?.error
+  throw new ActionError({
+    message: error instanceof Error ? error.message : String(error),
+    documentId: unreadableId,
+    transactionId: transaction.transactionId,
+  })
 }
 
 const subscribeToQueuedAndApplyNextTransaction = ({
@@ -572,11 +586,6 @@ const subscribeToSubscriptionsAndListenToDocuments = (
                   return timer(backoff)
                 },
               }),
-              tap((remote) =>
-                state.set('applyRemoteDocument', (prev) =>
-                  applyRemoteDocument(prev, remote, events),
-                ),
-              ),
               catchError((error) => {
                 state.set('setDocumentError', (prev) => {
                   const documentState = prev.documentStates[e.id]
@@ -588,6 +597,11 @@ const subscribeToSubscriptionsAndListenToDocuments = (
                 })
                 return EMPTY
               }),
+              tap((remote) =>
+                state.set('applyRemoteDocument', (prev) =>
+                  applyRemoteDocument(prev, remote, events),
+                ),
+              ),
             )
           }),
         ),
