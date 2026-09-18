@@ -170,6 +170,14 @@ describe('dashboard connection', () => {
     expect(callerId).toBe('favorites')
   })
 
+  it('exposes the id a connection connected with', () => {
+    installMessageBus({appId: 'dashboard'})
+    const application = connectMessageBus({appId: 'favorites'})
+    if (!application) throw new Error('Expected a dashboard message bus')
+
+    expect(application.appId).toBe('favorites')
+  })
+
   it('writes state to a connected application through its client', () => {
     const dashboard = installMessageBus({appId: 'dashboard'})
     const application = connectMessageBus({appId: 'favorites'})

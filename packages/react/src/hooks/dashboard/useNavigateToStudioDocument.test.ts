@@ -1,7 +1,10 @@
 import {type DocumentHandle} from '@sanity/sdk'
+import {installMessageBus, resetMessageBus} from '@sanity/sdk/_internal'
+import {type MessageBusHost} from '@sanity/sdk/dashboard'
 import {renderHook} from '@testing-library/react'
-import {beforeEach, describe, expect, it, vi} from 'vitest'
+import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
+import {renderHook as renderHookWithInstance} from '../../../test/test-utils'
 import {useNavigateToStudioDocument} from './useNavigateToStudioDocument'
 
 // Mock dependencies
@@ -52,14 +55,6 @@ describe('useNavigateToStudioDocument', () => {
     mockWorkspacesByProjectIdAndDataset = {
       'project1:dataset1': [mockWorkspace],
     }
-  })
-
-  it('returns a function and connection status', () => {
-    const {result} = renderHook(() => useNavigateToStudioDocument(mockDocumentHandle))
-
-    expect(result.current).toEqual({
-      navigateToStudioDocument: expect.any(Function),
-    })
   })
 
   it('sends correct navigation message when called', () => {
@@ -202,6 +197,118 @@ describe('useNavigateToStudioDocument', () => {
     )
     expect(mockSendMessage).not.toHaveBeenCalled()
 
+    consoleSpy.mockRestore()
+  })
+})
+
+describe('useNavigateToStudioDocument (message bus)', () => {
+  const MESSAGE_BUS_KEY = Symbol.for('sanity.os.bus')
+  let host: MessageBusHost
+  let updates: {url: string}[]
+  let reply: {ok: true} | {ok: false; reason: 'not-navigable' | 'interrupted' | 'failed'}
+
+  const mockDocumentHandle: DocumentHandle = {
+    documentId: 'doc123',
+    documentType: 'article',
+    projectId: 'project1',
+    dataset: 'dataset1',
+  }
+
+  const mockWorkspace = {
+    id: 'workspace123',
+    name: 'production',
+    title: 'Production',
+    basePath: '/production',
+    projectId: 'project1',
+    dataset: 'dataset1',
+    type: 'studio',
+    userApplicationId: 'studio-app',
+    url: 'https://test.sanity.studio',
+  }
+
+  beforeEach(() => {
+    // Reset shared mocks so `mockSendMessage` assertions don't depend on test order.
+    vi.resetAllMocks()
+    updates = []
+    reply = {ok: true}
+    mockWorkspacesByProjectIdAndDataset = {
+      'project1:dataset1': [mockWorkspace],
+    }
+    vi.stubGlobal('__SANITY_APP_ID__', 'app')
+    host = installMessageBus({appId: 'dashboard'})
+    host.subscribe('navigation.location.update', (message) => {
+      updates.push(message.payload)
+      message.reply(reply)
+    })
+  })
+
+  afterEach(() => {
+    resetMessageBus()
+    delete (globalThis as {[MESSAGE_BUS_KEY]?: unknown})[MESSAGE_BUS_KEY]
+    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
+  })
+
+  it('emits navigation.location.update with the studio edit intent url', () => {
+    const {result} = renderHookWithInstance(() => useNavigateToStudioDocument(mockDocumentHandle))
+
+    result.current.navigateToStudioDocument()
+
+    expect(mockSendMessage).not.toHaveBeenCalled()
+    expect(updates).toEqual([
+      {url: '/studios/studio-app/production/intent/edit/id=doc123;type=article/'},
+    ])
+  })
+
+  it('selects the workspace matching the preferred studio url', () => {
+    const preferredUrl = 'https://preferred.sanity.studio'
+    const mockWorkspace2 = {
+      ...mockWorkspace,
+      id: 'workspace2',
+      name: 'staging',
+      userApplicationId: 'preferred-app',
+      url: preferredUrl,
+    }
+    mockWorkspacesByProjectIdAndDataset = {
+      'project1:dataset1': [mockWorkspace, mockWorkspace2],
+    }
+
+    const {result} = renderHookWithInstance(() =>
+      useNavigateToStudioDocument(mockDocumentHandle, preferredUrl),
+    )
+
+    result.current.navigateToStudioDocument()
+
+    expect(updates).toEqual([
+      {url: '/studios/preferred-app/staging/intent/edit/id=doc123;type=article/'},
+    ])
+  })
+
+  it('warns and does not emit when no workspace is found', () => {
+    const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    mockWorkspacesByProjectIdAndDataset = {}
+
+    const {result} = renderHookWithInstance(() => useNavigateToStudioDocument(mockDocumentHandle))
+    result.current.navigateToStudioDocument()
+
+    expect(updates).toEqual([])
+    expect(consoleSpy).toHaveBeenCalled()
+    consoleSpy.mockRestore()
+  })
+
+  it('warns when the host rejects the navigation', async () => {
+    const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    reply = {ok: false, reason: 'not-navigable'}
+
+    const {result} = renderHookWithInstance(() => useNavigateToStudioDocument(mockDocumentHandle))
+    result.current.navigateToStudioDocument()
+
+    await vi.waitFor(() =>
+      expect(consoleSpy).toHaveBeenCalledWith(
+        'Failed to navigate to studio document',
+        expect.objectContaining({ok: false, reason: 'not-navigable'}),
+      ),
+    )
     consoleSpy.mockRestore()
   })
 })
