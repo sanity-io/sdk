@@ -562,6 +562,7 @@ const subscribeToSubscriptionsAndListenToDocuments = (
             return listen(context, e.id).pipe(
               retry({
                 count: OUT_OF_SYNC_RETRY_COUNT,
+                resetOnSuccess: true,
                 delay: (error, retryCount) => {
                   const isTransient =
                     error instanceof OutOfSyncError ||
