@@ -2,4 +2,4 @@
 '@sanity/sdk': patch
 ---
 
-Scope a failed document read to its own document
+Prevent an inaccessible document from breaking reads for other documents in the same dataset
