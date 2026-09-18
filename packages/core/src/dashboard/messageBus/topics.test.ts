@@ -6,6 +6,7 @@ import {
   type ApplicationConfig,
   type ApplicationConfigAppType,
   type ApplicationStatusUpdate,
+  type CapabilityRecord,
   DASHBOARD_TOPIC_MANIFEST,
   type DashboardTopics,
   type EventTopic,
@@ -53,6 +54,7 @@ describe('dashboard topic types', () => {
     expectTypeOf<ValueOf<'applications.foreground', DashboardTopics>>().toEqualTypeOf<
       Application['id'] | null
     >()
+    expectTypeOf<ValueOf<'applications.capabilities'>>().toEqualTypeOf<CapabilityRecord>()
     expectTypeOf<ValueOf<'applications.config'>>().toEqualTypeOf<ApplicationConfig[] | null>()
     expectTypeOf<ValueOf<'applications.list'>>().toEqualTypeOf<TopicResult<
       Application<ApplicationInclude>[]
