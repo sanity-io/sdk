@@ -1,5 +1,13 @@
 # Changelog
 
+## 3.4.0
+
+### Patch Changes
+
+- [#1277](https://github.com/sanity-io/sdk/pull/1277) [`04e1723`](https://github.com/sanity-io/sdk/commit/04e17230f26c53156d57815f38939af713f43e12) Thanks [@squiggler-app](https://github.com/apps/squiggler-app)! - Update dependencies: `@sanity/types@6.15.0`
+- Updated dependencies [[`eaaa7fb`](https://github.com/sanity-io/sdk/commit/eaaa7fb37c670aaa04b70e0eb597329f7f736ea0), [`04e1723`](https://github.com/sanity-io/sdk/commit/04e17230f26c53156d57815f38939af713f43e12)]:
+  - @sanity/sdk@3.4.0
+
 ## 3.3.0 (2026-09-17)
 
 
