@@ -249,7 +249,7 @@ function selectLocalDocument(
   return selected
 }
 
-function hasEveryDocumentState(
+function hasEveryDocumentArrived(
   documentStates: DocumentStoreState['documentStates'],
   documentIds: string[],
 ): boolean {
@@ -324,7 +324,7 @@ export const getDocumentSyncStatus = bindActionByResource(
     ) => {
       const documentId = DocumentId(typeof doc === 'string' ? doc : doc.documentId)
       if (error) throw error
-      if (!hasEveryDocumentState(documents, readDocumentIds(documentId, doc))) return undefined
+      if (!hasEveryDocumentArrived(documents, readDocumentIds(documentId, doc))) return undefined
       return !queued.length && !applied.length && !outgoing
     },
     onSubscribe: (context, doc: DocumentHandle) => {
@@ -373,12 +373,35 @@ export const subscribeDocumentEvents = bindActionByResource(
   },
 )
 
+/**
+ * A document that failed to read never loads, so a transaction waiting on it would hold back
+ * everything queued behind it. Fail the transaction with that error instead.
+ */
+function failTransactionOnUnreadableDocument({queued, documentStates}: DocumentStoreState): void {
+  const transaction = queued.at(0)
+  if (!transaction) return
+  for (const action of transaction.actions) {
+    if (!('documentId' in action) || !action.documentId) continue
+    for (const id of readDocumentIds(DocumentId(action.documentId), action)) {
+      const error = documentStates[id]?.error
+      if (error) {
+        throw new ActionError({
+          message: error instanceof Error ? error.message : String(error),
+          documentId: id,
+          transactionId: transaction.transactionId,
+        })
+      }
+    }
+  }
+}
+
 const subscribeToQueuedAndApplyNextTransaction = ({
   state,
 }: StoreContext<DocumentStoreState, BoundResourceKey>) => {
   const {events} = state.get()
   return state.observable
     .pipe(
+      tap(failTransactionOnUnreadableDocument),
       map(applyFirstQueuedTransaction),
       distinctUntilChanged(),
       tap((next) => state.set('applyFirstQueuedTransaction', next)),
