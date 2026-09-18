@@ -392,11 +392,13 @@ function failTransactionOnUnreadableDocument({queued, documentStates}: DocumentS
   const unreadableId = ids.find((id) => documentStates[id]?.error)
   if (unreadableId === undefined) return
   const error = documentStates[unreadableId]?.error
-  throw new ActionError({
+  const actionError = new ActionError({
     message: error instanceof Error ? error.message : String(error),
     documentId: unreadableId,
     transactionId: transaction.transactionId,
   })
+  actionError.cause = error
+  throw actionError
 }
 
 const subscribeToQueuedAndApplyNextTransaction = ({
