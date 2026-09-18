@@ -1,5 +1,27 @@
 # Changelog
 
+## 3.4.0-rc.0
+
+### Minor Changes
+
+- [#1223](https://github.com/sanity-io/sdk/pull/1223) [`bc62538`](https://github.com/sanity-io/sdk/commit/bc6253842a7f971a6bd94567da3c8457af0d793e) Thanks [@joshuaellis](https://github.com/joshuaellis)! - Drive the OAuth login flow from `AuthBoundary` ([#1223](https://github.com/sanity-io/sdk/pull/1223))
+
+- [#1271](https://github.com/sanity-io/sdk/pull/1271) [`843dd5b`](https://github.com/sanity-io/sdk/commit/843dd5b2863c1e17e853c75da5405059e4ba1d26) Thanks [@joshuaellis](https://github.com/joshuaellis)! - Make the OAuth `organizationId` optional ([#1271](https://github.com/sanity-io/sdk/pull/1271))
+
+- [#1236](https://github.com/sanity-io/sdk/pull/1236) [`69d9a64`](https://github.com/sanity-io/sdk/commit/69d9a64412120fd75295b547a16226559b09c69d) Thanks [@joshuaellis](https://github.com/joshuaellis)! - Return to the pre-login location after the OAuth callback ([#1236](https://github.com/sanity-io/sdk/pull/1236))
+
+- [#1217](https://github.com/sanity-io/sdk/pull/1217) [`4ca6d90`](https://github.com/sanity-io/sdk/commit/4ca6d900d7c4a3a92e983d6bab0897e544fcf75f) Thanks [@joshuaellis](https://github.com/joshuaellis)! - Add the `useOAuthAuthorize` hook to start the OAuth authorization-code + PKCE flow ([#1217](https://github.com/sanity-io/sdk/pull/1217))
+
+- [#1216](https://github.com/sanity-io/sdk/pull/1216) [`221448f`](https://github.com/sanity-io/sdk/commit/221448f1013360fe6070a82134d500cebbcd616f) Thanks [@joshuaellis](https://github.com/joshuaellis)! - Add the `useHandleOAuthCallback` hook to complete the OAuth authorization-code callback ([#1216](https://github.com/sanity-io/sdk/pull/1216))
+
+- [#1213](https://github.com/sanity-io/sdk/pull/1213) [`e1416a6`](https://github.com/sanity-io/sdk/commit/e1416a670e0f734fe1fdce57b924a71dcb0171b7) Thanks [@joshuaellis](https://github.com/joshuaellis)! - Add the `useOAuthTokens` hook exposing stored OAuth token state with `refresh` and `revoke` ([#1213](https://github.com/sanity-io/sdk/pull/1213))
+
+### Patch Changes
+
+- [#1235](https://github.com/sanity-io/sdk/pull/1235) [`58549b1`](https://github.com/sanity-io/sdk/commit/58549b1c7b534bda2663b731ea6aba3f55b8a38a) Thanks [@joshuaellis](https://github.com/joshuaellis)! - Ignore stale OAuth callbacks once a session is established ([#1235](https://github.com/sanity-io/sdk/pull/1235))
+
+- [#1234](https://github.com/sanity-io/sdk/pull/1234) [`62434e6`](https://github.com/sanity-io/sdk/commit/62434e6243bc25785c0ebefa25d06695298fb487) Thanks [@joshuaellis](https://github.com/joshuaellis)! - Reject persisted OAuth tokens with an unparseable `expiresAt` ([#1234](https://github.com/sanity-io/sdk/pull/1234))
+
 ## 3.3.0 (2026-09-17)
 
 
