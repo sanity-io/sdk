@@ -234,30 +234,42 @@ function readDocumentIds(
   return [...versionIds, getDraftId(documentId), getPublishedId(documentId)]
 }
 
-function throwDocumentError(
+/** Version wins over draft, and draft over published. Undefined until every read has arrived. */
+function selectLocalDocument(
   documentStates: DocumentStoreState['documentStates'],
   documentIds: string[],
-): void {
+): ResolveDocument | null | undefined {
+  let selected: ResolveDocument | null = null
   for (const documentId of documentIds) {
-    const documentError = documentStates[documentId]?.error
-    if (documentError) throw documentError
+    const documentState = documentStates[documentId]
+    if (documentState?.error) throw documentState.error
+    if (documentState?.local === undefined) return undefined
+    if (selected === null) selected = documentState.local
   }
+  return selected
+}
+
+function hasEveryDocumentState(
+  documentStates: DocumentStoreState['documentStates'],
+  documentIds: string[],
+): boolean {
+  for (const documentId of documentIds) {
+    const documentState = documentStates[documentId]
+    if (documentState?.error) throw documentState.error
+    if (documentState === undefined) return false
+  }
+  return true
 }
 
 const _getDocumentState = bindActionByResource(
   documentStore,
   createStateSourceAction({
     selector: ({state: {error, documentStates}}, options: DocumentOptions<string | undefined>) => {
-      const {documentId: docId, path, liveEdit} = options
+      const {documentId: docId, path} = options
       const documentId = DocumentId(docId)
       if (error) throw error
-      const documentIds = readDocumentIds(documentId, options)
-      throwDocumentError(documentStates, documentIds)
-      const documents = documentIds.map((id) => documentStates[id]?.local)
-      // a read resolves every document it depends on, so hold until they all arrive
-      if (!liveEdit && documents.includes(undefined)) return undefined
-      // version wins over draft, and draft over published
-      const document = liveEdit ? documents[0] : (documents.find((value) => value !== null) ?? null)
+      const document = selectLocalDocument(documentStates, readDocumentIds(documentId, options))
+      if (document === undefined) return undefined
 
       if (!path) return document
       const result = jsonMatch(document, path).next()
@@ -312,9 +324,7 @@ export const getDocumentSyncStatus = bindActionByResource(
     ) => {
       const documentId = DocumentId(typeof doc === 'string' ? doc : doc.documentId)
       if (error) throw error
-      const documentIds = readDocumentIds(documentId, doc)
-      throwDocumentError(documents, documentIds)
-      if (documentIds.some((id) => documents[id] === undefined)) return undefined
+      if (!hasEveryDocumentState(documents, readDocumentIds(documentId, doc))) return undefined
       return !queued.length && !applied.length && !outgoing
     },
     onSubscribe: (context, doc: DocumentHandle) => {
@@ -536,18 +546,14 @@ const subscribeToSubscriptionsAndListenToDocuments = (
                 ),
               ),
               catchError((error) => {
-                state.set('setDocumentError', (prev) => ({
-                  ...prev,
-                  documentStates: {
-                    ...prev.documentStates,
-                    [e.id]: {
-                      ...prev.documentStates[e.id],
-                      id: e.id,
-                      subscriptions: prev.documentStates[e.id]?.subscriptions ?? [],
-                      error,
-                    },
-                  },
-                }))
+                state.set('setDocumentError', (prev) => {
+                  const documentState = prev.documentStates[e.id]
+                  if (!documentState) return prev
+                  return {
+                    ...prev,
+                    documentStates: {...prev.documentStates, [e.id]: {...documentState, error}},
+                  }
+                })
                 return EMPTY
               }),
             )
