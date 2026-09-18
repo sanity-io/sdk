@@ -10,6 +10,7 @@ import {
   type RawQueryResponse,
   type ResponseQueryOptions,
   type SanityClient,
+  ServerError,
   type SingleActionResult,
   type UnfilteredResponseQueryOptions,
   type WelcomeEvent,
@@ -1895,4 +1896,27 @@ it('fails a write to a document it cannot read instead of waiting for it', async
       resource,
     }),
   ).rejects.toThrow(message)
+})
+
+it('reads a document again after the server fails once', async () => {
+  const documentId = DocumentId('doc-with-flaky-read')
+  const draftId = getDraftId(documentId)
+  let thrown = 0
+
+  vi.mocked(createFetchDocument).mockReturnValue(
+    vi.fn((id) =>
+      defer(() => {
+        if (id === draftId && thrown === 0) {
+          thrown++
+          return throwError(() => new ServerError({statusCode: 503, headers: {}, body: {}}))
+        }
+        return of({_id: id, _type: 'article', _rev: 'rev-1'} as SanityDocument)
+      }).pipe(delay(0)),
+    ),
+  )
+
+  const doc = createDocumentHandle({documentId, documentType: 'article'})
+
+  await expect(resolveDocument(instance, doc)).resolves.toMatchObject({_id: draftId})
+  expect(thrown).toBe(1)
 })
