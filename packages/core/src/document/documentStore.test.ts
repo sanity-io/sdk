@@ -1848,3 +1848,27 @@ it('resolves a readable document while another in the same dataset is inaccessib
   unsubscribeReadable()
   unsubscribeBlocked()
 })
+
+it('reports an inaccessible draft to the document that reads it', async () => {
+  const documentId = DocumentId('doc-with-blocked-draft')
+  const draftId = getDraftId(documentId)
+  const message = `Document with ID \`${draftId}\` is inaccessible due to permissions.`
+
+  vi.mocked(createFetchDocument).mockReturnValue(
+    vi.fn((id) =>
+      (id === draftId
+        ? throwError(() => new Error(message))
+        : of({_id: id, _type: 'article', _rev: 'rev-1'} as SanityDocument)
+      ).pipe(delay(0)),
+    ),
+  )
+
+  const doc = createDocumentHandle({documentId, documentType: 'article'})
+
+  await expect(resolveDocument(instance, doc)).rejects.toThrow(message)
+  await expect(
+    firstValueFrom(
+      getDocumentSyncStatus(instance, doc).observable.pipe(first((value) => value !== undefined)),
+    ),
+  ).rejects.toThrow(message)
+})
