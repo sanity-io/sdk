@@ -979,6 +979,20 @@ describe('reset', () => {
     expect(seen).toEqual([{ok: true, value: null}, panel])
   })
 
+  it("clears a connection's rejections along with its state", async () => {
+    const host = installMessageBus({appId: 'dashboard'})
+    const application = connectMessageBus({appId: 'favorites'})
+    if (!application) throw new Error('Expected a dashboard message bus')
+    let client: MessageBusClient | undefined
+    host.connections.subscribe((connected) => (client = connected))
+    client?.reject('panels.mode', 'hidden')
+    await expect(application.query('panels.mode')).rejects.toMatchObject({code: 'REFUSED'})
+
+    resetMessageBus()
+
+    await expect(application.query('panels.mode')).resolves.toEqual({ok: true, value: null})
+  })
+
   it('keeps announcing new connections to a host subscribed before the reset', () => {
     const host = installMessageBus({appId: 'dashboard'})
     const seen: string[] = []

@@ -1174,6 +1174,7 @@ function reset(registry: MessageBusRegistry): void {
   for (const connection of registry.connections) {
     for (const subject of connection.stateSubjects.values()) subject.complete()
     connection.stateSubjects.clear()
+    connection.rejections.clear()
   }
   for (const subject of registry.eventSubjects.values()) subject.complete()
 
