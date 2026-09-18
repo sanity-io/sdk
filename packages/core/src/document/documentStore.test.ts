@@ -48,6 +48,7 @@ import {
   unpublishDocument,
 } from './actions'
 import {applyDocumentActions} from './applyDocumentActions'
+import {OUT_OF_SYNC_RETRY_COUNT} from './documentConstants'
 import {
   getDocumentState,
   getDocumentSyncStatus,
@@ -1964,4 +1965,41 @@ it('gives up on a read that keeps failing rather than loading forever', async ()
 
   await expect(resolveDocument(instance, doc)).rejects.toThrow(ServerError)
   expect(attempts).toBe(3)
+})
+
+it('keeps its retry budget per failure, not per listener', async () => {
+  const documentId = DocumentId('doc-with-flaky-listener')
+  const draftId = getDraftId(documentId)
+  let calls = 0
+
+  vi.mocked(createFetchDocument).mockReturnValue(
+    vi.fn((id) =>
+      defer(() => {
+        if (id !== draftId) return of({_id: id, _type: 'article', _rev: 'rev-1'} as SanityDocument)
+        calls++
+        // every read fails once before it succeeds
+        return calls % 2 === 1
+          ? throwError(() => new ServerError({statusCode: 503, headers: {}, body: {}}))
+          : of({_id: id, _type: 'article', _rev: `rev-${calls}`} as SanityDocument)
+      }).pipe(delay(0)),
+    ),
+  )
+
+  const doc = createDocumentHandle({documentId, documentType: 'article'})
+  const documentState = getDocumentState<TestDocument>(instance, doc)
+  const unsubscribe = documentState.subscribe()
+  await vi.waitFor(() => expect(documentState.getCurrent()).toMatchObject({_id: draftId}))
+
+  const sharedListener = (
+    createSharedListener as unknown as () => {events: Subject<ListenEvent<SanityDocument>>}
+  )()
+  // more failure streaks than the budget, each one recovering in between
+  for (let attempt = 0; attempt < OUT_OF_SYNC_RETRY_COUNT + 2; attempt++) {
+    const seen = calls
+    sharedListener.events.next({type: 'reset'})
+    await vi.waitFor(() => expect(calls).toBeGreaterThan(seen + 1))
+  }
+
+  expect(() => documentState.getCurrent()).not.toThrow()
+  unsubscribe()
 })
