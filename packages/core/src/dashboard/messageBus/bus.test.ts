@@ -501,14 +501,14 @@ describe('event topics', () => {
   })
 })
 
-describe('state topic refusals', () => {
-  it('rejects a pending query with REFUSED when the host refuses', async () => {
+describe('state topic rejections', () => {
+  it('rejects a pending query with REFUSED when the host rejects', async () => {
     const host = createMessageBus()
     registerStateTopics(host, {'test.suspending': undefined})
     const {app, client} = connect(host, {appId: 'favorites'})
 
     const pending = app.query('test.suspending', {timeout: null})
-    client.refuse('test.suspending', 'hidden')
+    client.reject('test.suspending', 'hidden')
 
     await expect(pending).rejects.toMatchObject({code: 'REFUSED', message: 'hidden'})
   })
@@ -517,7 +517,7 @@ describe('state topic refusals', () => {
     const host = createMessageBus()
     registerStateTopics(host, {'test.suspending': undefined})
     const {app, client} = connect(host, {appId: 'favorites'})
-    client.refuse('test.suspending', 'hidden')
+    client.reject('test.suspending', 'hidden')
 
     await expect(app.query('test.suspending', {timeout: null})).rejects.toMatchObject({
       code: 'REFUSED',
@@ -528,20 +528,20 @@ describe('state topic refusals', () => {
     await expect(app.query('test.suspending')).resolves.toBe('ready')
   })
 
-  it('rejects a query for a topic the connection already holds once refused', async () => {
+  it('rejects a query for a topic the connection already holds once rejected', async () => {
     const host = createMessageBus()
     registerStateTopics(host, {'test.count': 0})
     const {app, client} = connect(host, {appId: 'favorites'})
     client.emit('test.count', 1)
     await expect(app.query('test.count')).resolves.toBe(1)
 
-    client.refuse('test.count', 'hidden')
+    client.reject('test.count', 'hidden')
 
     await expect(app.query('test.count')).rejects.toMatchObject({code: 'REFUSED'})
     expect(app.subscribe('test.count').getCurrent()).toBe(1)
   })
 
-  it('leaves subscribers silent through a refusal and delivers the later value', () => {
+  it('leaves subscribers silent through a rejection and delivers the later value', () => {
     const host = createMessageBus()
     registerStateTopics(host, {'test.suspending': undefined})
     const {app, client} = connect(host, {appId: 'favorites'})
@@ -550,20 +550,20 @@ describe('state topic refusals', () => {
     app.subscribe('test.suspending', (value) => seen.push(value), {})
     app.subscribe('test.suspending').subscribe({error: (error) => (errored = error)})
 
-    client.refuse('test.suspending', 'hidden')
+    client.reject('test.suspending', 'hidden')
     client.emit('test.suspending', 'ready')
 
     expect(errored).toBeUndefined()
     expect(seen).toEqual(['ready'])
   })
 
-  it('ignores a refusal once the connection has closed', async () => {
+  it('ignores a rejection once the connection has closed', async () => {
     const host = createMessageBus()
     registerStateTopics(host, {'test.count': 0})
     const {app, client} = connect(host, {appId: 'favorites'})
 
     app.disconnect()
-    expect(() => client.refuse('test.count', 'hidden')).not.toThrow()
+    expect(() => client.reject('test.count', 'hidden')).not.toThrow()
   })
 })
 
