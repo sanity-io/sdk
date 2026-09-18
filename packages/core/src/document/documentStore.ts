@@ -223,9 +223,20 @@ export function getDocumentState(
   return _getDocumentState(...args)
 }
 
+function readDocumentIds(
+  documentId: DocumentId,
+  options: {liveEdit?: boolean; perspective?: DocumentOptions<string | undefined>['perspective']},
+): string[] {
+  if (options.liveEdit) return [documentId]
+  const versionIds = isReleasePerspective(options.perspective)
+    ? [getVersionId(documentId, options.perspective.releaseName)]
+    : []
+  return [...versionIds, getDraftId(documentId), getPublishedId(documentId)]
+}
+
 function throwDocumentError(
   documentStates: DocumentStoreState['documentStates'],
-  ...documentIds: string[]
+  documentIds: string[],
 ): void {
   for (const documentId of documentIds) {
     const documentError = documentStates[documentId]?.error
@@ -237,30 +248,16 @@ const _getDocumentState = bindActionByResource(
   documentStore,
   createStateSourceAction({
     selector: ({state: {error, documentStates}}, options: DocumentOptions<string | undefined>) => {
-      const {documentId: docId, path, liveEdit, perspective} = options
+      const {documentId: docId, path, liveEdit} = options
       const documentId = DocumentId(docId)
       if (error) throw error
-      let document: ResolveDocument | null | undefined
-
-      if (liveEdit) {
-        throwDocumentError(documentStates, documentId)
-        document = documentStates[documentId]?.local
-      } else {
-        let version: ResolveDocument | null | undefined
-        if (isReleasePerspective(perspective)) {
-          const versionId = getVersionId(documentId, perspective.releaseName)
-          throwDocumentError(documentStates, versionId)
-          version = documentStates[versionId]?.local
-          // early exit if we don't have the version document and we're in a release perspective
-          if (version === undefined) return undefined
-        }
-        throwDocumentError(documentStates, getDraftId(documentId), getPublishedId(documentId))
-        const draft = documentStates[getDraftId(documentId)]?.local
-        const published = documentStates[getPublishedId(documentId)]?.local
-        // early exit if we don't have all the documents for draft/published logic
-        if (draft === undefined || published === undefined) return undefined
-        document = version ?? draft ?? published
-      }
+      const documentIds = readDocumentIds(documentId, options)
+      throwDocumentError(documentStates, documentIds)
+      const documents = documentIds.map((id) => documentStates[id]?.local)
+      // a read resolves every document it depends on, so hold until they all arrive
+      if (!liveEdit && documents.includes(undefined)) return undefined
+      // version wins over draft, and draft over published
+      const document = liveEdit ? documents[0] : (documents.find((value) => value !== null) ?? null)
 
       if (!path) return document
       const result = jsonMatch(document, path).next()
@@ -315,22 +312,9 @@ export const getDocumentSyncStatus = bindActionByResource(
     ) => {
       const documentId = DocumentId(typeof doc === 'string' ? doc : doc.documentId)
       if (error) throw error
-
-      if (doc.liveEdit) {
-        throwDocumentError(documents, documentId)
-        // For liveEdit documents, only check the single document
-        if (documents[documentId] === undefined) return undefined
-      } else {
-        const version = isReleasePerspective(doc.perspective)
-          ? documents[getVersionId(documentId, doc.perspective.releaseName)]
-          : undefined
-        if (isReleasePerspective(doc.perspective) && version === undefined) return undefined
-        // Standard draft/published logic
-        throwDocumentError(documents, getDraftId(documentId), getPublishedId(documentId))
-        const draft = documents[getDraftId(documentId)]
-        const published = documents[getPublishedId(documentId)]
-        if (draft === undefined || published === undefined) return undefined
-      }
+      const documentIds = readDocumentIds(documentId, doc)
+      throwDocumentError(documents, documentIds)
+      if (documentIds.some((id) => documents[id] === undefined)) return undefined
       return !queued.length && !applied.length && !outgoing
     },
     onSubscribe: (context, doc: DocumentHandle) => {
