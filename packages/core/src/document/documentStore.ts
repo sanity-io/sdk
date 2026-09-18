@@ -225,10 +225,12 @@ export function getDocumentState(
 
 function throwDocumentError(
   documentStates: DocumentStoreState['documentStates'],
-  documentId: string,
+  ...documentIds: string[]
 ): void {
-  const documentError = documentStates[documentId]?.error
-  if (documentError) throw documentError
+  for (const documentId of documentIds) {
+    const documentError = documentStates[documentId]?.error
+    if (documentError) throw documentError
+  }
 }
 
 const _getDocumentState = bindActionByResource(
@@ -238,19 +240,21 @@ const _getDocumentState = bindActionByResource(
       const {documentId: docId, path, liveEdit, perspective} = options
       const documentId = DocumentId(docId)
       if (error) throw error
-      throwDocumentError(documentStates, documentId)
       let document: ResolveDocument | null | undefined
 
       if (liveEdit) {
+        throwDocumentError(documentStates, documentId)
         document = documentStates[documentId]?.local
       } else {
         let version: ResolveDocument | null | undefined
         if (isReleasePerspective(perspective)) {
           const versionId = getVersionId(documentId, perspective.releaseName)
+          throwDocumentError(documentStates, versionId)
           version = documentStates[versionId]?.local
           // early exit if we don't have the version document and we're in a release perspective
           if (version === undefined) return undefined
         }
+        throwDocumentError(documentStates, getDraftId(documentId), getPublishedId(documentId))
         const draft = documentStates[getDraftId(documentId)]?.local
         const published = documentStates[getPublishedId(documentId)]?.local
         // early exit if we don't have all the documents for draft/published logic
@@ -311,9 +315,9 @@ export const getDocumentSyncStatus = bindActionByResource(
     ) => {
       const documentId = DocumentId(typeof doc === 'string' ? doc : doc.documentId)
       if (error) throw error
-      throwDocumentError(documents, documentId)
 
       if (doc.liveEdit) {
+        throwDocumentError(documents, documentId)
         // For liveEdit documents, only check the single document
         if (documents[documentId] === undefined) return undefined
       } else {
@@ -322,6 +326,7 @@ export const getDocumentSyncStatus = bindActionByResource(
           : undefined
         if (isReleasePerspective(doc.perspective) && version === undefined) return undefined
         // Standard draft/published logic
+        throwDocumentError(documents, getDraftId(documentId), getPublishedId(documentId))
         const draft = documents[getDraftId(documentId)]
         const published = documents[getPublishedId(documentId)]
         if (draft === undefined || published === undefined) return undefined
