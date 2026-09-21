@@ -5,7 +5,6 @@ packages:
   - apps/*
   - '@repo/package.config'
 
-
 allowBuilds:
   esbuild: true
   unrs-resolver: false
@@ -53,6 +52,7 @@ catalog:
   eslint: '^10.10.0'
   groq: '^6.15.0'
   groq-js: '^2.0.0'
+  jsdom: '^30.0.1'
   lodash-es: '^4.18.1'
   oxfmt: '^0.68.0'
   react: '^19.3.0'
