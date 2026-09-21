@@ -1,0 +1,74 @@
+name: Claude Code
+
+on:
+  # Comments on a PR's conversation tab arrive as issue_comment events, so this
+  # trigger is required for PR mentions. The job filter below limits it to PRs.
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+  pull_request_review:
+    types: [submitted]
+
+# Serialize runs per PR so two mentions never push to the same branch at once.
+concurrency:
+  group: claude-${{ github.event.issue.number || github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  claude:
+    # The action itself also refuses actors without write access and blocks bots
+    # (allowed_bots is unset). This filter avoids spinning up a runner for
+    # comments that never mention Claude, and ignores GitHub Issues, which this
+    # repo does not use.
+    if: |
+      (github.event_name == 'issue_comment' && github.event.issue.pull_request && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude'))
+    runs-on: ubuntu-latest
+    # GitHub's default job timeout is 360 minutes (6 hours). Real runs take
+    # 2 to 7 minutes, so this caps a stuck run's API spend without cutting
+    # off normal work.
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
+      actions: read # Lets Claude read CI results on PRs
+
+    steps:
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
+        with:
+          client-id: ${{ secrets.ECOSPARK_APP_ID }}
+          private-key: ${{ secrets.ECOSPARK_APP_PRIVATE_KEY }}
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 1
+          token: ${{ steps.app-token.outputs.token }}
+
+      # Installs pnpm and dependencies so Claude can run the repo's test, type
+      # check, lint, and fallow commands. Without this the runner has no pnpm.
+      - name: Setup Environment
+        uses: ./.github/actions/setup
+        with:
+          node-version: 22
+
+      - name: Run Claude Code
+        id: claude
+        uses: anthropics/claude-code-action@6b082c41935b4c8a3b8b0ef85ba4ba4d9eeb8975 # v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ steps.app-token.outputs.token }}
+          additional_permissions: |
+            actions: read
+          # The action already grants read, edit, and git commit/push tools. This
+          # adds the repo's own scripts plus read-only gh commands, and nothing
+          # else. Keep Bash scoped; a bare Bash(*) would let injected PR content
+          # run arbitrary commands with the app token in the environment.
+          claude_args: |
+            --allowedTools "Bash(pnpm install:*),Bash(pnpm build:*),Bash(pnpm test:*),Bash(pnpm ts:check:*),Bash(pnpm lint:*),Bash(pnpm format:*),Bash(pnpm fallow:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr checks:*),Bash(gh issue view:*)"
