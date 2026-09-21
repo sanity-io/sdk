@@ -70,6 +70,20 @@ export type ApplicationStatusUpdate = {
 }
 
 /**
+ * What an application is currently showing: the Comlink agent resource context, made generic.
+ * @public
+ */
+export interface ApplicationContext {
+  /** The resource the application is working in. Types follow `@sanity/client`'s resource config. */
+  readonly resource: {
+    readonly id: string
+    readonly type: 'dataset' | 'media-library' | 'canvas'
+  }
+  /** The open document, or `null` when none is open. */
+  readonly document: {readonly id: string} | null
+}
+
+/**
  * Declares a topic that stores and replays its current value.
  * @public
  */
@@ -131,6 +145,12 @@ export interface DashboardTopics {
   'applications.capabilities': StateTopicDef<CapabilityRecord>
   /** The available application configuration modules. */
   'applications.config': StateTopicDef<ApplicationConfig[] | null>
+  /** The foreground application's context, or `null` when it has published none. */
+  'applications.context': StateTopicDef<
+    (ApplicationContext & {readonly appId: Application['id']}) | null
+  >
+  /** Publishes the sending application's context. `null` clears it. Fire-and-forget. */
+  'applications.context.update': EventTopicDef<ApplicationContext | null>
   /** The foreground application ID, or `null` on dashboard-level routes. */
   'applications.foreground': StateTopicDef<Application['id'] | null>
   /** The dashboard applications available to the current user. */
@@ -234,6 +254,8 @@ export const DASHBOARD_TOPIC_MANIFEST: DashboardTopicManifest = {
   'applications.base-path': stateTopic(undefined),
   'applications.capabilities': stateTopic(undefined),
   'applications.config': stateTopic(undefined),
+  'applications.context': stateTopic(undefined),
+  'applications.context.update': dashboardEvent,
   'applications.foreground': stateTopic(undefined),
   'applications.list': stateTopic(undefined),
   'applications.status.update': dashboardEvent,

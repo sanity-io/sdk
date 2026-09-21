@@ -18,6 +18,7 @@ export {MessageBusError} from '../dashboard/messageBus/bus'
 export type {
   ApplicationConfig,
   ApplicationConfigAppType,
+  ApplicationContext,
   Capability,
   CapabilityRecord,
   DashboardTopics,

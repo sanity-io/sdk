@@ -5,6 +5,7 @@ import {type MessageBus} from './bus'
 import {
   type ApplicationConfig,
   type ApplicationConfigAppType,
+  type ApplicationContext,
   type ApplicationStatusUpdate,
   type CapabilityRecord,
   DASHBOARD_TOPIC_MANIFEST,
@@ -73,6 +74,17 @@ describe('dashboard topic types', () => {
     expectTypeOf<'media-library'>().toMatchTypeOf<ApplicationConfigAppType>()
     // Guards the `& {}` trick: a plain `string` here would drop known-value autocomplete.
     expectTypeOf<ApplicationConfigAppType>().not.toEqualTypeOf<string>()
+  })
+
+  it('pairs the application context state with its update event', () => {
+    // State carries the host-stamped sender; the update payload does not, since the host reads
+    // the sender from `message.meta.appId`.
+    expectTypeOf<ValueOf<'applications.context'>>().toEqualTypeOf<
+      (ApplicationContext & {readonly appId: Application['id']}) | null
+    >()
+    expectTypeOf<
+      PayloadOf<'applications.context.update'>
+    >().toEqualTypeOf<ApplicationContext | null>()
   })
 
   it('exposes event payload and reply values', () => {
