@@ -85,20 +85,21 @@ jobs:
           client-id: ${{ secrets.ECOSPARK_APP_ID }}
           private-key: ${{ secrets.ECOSPARK_APP_PRIVATE_KEY }}
 
-      # Check out the PR head rather than the default branch so the dependency
-      # install below matches the PR's lockfile. On issue_comment events
-      # github.ref is main, and node_modules would otherwise survive the action's
-      # later switch to the PR branch. The gate job guarantees this ref is a
-      # same-repo branch pushed by someone with write access.
+      # Deliberately checks out the default branch, not the PR head. The workflow
+      # never runs PR code itself; only claude-code-action switches to the PR
+      # branch, and it does so after verifying the commenter has write access.
+      # Checking out a PR ref here would also trip CodeQL's untrusted-checkout
+      # rule for issue_comment workflows.
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 1
-          ref: refs/pull/${{ github.event.issue.number || github.event.pull_request.number }}/head
           token: ${{ steps.app-token.outputs.token }}
 
-      # Installs pnpm and dependencies so Claude can run the repo's test, type
-      # check, lint, and fallow commands. Without this the runner has no pnpm.
+      # Installs pnpm and primes the pnpm store so Claude can run the repo's test,
+      # type check, lint, and fallow commands. Without this the runner has no pnpm.
+      # These are the default branch's dependencies; the system prompt below has
+      # Claude reinstall from the PR's lockfile once the action switches branches.
       - name: Setup Environment
         uses: ./.github/actions/setup
         with:
@@ -118,4 +119,5 @@ jobs:
           # install rule is an exact match on purpose: a prefix rule would also
           # allow "pnpm install <any-package>", which runs that package's scripts.
           claude_args: |
+            --append-system-prompt "node_modules in this checkout was installed from the default branch before the switch to the PR branch. Run pnpm install --frozen-lockfile before the first pnpm script you run so dependencies match the lockfile on the PR branch."
             --allowedTools "Bash(pnpm install --frozen-lockfile),Bash(pnpm build:*),Bash(pnpm test:*),Bash(pnpm ts:check:*),Bash(pnpm lint:*),Bash(pnpm format:*),Bash(pnpm fallow:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr checks:*),Bash(gh issue view:*)"
