@@ -3,6 +3,7 @@ import {describe, expect, expectTypeOf, it} from 'vitest'
 import {type Application, type ApplicationInclude} from '../../applications/applications'
 import {type MessageBus} from './bus'
 import {
+  type ApplicationActivity,
   type ApplicationConfig,
   type ApplicationConfigAppType,
   type ApplicationContext,
@@ -95,6 +96,11 @@ describe('dashboard topic types', () => {
     expectTypeOf<ReplyOf<'navigation.location.update'>>().toEqualTypeOf<
       {ok: true} | {ok: false; reason: 'not-navigable' | 'interrupted' | 'failed'}
     >()
+  })
+
+  it('reports application activity as a fire-and-forget event', () => {
+    expectTypeOf<PayloadOf<'applications.activity'>>().toEqualTypeOf<ApplicationActivity>()
+    expectTypeOf<ReplyOf<'applications.activity'>>().toBeNever()
   })
 
   it('requires payloads only for events that declare one', () => {
