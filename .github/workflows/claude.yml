@@ -50,9 +50,18 @@ jobs:
           PR: ${{ github.event.issue.number || github.event.pull_request.number }}
           NOTICE: Claude mentions are disabled on pull requests from forks. Push the branch to this repository to use them.
         run: |
+          set -euo pipefail
           pr_json="$(gh pr view "$PR" --repo "$GITHUB_REPOSITORY" --json isCrossRepository,comments)"
-          if [ "$(jq -r '.isCrossRepository' <<<"$pr_json")" != "true" ]; then
+          is_fork="$(jq -r '.isCrossRepository' <<<"$pr_json")"
+          # Anything other than an explicit false is a failure. Treating a
+          # missing or unexpected value as "not a fork" would let the job below
+          # run when the API call did not actually answer.
+          if [ "$is_fork" = "false" ]; then
             exit 0
+          fi
+          if [ "$is_fork" != "true" ]; then
+            echo "::error::Unexpected isCrossRepository value: $is_fork"
+            exit 1
           fi
           echo "fork=true" >> "$GITHUB_OUTPUT"
           echo "::notice::$NOTICE"
@@ -64,7 +73,10 @@ jobs:
 
   claude:
     needs: gate
-    if: needs.gate.outputs.fork != 'true'
+    # A custom if replaces the default requirement that needed jobs succeeded, so
+    # this must check the gate's result. Otherwise a skipped gate (a comment that
+    # never mentioned Claude) would still start this job.
+    if: needs.gate.result == 'success' && needs.gate.outputs.fork != 'true'
     runs-on: ubuntu-latest
     # GitHub's default job timeout is 360 minutes (6 hours). Real runs take
     # 2 to 7 minutes, so this caps a stuck run's API spend without cutting
@@ -85,11 +97,10 @@ jobs:
           client-id: ${{ secrets.ECOSPARK_APP_ID }}
           private-key: ${{ secrets.ECOSPARK_APP_PRIVATE_KEY }}
 
-      # Deliberately checks out the default branch, not the PR head. The workflow
-      # never runs PR code itself; only claude-code-action switches to the PR
-      # branch, and it does so after verifying the commenter has write access.
-      # Checking out a PR ref here would also trip CodeQL's untrusted-checkout
-      # rule for issue_comment workflows.
+      # Deliberately checks out the default branch, not the PR head. Checking out a
+      # PR ref here would trip CodeQL's untrusted-checkout rule for issue_comment
+      # workflows. The allowed pnpm scripts do run PR code once the action switches
+      # to the PR branch; the gate job above is what limits that to same-repo PRs.
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -119,5 +130,5 @@ jobs:
           # install rule is an exact match on purpose: a prefix rule would also
           # allow "pnpm install <any-package>", which runs that package's scripts.
           claude_args: |
-            --append-system-prompt "node_modules in this checkout was installed from the default branch before the switch to the PR branch. Run pnpm install --frozen-lockfile before the first pnpm script you run so dependencies match the lockfile on the PR branch."
-            --allowedTools "Bash(pnpm install --frozen-lockfile),Bash(pnpm build:*),Bash(pnpm test:*),Bash(pnpm ts:check:*),Bash(pnpm lint:*),Bash(pnpm format:*),Bash(pnpm fallow:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr checks:*),Bash(gh issue view:*)"
+            --append-system-prompt "node_modules in this checkout was installed from the default branch before the switch to the PR branch. Run pnpm install --frozen-lockfile --no-runtime before the first pnpm script you run so dependencies match the lockfile on the PR branch. Keep the --no-runtime flag: without it pnpm downloads a different Node version than this job is pinned to."
+            --allowedTools "Bash(pnpm install --frozen-lockfile --no-runtime),Bash(pnpm build:*),Bash(pnpm test:*),Bash(pnpm ts:check:*),Bash(pnpm lint:*),Bash(pnpm format:*),Bash(pnpm fallow:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr checks:*),Bash(gh issue view:*)"
