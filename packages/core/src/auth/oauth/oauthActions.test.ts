@@ -299,8 +299,13 @@ describe('refreshOAuthTokens', () => {
     expect(body.get('client_id')).toBe('client-abc')
     expect(body.get('resource')).toBe('urn:io.sanity:organization:org123')
 
-    expect(result).toMatchObject({accessToken: 'new-access', refreshToken: 'new-refresh'})
-    expect(readStored(storageArea)).toMatchObject({accessToken: 'new-access'})
+    expect(result).toMatchObject({accessToken: 'new-access'})
+    expect(result).not.toHaveProperty('refreshToken')
+    // Storage retains the refresh token so core can refresh again later.
+    expect(readStored(storageArea)).toMatchObject({
+      accessToken: 'new-access',
+      refreshToken: 'new-refresh',
+    })
   })
 
   it('shares a single in-flight request across concurrent callers', async () => {
@@ -445,9 +450,19 @@ describe('revokeOAuthTokens', () => {
 })
 
 describe('getOAuthTokensState', () => {
-  it('exposes the current OAuth tokens', () => {
+  it('exposes the current OAuth tokens without the refresh token', () => {
     setup({storageSeed: {[OAUTH_TOKENS_KEY]: serializeTokens(seededTokens)}})
-    expect(getOAuthTokensState(instance!).getCurrent()).toEqual(seededTokens)
+    const current = getOAuthTokensState(instance!).getCurrent()
+    const {refreshToken: _refreshToken, ...expected} = seededTokens
+    expect(current).toEqual(expected)
+    expect(current).not.toHaveProperty('refreshToken')
+  })
+
+  it('returns the same reference while the tokens are unchanged', () => {
+    // useSyncExternalStore loops forever on a snapshot that changes identity every read
+    setup({storageSeed: {[OAUTH_TOKENS_KEY]: serializeTokens(seededTokens)}})
+    const source = getOAuthTokensState(instance!)
+    expect(source.getCurrent()).toBe(source.getCurrent())
   })
 
   it('returns null when there are no OAuth tokens', () => {

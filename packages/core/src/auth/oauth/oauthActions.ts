@@ -1,4 +1,5 @@
 import {ClientError, type SanityClient} from '@sanity/client'
+import {createSelector} from 'reselect'
 
 import {bindActionGlobally} from '../../store/createActionBinder'
 import {createStateSourceAction} from '../../store/createStateSourceAction'
@@ -253,14 +254,15 @@ function isUnrecoverableRefreshError(error: unknown): boolean {
 // singleton because `authStore` is a global store (one shared state).
 // ponytail: module-level single-flight; upgrade to per-store keying only if
 // the auth store ever stops being global.
-let refreshInFlight: Promise<OAuthTokens | null> | null = null
+let refreshInFlight: Promise<Omit<OAuthTokens, 'refreshToken'> | null> | null = null
 
 /**
  * Refreshes the OAuth tokens using the `refresh_token` grant. Concurrent
  * callers share a single in-flight request. An unrecoverable failure (a 4xx
  * rejecting the refresh token) clears the tokens and transitions to
  * `LOGGED_OUT`; transient failures (network, 5xx, rate limits) leave the
- * session intact and rethrow so the caller can retry.
+ * session intact and rethrow so the caller can retry. The resolved tokens omit
+ * the refresh token, which core retains internally for subsequent refreshes.
  *
  * @public
  */
@@ -275,7 +277,7 @@ export const refreshOAuthTokens = bindActionGlobally(authStore, (context) => {
 async function doRefreshOAuthTokens({
   state,
   instance,
-}: StoreContext<AuthStoreState>): Promise<OAuthTokens | null> {
+}: StoreContext<AuthStoreState>): Promise<Omit<OAuthTokens, 'refreshToken'> | null> {
   const logger = getAuthLogger(instance)
   const options = getOAuthOptions(state.get())
 
@@ -315,7 +317,8 @@ async function doRefreshOAuthTokens({
       authState: createLoggedInAuthState(tokens.accessToken, null),
       oauthTokens: tokens,
     })
-    return tokens
+    const {refreshToken: _refreshToken, ...publicTokens} = tokens
+    return publicTokens
   } catch (error) {
     if (!isUnrecoverableRefreshError(error)) {
       // Transient (network / 5xx / rate limit) — keep the session so the
@@ -371,15 +374,29 @@ export const revokeOAuthTokens = bindActionGlobally(authStore, async ({state, in
   }
 })
 
+// Memoised so `getCurrent()` keeps returning the same object while
+// `oauthTokens` is unchanged; `useSyncExternalStore` loops on a snapshot
+// that changes identity every read. One slot suffices: no params, global store.
+const selectPublicOAuthTokens = createSelector(
+  (state: AuthStoreState) => state.oauthTokens,
+  (oauthTokens): Omit<OAuthTokens, 'refreshToken'> | null => {
+    if (!oauthTokens) return null
+    const {refreshToken: _refreshToken, ...tokens} = oauthTokens
+    return tokens
+  },
+)
+
 /**
  * A state source exposing the current OAuth tokens (including expiry), or
- * `null` when not logged in via OAuth.
+ * `null` when not logged in via OAuth. The refresh token is omitted — it is a
+ * long-lived credential held internally by core for `refreshOAuthTokens`, not
+ * part of the app-facing token view.
  *
  * @public
  */
 export const getOAuthTokensState = bindActionGlobally(
   authStore,
-  createStateSourceAction(({state}) => state.oauthTokens ?? null),
+  createStateSourceAction(({state}) => selectPublicOAuthTokens(state)),
 )
 
 /** Removes the transient PKCE artifacts from session storage. */
