@@ -1,8 +1,10 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {getTokenState} from '../auth/authStore'
+import {type SanityConfig} from '../config/sanityConfig'
 import {createSanityInstance} from '../store/createSanityInstance'
 import {getTelemetryEnvironment} from './environment'
+import {type TelemetryRuntimeContext} from './events'
 import {getTelemetryManager, initTelemetry, trackHookMounted} from './initTelemetry'
 import {createTelemetryManager} from './telemetryManager'
 
@@ -273,6 +275,59 @@ describe('initTelemetry', () => {
 
     instance.dispose()
   })
+
+  it.each<{
+    config: SanityConfig
+    authMethod: string
+    runtimeContext: TelemetryRuntimeContext
+  }>([
+    {config: {}, authMethod: 'default', runtimeContext: 'app'},
+    {config: {auth: {token: 'test-token'}}, authMethod: 'token', runtimeContext: 'app'},
+    {config: {studio: {}}, authMethod: 'default', runtimeContext: 'studio'},
+    {
+      config: {studio: {auth: {token: {subscribe: () => ({unsubscribe() {}})}}}},
+      authMethod: 'studio',
+      runtimeContext: 'studio',
+    },
+    {
+      config: {
+        auth: {token: 'test-token'},
+        studio: {auth: {token: {subscribe: () => ({unsubscribe() {}})}}},
+      },
+      authMethod: 'token',
+      runtimeContext: 'studio',
+    },
+    {
+      config: {
+        auth: {
+          oauth: {
+            clientId: 'test-client',
+            redirectUri: 'http://localhost/callback',
+            organizationId: 'test-org',
+          },
+        },
+      },
+      authMethod: 'default',
+      runtimeContext: 'app',
+    },
+  ])(
+    'captures $authMethod auth and $runtimeContext context before flushing buffered hooks',
+    async ({config, authMethod, runtimeContext}) => {
+      vi.mocked(getTelemetryEnvironment).mockReturnValue('development')
+      const instance = createSanityInstance(config)
+      trackHookMounted(instance, 'useDocument')
+
+      initTelemetry(instance, 'abc123')
+      await flushPromises()
+
+      expect(createTelemetryManager).toHaveBeenCalledWith(
+        expect.objectContaining({authMethod, runtimeContext}),
+      )
+      const manager = vi.mocked(createTelemetryManager).mock.results[0].value
+      expect(manager.logHookFirstUsed).toHaveBeenCalledWith('useDocument')
+      instance.dispose()
+    },
+  )
 
   it('does not buffer hooks when the environment is not eligible', async () => {
     vi.mocked(getTelemetryEnvironment).mockReturnValue(null)

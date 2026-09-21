@@ -1,6 +1,7 @@
 import {createBatchedStore} from '@sanity/telemetry'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
+import {type TelemetryRuntimeContext} from './events'
 import {createTelemetryManager} from './telemetryManager'
 
 vi.mock('@sanity/telemetry', () => {
@@ -43,6 +44,8 @@ describe('createTelemetryManager', () => {
     getClient,
     projectId: 'abc123',
     environment: 'development' as const,
+    authMethod: 'token',
+    runtimeContext: 'app' as const,
   }
 
   beforeEach(() => {
@@ -73,7 +76,6 @@ describe('createTelemetryManager', () => {
     manager.logSessionStarted({
       projectId: 'abc123',
       perspective: 'published',
-      authMethod: 'token',
     })
 
     expect(logger.log).toHaveBeenCalledWith(
@@ -101,8 +103,16 @@ describe('createTelemetryManager', () => {
       .mocked(logger.log)
       .mock.calls.filter(([event]: [{name: string}]) => event.name === 'SDK Hook Mounted')
     expect(hookCalls).toHaveLength(2)
-    expect(hookCalls[0][1]).toEqual({hookName: 'useQuery'})
-    expect(hookCalls[1][1]).toEqual({hookName: 'useDocument'})
+    expect(hookCalls[0][1]).toEqual({
+      hookName: 'useQuery',
+      authMethod: 'token',
+      runtimeContext: 'app',
+    })
+    expect(hookCalls[1][1]).toEqual({
+      hookName: 'useDocument',
+      authMethod: 'token',
+      runtimeContext: 'app',
+    })
   })
 
   it('tracks hooksUsed set', () => {
@@ -113,6 +123,36 @@ describe('createTelemetryManager', () => {
 
     expect(manager.hooksUsed).toEqual(new Set(['useQuery', 'useDocument']))
   })
+
+  it.each<{authMethod: string; runtimeContext: TelemetryRuntimeContext}>([
+    {authMethod: 'studio', runtimeContext: 'studio'},
+    {authMethod: 'default', runtimeContext: 'studio'},
+    {authMethod: 'token', runtimeContext: 'studio'},
+    {authMethod: 'default', runtimeContext: 'app'},
+    {authMethod: 'token', runtimeContext: 'app'},
+  ])(
+    'retains hooks before session start and lifecycle events for $runtimeContext with $authMethod auth',
+    ({authMethod, runtimeContext}) => {
+      const manager = createTelemetryManager({...baseOptions, authMethod, runtimeContext})
+      const {logger} = vi.mocked(createBatchedStore).mock.results[0].value
+
+      manager.logHookFirstUsed('useQuery')
+      manager.logSessionStarted({projectId: 'abc123', perspective: 'published'})
+      manager.endSession()
+
+      expect(logger.log).toHaveBeenCalledWith(expect.objectContaining({name: 'SDK Hook Mounted'}), {
+        hookName: 'useQuery',
+        authMethod,
+        runtimeContext,
+      })
+      for (const name of ['SDK Session Started', 'SDK Session Ended']) {
+        expect(logger.log).toHaveBeenCalledWith(
+          expect.objectContaining({name}),
+          expect.objectContaining({authMethod, runtimeContext}),
+        )
+      }
+    },
+  )
 
   it('logs error events', () => {
     const manager = createTelemetryManager(baseOptions)
@@ -147,6 +187,7 @@ describe('createTelemetryManager', () => {
       expect.objectContaining({
         durationSeconds: 5,
         hooksUsed: ['useQuery'],
+        authMethod: 'token',
       }),
     )
 

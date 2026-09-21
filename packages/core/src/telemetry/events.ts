@@ -1,11 +1,19 @@
 import {defineEvent} from '@sanity/telemetry'
 
+/**
+ * Whether the instance has Studio configuration. Apps include Dashboard and standalone apps.
+ * This describes instance configuration, not credential source or who authored a hook call.
+ * @internal
+ */
+export type TelemetryRuntimeContext = 'studio' | 'app'
+
 /** @internal */
 export const SDKSessionStarted = defineEvent<{
   version: string
   projectId: string
   perspective: string
   authMethod: string
+  runtimeContext: TelemetryRuntimeContext
 }>({
   name: 'SDK Session Started',
   version: 1,
@@ -15,6 +23,8 @@ export const SDKSessionStarted = defineEvent<{
 /** @internal */
 export const SDKHookMounted = defineEvent<{
   hookName: string
+  authMethod: string
+  runtimeContext: TelemetryRuntimeContext
 }>({
   name: 'SDK Hook Mounted',
   version: 1,
@@ -25,6 +35,8 @@ export const SDKHookMounted = defineEvent<{
 export const SDKSessionEnded = defineEvent<{
   durationSeconds: number
   hooksUsed: string[]
+  authMethod: string
+  runtimeContext: TelemetryRuntimeContext
 }>({
   name: 'SDK Session Ended',
   version: 1,
