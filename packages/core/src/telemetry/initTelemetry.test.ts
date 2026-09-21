@@ -83,10 +83,9 @@ function createControlledTokenState(
 }
 
 /**
- * Flush the microtask queue so the dynamic imports in initTelemetry
- * have time to resolve before assertions run.
+ * Waits for telemetry's dynamic imports and their completion callbacks.
  */
-const flushPromises = () => new Promise<void>((r) => setTimeout(r, 0))
+const flushPromises = () => vi.dynamicImportSettled()
 
 describe('initTelemetry', () => {
   beforeEach(() => {

@@ -65,8 +65,9 @@ export function initTelemetry(instance: SanityInstance, projectId: string): void
     import('./telemetryManager'),
     import('../client/clientStore'),
     import('../auth/authStore'),
+    import('../auth/authMode'),
   ])
-    .then(async ([{createTelemetryManager}, {getClient}, {getTokenState}]) => {
+    .then(async ([{createTelemetryManager}, {getClient}, {getTokenState}, {isStudioConfig}]) => {
       if (instance.isDisposed()) {
         initInFlight.delete(instance)
         logger.debug('telemetry skipped: instance disposed before imports resolved')
@@ -119,7 +120,7 @@ export function initTelemetry(instance: SanityInstance, projectId: string): void
       const config = instance.config
       const perspective = typeof config.perspective === 'string' ? config.perspective : 'published'
       // Studio instances can use explicit tokens. Keep runtime context independent of auth.
-      const runtimeContext = config.studio ? 'studio' : 'app'
+      const runtimeContext = isStudioConfig(config) ? 'studio' : 'app'
       const authMethod = config.auth?.token
         ? 'token'
         : config.studio?.auth?.token

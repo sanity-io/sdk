@@ -172,7 +172,7 @@ export function createTelemetryManager(options: TelemetryManagerOptions): Teleme
     logHookFirstUsed(hookName: string) {
       if (emittedHooks.has(hookName)) return
       emittedHooks.add(hookName)
-      log.debug('event: SDK Hook Mounted', {hookName})
+      log.debug('event: SDK Hook Mounted', {hookName, authMethod, runtimeContext})
       logger.log(SDKHookMounted, {hookName, authMethod, runtimeContext})
     },
 
@@ -186,6 +186,8 @@ export function createTelemetryManager(options: TelemetryManagerOptions): Teleme
       log.debug('event: SDK Session Ended', {
         durationSeconds,
         hooksUsed: [...emittedHooks],
+        authMethod,
+        runtimeContext,
         environment,
       })
       logger.log(SDKSessionEnded, {
