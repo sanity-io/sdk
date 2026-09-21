@@ -42,7 +42,11 @@ export {useAuthToken} from '../hooks/dashboard/useAuthToken'
 export {useCapabilities} from '../hooks/dashboard/useCapabilities'
 export {useCurrentUser} from '../hooks/dashboard/useCurrentUser'
 export {type TopicEmitter, useEmit} from '../hooks/dashboard/useEmit'
-export {useNavigate} from '../hooks/dashboard/useNavigate'
+export {
+  type DashboardNavigation,
+  type NavigateToDashboardPath,
+  useNavigate,
+} from '../hooks/dashboard/useNavigate'
 export {
   type NavigateToStudioResult,
   useNavigateToStudioDocument,
