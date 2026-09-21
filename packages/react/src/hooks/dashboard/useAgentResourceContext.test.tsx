@@ -1,7 +1,9 @@
+import {installMessageBus, resetMessageBus} from '@sanity/sdk/_internal'
+import {type MessageBusHost, type PayloadOf} from '@sanity/sdk/dashboard'
 import {renderHook} from '@testing-library/react'
-import {beforeEach, describe, expect, it, vi} from 'vitest'
+import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
-import {AppProviders} from '../../../test/test-utils'
+import {AppProviders, renderHook as renderHookWithInstance} from '../../../test/test-utils'
 import {useWindowConnection} from '../comlink/useWindowConnection'
 import {useAgentResourceContext} from './useAgentResourceContext'
 
@@ -241,5 +243,68 @@ describe('useAgentResourceContext', () => {
       dataset: 'production',
       documentId: undefined,
     })
+  })
+})
+
+describe('useAgentResourceContext (message bus)', () => {
+  const MESSAGE_BUS_KEY = Symbol.for('sanity.os.bus')
+  let host: MessageBusHost
+
+  const collect = (): PayloadOf<'applications.context.update'>[] => {
+    const payloads: PayloadOf<'applications.context.update'>[] = []
+    host.subscribe('applications.context.update', (message) => payloads.push(message.payload))
+    return payloads
+  }
+
+  beforeEach(() => {
+    vi.stubGlobal('__SANITY_APP_ID__', 'app')
+    host = installMessageBus({appId: 'dashboard'})
+  })
+
+  afterEach(() => {
+    resetMessageBus()
+    delete (globalThis as {[MESSAGE_BUS_KEY]?: unknown})[MESSAGE_BUS_KEY]
+    vi.unstubAllGlobals()
+  })
+
+  it('maps the options to an application context payload', () => {
+    const payloads = collect()
+
+    renderHookWithInstance(() =>
+      useAgentResourceContext({projectId: 'proj', dataset: 'ds', documentId: 'doc'}),
+    )
+
+    expect(payloads).toEqual([{resource: {id: 'proj.ds', type: 'dataset'}, document: {id: 'doc'}}])
+    expect(useWindowConnection).not.toHaveBeenCalled()
+  })
+
+  it('does not re-emit when re-rendered with equal options', () => {
+    const payloads = collect()
+
+    const {rerender} = renderHookWithInstance((options) => useAgentResourceContext(options), {
+      initialProps: {projectId: 'proj', dataset: 'ds', documentId: 'doc'},
+    })
+    rerender({projectId: 'proj', dataset: 'ds', documentId: 'doc'})
+
+    expect(payloads).toHaveLength(1)
+  })
+
+  it('sets document to null when no documentId is given', () => {
+    const payloads = collect()
+
+    renderHookWithInstance(() => useAgentResourceContext({projectId: 'proj', dataset: 'ds'}))
+
+    expect(payloads).toEqual([{resource: {id: 'proj.ds', type: 'dataset'}, document: null}])
+  })
+
+  it.each([
+    {projectId: '', dataset: 'ds'},
+    {projectId: 'proj', dataset: ''},
+  ])('publishes null when a required field is missing (%o)', ({projectId, dataset}) => {
+    const payloads = collect()
+
+    renderHookWithInstance(() => useAgentResourceContext({projectId, dataset, documentId: 'doc'}))
+
+    expect(payloads).toEqual([null])
   })
 })

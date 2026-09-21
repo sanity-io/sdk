@@ -31,6 +31,7 @@ export {
   useApplicationConfig,
 } from '../hooks/dashboard/useApplicationConfig'
 export {useApplicationConfigs} from '../hooks/dashboard/useApplicationConfigs'
+export {useApplicationContext} from '../hooks/dashboard/useApplicationContext'
 export {useApplicationForegroundId} from '../hooks/dashboard/useApplicationForegroundId'
 export {
   type DashboardApplication,
@@ -58,6 +59,7 @@ export {useWindowTitle} from '../hooks/dashboard/useWindowTitle'
 export type {
   ApplicationConfig,
   ApplicationConfigAppType,
+  ApplicationContext,
   Capability,
   CapabilityRecord,
   ConnectMessageBusOptions,
