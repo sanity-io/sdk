@@ -19,7 +19,12 @@ concurrency:
   queue: max
 
 jobs:
-  claude:
+  # claude-code-action checks out the PR head itself, and for fork PRs it fetches
+  # refs/pull/N/head. The pnpm scripts allowed in the claude job would then run
+  # the fork's code with the app token and API key in the environment, so fork
+  # PRs stop here. Claude could not push to a fork anyway. The issue_comment
+  # payload has no head-repo info, so this needs an API call rather than an if:.
+  gate:
     # The action itself also refuses actors without write access and blocks bots
     # (allowed_bots is unset). This filter avoids spinning up a runner for
     # comments that never mention Claude, for bot comments that the action would
@@ -29,6 +34,37 @@ jobs:
       (github.event_name == 'issue_comment' && github.event.issue.pull_request && github.event.comment.user.type != 'Bot' && contains(github.event.comment.body, '@claude')) ||
       (github.event_name == 'pull_request_review_comment' && github.event.comment.user.type != 'Bot' && contains(github.event.comment.body, '@claude')) ||
       (github.event_name == 'pull_request_review' && github.event.review.user.type != 'Bot' && contains(github.event.review.body, '@claude'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      pull-requests: write
+      issues: write
+    outputs:
+      fork: ${{ steps.check.outputs.fork }}
+
+    steps:
+      - name: Check whether the pull request is from a fork
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.issue.number || github.event.pull_request.number }}
+          NOTICE: Claude mentions are disabled on pull requests from forks. Push the branch to this repository to use them.
+        run: |
+          pr_json="$(gh pr view "$PR" --repo "$GITHUB_REPOSITORY" --json isCrossRepository,comments)"
+          if [ "$(jq -r '.isCrossRepository' <<<"$pr_json")" != "true" ]; then
+            exit 0
+          fi
+          echo "fork=true" >> "$GITHUB_OUTPUT"
+          echo "::notice::$NOTICE"
+          # Post the notice once per PR. Exiting cleanly and not repeating the
+          # comment means a fork author gains nothing by mentioning Claude again.
+          if [ "$(jq --arg n "$NOTICE" '[.comments[] | select(.body == $n)] | length' <<<"$pr_json")" = "0" ]; then
+            gh pr comment "$PR" --repo "$GITHUB_REPOSITORY" --body "$NOTICE"
+          fi
+
+  claude:
+    needs: gate
+    if: needs.gate.outputs.fork != 'true'
     runs-on: ubuntu-latest
     # GitHub's default job timeout is 360 minutes (6 hours). Real runs take
     # 2 to 7 minutes, so this caps a stuck run's API spend without cutting
@@ -42,23 +78,6 @@ jobs:
       actions: read # Lets Claude read CI results on PRs
 
     steps:
-      # claude-code-action checks out the PR head itself, and for fork PRs it
-      # fetches refs/pull/N/head. The pnpm scripts allowed below would then run
-      # the fork's code with the app token and API key in the environment, so
-      # stop here. Claude could not push to a fork anyway. The event payload for
-      # issue_comment has no head-repo info, so this cannot live in the if: filter.
-      - name: Skip pull requests from forks
-        env:
-          GH_TOKEN: ${{ github.token }}
-          PR: ${{ github.event.issue.number || github.event.pull_request.number }}
-        run: |
-          if [ "$(gh pr view "$PR" --repo "$GITHUB_REPOSITORY" --json isCrossRepository -q .isCrossRepository)" = "true" ]; then
-            gh pr comment "$PR" --repo "$GITHUB_REPOSITORY" \
-              --body "Claude mentions are disabled on pull requests from forks. Push the branch to this repository to use them."
-            echo "::error::Claude mentions are disabled on pull requests from forks"
-            exit 1
-          fi
-
       - name: Generate GitHub App token
         id: app-token
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
@@ -66,10 +85,16 @@ jobs:
           client-id: ${{ secrets.ECOSPARK_APP_ID }}
           private-key: ${{ secrets.ECOSPARK_APP_PRIVATE_KEY }}
 
+      # Check out the PR head rather than the default branch so the dependency
+      # install below matches the PR's lockfile. On issue_comment events
+      # github.ref is main, and node_modules would otherwise survive the action's
+      # later switch to the PR branch. The gate job guarantees this ref is a
+      # same-repo branch pushed by someone with write access.
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 1
+          ref: refs/pull/${{ github.event.issue.number || github.event.pull_request.number }}/head
           token: ${{ steps.app-token.outputs.token }}
 
       # Installs pnpm and dependencies so Claude can run the repo's test, type
@@ -80,7 +105,6 @@ jobs:
           node-version: 22
 
       - name: Run Claude Code
-        id: claude
         uses: anthropics/claude-code-action@6b082c41935b4c8a3b8b0ef85ba4ba4d9eeb8975 # v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
