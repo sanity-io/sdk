@@ -11,20 +11,24 @@ on:
     types: [submitted]
 
 # Serialize runs per PR so two mentions never push to the same branch at once.
+# Without queue: max, GitHub keeps only one pending run per group and silently
+# cancels the rest, so a third mention would get no reply.
 concurrency:
   group: claude-${{ github.event.issue.number || github.event.pull_request.number }}
   cancel-in-progress: false
+  queue: max
 
 jobs:
   claude:
     # The action itself also refuses actors without write access and blocks bots
     # (allowed_bots is unset). This filter avoids spinning up a runner for
-    # comments that never mention Claude, and ignores GitHub Issues, which this
-    # repo does not use.
+    # comments that never mention Claude, for bot comments that the action would
+    # reject anyway (including its own tracking comment), and for GitHub Issues,
+    # which this repo does not use.
     if: |
-      (github.event_name == 'issue_comment' && github.event.issue.pull_request && contains(github.event.comment.body, '@claude')) ||
-      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
-      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude'))
+      (github.event_name == 'issue_comment' && github.event.issue.pull_request && github.event.comment.user.type != 'Bot' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review_comment' && github.event.comment.user.type != 'Bot' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review' && github.event.review.user.type != 'Bot' && contains(github.event.review.body, '@claude'))
     runs-on: ubuntu-latest
     # GitHub's default job timeout is 360 minutes (6 hours). Real runs take
     # 2 to 7 minutes, so this caps a stuck run's API spend without cutting
@@ -38,6 +42,23 @@ jobs:
       actions: read # Lets Claude read CI results on PRs
 
     steps:
+      # claude-code-action checks out the PR head itself, and for fork PRs it
+      # fetches refs/pull/N/head. The pnpm scripts allowed below would then run
+      # the fork's code with the app token and API key in the environment, so
+      # stop here. Claude could not push to a fork anyway. The event payload for
+      # issue_comment has no head-repo info, so this cannot live in the if: filter.
+      - name: Skip pull requests from forks
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.issue.number || github.event.pull_request.number }}
+        run: |
+          if [ "$(gh pr view "$PR" --repo "$GITHUB_REPOSITORY" --json isCrossRepository -q .isCrossRepository)" = "true" ]; then
+            gh pr comment "$PR" --repo "$GITHUB_REPOSITORY" \
+              --body "Claude mentions are disabled on pull requests from forks. Push the branch to this repository to use them."
+            echo "::error::Claude mentions are disabled on pull requests from forks"
+            exit 1
+          fi
+
       - name: Generate GitHub App token
         id: app-token
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
@@ -69,6 +90,8 @@ jobs:
           # The action already grants read, edit, and git commit/push tools. This
           # adds the repo's own scripts plus read-only gh commands, and nothing
           # else. Keep Bash scoped; a bare Bash(*) would let injected PR content
-          # run arbitrary commands with the app token in the environment.
+          # run arbitrary commands with the app token in the environment. The
+          # install rule is an exact match on purpose: a prefix rule would also
+          # allow "pnpm install <any-package>", which runs that package's scripts.
           claude_args: |
-            --allowedTools "Bash(pnpm install:*),Bash(pnpm build:*),Bash(pnpm test:*),Bash(pnpm ts:check:*),Bash(pnpm lint:*),Bash(pnpm format:*),Bash(pnpm fallow:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr checks:*),Bash(gh issue view:*)"
+            --allowedTools "Bash(pnpm install --frozen-lockfile),Bash(pnpm build:*),Bash(pnpm test:*),Bash(pnpm ts:check:*),Bash(pnpm lint:*),Bash(pnpm format:*),Bash(pnpm fallow:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr checks:*),Bash(gh issue view:*)"
