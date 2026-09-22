@@ -255,7 +255,7 @@ catalogs:
       specifier: ^6.15.0
       version: 6.15.0
     tsx:
-      specifier: ^4.23.13
+      specifier: ^4.23.15
       version: 4.23.15
     typescript:
       specifier: ^6.0.3
@@ -11814,8 +11814,8 @@ snapshots:
 
   '@typescript-eslint/project-service@8.56.1(supports-color@8.1.1)(typescript@6.0.3)':
     dependencies:
-      '@typescript-eslint/tsconfig-utils': 8.56.1(typescript@6.0.3)
-      '@typescript-eslint/types': 8.56.1
+      '@typescript-eslint/tsconfig-utils': 8.70.0(typescript@6.0.3)
+      '@typescript-eslint/types': 8.70.0
       debug: 4.4.3(supports-color@8.1.1)
       typescript: 6.0.3
     transitivePeerDependencies:
