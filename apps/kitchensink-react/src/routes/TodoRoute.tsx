@@ -1,3 +1,4 @@
+import {randomUuid} from '@sanity/sdk/_internal'
 import {
   createDocument,
   createDocumentHandle,
@@ -40,7 +41,7 @@ function TodoItem({handle}: {handle: DocumentHandle<'todo'>}): JSX.Element {
   }
 
   return (
-    <Card as="li" borderBottom padding={3}>
+    <Box as="li" borderBottom padding={3}>
       <Flex alignItems="center" gap={3}>
         <Checkbox
           aria-label={`Mark ${data.text || 'untitled todo'} as ${
@@ -60,20 +61,20 @@ function TodoItem({handle}: {handle: DocumentHandle<'todo'>}): JSX.Element {
         </Box>
         <Button fontSize={1} mode="bleed" onClick={remove} text="Delete" tone="critical" />
       </Flex>
-    </Card>
+    </Box>
   )
 }
 
 function TodoItemFallback(): JSX.Element {
   return (
-    <Card as="li" borderBottom padding={3}>
+    <Box as="li" borderBottom padding={3}>
       <Flex alignItems="center" gap={2}>
         <Spinner />
         <Text muted size={1}>
           Loading todo…
         </Text>
       </Flex>
-    </Card>
+    </Box>
   )
 }
 
@@ -93,7 +94,7 @@ export function TodoRoute(): JSX.Element {
     if (!value) return
 
     const handle = createDocumentHandle({
-      documentId: crypto.randomUUID(),
+      documentId: randomUuid(),
       documentType: 'todo',
     })
     const initialValue = {
@@ -111,7 +112,7 @@ export function TodoRoute(): JSX.Element {
       title="Todo"
       subtitle="SDK-backed documents with no user-land optimistic list state"
     >
-      <Card padding={4}>
+      <Card density="regular">
         <form onSubmit={addTodo}>
           <Flex alignItems="flex-end" gap={2}>
             <Box flexGrow={1}>
