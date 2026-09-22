@@ -10,6 +10,7 @@ import {
   type RawQueryResponse,
   type ResponseQueryOptions,
   type SanityClient,
+  ServerError,
   type SingleActionResult,
   type UnfilteredResponseQueryOptions,
   type WelcomeEvent,
@@ -43,9 +44,11 @@ import {
   discardDocument,
   editDocument,
   publishDocument,
+  publishRelease,
   unpublishDocument,
 } from './actions'
 import {applyDocumentActions} from './applyDocumentActions'
+import {OUT_OF_SYNC_RETRY_COUNT} from './documentConstants'
 import {
   getDocumentState,
   getDocumentSyncStatus,
@@ -1403,6 +1406,7 @@ vi.mock('./documentConstants.ts', async (importOriginal) => {
     DOCUMENT_STATE_CLEAR_DELAY: 25,
     OUT_OF_SYNC_RETRY_BASE_DELAY: 0,
     OUT_OF_SYNC_RETRY_MAX_DELAY: 0,
+    OUT_OF_SYNC_RETRY_COUNT: 2,
     ACL_RETRY_BASE_DELAY: 0,
     ACL_RETRY_MAX_DELAY: 0,
   }
@@ -1808,4 +1812,194 @@ beforeEach(() => {
     },
   } as SanityClient
   client$.next(client)
+})
+
+it('resolves a readable document while another in the same dataset is inaccessible due to permissions', async () => {
+  const readableId = DocumentId('doc-readable')
+  const blockedId = DocumentId('doc-blocked')
+
+  vi.mocked(createFetchDocument).mockReturnValue(
+    vi.fn((id) =>
+      (id === blockedId
+        ? throwError(
+            () =>
+              new Error(`Document with ID \`${blockedId}\` is inaccessible due to permissions.`),
+          )
+        : of({_id: id, _type: 'article', _rev: 'rev-1'} as SanityDocument)
+      ).pipe(delay(0)),
+    ),
+  )
+
+  const readable = getDocumentState<TestDocument>(instance, {
+    documentId: readableId,
+    documentType: 'article',
+    liveEdit: true,
+  })
+  const blocked = getDocumentState<TestDocument>(instance, {
+    documentId: blockedId,
+    documentType: 'article',
+    liveEdit: true,
+  })
+
+  const unsubscribeReadable = readable.subscribe()
+  const unsubscribeBlocked = blocked.subscribe()
+
+  await vi.waitFor(() => expect(readable.getCurrent()).toMatchObject({_id: readableId}))
+  await expect(firstValueFrom(blocked.observable)).rejects.toThrow(
+    'Document with ID `doc-blocked` is inaccessible due to permissions.',
+  )
+
+  unsubscribeReadable()
+  unsubscribeBlocked()
+})
+
+it('reports an inaccessible draft to the document that reads it', async () => {
+  const documentId = DocumentId('doc-with-blocked-draft')
+  const draftId = getDraftId(documentId)
+  const message = `Document with ID \`${draftId}\` is inaccessible due to permissions.`
+
+  vi.mocked(createFetchDocument).mockReturnValue(
+    vi.fn((id) =>
+      (id === draftId
+        ? throwError(() => new Error(message))
+        : of({_id: id, _type: 'article', _rev: 'rev-1'} as SanityDocument)
+      ).pipe(delay(0)),
+    ),
+  )
+
+  const doc = createDocumentHandle({documentId, documentType: 'article'})
+
+  await expect(resolveDocument(instance, doc)).rejects.toThrow(message)
+  await expect(
+    firstValueFrom(
+      getDocumentSyncStatus(instance, doc).observable.pipe(first((value) => value !== undefined)),
+    ),
+  ).rejects.toThrow(message)
+})
+
+it('fails a write to a document it cannot read instead of waiting for it', async () => {
+  const documentId = DocumentId('doc-with-blocked-draft-write')
+  const draftId = getDraftId(documentId)
+  const message = `Document with ID \`${draftId}\` is inaccessible due to permissions.`
+
+  vi.mocked(createFetchDocument).mockReturnValue(
+    vi.fn((id) =>
+      (id === draftId
+        ? throwError(() => new Error(message))
+        : of({_id: id, _type: 'article', _rev: 'rev-1'} as SanityDocument)
+      ).pipe(delay(0)),
+    ),
+  )
+
+  const doc = createDocumentHandle({documentId, documentType: 'article'})
+
+  await expect(
+    applyDocumentActions(instance, {
+      actions: [editDocument(doc, {set: {title: 'Edited'}})],
+      resource,
+    }),
+  ).rejects.toThrow(message)
+})
+
+it('reads a document again after the server fails once', async () => {
+  const documentId = DocumentId('doc-with-flaky-read')
+  const draftId = getDraftId(documentId)
+  let thrown = 0
+
+  vi.mocked(createFetchDocument).mockReturnValue(
+    vi.fn((id) =>
+      defer(() => {
+        if (id === draftId && thrown === 0) {
+          thrown++
+          return throwError(() => new ServerError({statusCode: 503, headers: {}, body: {}}))
+        }
+        return of({_id: id, _type: 'article', _rev: 'rev-1'} as SanityDocument)
+      }).pipe(delay(0)),
+    ),
+  )
+
+  const doc = createDocumentHandle({documentId, documentType: 'article'})
+
+  await expect(resolveDocument(instance, doc)).resolves.toMatchObject({_id: draftId})
+  expect(thrown).toBe(1)
+})
+
+it('fails a release action whose release document cannot be read', async () => {
+  const releaseId = 'blocked-release'
+  const releaseDocumentId = `_.releases.${releaseId}`
+  const message = `Document with ID \`${releaseDocumentId}\` is inaccessible due to permissions.`
+
+  vi.mocked(createFetchDocument).mockReturnValue(
+    vi.fn((id) =>
+      (id === releaseDocumentId
+        ? throwError(() => new Error(message))
+        : of({_id: id, _type: 'article', _rev: 'rev-1'} as SanityDocument)
+      ).pipe(delay(0)),
+    ),
+  )
+
+  await expect(
+    applyDocumentActions(instance, {
+      actions: [publishRelease({releaseId})],
+      resource,
+    }),
+  ).rejects.toThrow(message)
+})
+
+it('gives up on a read that keeps failing rather than loading forever', async () => {
+  const documentId = DocumentId('doc-with-failing-read')
+  const draftId = getDraftId(documentId)
+  let attempts = 0
+
+  vi.mocked(createFetchDocument).mockReturnValue(
+    vi.fn((id) =>
+      defer(() => {
+        if (id !== draftId) return of({_id: id, _type: 'article', _rev: 'rev-1'} as SanityDocument)
+        attempts++
+        return throwError(() => new ServerError({statusCode: 503, headers: {}, body: {}}))
+      }).pipe(delay(0)),
+    ),
+  )
+
+  const doc = createDocumentHandle({documentId, documentType: 'article'})
+
+  await expect(resolveDocument(instance, doc)).rejects.toThrow(ServerError)
+  expect(attempts).toBe(3)
+})
+
+it('keeps its retry budget per failure, not per listener', async () => {
+  const documentId = DocumentId('doc-with-flaky-listener')
+  const draftId = getDraftId(documentId)
+  let calls = 0
+
+  vi.mocked(createFetchDocument).mockReturnValue(
+    vi.fn((id) =>
+      defer(() => {
+        if (id !== draftId) return of({_id: id, _type: 'article', _rev: 'rev-1'} as SanityDocument)
+        calls++
+        // every read fails once before it succeeds
+        return calls % 2 === 1
+          ? throwError(() => new ServerError({statusCode: 503, headers: {}, body: {}}))
+          : of({_id: id, _type: 'article', _rev: `rev-${calls}`} as SanityDocument)
+      }).pipe(delay(0)),
+    ),
+  )
+
+  const doc = createDocumentHandle({documentId, documentType: 'article'})
+  const documentState = getDocumentState<TestDocument>(instance, doc)
+  const unsubscribe = documentState.subscribe()
+  await vi.waitFor(() => expect(documentState.getCurrent()).toMatchObject({_id: draftId}))
+
+  const sharedListener = (
+    createSharedListener as unknown as () => {events: Subject<ListenEvent<SanityDocument>>}
+  )()
+  // more failure streaks than the budget, each one recovering in between
+  for (let attempt = 0; attempt < OUT_OF_SYNC_RETRY_COUNT + 2; attempt++) {
+    const seen = calls
+    sharedListener.events.next({type: 'reset'})
+    await vi.waitFor(() => expect(calls).toBeGreaterThan(seen + 1))
+  }
+
+  expect(() => documentState.getCurrent()).not.toThrow()
+  unsubscribe()
 })
