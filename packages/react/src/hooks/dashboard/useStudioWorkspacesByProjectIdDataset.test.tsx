@@ -305,7 +305,22 @@ describe('useStudioWorkspacesByProjectIdDataset (message bus)', () => {
   })
 
   it('maps studio workspaces to resources keyed by projectId:dataset', () => {
-    emitApplications([studio, coreApp])
+    // An installation (no `type`) shares the topic; the hook must tolerate it and map only studios.
+    const installation = {id: 'installation-1', applicationId: 'app-remote-1'}
+    // A dev-server studio is still a studio, addressed by its dev server.
+    const localStudio = {
+      ...studio,
+      id: 'studio-local',
+      slug: null,
+      externalUrl: 'http://localhost:3333',
+      local: {host: 'localhost', port: 3333},
+      activeDeployment: {
+        ...deployment,
+        applicationId: 'studio-local',
+        workspaces: [{...workspace, id: 'workspace-local', projectId: 'project3'}],
+      },
+    }
+    emitApplications([studio, coreApp, installation, localStudio])
 
     const {result} = renderHookWithInstance(() => useStudioWorkspacesByProjectIdDataset())
 
@@ -327,6 +342,13 @@ describe('useStudioWorkspacesByProjectIdDataset (message bus)', () => {
         expect.objectContaining({id: 'workspace-2', title: 'My Studio', basePath: ''}),
       ],
       'project2:dataset2': [expect.objectContaining({id: 'workspace-3'})],
+      'project3:dataset1': [
+        expect.objectContaining({
+          id: 'workspace-local',
+          userApplicationId: 'studio-local',
+          url: 'http://localhost:3333',
+        }),
+      ],
     })
   })
 

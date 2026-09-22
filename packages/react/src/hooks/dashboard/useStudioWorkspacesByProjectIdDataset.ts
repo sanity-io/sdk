@@ -79,7 +79,8 @@ export function useStudioWorkspacesByProjectIdDataset(): StudioWorkspacesResult 
 // The legacy Comlink protocol models studios at the workspace level, so each workspace of a
 // studio's active deployment becomes one resource, addressed by the studio's origin.
 function toResources(application: DashboardApplications[number]): DashboardResource[] {
-  if (application.type !== 'studio') return []
+  // Installations join the topic union without a `type`; only studios yield workspace resources.
+  if (!('type' in application) || application.type !== 'studio') return []
   const url = getApplicationOrigin(application) ?? ''
   return (application.activeDeployment?.workspaces ?? []).map((workspace) => ({
     id: workspace.id,
