@@ -1,0 +1,134 @@
+name: Claude Code
+
+on:
+  # Comments on a PR's conversation tab arrive as issue_comment events, so this
+  # trigger is required for PR mentions. The job filter below limits it to PRs.
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+  pull_request_review:
+    types: [submitted]
+
+# Serialize runs per PR so two mentions never push to the same branch at once.
+# Without queue: max, GitHub keeps only one pending run per group and silently
+# cancels the rest, so a third mention would get no reply.
+concurrency:
+  group: claude-${{ github.event.issue.number || github.event.pull_request.number }}
+  cancel-in-progress: false
+  queue: max
+
+jobs:
+  # claude-code-action checks out the PR head itself, and for fork PRs it fetches
+  # refs/pull/N/head. The pnpm scripts allowed in the claude job would then run
+  # the fork's code with the app token and API key in the environment, so fork
+  # PRs stop here. Claude could not push to a fork anyway. The issue_comment
+  # payload has no head-repo info, so this needs an API call rather than an if:.
+  gate:
+    # The action itself also refuses actors without write access and blocks bots
+    # (allowed_bots is unset). This filter avoids spinning up a runner for
+    # comments that never mention Claude, for bot comments that the action would
+    # reject anyway (including its own tracking comment), and for GitHub Issues,
+    # which this repo does not use.
+    if: |
+      (github.event_name == 'issue_comment' && github.event.issue.pull_request && github.event.comment.user.type != 'Bot' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review_comment' && github.event.comment.user.type != 'Bot' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review' && github.event.review.user.type != 'Bot' && contains(github.event.review.body, '@claude'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      pull-requests: write
+      issues: write
+    outputs:
+      fork: ${{ steps.check.outputs.fork }}
+
+    steps:
+      - name: Check whether the pull request is from a fork
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.issue.number || github.event.pull_request.number }}
+          NOTICE: Claude mentions are disabled on pull requests from forks. Push the branch to this repository to use them.
+        run: |
+          set -euo pipefail
+          pr_json="$(gh pr view "$PR" --repo "$GITHUB_REPOSITORY" --json isCrossRepository,comments)"
+          is_fork="$(jq -r '.isCrossRepository' <<<"$pr_json")"
+          # Anything other than an explicit false is a failure. Treating a
+          # missing or unexpected value as "not a fork" would let the job below
+          # run when the API call did not actually answer.
+          if [ "$is_fork" = "false" ]; then
+            exit 0
+          fi
+          if [ "$is_fork" != "true" ]; then
+            echo "::error::Unexpected isCrossRepository value: $is_fork"
+            exit 1
+          fi
+          echo "fork=true" >> "$GITHUB_OUTPUT"
+          echo "::notice::$NOTICE"
+          # Post the notice once per PR. Exiting cleanly and not repeating the
+          # comment means a fork author gains nothing by mentioning Claude again.
+          if [ "$(jq --arg n "$NOTICE" '[.comments[] | select(.body == $n)] | length' <<<"$pr_json")" = "0" ]; then
+            gh pr comment "$PR" --repo "$GITHUB_REPOSITORY" --body "$NOTICE"
+          fi
+
+  claude:
+    needs: gate
+    # A custom if replaces the default requirement that needed jobs succeeded, so
+    # this must check the gate's result. Otherwise a skipped gate (a comment that
+    # never mentioned Claude) would still start this job.
+    if: needs.gate.result == 'success' && needs.gate.outputs.fork != 'true'
+    runs-on: ubuntu-latest
+    # GitHub's default job timeout is 360 minutes (6 hours). Real runs take
+    # 2 to 7 minutes, so this caps a stuck run's API spend without cutting
+    # off normal work.
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
+      actions: read # Lets Claude read CI results on PRs
+
+    steps:
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
+        with:
+          client-id: ${{ secrets.ECOSPARK_APP_ID }}
+          private-key: ${{ secrets.ECOSPARK_APP_PRIVATE_KEY }}
+
+      # Deliberately checks out the default branch, not the PR head. Checking out a
+      # PR ref here would trip CodeQL's untrusted-checkout rule for issue_comment
+      # workflows. The allowed pnpm scripts do run PR code once the action switches
+      # to the PR branch; the gate job above is what limits that to same-repo PRs.
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 1
+          token: ${{ steps.app-token.outputs.token }}
+
+      # Installs pnpm and primes the pnpm store so Claude can run the repo's test,
+      # type check, lint, and fallow commands. Without this the runner has no pnpm.
+      # These are the default branch's dependencies; the system prompt below has
+      # Claude reinstall from the PR's lockfile once the action switches branches.
+      - name: Setup Environment
+        uses: ./.github/actions/setup
+        with:
+          node-version: 22
+
+      - name: Run Claude Code
+        uses: anthropics/claude-code-action@6b082c41935b4c8a3b8b0ef85ba4ba4d9eeb8975 # v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ steps.app-token.outputs.token }}
+          additional_permissions: |
+            actions: read
+          # The action already grants read, edit, and git commit/push tools. This
+          # adds the repo's own scripts plus read-only gh commands, and nothing
+          # else. Keep Bash scoped; a bare Bash(*) would let injected PR content
+          # run arbitrary commands with the app token in the environment. The
+          # install rule is an exact match on purpose: a prefix rule would also
+          # allow "pnpm install <any-package>", which runs that package's scripts.
+          claude_args: |
+            --append-system-prompt "node_modules in this checkout was installed from the default branch before the switch to the PR branch. Run pnpm install --frozen-lockfile --no-runtime before the first pnpm script you run so dependencies match the lockfile on the PR branch. Keep the --no-runtime flag: without it pnpm downloads a different Node version than this job is pinned to."
+            --allowedTools "Bash(pnpm install --frozen-lockfile --no-runtime),Bash(pnpm build:*),Bash(pnpm test:*),Bash(pnpm ts:check:*),Bash(pnpm lint:*),Bash(pnpm format:*),Bash(pnpm fallow:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr checks:*),Bash(gh issue view:*)"
