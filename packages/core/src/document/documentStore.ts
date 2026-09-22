@@ -8,7 +8,6 @@ import {
   distinctUntilChanged,
   EMPTY,
   filter,
-  first,
   firstValueFrom,
   groupBy,
   map,
@@ -21,7 +20,6 @@ import {
   Subject,
   switchMap,
   tap,
-  throttle,
   throwError,
   timer,
   withLatestFrom,
@@ -50,7 +48,6 @@ import {
   ACL_RETRY_BASE_DELAY,
   ACL_RETRY_MAX_DELAY,
   API_VERSION,
-  INITIAL_OUTGOING_THROTTLE_TIME,
   OUT_OF_SYNC_RETRY_BASE_DELAY,
   OUT_OF_SYNC_RETRY_COUNT,
   OUT_OF_SYNC_RETRY_MAX_DELAY,
@@ -82,9 +79,9 @@ import {
   type QueuedTransaction,
   removeQueuedTransaction,
   revertOutgoingTransaction,
-  transitionAppliedTransactionsToOutgoing,
   type UnverifiedDocumentRevision,
 } from './reducers'
+import {scheduleOutgoingTransactions} from './scheduleOutgoingTransactions'
 import {createFetchDocument, createSharedListener, type SharedListener} from './sharedListener'
 
 export interface DocumentStoreState {
@@ -422,23 +419,8 @@ const subscribeToAppliedAndSubmitNextTransaction = ({
 }: StoreContext<DocumentStoreState, BoundResourceKey>) => {
   const {events} = state.get()
 
-  return state.observable
+  return scheduleOutgoingTransactions(state)
     .pipe(
-      throttle(
-        (s) =>
-          // if there is no outgoing transaction, we can throttle by the
-          // initial outgoing throttle time…
-          !s.outgoing
-            ? timer(INITIAL_OUTGOING_THROTTLE_TIME)
-            : // …otherwise, wait until the outgoing has been cleared
-              state.observable.pipe(first(({outgoing}) => !outgoing)),
-        {leading: false, trailing: true},
-      ),
-      map(transitionAppliedTransactionsToOutgoing),
-      distinctUntilChanged((a, b) => a.outgoing?.transactionId === b.outgoing?.transactionId),
-      tap((next) => state.set('transitionAppliedTransactionsToOutgoing', next)),
-      map((s) => s.outgoing),
-      distinctUntilChanged(),
       withLatestFrom(
         getClientState(instance, {
           apiVersion: API_VERSION,
@@ -446,8 +428,6 @@ const subscribeToAppliedAndSubmitNextTransaction = ({
         }).observable,
       ),
       concatMap(([outgoing, client]) => {
-        if (!outgoing) return EMPTY
-
         const revertOnError = catchError((error: unknown) => {
           state.set('revertOutgoingTransaction', revertOutgoingTransaction)
           const message = error instanceof Error ? error.message : 'Request failed'
