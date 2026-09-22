@@ -1,6 +1,7 @@
 import {describe, expect, expectTypeOf, it} from 'vitest'
 
 import {type Application, type ApplicationInclude} from '../../applications/applications'
+import {type Installation, type InstallationInclude} from '../../installations/installations'
 import {type MessageBus} from './bus'
 import {
   type ApplicationActivity,
@@ -12,6 +13,7 @@ import {
   DASHBOARD_TOPIC_MANIFEST,
   type DashboardTopics,
   type EventTopic,
+  type LocalApplication,
   type PayloadOf,
   type ReplyOf,
   type StateTopic,
@@ -25,8 +27,9 @@ type ListedApplication = Extract<
   NonNullable<ValueOf<'applications.list'>>,
   {ok: true}
 >['value'][number]
+// The list value mixes applications and installations; interface shape lives on applications.
 type ListedInterface = NonNullable<
-  NonNullable<ListedApplication['activeDeployment']>['interfaces']
+  NonNullable<Extract<ListedApplication, {type: unknown}>['activeDeployment']>['interfaces']
 >[number]
 
 describe('dashboard topic types', () => {
@@ -59,8 +62,12 @@ describe('dashboard topic types', () => {
     expectTypeOf<ValueOf<'applications.capabilities'>>().toEqualTypeOf<CapabilityRecord>()
     expectTypeOf<ValueOf<'applications.config'>>().toEqualTypeOf<ApplicationConfig[] | null>()
     expectTypeOf<ValueOf<'applications.list'>>().toEqualTypeOf<TopicResult<
-      Application<ApplicationInclude>[]
+      (Application<ApplicationInclude> | LocalApplication | Installation<InstallationInclude>)[]
     > | null>()
+    // Every kind joins the list value element, distinguished by shape rather than a tag.
+    expectTypeOf<Application<ApplicationInclude>>().toMatchTypeOf<ListedApplication>()
+    expectTypeOf<LocalApplication>().toMatchTypeOf<ListedApplication>()
+    expectTypeOf<Installation<InstallationInclude>>().toMatchTypeOf<ListedApplication>()
     expectTypeOf<Extract<ListedInterface, {type: 'tile'}>['metadata']>().toEqualTypeOf<{
       order?: number
       size: 'small' | 'large' | 'banner'

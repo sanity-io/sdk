@@ -1,5 +1,16 @@
+import {
+  type Application,
+  type ApplicationInclude,
+  type Installation,
+  type InstallationInclude,
+} from '@sanity/sdk'
 import {installMessageBus, resetMessageBus} from '@sanity/sdk/_internal'
-import {type MessageBusHost, TopicError, type ValueOf} from '@sanity/sdk/dashboard'
+import {
+  type LocalApplication,
+  type MessageBusHost,
+  TopicError,
+  type ValueOf,
+} from '@sanity/sdk/dashboard'
 import {Suspense} from 'react'
 import {ErrorBoundary} from 'react-error-boundary'
 import {afterEach, beforeEach, describe, expect, expectTypeOf, it, vi} from 'vitest'
@@ -62,7 +73,7 @@ const application = {
         title: 'Summary',
         version: '1',
         moduleId: 'views/summary',
-        metadata: null,
+        metadata: {size: 'small'},
       },
       {
         id: 'asset-source-1',
@@ -84,7 +95,7 @@ const application = {
       },
     ],
   },
-}
+} satisfies Application<ApplicationInclude>
 
 const nonFederatedApplication = {
   ...application,
@@ -95,7 +106,7 @@ const nonFederatedApplication = {
   title: 'Legacy',
   isSingleton: false,
   config: {},
-}
+} satisfies Application<ApplicationInclude>
 
 const nonSingletonApplication = {
   ...application,
@@ -105,7 +116,7 @@ const nonSingletonApplication = {
   slug: 'canvas',
   title: 'Canvas',
   isSingleton: false,
-}
+} satisfies Application<ApplicationInclude>
 
 const externalApplication = {
   ...application,
@@ -113,7 +124,57 @@ const externalApplication = {
   name: 'external',
   slug: null,
   externalUrl: 'https://apps.example.com/external/index.html',
-}
+} satisfies Application<ApplicationInclude>
+
+// The workbench synthesises a dev-server app into the deployed shape and marks it with `local`.
+const localApplication = {
+  ...application,
+  id: 'application-5',
+  name: 'dev',
+  slug: null,
+  isSingleton: false,
+  externalUrl: 'http://localhost:3333',
+  organizationId: 'local',
+  local: {host: 'localhost', port: 3333},
+} satisfies LocalApplication
+
+const installation = {
+  id: 'installation-1',
+  applicationId: 'app-remote-1',
+  organizationId: 'organization-1',
+  installedBy: 'user-1',
+  createdAt: '2026-01-01T00:00:00.000Z',
+  updatedAt: '2026-01-02T00:00:00.000Z',
+  application: {
+    title: 'Remote App',
+    name: 'remote',
+    reference: 'sanity/remote',
+    slug: 'remote',
+    icon: null,
+    // Distinct from the installing org: the bundle is hosted under the publisher's org.
+    organizationId: 'organization-publisher',
+  },
+  interfaces: [
+    {
+      id: 'remote-view-1',
+      type: 'app',
+      name: 'remote',
+      title: 'Remote App',
+      version: '1',
+      moduleId: 'App',
+      metadata: null,
+    },
+    {
+      id: 'remote-panel-1',
+      type: 'panel',
+      name: 'remote-panel',
+      title: 'Remote Panel',
+      version: '1',
+      moduleId: 'views/panel',
+      metadata: null,
+    },
+  ],
+} satisfies Installation<InstallationInclude>
 
 const emitApplications = (value: unknown[]) =>
   host.connections.subscribe((client) =>
@@ -140,8 +201,12 @@ describe('useApplications', () => {
     const {result} = renderHook(() => useApplications())
 
     expectTypeOf(result.current).toEqualTypeOf<DashboardApplication[]>()
+    // The application member keeps its raw deployment fields; the union also admits installations.
     expectTypeOf<
-      Extract<keyof DashboardApplication, 'activeDeployment' | 'config'>
+      Extract<
+        keyof Exclude<DashboardApplication, {type: 'installation'}>,
+        'activeDeployment' | 'config'
+      >
     >().toEqualTypeOf<'activeDeployment' | 'config'>()
     const [federated, nonFederated, nonSingleton] = result.current
     expect(federated).toMatchObject({
@@ -180,6 +245,99 @@ describe('useApplications', () => {
     ])
     expect(nonFederated).toMatchObject({views: [], webWorkers: []})
     expect(nonSingleton?.views[0]?.module.entry).toBe('https://canvas.sanity.studio')
+    expect(result.current.map(({isLocal}) => isLocal)).toEqual([false, false, false])
+  })
+
+  it('marks dev-server applications local and loads their modules from the dev server', () => {
+    emitApplications([application, localApplication, installation])
+
+    const {result} = renderHook(() => useApplications())
+
+    expect(result.current.map(({id, isLocal}) => [id, isLocal])).toEqual([
+      ['application-1', false],
+      ['application-5', true],
+      ['installation-1', false],
+    ])
+    const local = result.current[1]
+    expect(local).toMatchObject({type: 'coreApp', local: {host: 'localhost', port: 3333}})
+    expect(local?.views[0]?.module.entry).toBe('http://localhost:3333')
+    expect(local?.views[0]?.application).toMatchObject({id: 'application-5', isLocal: true})
+  })
+
+  it('shapes installations alongside applications in one consistent shape', () => {
+    emitApplications([application, installation])
+
+    const {result} = renderHook(() => useApplications())
+
+    const shaped = result.current.find(({id}) => id === 'installation-1')
+    expect(shaped).toMatchObject({
+      id: 'installation-1',
+      type: 'installation',
+      title: 'Remote App',
+      name: 'remote',
+      reference: 'sanity/remote',
+      slug: 'remote',
+      icon: null,
+      isSingleton: true,
+      visibility: 'default',
+      externalUrl: null,
+      organizationId: 'organization-publisher',
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-02T00:00:00.000Z',
+      installation,
+    })
+    // Raw record fields must not leak onto the shaped entry, nor the raw record onto its views.
+    expect(shaped).not.toHaveProperty('applicationId')
+    expect(shaped).not.toHaveProperty('installedBy')
+    expect(shaped?.views[0]?.application).not.toHaveProperty('installation')
+    expect(shaped?.views).toEqual([
+      expect.objectContaining({
+        name: 'remote',
+        surface: 'window',
+        module: {
+          entry: 'https://remote-apps-organization-publisher.sanity.run',
+          moduleId: 'installation-1/App',
+          version: '1',
+        },
+      }),
+      expect.objectContaining({
+        name: 'remote-panel',
+        surface: 'panel',
+        module: expect.objectContaining({moduleId: 'installation-1/views/panel'}),
+      }),
+    ])
+    expect(shaped?.webWorkers).toEqual([])
+  })
+
+  it('exposes no views for an installation without interfaces', () => {
+    const {interfaces: _interfaces, ...withoutInterfaces} = installation
+    emitApplications([withoutInterfaces])
+
+    const {result} = renderHook(() => useApplications())
+
+    expect(result.current[0]).toMatchObject({id: 'installation-1', views: [], webWorkers: []})
+  })
+
+  it('exposes no views for an installation without a slug to derive an origin from', () => {
+    emitApplications([{...installation, application: {...installation.application, slug: null}}])
+
+    const {result} = renderHook(() => useApplications())
+
+    expect(result.current[0]).toMatchObject({id: 'installation-1', views: [], webWorkers: []})
+  })
+
+  it('loads a dev-server application without a module federation manifest', () => {
+    const {config: _config, ...withoutManifest} = localApplication
+    emitApplications([withoutManifest])
+
+    const {result} = renderHook(() => useApplications())
+
+    expect(result.current[0]?.views.map(({name}) => name)).toEqual([
+      'inbox',
+      'notifications',
+      'summary',
+      'library',
+    ])
   })
 
   it('follows topic updates without remapping unchanged lists', () => {

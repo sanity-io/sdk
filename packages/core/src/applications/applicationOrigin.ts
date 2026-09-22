@@ -9,7 +9,9 @@ type SanityGlobal = typeof globalThis & {__SANITY_STAGING__?: boolean}
  *
  * @internal
  */
-export function getApplicationOrigin(application: ApplicationBase): string | null {
+export function getApplicationOrigin(
+  application: Pick<ApplicationBase, 'externalUrl' | 'slug' | 'isSingleton' | 'organizationId'>,
+): string | null {
   if (application.externalUrl !== null) return new URL(application.externalUrl).origin
   if (application.slug === null) return null
 
