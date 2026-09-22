@@ -13,10 +13,10 @@ import {
   OAUTH_VERIFIER_KEY,
   refreshOAuthTokens,
   revokeOAuthTokens,
-  serializeTokens,
   startOAuthAuthorization,
 } from './oauthActions'
 import {deserializeTokens, OAUTH_TOKENS_KEY} from './oauthAuth'
+import {serializeTokens} from './oauthClient'
 import {type OAuthTokens} from './types'
 
 const readStored = (storage: Storage) => deserializeTokens(storage.getItem(OAUTH_TOKENS_KEY))
