@@ -7,7 +7,7 @@ import {type StoreContext} from '../store/defineStore'
 import {randomId} from '../utils/ids'
 import {isDeepEqual, omitProperty} from '../utils/object'
 import {setCleanupTimeout} from '../utils/setCleanupTimeout'
-import {type Action} from './actions'
+import {type Action, type EditDocumentAction} from './actions'
 import {DOCUMENT_STATE_CLEAR_DELAY, UNVERIFIED_REVISION_RETENTION_TIME} from './documentConstants'
 import {type DocumentState, type DocumentStoreState} from './documentStore'
 import {type RemoteDocument} from './listen'
@@ -264,6 +264,17 @@ export function applyFirstQueuedTransaction(prev: SyncTransactionState): SyncTra
   }
 }
 
+/** Whether a transaction can be combined with adjacent edits in the submission queue. */
+export function isBatchableTransaction<TTransaction extends QueuedTransaction>(
+  transaction: TTransaction,
+): transaction is TTransaction & {actions: [EditDocumentAction]} {
+  return (
+    !transaction.disableBatching &&
+    transaction.actions.length === 1 &&
+    transaction.actions[0].type === 'document.edit'
+  )
+}
+
 export function batchAppliedTransactions([curr, ...rest]: AppliedTransaction[]):
   | OutgoingTransaction
   | undefined {
@@ -273,8 +284,9 @@ export function batchAppliedTransactions([curr, ...rest]: AppliedTransaction[]):
   // Skip transactions with no actions.
   if (!curr.actions.length) return batchAppliedTransactions(rest)
 
-  // If there are multiple actions, we cannot batch further.
-  if (curr.actions.length > 1) {
+  // Explicitly unbatched transactions, non-edit actions, and multi-action
+  // transactions must retain their transaction boundary.
+  if (!isBatchableTransaction(curr)) {
     return {
       ...curr,
       disableBatching: true,
@@ -283,16 +295,6 @@ export function batchAppliedTransactions([curr, ...rest]: AppliedTransaction[]):
   }
 
   const [action] = curr.actions
-
-  // If the single action isn't a document.edit or batching is disabled,
-  // mark this transaction as non-batchable.
-  if (action.type !== 'document.edit' || curr.disableBatching) {
-    return {
-      ...curr,
-      disableBatching: true,
-      batchedTransactionIds: [curr.transactionId],
-    }
-  }
 
   // Create an outgoing transaction for the single edit action.
   // At this point, batching is allowed.
@@ -304,8 +306,9 @@ export function batchAppliedTransactions([curr, ...rest]: AppliedTransaction[]):
   }
   if (!rest.length) return editAction
 
+  // The rest may hold only transactions without actions; submit this edit on its own.
   const next = batchAppliedTransactions(rest)
-  if (!next) return undefined
+  if (!next) return editAction
   if (next.disableBatching) return editAction
 
   // Don't batch a liveEdit edit with a non-liveEdit edit — they route to different APIs
