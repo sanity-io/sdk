@@ -71,10 +71,7 @@ function FavoriteButton({docHandle}: {docHandle: DocumentHandle}) {
 }
 
 const ViewButton = ({docHandle}: {docHandle: DocumentHandle}) => {
-  const {recordEvent} = useRecordDocumentHistoryEvent({
-    ...docHandle,
-    resourceType: 'studio',
-  })
+  const {recordEvent} = useRecordDocumentHistoryEvent(useStudioResource(docHandle))
   return (
     <ErrorBoundary fallbackRender={({error}) => <ButtonError error={error as unknown as Error} />}>
       <Button mode="ghost" onClick={() => recordEvent('viewed')} text="Record view" />

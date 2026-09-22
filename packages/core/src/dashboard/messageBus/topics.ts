@@ -53,6 +53,31 @@ export type Capability = (typeof capabilities)[number]
 export type CapabilityRecord = Partial<Record<Capability, boolean>>
 
 /**
+ * A document a user viewed, edited, created, or deleted in an application.
+ * @public
+ */
+export interface DocumentActivity {
+  readonly kind: 'document'
+  readonly eventType: 'viewed' | 'edited' | 'created' | 'deleted'
+  readonly document: {
+    readonly id: string
+    readonly type: string
+    readonly resource: {
+      readonly id: string
+      readonly type: 'dataset' | 'media-library' | 'canvas'
+      /** Schema collection the document belongs to; the workspace name for studios. */
+      readonly schemaName?: string
+    }
+  }
+}
+
+/**
+ * Activity an application reports to the host. Discriminated on `kind`.
+ * @public
+ */
+export type ApplicationActivity = DocumentActivity
+
+/**
  * A label rendered for an application interface; `null` clears it.
  * @internal
  */
@@ -135,6 +160,8 @@ export type NavigationLocation = NavigationTarget & {
  * @public
  */
 export interface DashboardTopics {
+  /** Reports user activity in an application, e.g. for the recents feed. Fire-and-forget. */
+  'applications.activity': EventTopicDef<ApplicationActivity>
   /**
    * The base path for an application.
    *
@@ -251,6 +278,7 @@ type DashboardTopicManifest = {
  * @internal
  */
 export const DASHBOARD_TOPIC_MANIFEST: DashboardTopicManifest = {
+  'applications.activity': dashboardEvent,
   'applications.base-path': stateTopic(undefined),
   'applications.capabilities': stateTopic(undefined),
   'applications.config': stateTopic(undefined),

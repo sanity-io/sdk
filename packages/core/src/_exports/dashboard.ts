@@ -16,12 +16,14 @@ export type {
 export {connectMessageBus} from '../dashboard/messageBus/bus'
 export {MessageBusError} from '../dashboard/messageBus/bus'
 export type {
+  ApplicationActivity,
   ApplicationConfig,
   ApplicationConfigAppType,
   ApplicationContext,
   Capability,
   CapabilityRecord,
   DashboardTopics,
+  DocumentActivity,
   EventTopic,
   EventTopicDef,
   NavigationLocation,
