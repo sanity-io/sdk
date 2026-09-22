@@ -1,5 +1,5 @@
 import {type Action, ClientError, CorsOriginError, type Mutation, ServerError} from '@sanity/client'
-import {DocumentId, getDraftId, getPublishedId, getVersionId} from '@sanity/id-utils'
+import {DocumentId, getDraftId} from '@sanity/id-utils'
 import {jsonMatch} from '@sanity/json-match'
 import {type ExprNode} from 'groq-js'
 import {
@@ -36,7 +36,6 @@ import {
   isDatasetResource,
   isMediaLibraryResource,
 } from '../config/sanityConfig'
-import {isReleasePerspective} from '../releases/utils/isReleasePerspective'
 import {
   bindActionByResource,
   type BoundResourceKey,
@@ -71,12 +70,13 @@ import {
   type Grant,
 } from './permissions'
 import {ActionError} from './processActions/processActions'
-import {getReleaseDocumentId, isReleaseAction} from './processActions/releaseUtil'
+import {isReleaseAction} from './processActions/releaseUtil'
 import {
   type AppliedTransaction,
   applyFirstQueuedTransaction,
   applyRemoteDocument,
   cleanupOutgoingTransaction,
+  getDocumentIdsFromHandleLikes,
   manageSubscriberIds,
   type OutgoingTransaction,
   type QueuedTransaction,
@@ -224,17 +224,6 @@ export function getDocumentState(
   return _getDocumentState(...args)
 }
 
-function readDocumentIds(
-  documentId: DocumentId,
-  options: {liveEdit?: boolean; perspective?: DocumentOptions<string | undefined>['perspective']},
-): string[] {
-  if (options.liveEdit) return [documentId]
-  const versionIds = isReleasePerspective(options.perspective)
-    ? [getVersionId(documentId, options.perspective.releaseName)]
-    : []
-  return [...versionIds, getDraftId(documentId), getPublishedId(documentId)]
-}
-
 function throwDocumentError(
   documentStates: DocumentStoreState['documentStates'],
   documentIds: string[],
@@ -272,10 +261,9 @@ const _getDocumentState = bindActionByResource(
   documentStore,
   createStateSourceAction({
     selector: ({state: {error, documentStates}}, options: DocumentOptions<string | undefined>) => {
-      const {documentId: docId, path} = options
-      const documentId = DocumentId(docId)
+      const {path} = options
       if (error) throw error
-      const document = selectLocalDocument(documentStates, readDocumentIds(documentId, options))
+      const document = selectLocalDocument(documentStates, getDocumentIdsFromHandleLikes([options]))
       if (document === undefined) return undefined
 
       if (!path) return document
@@ -329,9 +317,9 @@ export const getDocumentSyncStatus = bindActionByResource(
       {state: {error, documentStates: documents, outgoing, applied, queued}},
       doc: DocumentHandle,
     ) => {
-      const documentId = DocumentId(typeof doc === 'string' ? doc : doc.documentId)
       if (error) throw error
-      if (!hasEveryDocumentArrived(documents, readDocumentIds(documentId, doc))) return undefined
+      if (!hasEveryDocumentArrived(documents, getDocumentIdsFromHandleLikes([doc])))
+        return undefined
       return !queued.length && !applied.length && !outgoing
     },
     onSubscribe: (context, doc: DocumentHandle) => {
@@ -380,16 +368,10 @@ export const subscribeDocumentEvents = bindActionByResource(
   },
 )
 
-function actionDocumentIds(action: QueuedTransaction['actions'][number]): string[] {
-  if (isReleaseAction(action)) return [getReleaseDocumentId(action.releaseId)]
-  if (!('documentId' in action) || !action.documentId) return []
-  return readDocumentIds(DocumentId(action.documentId), action)
-}
-
 function failTransactionOnUnreadableDocument({queued, documentStates}: DocumentStoreState): void {
   const transaction = queued.at(0)
   if (!transaction) return
-  const ids = transaction.actions.flatMap(actionDocumentIds)
+  const ids = getDocumentIdsFromHandleLikes(transaction.actions)
   const unreadableId = ids.find((id) => documentStates[id]?.error)
   if (unreadableId === undefined) return
   const error = documentStates[unreadableId]?.error
