@@ -9,6 +9,7 @@ import {DashboardTokenRefreshProvider} from '../../context/DashboardTokenRefresh
 import {ResourceProvider} from '../../context/ResourceProvider'
 import {useAuthState} from '../../hooks/auth/useAuthState'
 import {useLoginUrl} from '../../hooks/auth/useLoginUrl'
+import {useOAuthAuthorize} from '../../hooks/auth/useOAuthAuthorize'
 import {useVerifyOrgProjects} from '../../hooks/auth/useVerifyOrgProjects'
 import {AuthBoundary} from './AuthBoundary'
 
@@ -17,6 +18,9 @@ vi.mock('../../hooks/auth/useAuthState', () => ({
   useAuthState: vi.fn(() => 'logged-out'),
 }))
 vi.mock('../../hooks/auth/useLoginUrl')
+vi.mock('../../hooks/auth/useOAuthAuthorize', () => ({
+  useOAuthAuthorize: vi.fn(() => vi.fn().mockResolvedValue(undefined)),
+}))
 vi.mock('../../hooks/auth/useVerifyOrgProjects')
 vi.mock('../../hooks/auth/useHandleAuthCallback', () => ({
   useHandleAuthCallback: vi.fn(() => async () => {}),
@@ -34,8 +38,8 @@ vi.mock('./AuthError', async (importOriginal) => {
   return {
     ...actual,
     AuthError: class MockAuthError extends Error {
-      constructor(error: Error) {
-        super(error.message)
+      constructor(error: unknown) {
+        super(error instanceof Error ? error.message : undefined)
         this.name = 'AuthError'
         this.cause = error
       }
@@ -174,6 +178,81 @@ describe('AuthBoundary', () => {
       vi.unstubAllGlobals()
       Object.defineProperty(window, 'location', {value: originalLocation, writable: true})
     }
+  })
+
+  describe('oauth mode', () => {
+    const oauth = {
+      clientId: 'client-abc',
+      redirectUri: 'https://app.example.com/callback',
+      organizationId: 'org123',
+    }
+
+    it('starts the OAuth authorization flow when authState="logged-out"', async () => {
+      const authorize = vi.fn().mockResolvedValue(undefined)
+      vi.mocked(useOAuthAuthorize).mockReturnValue(authorize)
+      vi.mocked(useAuthState).mockReturnValue({
+        type: AuthStateType.LOGGED_OUT,
+        isDestroyingSession: false,
+      })
+      render(
+        <ResourceProvider projectId="p" dataset="d" auth={{oauth}} fallback={null}>
+          <AuthBoundary projectIds={testProjectIds}>Protected Content</AuthBoundary>
+        </ResourceProvider>,
+      )
+
+      await waitFor(() => expect(authorize).toHaveBeenCalledTimes(1))
+      expect(screen.queryByText('Protected Content')).not.toBeInTheDocument()
+    })
+
+    it('does not start the OAuth flow when logged out without oauth config', async () => {
+      const authorize = vi.fn().mockResolvedValue(undefined)
+      vi.mocked(useOAuthAuthorize).mockReturnValue(authorize)
+      vi.mocked(useAuthState).mockReturnValue({
+        type: AuthStateType.LOGGED_OUT,
+        isDestroyingSession: false,
+      })
+      render(
+        <ResourceProvider projectId="p" dataset="d" fallback={null}>
+          <AuthBoundary projectIds={testProjectIds}>Protected Content</AuthBoundary>
+        </ResourceProvider>,
+      )
+
+      await waitFor(() => expect(screen.queryByText('Protected Content')).not.toBeInTheDocument())
+      expect(authorize).not.toHaveBeenCalled()
+    })
+
+    it('renders the error fallback when starting the OAuth flow rejects', async () => {
+      // A falsy rejection reason must still surface as an error, not a blank screen.
+      vi.mocked(useOAuthAuthorize).mockReturnValue(vi.fn().mockRejectedValue(undefined))
+      vi.mocked(useAuthState).mockReturnValue({
+        type: AuthStateType.LOGGED_OUT,
+        isDestroyingSession: false,
+      })
+      render(
+        <ResourceProvider projectId="p" dataset="d" auth={{oauth}} fallback={null}>
+          <AuthBoundary projectIds={testProjectIds}>Protected Content</AuthBoundary>
+        </ResourceProvider>,
+      )
+
+      await waitFor(() => expect(screen.getByText('Authentication Error')).toBeInTheDocument())
+    })
+
+    it('renders the error fallback without restarting the flow when authState="error"', async () => {
+      const authorize = vi.fn().mockResolvedValue(undefined)
+      vi.mocked(useOAuthAuthorize).mockReturnValue(authorize)
+      vi.mocked(useAuthState).mockReturnValue({
+        type: AuthStateType.ERROR,
+        error: new Error('access_denied'),
+      })
+      render(
+        <ResourceProvider projectId="p" dataset="d" auth={{oauth}} fallback={null}>
+          <AuthBoundary projectIds={testProjectIds}>Protected Content</AuthBoundary>
+        </ResourceProvider>,
+      )
+
+      await waitFor(() => expect(screen.getByText('Authentication Error')).toBeInTheDocument())
+      expect(authorize).not.toHaveBeenCalled()
+    })
   })
 
   it('renders the empty LoginCallback component when authState="logging-in"', () => {
