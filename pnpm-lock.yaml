@@ -222,7 +222,7 @@ catalogs:
       specifier: ^2.0.0
       version: 2.0.0
     jsdom:
-      specifier: ^30.0.1
+      specifier: ^30.1.0
       version: 30.1.0
     lodash-es:
       specifier: ^4.18.1
@@ -11814,8 +11814,8 @@ snapshots:
 
   '@typescript-eslint/project-service@8.56.1(supports-color@8.1.1)(typescript@6.0.3)':
     dependencies:
-      '@typescript-eslint/tsconfig-utils': 8.56.1(typescript@6.0.3)
-      '@typescript-eslint/types': 8.56.1
+      '@typescript-eslint/tsconfig-utils': 8.70.0(typescript@6.0.3)
+      '@typescript-eslint/types': 8.70.0
       debug: 4.4.3(supports-color@8.1.1)
       typescript: 6.0.3
     transitivePeerDependencies:
