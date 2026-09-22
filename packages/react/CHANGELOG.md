@@ -1,5 +1,27 @@
 # Changelog
 
+## 3.4.0
+
+### Minor Changes
+
+- [#1288](https://github.com/sanity-io/sdk/pull/1288) [`9c2104a`](https://github.com/sanity-io/sdk/commit/9c2104a799f7b00b18b287b8735ef11b352d676b) Thanks [@joshuaellis](https://github.com/joshuaellis)! - `useAgentResourceContext` works in both Dashboard runtimes. Under the message bus it publishes the new `applications.context.update` topic instead of the Comlink event. A new `useApplicationContext` hook publishes what an application is currently showing, and new `applications.context` and `applications.context.update` topics carry it.
+
+- [#1274](https://github.com/sanity-io/sdk/pull/1274) [`efad8fe`](https://github.com/sanity-io/sdk/commit/efad8fe1e719e865120feb19bcacece9e86b14ec) Thanks [@joshuaellis](https://github.com/joshuaellis)! - `useNavigate` and `useNavigateToStudioDocument` work in both Dashboard runtimes. Under the message bus, `useNavigate` follows the `navigation.location` topic and its returned function reports in-app navigation back to the Dashboard; `useNavigateToStudioDocument` requests the studio edit intent over `navigation.location.update`. `MessageBusConnection` exposes `appId`.
+
+- [#1279](https://github.com/sanity-io/sdk/pull/1279) [`73a24d6`](https://github.com/sanity-io/sdk/commit/73a24d681375b8294f8660b2eaa501d8c589545b) Thanks [@joshuaellis](https://github.com/joshuaellis)! - Add the `applications.capabilities` state topic, the `Capability`, `CapabilityRecord`, and `capabilities` exports on `@sanity/sdk/dashboard`, and the `useCapabilities()` hook on `@sanity/sdk-react/dashboard` so an application can read the capabilities the host provides and hide its own implementation of anything the host provides.
+
+- [#1287](https://github.com/sanity-io/sdk/pull/1287) [`1ea6b4a`](https://github.com/sanity-io/sdk/commit/1ea6b4a251f4ec701e7044c9043613368440048a) Thanks [@joshuaellis](https://github.com/joshuaellis)! - `useRecordDocumentHistoryEvent` works in both Dashboard runtimes. Under the message bus it reports document activity over the new `applications.activity` topic, requires `resourceId`, and no-ops when the host does not provide the `history` capability. The Comlink behaviour and the public signature are unchanged.
+
+### Patch Changes
+
+- [#1292](https://github.com/sanity-io/sdk/pull/1292) [`fe0d62b`](https://github.com/sanity-io/sdk/commit/fe0d62b51660204583bfda5dbf054ef5c2abbb4c) Thanks [@squiggler-app](https://github.com/apps/squiggler-app)! - Update dependencies: `react-error-boundary@6.1.6`
+
+- [#1284](https://github.com/sanity-io/sdk/pull/1284) [`36889e2`](https://github.com/sanity-io/sdk/commit/36889e2d61adb8ea04265d9c2c5d2d13b434fe33) Thanks [@squiggler-app](https://github.com/apps/squiggler-app)! - Update dependencies: `groq@6.15.0`, `sanity@6.15.0`
+
+- [#1277](https://github.com/sanity-io/sdk/pull/1277) [`04e1723`](https://github.com/sanity-io/sdk/commit/04e17230f26c53156d57815f38939af713f43e12) Thanks [@squiggler-app](https://github.com/apps/squiggler-app)! - Update dependencies: `@sanity/types@6.15.0`
+- Updated dependencies [[`9c2104a`](https://github.com/sanity-io/sdk/commit/9c2104a799f7b00b18b287b8735ef11b352d676b), [`73a24d6`](https://github.com/sanity-io/sdk/commit/73a24d681375b8294f8660b2eaa501d8c589545b), [`1ea6b4a`](https://github.com/sanity-io/sdk/commit/1ea6b4a251f4ec701e7044c9043613368440048a), [`eaaa7fb`](https://github.com/sanity-io/sdk/commit/eaaa7fb37c670aaa04b70e0eb597329f7f736ea0), [`fe0d62b`](https://github.com/sanity-io/sdk/commit/fe0d62b51660204583bfda5dbf054ef5c2abbb4c), [`36889e2`](https://github.com/sanity-io/sdk/commit/36889e2d61adb8ea04265d9c2c5d2d13b434fe33), [`04e1723`](https://github.com/sanity-io/sdk/commit/04e17230f26c53156d57815f38939af713f43e12), [`d764d35`](https://github.com/sanity-io/sdk/commit/d764d354fc85b8ffcdd41cf86f280294a28c1d71)]:
+  - @sanity/sdk@3.4.0
+
 ## 3.3.0 (2026-09-17)
 
 
