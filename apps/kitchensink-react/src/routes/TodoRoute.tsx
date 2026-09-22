@@ -43,8 +43,11 @@ function TodoItem({handle}: {handle: DocumentHandle<'todo'>}): JSX.Element {
   const apply = useApplyDocumentActions()
   const completed = data.completed ?? false
 
-  const updateCompleted = async (completed: boolean) => {
-    const result = await apply([editDocument(handle, {set: {completed}}), publishDocument(handle)])
+  const updateCompleted = async (nextCompleted: boolean) => {
+    const result = await apply([
+      editDocument(handle, {set: {completed: nextCompleted}}),
+      publishDocument(handle),
+    ])
     await result.submitted()
   }
 
