@@ -23,12 +23,25 @@ interface TodoFields {
   createdAtMs?: number
 }
 
+function TodoDescription({completed = false, text}: TodoFields): JSX.Element {
+  return (
+    <Text
+      muted={completed}
+      size={1}
+      style={{textDecoration: completed ? 'line-through' : undefined}}
+    >
+      {text || <em>Untitled</em>}
+    </Text>
+  )
+}
+
 function TodoItem({handle}: {handle: DocumentHandle<'todo'>}): JSX.Element {
   const {data} = useDocumentProjection<TodoFields>({
     ...handle,
     projection: '{text, completed, createdAtMs}',
   })
   const apply = useApplyDocumentActions()
+  const completed = data.completed ?? false
 
   const updateCompleted = async (completed: boolean) => {
     const result = await apply([editDocument(handle, {set: {completed}}), publishDocument(handle)])
@@ -44,20 +57,12 @@ function TodoItem({handle}: {handle: DocumentHandle<'todo'>}): JSX.Element {
     <Box as="li" borderBottom padding={3}>
       <Flex alignItems="center" gap={3}>
         <Checkbox
-          aria-label={`Mark ${data.text || 'untitled todo'} as ${
-            data.completed ? 'incomplete' : 'complete'
-          }`}
-          checked={data.completed ?? false}
+          aria-label={completed ? 'Mark todo as incomplete' : 'Mark todo as complete'}
+          checked={completed}
           onChange={(event) => updateCompleted(event.currentTarget.checked)}
         />
         <Box flexGrow={1}>
-          <Text
-            muted={data.completed}
-            size={1}
-            style={{textDecoration: data.completed ? 'line-through' : undefined}}
-          >
-            {data.text || <em>Untitled</em>}
-          </Text>
+          <TodoDescription {...data} />
         </Box>
         <Button fontSize={1} mode="bleed" onClick={remove} text="Delete" tone="critical" />
       </Flex>
@@ -78,14 +83,9 @@ function TodoItemFallback(): JSX.Element {
   )
 }
 
-export function TodoRoute(): JSX.Element {
+function AddTodoForm(): JSX.Element {
   const [text, setText] = useState('')
   const apply = useApplyDocumentActions()
-  const {count, data, hasMore, isPending, loadMore} = useDocuments({
-    documentType: 'todo',
-    batchSize: 100,
-    orderings: [{field: '_createdAt', direction: 'asc'}],
-  })
 
   const addTodo = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -108,51 +108,68 @@ export function TodoRoute(): JSX.Element {
   }
 
   return (
+    <Card density="regular">
+      <form onSubmit={addTodo}>
+        <Flex alignItems="flex-end" gap={2}>
+          <Box flexGrow={1}>
+            <TextInput
+              label="What needs to be done?"
+              onChange={(event) => setText(event.currentTarget.value)}
+              placeholder="Add a todo"
+              value={text}
+            />
+          </Box>
+          <Button disabled={!text.trim()} text="Add todo" tone="primary" type="submit" />
+        </Flex>
+      </form>
+    </Card>
+  )
+}
+
+function TodoList(): JSX.Element {
+  const {count, data, hasMore, isPending, loadMore} = useDocuments({
+    documentType: 'todo',
+    batchSize: 100,
+    orderings: [{field: '_createdAt', direction: 'asc'}],
+  })
+
+  return (
+    <Card>
+      <VStack>
+        <Box borderBottom padding={3}>
+          <Text size={1} weight="semibold">
+            {count} {count === 1 ? 'item' : 'items'}
+          </Text>
+        </Box>
+        {data.length === 0 ? (
+          <Box padding={4}>
+            <Text align="center" muted size={1}>
+              {isPending ? 'Loading todos…' : 'No todos yet'}
+            </Text>
+          </Box>
+        ) : (
+          <ul style={{listStyle: 'none'}}>
+            {data.map((handle) => (
+              <Suspense key={handle.documentId} fallback={<TodoItemFallback />}>
+                <TodoItem handle={handle} />
+              </Suspense>
+            ))}
+          </ul>
+        )}
+        <LoadMore hasMore={hasMore} isPending={isPending} onLoadMore={loadMore} />
+      </VStack>
+    </Card>
+  )
+}
+
+export function TodoRoute(): JSX.Element {
+  return (
     <PageLayout
       title="Todo"
       subtitle="SDK-backed documents with no user-land optimistic list state"
     >
-      <Card density="regular">
-        <form onSubmit={addTodo}>
-          <Flex alignItems="flex-end" gap={2}>
-            <Box flexGrow={1}>
-              <TextInput
-                label="What needs to be done?"
-                onChange={(event) => setText(event.currentTarget.value)}
-                placeholder="Add a todo"
-                value={text}
-              />
-            </Box>
-            <Button disabled={!text.trim()} text="Add todo" tone="primary" type="submit" />
-          </Flex>
-        </form>
-      </Card>
-
-      <Card>
-        <VStack>
-          <Box borderBottom padding={3}>
-            <Text size={1} weight="semibold">
-              {count} {count === 1 ? 'item' : 'items'}
-            </Text>
-          </Box>
-          {data.length === 0 ? (
-            <Box padding={4}>
-              <Text align="center" muted size={1}>
-                {isPending ? 'Loading todos…' : 'No todos yet'}
-              </Text>
-            </Box>
-          ) : (
-            <ul style={{listStyle: 'none'}}>
-              {data.map((handle) => (
-                <Suspense key={handle.documentId} fallback={<TodoItemFallback />}>
-                  <TodoItem handle={handle} />
-                </Suspense>
-              ))}
-            </ul>
-          )}
-          <LoadMore hasMore={hasMore} isPending={isPending} onLoadMore={loadMore} />
-        </VStack>
-      </Card>
+      <AddTodoForm />
+      <TodoList />
     </PageLayout>
   )
 }
