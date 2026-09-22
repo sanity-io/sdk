@@ -155,7 +155,7 @@ git commit -am "chore: exit rc pre-release mode"
 git push
 ```
 
-`pnpm changeset pre exit` does not delete `.changeset/pre.json`; it sets its `"mode"` to `"exit"` and moves the consumed changesets back to the top-level `.changeset/`. Commit that. Never merge a branch whose `pre.json` still has `"mode": "pre"` — it would put `main` into pre-release mode. The Version PR on `main` removes `pre.json` when it runs `changeset version`, turns `3.3.0-rc.N` into `3.3.0`, and collapses the rc changelog entries into the final release.
+`pnpm changeset pre exit` only flips `"mode"` in `.changeset/pre.json` from `"pre"` to `"exit"`. It does not delete the file, and the consumed changesets stay in `.changeset/pre/` — that is expected, and `changeset version` still reads them from there. Commit the one-line `pre.json` change. Never merge a branch whose `pre.json` still has `"mode": "pre"` — it would put `main` into pre-release mode. The Version PR on `main` removes `pre.json` and `.changeset/pre/` when it runs `changeset version`, turns `3.3.0-rc.N` into `3.3.0`, and collapses the rc changelog entries into the final release.
 
 ## Contributing
 

@@ -8,11 +8,11 @@ import {AuthStateType} from '../authStateType'
 import {authStore, type AuthStoreState} from '../authStore'
 import {createLoggedInAuthState, getDefaultLocation} from '../utils'
 import {
+  appendResourceIndicator,
   createOAuthClient,
   getOAuthOptions,
-  getResourceIndicator,
+  postTokenRequest,
   serializeTokens,
-  type TokenEndpointResponse,
   toOAuthTokens,
 } from './oauthClient'
 import {runOAuthTokenRefresh} from './oauthRefresh'
@@ -84,7 +84,7 @@ export const startOAuthAuthorization = bindActionGlobally(authStore, async ({sta
   authorizeUrl.searchParams.set('state', oauthState)
   authorizeUrl.searchParams.set('code_challenge', codeChallenge)
   authorizeUrl.searchParams.set('code_challenge_method', 'S256')
-  authorizeUrl.searchParams.append('resource', getResourceIndicator(options.oauth.organizationId))
+  appendResourceIndicator(authorizeUrl.searchParams, options.oauth)
 
   logger.info('Starting OAuth authorization')
   if (typeof window !== 'undefined' && typeof window.location?.assign === 'function') {
@@ -184,15 +184,9 @@ export const handleOAuthCallback = bindActionGlobally(
         code_verifier: codeVerifier,
         redirect_uri: options.oauth.redirectUri,
         client_id: options.oauth.clientId,
-        resource: getResourceIndicator(options.oauth.organizationId),
       })
-      const response = await client.request<TokenEndpointResponse>({
-        method: 'POST',
-        url: '/auth/oauth/token',
-        headers: {'content-type': 'application/x-www-form-urlencoded'},
-        body: params.toString(),
-        tag: 'oauth.token',
-      })
+      appendResourceIndicator(params, options.oauth)
+      const response = await postTokenRequest(client, params, 'oauth.token')
 
       const tokens = toOAuthTokens(response)
       options.storageArea?.setItem(options.storageKey, serializeTokens(tokens))
