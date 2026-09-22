@@ -1,5 +1,14 @@
 import {CorsOriginError, type ListenEvent, type SanityClient} from '@sanity/client'
-import {BehaviorSubject, delay, filter, firstValueFrom, Observable, of, Subject} from 'rxjs'
+import {
+  BehaviorSubject,
+  delay,
+  filter,
+  finalize,
+  firstValueFrom,
+  Observable,
+  of,
+  Subject,
+} from 'rxjs'
 import {beforeEach, describe, expect, it, type Mock, vi} from 'vitest'
 
 import {getClientState} from '../client/clientStore'
@@ -33,7 +42,7 @@ vi.mock('../releases/getPerspectiveState', async () => {
 // With fake timers, an emission gated on a pending rxjs delay or cleanup
 // timeout never arrives on its own: create the promise first, advance the
 // clock, then await it.
-async function advanceAndAwait<T>(promise: Promise<T>, ms = 0): Promise<T> {
+async function advanceAndAwait<T>(promise: Promise<T>, ms = 5): Promise<T> {
   await vi.advanceTimersByTimeAsync(ms)
   return promise
 }
@@ -252,12 +261,12 @@ describe('queryStore', () => {
       const query = '*[_type == "movie"]{title, "author": author->name}'
       const state = getQueryState(instance, {query})
       const unsubscribe = state.subscribe()
-      await vi.advanceTimersByTimeAsync(0)
+      await vi.advanceTimersByTimeAsync(5)
 
       const updated = [{_id: 'movie1', title: 'Updated', author: 'New author'}]
       vi.mocked(fetch).mockReturnValueOnce(of({result: updated, ms: 0}).pipe(delay(0)))
-      listenerEvents.next({type: 'mutation', documentId} as ListenEvent)
-      await vi.advanceTimersByTimeAsync(51)
+      listenerEvents.next({type: 'mutation', visibility: 'query', documentId} as ListenEvent)
+      await vi.advanceTimersByTimeAsync(55)
 
       expect(fetch).toHaveBeenCalledTimes(2)
       expect(state.getCurrent()).toEqual(updated)
@@ -268,34 +277,109 @@ describe('queryStore', () => {
 
   it.each(['welcome', 'reconnect'] as const)('refetches on %s', async (type) => {
     const unsubscribe = getQueryState(instance, {query: '*'}).subscribe()
-    await vi.advanceTimersByTimeAsync(0)
+    await vi.advanceTimersByTimeAsync(5)
     listenerEvents.next({type, listenerName: 'test'})
-    await vi.advanceTimersByTimeAsync(51)
+    await vi.advanceTimersByTimeAsync(55)
     expect(fetch).toHaveBeenCalledTimes(2)
     unsubscribe()
   })
 
   it('coalesces bursts of mutations into a single refetch', async () => {
     const unsubscribe = getQueryState(instance, {query: '*'}).subscribe()
-    await vi.advanceTimersByTimeAsync(0)
+    await vi.advanceTimersByTimeAsync(5)
     for (let i = 0; i < 10; i++) {
-      listenerEvents.next({type: 'mutation'} as ListenEvent)
+      listenerEvents.next({type: 'mutation', visibility: 'query'} as ListenEvent)
     }
-    await vi.advanceTimersByTimeAsync(51)
+    await vi.advanceTimersByTimeAsync(55)
     expect(fetch).toHaveBeenCalledTimes(2)
     unsubscribe()
   })
 
+  it.each(['transaction', undefined])(
+    'waits for indexing when mutation visibility is %s',
+    async (visibility) => {
+      const unsubscribe = getQueryState(instance, {query: '*'}).subscribe()
+      await vi.advanceTimersByTimeAsync(5)
+      listenerEvents.next({type: 'mutation', visibility} as ListenEvent)
+
+      // The 50 ms event batch is followed by Studio's 1,200 ms fallback.
+      await vi.advanceTimersByTimeAsync(1249)
+      expect(fetch).toHaveBeenCalledTimes(1)
+      await vi.advanceTimersByTimeAsync(6)
+      expect(fetch).toHaveBeenCalledTimes(2)
+      unsubscribe()
+    },
+  )
+
+  it('finishes a slow fetch and coalesces mutations into one trailing refetch', async () => {
+    const firstResponse = new Subject<{result: unknown; ms: number}>()
+    const secondResponse = new Subject<{result: unknown; ms: number}>()
+    const stopFetching = vi.fn()
+    vi.mocked(fetch)
+      .mockReturnValueOnce(firstResponse.pipe(finalize(stopFetching)))
+      .mockReturnValueOnce(secondResponse)
+    const state = getQueryState(instance, {query: '*'})
+    const unsubscribe = state.subscribe()
+    await vi.advanceTimersByTimeAsync(5)
+
+    for (let i = 0; i < 3; i++) {
+      listenerEvents.next({type: 'mutation', visibility: 'query'} as ListenEvent)
+      await vi.advanceTimersByTimeAsync(55)
+    }
+    expect(fetch).toHaveBeenCalledTimes(1)
+    expect(stopFetching).not.toHaveBeenCalled()
+
+    firstResponse.next({result: ['first'], ms: 0})
+    firstResponse.complete()
+    await vi.advanceTimersByTimeAsync(5)
+    expect(state.getCurrent()).toEqual(['first'])
+    expect(fetch).toHaveBeenCalledTimes(2)
+
+    secondResponse.next({result: ['latest'], ms: 0})
+    secondResponse.complete()
+    await vi.advanceTimersByTimeAsync(5)
+    expect(state.getCurrent()).toEqual(['latest'])
+    expect(fetch).toHaveBeenCalledTimes(2)
+    unsubscribe()
+  })
+
+  it('cancels an indexing delay when the last query is removed', async () => {
+    const unsubscribe = getQueryState(instance, {query: '*'}).subscribe()
+    await vi.advanceTimersByTimeAsync(5)
+    listenerEvents.next({type: 'mutation', visibility: 'transaction'} as ListenEvent)
+    await vi.advanceTimersByTimeAsync(55)
+    unsubscribe()
+    await vi.advanceTimersByTimeAsync(QUERY_STATE_CLEAR_DELAY + 1200)
+    expect(fetch).toHaveBeenCalledTimes(1)
+    expect(stopListening).toHaveBeenCalledTimes(1)
+  })
+
+  it('cancels the active fetch and drops the trailing refetch on disposal', async () => {
+    const stopFetching = vi.fn()
+    vi.mocked(fetch).mockReturnValueOnce(
+      new Subject<{result: unknown; ms: number}>().pipe(finalize(stopFetching)),
+    )
+    getQueryState(instance, {query: '*'}).subscribe()
+    await vi.advanceTimersByTimeAsync(5)
+    listenerEvents.next({type: 'mutation', visibility: 'query'} as ListenEvent)
+    await vi.advanceTimersByTimeAsync(55)
+
+    instance.dispose()
+    await vi.advanceTimersByTimeAsync(2000)
+    expect(stopFetching).toHaveBeenCalledTimes(1)
+    expect(fetch).toHaveBeenCalledTimes(1)
+  })
+
   it('shares the listener across queries and releases it after the last query is removed', async () => {
     const unsubscribe1 = getQueryState(instance, {query: '*[_type == "movie"]'}).subscribe()
-    await vi.advanceTimersByTimeAsync(0)
+    await vi.advanceTimersByTimeAsync(5)
     const unsubscribe2 = getQueryState(instance, {query: 'count(*)'}).subscribe()
-    await vi.advanceTimersByTimeAsync(0)
+    await vi.advanceTimersByTimeAsync(5)
     expect(listen).toHaveBeenCalledTimes(1)
     expect(fetch).toHaveBeenCalledTimes(2)
 
-    listenerEvents.next({type: 'mutation'} as ListenEvent)
-    await vi.advanceTimersByTimeAsync(51)
+    listenerEvents.next({type: 'mutation', visibility: 'query'} as ListenEvent)
+    await vi.advanceTimersByTimeAsync(55)
     expect(fetch).toHaveBeenCalledTimes(4)
 
     unsubscribe1()
@@ -305,24 +389,29 @@ describe('queryStore', () => {
     await vi.advanceTimersByTimeAsync(QUERY_STATE_CLEAR_DELAY)
     expect(stopListening).toHaveBeenCalledTimes(1)
 
-    listenerEvents.next({type: 'mutation'} as ListenEvent)
-    await vi.advanceTimersByTimeAsync(51)
+    listenerEvents.next({type: 'mutation', visibility: 'query'} as ListenEvent)
+    await vi.advanceTimersByTimeAsync(55)
     expect(fetch).toHaveBeenCalledTimes(4)
   })
 
   it('replaces the listener and refetches when the client changes', async () => {
+    const stopFetching = vi.fn()
+    vi.mocked(fetch).mockReturnValueOnce(
+      new Subject<{result: unknown; ms: number}>().pipe(finalize(stopFetching)),
+    )
     const clients = new BehaviorSubject({listen, observable: {fetch}} as SanityClient)
     vi.mocked(getClientState).mockReturnValue({
       observable: clients.asObservable(),
     } as StateSource<SanityClient>)
     const unsubscribe = getQueryState(instance, {query: '*'}).subscribe()
-    await vi.advanceTimersByTimeAsync(0)
+    await vi.advanceTimersByTimeAsync(5)
 
     const replacementListen = vi.fn().mockReturnValue(new Subject<ListenEvent>())
     clients.next({listen: replacementListen, observable: {fetch}} as unknown as SanityClient)
-    await vi.advanceTimersByTimeAsync(0)
+    await vi.advanceTimersByTimeAsync(5)
     expect(stopListening).toHaveBeenCalledTimes(1)
     expect(replacementListen).toHaveBeenCalledTimes(1)
+    expect(stopFetching).toHaveBeenCalledTimes(1)
     expect(fetch).toHaveBeenCalledTimes(2)
     unsubscribe()
   })
@@ -347,6 +436,8 @@ describe('queryStore', () => {
     const state = getQueryState(instance, {query})
     const unsubscribe = state.subscribe()
 
+    await vi.advanceTimersByTimeAsync(5)
+
     // Verify error is thrown when accessing state
     expect(() => state.getCurrent()).toThrow(errorMessage)
 
@@ -364,6 +455,7 @@ describe('queryStore', () => {
     const query = '*[_type == "movie"]'
     const state1 = getQueryState(instance, {query})
     const unsub1 = state1.subscribe()
+    await vi.advanceTimersByTimeAsync(5)
     expect(() => state1.getCurrent()).toThrow('transient network failure')
     unsub1()
 
@@ -374,7 +466,7 @@ describe('queryStore', () => {
     const state2 = getQueryState(instance, {query})
     const unsub2 = state2.subscribe()
 
-    await vi.advanceTimersByTimeAsync(0)
+    await vi.advanceTimersByTimeAsync(5)
     expect(vi.mocked(fetch)).toHaveBeenCalledTimes(2)
 
     const result = await advanceAndAwait(
@@ -394,7 +486,7 @@ describe('queryStore', () => {
     const query = '*[_type == "movie"]'
     // This is how React drives a suspended query: resolveQuery creates the
     // key without any subscriber (the component never commits when it throws)
-    await expect(resolveQuery(instance, {query})).rejects.toThrow('network down')
+    await advanceAndAwait(expect(resolveQuery(instance, {query})).rejects.toThrow('network down'))
 
     // While the errored key exists, the error surfaces to error boundaries
     const state = getQueryState(instance, {query})
@@ -415,7 +507,7 @@ describe('queryStore', () => {
     async (error) => {
       const state = getQueryState(instance, {query: '*'})
       const unsubscribe = state.subscribe()
-      await vi.advanceTimersByTimeAsync(0)
+      await vi.advanceTimersByTimeAsync(5)
       listenerEvents.error(error)
       await vi.advanceTimersByTimeAsync(5000)
       expect(() => state.getCurrent()).toThrow(error)

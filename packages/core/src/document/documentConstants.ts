@@ -6,7 +6,11 @@
  * different views quickly.
  */
 export const DOCUMENT_STATE_CLEAR_DELAY = 1000
-export const INITIAL_OUTGOING_THROTTLE_TIME = 1000
+/**
+ * Submit on the next timer turn so synchronous edits can still batch together.
+ * This POC removes the one-second wait; in-flight transactions remain serialized.
+ */
+export const INITIAL_OUTGOING_THROTTLE_TIME = 0
 export const API_VERSION = 'v2025-05-06'
 
 /**

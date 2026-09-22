@@ -21,7 +21,9 @@ import {
   startWith,
   switchMap,
   tap,
+  timer,
 } from 'rxjs'
+import {exhaustMapWithTrailing} from 'rxjs-exhaustmap-with-trailing'
 
 import {getClientState} from '../client/clientStore'
 import {type DatasetHandle} from '../config/sanityConfig'
@@ -176,21 +178,36 @@ const listenForNewSubscribersAndFetch = (
             }).observable
 
             return combineLatest({
-              change: changes$.pipe(startWith(undefined)),
               client: client$,
               perspective: perspective$,
             }).pipe(
-              switchMap(({client, perspective}) =>
-                client.observable.fetch(query, params, {
-                  ...restOptions,
-                  perspective,
-                  filterResponse: false,
-                  returnQuery: false,
-                  // Listener events do not carry a Live Content API cache cursor.
-                  useCdn: false,
-                  tag: tag ?? 'query.fetch',
-                }),
-              ),
+              // A new client or perspective must still cancel obsolete requests.
+              switchMap(({client, perspective}) => {
+                const fetch$ = defer(() =>
+                  client.observable.fetch(query, params, {
+                    ...restOptions,
+                    perspective,
+                    filterResponse: false,
+                    returnQuery: false,
+                    // Listener events do not carry a Live Content API cache cursor.
+                    useCdn: false,
+                    tag: tag ?? 'query.fetch',
+                  }),
+                )
+
+                return changes$.pipe(
+                  startWith(undefined),
+                  // Finish the current fetch, then run once more with the latest event.
+                  exhaustMapWithTrailing((event) => {
+                    // Like Studio, allow indexing time when the server delivers an
+                    // early mutation despite our request for query visibility.
+                    if (event?.type === 'mutation' && event.visibility !== 'query') {
+                      return timer(1200).pipe(switchMap(() => fetch$))
+                    }
+                    return fetch$
+                  }),
+                )
+              }),
               tap(({result}) => {
                 state.set('setQueryData', setQueryData(group$.key, result))
               }),
