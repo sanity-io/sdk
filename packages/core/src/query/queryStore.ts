@@ -1,7 +1,9 @@
 import {type ResponseQueryOptions} from '@sanity/client'
 import {
+  auditTime,
   catchError,
   combineLatest,
+  defer,
   distinctUntilChanged,
   EMPTY,
   filter,
@@ -22,7 +24,6 @@ import {
 } from 'rxjs'
 
 import {getClientState} from '../client/clientStore'
-import {observeLiveEvents} from '../client/liveEvents'
 import {type DatasetHandle} from '../config/sanityConfig'
 import {getPerspectiveState} from '../releases/getPerspectiveState'
 import {isReleasePerspective} from '../releases/utils/isReleasePerspective'
@@ -47,7 +48,6 @@ import {
   addSubscriber,
   type QueryStoreState,
   removeSubscriber,
-  setLastLiveEventId,
   setQueryData,
   setQueryError,
 } from './reducers'
@@ -77,8 +77,6 @@ export interface ResolveQueryOptions<
 > extends QueryOptions<TQuery, TDataset, TProjectId> {
   signal?: AbortSignal
 }
-
-const EMPTY_ARRAY: never[] = []
 
 /** @internal */
 export const getQueryKey = (instance: SanityInstance, options: QueryOptions): string =>
@@ -112,16 +110,8 @@ const queryStore = defineStore<QueryStoreState, BoundResourceKey>({
   name: 'QueryStore',
   getInitialState: () => ({queries: {}}),
   initialize(context) {
-    const subscriptions = [
-      listenForNewSubscribersAndFetch(context),
-      listenToLiveClientAndSetLastLiveEventIds(context),
-    ]
-
-    return () => {
-      for (const subscription of subscriptions) {
-        subscription.unsubscribe()
-      }
-    }
+    const subscription = listenForNewSubscribersAndFetch(context)
+    return () => subscription.unsubscribe()
   },
 })
 
@@ -129,7 +119,11 @@ const errorHandler = (state: StoreState<{error?: unknown}>) => {
   return (error: unknown): void => state.set('setError', {error})
 }
 
-const listenForNewSubscribersAndFetch = ({state, instance}: StoreContext<QueryStoreState>) => {
+const listenForNewSubscribersAndFetch = (
+  context: StoreContext<QueryStoreState, BoundResourceKey>,
+) => {
+  const {state, instance} = context
+  const changes$ = observeQueryChanges(context)
   return state.observable
     .pipe(
       map((s) => new Set(Object.keys(s.queries))),
@@ -154,10 +148,6 @@ const listenForNewSubscribersAndFetch = ({state, instance}: StoreContext<QuerySt
           switchMap((e) => {
             if (!e.added) return EMPTY
 
-            const lastLiveEventId$ = state.observable.pipe(
-              map((s) => s.queries[group$.key]?.lastLiveEventId),
-              distinctUntilChanged(),
-            )
             const {
               query,
               params,
@@ -186,22 +176,23 @@ const listenForNewSubscribersAndFetch = ({state, instance}: StoreContext<QuerySt
             }).observable
 
             return combineLatest({
-              lastLiveEventId: lastLiveEventId$,
+              change: changes$.pipe(startWith(undefined)),
               client: client$,
               perspective: perspective$,
             }).pipe(
-              switchMap(({lastLiveEventId, client, perspective}) =>
+              switchMap(({client, perspective}) =>
                 client.observable.fetch(query, params, {
                   ...restOptions,
                   perspective,
                   filterResponse: false,
                   returnQuery: false,
-                  lastLiveEventId,
-                  tag,
+                  // Listener events do not carry a Live Content API cache cursor.
+                  useCdn: false,
+                  tag: tag ?? 'query.fetch',
                 }),
               ),
-              tap(({result, syncTags}) => {
-                state.set('setQueryData', setQueryData(group$.key, result, syncTags))
+              tap(({result}) => {
+                state.set('setQueryData', setQueryData(group$.key, result))
               }),
               // Catch inside the per-event stream: erroring the group pipe would
               // complete the group's subscription, and since `groupBy` above never
@@ -219,48 +210,51 @@ const listenForNewSubscribersAndFetch = ({state, instance}: StoreContext<QuerySt
     .subscribe({error: errorHandler(state)})
 }
 
-const listenToLiveClientAndSetLastLiveEventIds = ({
+// Share one listener per resource. Listening to the original query would miss
+// changes to joined documents and cannot support arbitrary GROQ expressions.
+const observeQueryChanges = ({
   state,
   instance,
   key: {resource},
-}: StoreContext<QueryStoreState, BoundResourceKey>) => {
-  const liveMessages$ = observeLiveEvents(instance, {
-    resource,
-    // Surface CORS errors as store state (handled by the Cors Error
-    // component) instead of erroring the stream: a stream error here would
-    // reach the outer subscription's errorHandler, set the store-wide
-    // `state.error`, and permanently brick every query selector.
-    onCorsError: (error) => state.set('setError', {error}),
-  }).pipe(share())
-
-  return state.observable
-    .pipe(
-      mergeMap((s) => Object.entries(s.queries)),
-      groupBy(([key]) => key),
-      mergeMap((group$) => {
-        const syncTags$ = group$.pipe(
-          map(([, queryState]) => queryState),
-          map((i) => i?.syncTags ?? EMPTY_ARRAY),
-          distinctUntilChanged(),
-        )
-
-        return combineLatest([liveMessages$, syncTags$]).pipe(
-          filter(([message, syncTags]) => message.tags.some((tag) => syncTags.includes(tag))),
-          tap(([message]) => {
-            state.set('setLastLiveEventId', setLastLiveEventId(group$.key, message.id))
-          }),
-        )
-      }),
-    )
-    .subscribe({error: errorHandler(state)})
-}
+}: StoreContext<QueryStoreState, BoundResourceKey>) =>
+  getClientState(instance, {apiVersion: QUERY_STORE_API_VERSION, resource}).observable.pipe(
+    switchMap((client) =>
+      defer(() =>
+        client.listen(
+          '*',
+          {},
+          {
+            events: ['welcome', 'mutation', 'reconnect'],
+            includeResult: false,
+            includeMutations: false,
+            includeAllVersions: true,
+            visibility: 'query',
+            tag: 'query.listen',
+          },
+        ),
+      ).pipe(
+        // The client reconnects dropped connections itself. Surface terminal
+        // errors (e.g. invalid credentials) instead of retrying them forever.
+        catchError((error) => {
+          state.set('setError', {error})
+          return EMPTY
+        }),
+      ),
+    ),
+    // Coalesce transaction bursts while still refreshing during continuous edits.
+    auditTime(50),
+    share(),
+  )
 
 /**
  * Returns the state source for a query.
  *
  * This function returns a state source that represents the current result of a GROQ query.
  * Subscribing to the state source will instruct the SDK to fetch the query (if not already fetched)
- * and will keep the query live using the Live content API (considering sync tags) to provide up-to-date results.
+ * and will refetch the query on resource mutations using a shared `client.listen` subscription.
+ * This POC bypasses the CDN and refetches all active queries for any document change,
+ * including drafts and release versions. Listener visibility is best-effort; unlike the
+ * Live Content API, this does not provide a consistency cursor for the fetch.
  * When the last subscriber is removed, the query state is automatically cleaned up from the store.
  *
  * Note: This functionality is for advanced users who want to build their own framework integrations.

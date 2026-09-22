@@ -4,7 +4,6 @@ import {
   addSubscriber,
   type QueryStoreState,
   removeSubscriber,
-  setLastLiveEventId,
   setQueryData,
   setQueryError,
 } from './reducers'
@@ -29,43 +28,26 @@ describe('Query Reducers', () => {
   describe('setQueryData', () => {
     it('should return state unchanged if key does not exist', () => {
       const state: QueryStoreState = {queries: {}}
-      const reducer = setQueryData('nonexistent', {foo: 'bar'}, ['tag1'])
+      const reducer = setQueryData('nonexistent', {foo: 'bar'})
       const newState = reducer(state)
       expect(newState).toBe(state)
     })
 
-    it('should set result and syncTags if key exists', () => {
+    it('should set result if key exists', () => {
       const state: QueryStoreState = {queries: {q2: {subscribers: []}}}
-      const reducer = setQueryData('q2', {foo: 'bar'}, ['tag1', 'tag2'])
+      const reducer = setQueryData('q2', {foo: 'bar'})
       const newState = reducer(state)
       expect(newState.queries['q2']).toEqual({
         subscribers: [],
         result: {foo: 'bar'},
-        syncTags: ['tag1', 'tag2'],
       })
     })
 
     it('should set result to null if result is undefined', () => {
       const state: QueryStoreState = {queries: {q3: {subscribers: []}}}
-      const reducer = setQueryData('q3', undefined, ['tag'])
+      const reducer = setQueryData('q3', undefined)
       const newState = reducer(state)
-      expect(newState.queries['q3']).toEqual({subscribers: [], result: null, syncTags: ['tag']})
-    })
-  })
-
-  describe('setLastLiveEventId', () => {
-    it('should return state unchanged if key does not exist', () => {
-      const state: QueryStoreState = {queries: {}}
-      const reducer = setLastLiveEventId('nonexistent', 'live123')
-      const newState = reducer(state)
-      expect(newState).toBe(state)
-    })
-
-    it('should set lastLiveEventId if key exists', () => {
-      const state: QueryStoreState = {queries: {q4: {subscribers: []}}}
-      const reducer = setLastLiveEventId('q4', 'event99')
-      const newState = reducer(state)
-      expect(newState.queries['q4']).toEqual({subscribers: [], lastLiveEventId: 'event99'})
+      expect(newState.queries['q3']).toEqual({subscribers: [], result: null})
     })
   })
 
