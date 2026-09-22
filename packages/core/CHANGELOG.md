@@ -1,5 +1,27 @@
 # Changelog
 
+## 3.4.0
+
+### Minor Changes
+
+- [#1288](https://github.com/sanity-io/sdk/pull/1288) [`9c2104a`](https://github.com/sanity-io/sdk/commit/9c2104a799f7b00b18b287b8735ef11b352d676b) Thanks [@joshuaellis](https://github.com/joshuaellis)! - `useAgentResourceContext` works in both Dashboard runtimes. Under the message bus it publishes the new `applications.context.update` topic instead of the Comlink event. A new `useApplicationContext` hook publishes what an application is currently showing, and new `applications.context` and `applications.context.update` topics carry it.
+
+- [#1279](https://github.com/sanity-io/sdk/pull/1279) [`73a24d6`](https://github.com/sanity-io/sdk/commit/73a24d681375b8294f8660b2eaa501d8c589545b) Thanks [@joshuaellis](https://github.com/joshuaellis)! - Add the `applications.capabilities` state topic, the `Capability`, `CapabilityRecord`, and `capabilities` exports on `@sanity/sdk/dashboard`, and the `useCapabilities()` hook on `@sanity/sdk-react/dashboard` so an application can read the capabilities the host provides and hide its own implementation of anything the host provides.
+
+- [#1287](https://github.com/sanity-io/sdk/pull/1287) [`1ea6b4a`](https://github.com/sanity-io/sdk/commit/1ea6b4a251f4ec701e7044c9043613368440048a) Thanks [@joshuaellis](https://github.com/joshuaellis)! - `useRecordDocumentHistoryEvent` works in both Dashboard runtimes. Under the message bus it reports document activity over the new `applications.activity` topic, requires `resourceId`, and no-ops when the host does not provide the `history` capability. The Comlink behaviour and the public signature are unchanged.
+
+- [#1275](https://github.com/sanity-io/sdk/pull/1275) [`eaaa7fb`](https://github.com/sanity-io/sdk/commit/eaaa7fb37c670aaa04b70e0eb597329f7f736ea0) Thanks [@joshuaellis](https://github.com/joshuaellis)! - Add `REFUSED` to `MessageBusErrorCode`, `MessageBusMessage.reject()` so a host responder can refuse an event, and `MessageBusClient.reject()` so a host can refuse a state topic for one connection until it next writes a value.
+
+### Patch Changes
+
+- [#1292](https://github.com/sanity-io/sdk/pull/1292) [`fe0d62b`](https://github.com/sanity-io/sdk/commit/fe0d62b51660204583bfda5dbf054ef5c2abbb4c) Thanks [@squiggler-app](https://github.com/apps/squiggler-app)! - Update dependencies: `react-error-boundary@6.1.6`
+
+- [#1284](https://github.com/sanity-io/sdk/pull/1284) [`36889e2`](https://github.com/sanity-io/sdk/commit/36889e2d61adb8ea04265d9c2c5d2d13b434fe33) Thanks [@squiggler-app](https://github.com/apps/squiggler-app)! - Update dependencies: `groq@6.15.0`, `sanity@6.15.0`
+
+- [#1277](https://github.com/sanity-io/sdk/pull/1277) [`04e1723`](https://github.com/sanity-io/sdk/commit/04e17230f26c53156d57815f38939af713f43e12) Thanks [@squiggler-app](https://github.com/apps/squiggler-app)! - Update dependencies: `@sanity/types@6.15.0`
+
+- [#1280](https://github.com/sanity-io/sdk/pull/1280) [`d764d35`](https://github.com/sanity-io/sdk/commit/d764d354fc85b8ffcdd41cf86f280294a28c1d71) Thanks [@gu-stav](https://github.com/gu-stav)! - Prevent an inaccessible document from breaking reads for other documents in the same dataset, and report an inaccessible draft to the document that reads it. `useDocument` and `useDocumentSyncStatus` now throw for a document the reader cannot read, where they used to load forever or report it as synced.
+
 ## 3.3.0 (2026-09-17)
 
 
