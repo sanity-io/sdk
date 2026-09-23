@@ -8,7 +8,6 @@ import {type AuthStoreState} from '../authStore'
 import {type AuthStrategyOptions} from '../authStrategy'
 import {subscribeToStateAndFetchCurrentUser} from '../subscribeToStateAndFetchCurrentUser'
 import {getStorageEvents} from '../utils'
-import {serializeTokens} from './oauthActions'
 import {
   deserializeTokens,
   getOauthInitialState,
@@ -16,9 +15,12 @@ import {
   OAUTH_TOKENS_KEY,
   subscribeToOAuthStorageEvents,
 } from './oauthAuth'
+import {serializeTokens} from './oauthClient'
+import {runOAuthTokenRefresh} from './oauthRefresh'
 import {type OAuthTokens} from './types'
 
 vi.mock('../subscribeToStateAndFetchCurrentUser')
+vi.mock('./oauthRefresh')
 vi.mock('../utils', async (importOriginal) => {
   const original = await importOriginal<typeof import('../utils')>()
   return {...original, getStorageEvents: vi.fn(() => new Subject())}
@@ -31,6 +33,8 @@ const tokens: OAuthTokens = {
   expiresAt: new Date('2030-01-01T00:00:00.000Z'),
   refreshToken: 'refresh-1',
 }
+
+const expiredTokens: OAuthTokens = {...tokens, expiresAt: new Date('2020-01-01T00:00:00.000Z')}
 
 function createMemoryStorage(seed?: Record<string, string>): Storage {
   const map = new Map<string, string>(Object.entries(seed ?? {}))
@@ -83,6 +87,11 @@ describe('serialize/deserialize tokens', () => {
     expect(deserializeTokens('{"foo":"bar"}')).toBeNull()
     expect(deserializeTokens('123')).toBeNull()
   })
+
+  it('returns null when expiresAt does not parse to a valid date', () => {
+    const raw = JSON.stringify({...JSON.parse(serializeTokens(tokens)), expiresAt: 'garbage'})
+    expect(deserializeTokens(raw)).toBeNull()
+  })
 })
 
 describe('getOauthInitialState', () => {
@@ -92,6 +101,35 @@ describe('getOauthInitialState', () => {
     expect(result.authState).toMatchObject({type: AuthStateType.LOGGED_IN, token: 'access-1'})
     expect(result.oauthTokens).toEqual(tokens)
     expect(result.authMethod).toBe('localstorage')
+  })
+
+  it('returns LOGGED_OUT and clears storage when persisted tokens are corrupt', () => {
+    const storageArea = createMemoryStorage({
+      [OAUTH_TOKENS_KEY]: '{"accessToken":"a","expiresAt":"garbage"}',
+    })
+    const result = getOauthInitialState(baseOptions({storageArea}))
+    expect(result.authState).toEqual({type: AuthStateType.LOGGED_OUT, isDestroyingSession: false})
+    expect(result.oauthTokens).toBeUndefined()
+    expect(storageArea.getItem(OAUTH_TOKENS_KEY)).toBeNull()
+  })
+
+  it('returns LOGGING_IN and keeps the tokens when they have expired but can be refreshed', () => {
+    const storageArea = createMemoryStorage({[OAUTH_TOKENS_KEY]: serializeTokens(expiredTokens)})
+    const result = getOauthInitialState(baseOptions({storageArea}))
+    // isExchangingToken makes handleOAuthCallback stand down while the refresh runs
+    expect(result.authState).toEqual({type: AuthStateType.LOGGING_IN, isExchangingToken: true})
+    expect(result.oauthTokens).toEqual(expiredTokens)
+    expect(result.authMethod).toBe('localstorage')
+    expect(storageArea.getItem(OAUTH_TOKENS_KEY)).not.toBeNull()
+  })
+
+  it('returns LOGGED_OUT and clears storage when expired tokens have no refresh token', () => {
+    const {refreshToken: _omit, ...unrefreshable} = expiredTokens
+    const storageArea = createMemoryStorage({[OAUTH_TOKENS_KEY]: serializeTokens(unrefreshable)})
+    const result = getOauthInitialState(baseOptions({storageArea}))
+    expect(result.authState).toEqual({type: AuthStateType.LOGGED_OUT, isDestroyingSession: false})
+    expect(result.oauthTokens).toBeUndefined()
+    expect(storageArea.getItem(OAUTH_TOKENS_KEY)).toBeNull()
   })
 
   it('returns LOGGING_IN when the callback URL matches the redirect URI', () => {
@@ -106,6 +144,14 @@ describe('getOauthInitialState', () => {
     const storageArea = createMemoryStorage()
     const result = getOauthInitialState(
       baseOptions({storageArea, initialLocationHref: 'https://other/callback?code=c&state=s'}),
+    )
+    expect(result.authState).toEqual({type: AuthStateType.LOGGED_OUT, isDestroyingSession: false})
+  })
+
+  it('returns LOGGED_OUT when the redirect URI only carries a stray state param', () => {
+    const storageArea = createMemoryStorage()
+    const result = getOauthInitialState(
+      baseOptions({storageArea, initialLocationHref: 'https://app/callback?state=s'}),
     )
     expect(result.authState).toEqual({type: AuthStateType.LOGGED_OUT, isDestroyingSession: false})
   })
@@ -183,24 +229,61 @@ describe('initializeOauthAuth', () => {
   beforeEach(() => {
     vi.mocked(getStorageEvents).mockReturnValue(new Subject())
     vi.mocked(subscribeToStateAndFetchCurrentUser).mockReturnValue(new Subject().subscribe())
+    vi.mocked(runOAuthTokenRefresh).mockReset().mockResolvedValue(null)
   })
 
-  function makeContext(storageArea: Storage | undefined): StoreContext<AuthStoreState> {
-    return {
-      state: {get: () => ({options: {storageArea}}), set: vi.fn()},
+  function makeContext(
+    storageArea: Storage | undefined,
+    initial: Partial<AuthStoreState> = {
+      authState: {type: AuthStateType.LOGGED_IN, token: 'access-1', currentUser: null},
+    },
+  ): {context: StoreContext<AuthStoreState>; set: ReturnType<typeof vi.fn>} {
+    const set = vi.fn()
+    const context = {
+      state: {get: () => ({...initial, options: {storageArea}}), set},
       instance: {config: {}} as SanityInstance,
       key: null,
     } as unknown as StoreContext<AuthStoreState>
+    return {context, set}
   }
 
   it('does not start the stamped-token refresher', () => {
-    const result = initializeOauthAuth(makeContext(createMemoryStorage()))
+    const result = initializeOauthAuth(makeContext(createMemoryStorage()).context)
     expect(result.tokenRefresherStarted).toBe(false)
     result.dispose()
   })
 
   it('subscribes without a storage area without throwing', () => {
-    const result = initializeOauthAuth(makeContext(undefined))
+    const result = initializeOauthAuth(makeContext(undefined).context)
     expect(() => result.dispose()).not.toThrow()
+  })
+
+  it('does not refresh when the persisted tokens are still valid', () => {
+    initializeOauthAuth(makeContext(createMemoryStorage()).context).dispose()
+    expect(runOAuthTokenRefresh).not.toHaveBeenCalled()
+  })
+
+  it('refreshes expired persisted tokens on startup', () => {
+    const {context} = makeContext(createMemoryStorage(), {
+      authState: {type: AuthStateType.LOGGING_IN, isExchangingToken: true},
+      oauthTokens: expiredTokens,
+    })
+    initializeOauthAuth(context).dispose()
+    expect(runOAuthTokenRefresh).toHaveBeenCalledWith(context)
+  })
+
+  it('surfaces a failed startup refresh as an auth error', async () => {
+    const error = new Error('network down')
+    vi.mocked(runOAuthTokenRefresh).mockRejectedValueOnce(error)
+    const {context, set} = makeContext(createMemoryStorage(), {
+      authState: {type: AuthStateType.LOGGING_IN, isExchangingToken: true},
+      oauthTokens: expiredTokens,
+    })
+    initializeOauthAuth(context).dispose()
+    await vi.waitFor(() =>
+      expect(set).toHaveBeenCalledWith('oauthStartupRefreshError', {
+        authState: {type: AuthStateType.ERROR, error},
+      }),
+    )
   })
 })

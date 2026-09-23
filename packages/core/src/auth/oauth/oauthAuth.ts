@@ -7,6 +7,7 @@ import {type AuthStoreState} from '../authStore'
 import {type AuthStrategyOptions, type AuthStrategyResult} from '../authStrategy'
 import {subscribeToStateAndFetchCurrentUser} from '../subscribeToStateAndFetchCurrentUser'
 import {createLoggedInAuthState, getDefaultStorage, getStorageEvents} from '../utils'
+import {runOAuthTokenRefresh} from './oauthRefresh'
 import {type OAuthTokens} from './types'
 
 /** localStorage (or configured `storageArea`) key for persisted OAuth tokens. */
@@ -19,7 +20,9 @@ interface SerializedOAuthTokens extends Omit<OAuthTokens, 'expiresAt'> {
 
 /**
  * Parses persisted token JSON back into {@link OAuthTokens}. Returns `null`
- * when the value is missing or malformed.
+ * when the value is missing or malformed, including an `expiresAt` that does
+ * not parse to a valid date (an `Invalid Date` would otherwise read as never
+ * expiring, since `NaN <= now` is always `false`).
  *
  * @internal
  */
@@ -38,11 +41,13 @@ export function deserializeTokens(raw: string | null): OAuthTokens | null {
       return null
     }
     const value = parsed as SerializedOAuthTokens
+    const expiresAt = new Date(value.expiresAt)
+    if (Number.isNaN(expiresAt.getTime())) return null
     return {
       accessToken: value.accessToken,
       tokenType: 'bearer',
       expiresIn: value.expiresIn,
-      expiresAt: new Date(value.expiresAt),
+      expiresAt,
       ...(value.refreshToken !== undefined && {refreshToken: value.refreshToken}),
     }
   } catch {
@@ -51,11 +56,30 @@ export function deserializeTokens(raw: string | null): OAuthTokens | null {
 }
 
 /**
+ * Reads the persisted tokens, discarding entries that can never lead to a
+ * session: corrupt JSON, or an expired access token with no refresh token.
+ * Dropping them from storage stops them shadowing a fresh login.
+ */
+function readPersistedTokens(
+  storageArea: Storage | undefined,
+): {tokens: OAuthTokens; expired: boolean} | null {
+  const raw = storageArea?.getItem(OAUTH_TOKENS_KEY) ?? null
+  const tokens = deserializeTokens(raw)
+  const expired = tokens !== null && tokens.expiresAt.getTime() <= Date.now()
+  if (tokens && (!expired || tokens.refreshToken)) return {tokens, expired}
+  if (raw) storageArea?.removeItem(OAUTH_TOKENS_KEY)
+  return null
+}
+
+/**
  * Resolves the initial auth state for OAuth mode.
  *
  * State discovery order:
- * 1. Persisted tokens in `__sanity_oauth_tokens` → `LOGGED_IN`
- * 2. Callback URL (contains `code`/`state`/`error` and matches `redirectUri`)
+ * 1. Persisted tokens in `__sanity_oauth_tokens` → `LOGGED_IN`, or
+ *    `LOGGING_IN` when the access token has expired but a refresh token is
+ *    available (`initializeOauthAuth` then refreshes). Corrupt or expired
+ *    tokens without a refresh token are discarded.
+ * 2. Callback URL (contains `code` or `error` and matches `redirectUri`)
  *    → `LOGGING_IN`
  * 3. Otherwise → `LOGGED_OUT`
  *
@@ -68,10 +92,15 @@ export function getOauthInitialState(options: AuthStrategyOptions): AuthStrategy
   const redirectUri = authConfig.oauth?.redirectUri
 
   // Persisted tokens win
-  const tokens = deserializeTokens(storageArea?.getItem(OAUTH_TOKENS_KEY) ?? null)
-  if (tokens) {
+  const persisted = readPersistedTokens(storageArea)
+  if (persisted) {
+    const {tokens, expired} = persisted
     return {
-      authState: createLoggedInAuthState(tokens.accessToken, null),
+      // An expired token is not usable yet; `isExchangingToken` also makes
+      // handleOAuthCallback stand down until the refresh has settled.
+      authState: expired
+        ? {type: AuthStateType.LOGGING_IN, isExchangingToken: true}
+        : createLoggedInAuthState(tokens.accessToken, null),
       storageKey,
       storageArea,
       authMethod: 'localstorage',
@@ -80,11 +109,12 @@ export function getOauthInitialState(options: AuthStrategyOptions): AuthStrategy
     }
   }
 
-  // Callback URL with code/state/error whose origin + pathname match our
-  // redirect URI (query and hash are ignored).
+  // Callback URL with code/error whose origin + pathname match our redirect
+  // URI (query and hash are ignored). `state` alone is not a callback: the
+  // server always sends `code` or `error`, and handleOAuthCallback would
+  // otherwise leave the app stuck in LOGGING_IN.
   const {searchParams} = new URL(initialLocationHref, DEFAULT_BASE)
-  const isCallback =
-    searchParams.has('code') || searchParams.has('state') || searchParams.has('error')
+  const isCallback = searchParams.has('code') || searchParams.has('error')
   if (redirectUri && isCallback) {
     const loc = new URL(initialLocationHref, DEFAULT_BASE)
     const redirect = new URL(redirectUri, DEFAULT_BASE)
@@ -136,6 +166,7 @@ export function subscribeToOAuthStorageEvents({state}: StoreContext<AuthStoreSta
 
 /**
  * Initialize OAuth auth subscriptions:
+ * - Refresh persisted tokens that expired while the app was closed
  * - Subscribe to state changes and fetch current user
  * - Subscribe to cross-tab storage events for the OAuth tokens key
  *
@@ -150,9 +181,21 @@ export function initializeOauthAuth(context: StoreContext<AuthStoreState>): {
 } {
   const subscriptions: Subscription[] = []
 
+  const {authState, oauthTokens, options} = context.state.get()
+  if (authState.type === AuthStateType.LOGGING_IN && oauthTokens) {
+    // getOauthInitialState handed us expired tokens with a refresh token.
+    // Unrecoverable failures already end in LOGGED_OUT; a transient one is
+    // surfaced rather than leaving the app stuck in LOGGING_IN.
+    runOAuthTokenRefresh(context).catch((error) => {
+      context.state.set('oauthStartupRefreshError', {
+        authState: {type: AuthStateType.ERROR, error},
+      })
+    })
+  }
+
   subscriptions.push(subscribeToStateAndFetchCurrentUser(context, {useProjectHostname: false}))
 
-  const storageArea = context.state.get().options?.storageArea
+  const storageArea = options?.storageArea
   if (storageArea) {
     subscriptions.push(subscribeToOAuthStorageEvents(context))
   }

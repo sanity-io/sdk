@@ -90,8 +90,11 @@ export interface AuthConfig {
     redirectUri: string
 
     /**
-     * Organisation id used for RFC 8707 resource scoping.
+     * Organisation id used for RFC 8707 resource scoping. Optional: when
+     * omitted, the `resource` parameter is left off the authorize and token
+     * requests, so the issued tokens are not restricted to a single
+     * organisation.
      */
-    organizationId: string
+    organizationId?: string
   }
 }

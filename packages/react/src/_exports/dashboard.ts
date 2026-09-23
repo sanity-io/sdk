@@ -35,6 +35,8 @@ export {useApplicationContext} from '../hooks/dashboard/useApplicationContext'
 export {useApplicationForegroundId} from '../hooks/dashboard/useApplicationForegroundId'
 export {
   type DashboardApplication,
+  type DashboardApplicationBase,
+  type DashboardInstallation,
   type DashboardView,
   type DashboardWebWorker,
   useApplications,

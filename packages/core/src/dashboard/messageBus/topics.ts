@@ -1,6 +1,7 @@
 import {type CurrentUser} from '@sanity/types'
 
 import {type Application, type ApplicationInclude} from '../../applications/applications'
+import {type Installation, type InstallationInclude} from '../../installations/installations'
 import {type OrganizationBase} from '../../organization/organization'
 
 /**
@@ -109,6 +110,15 @@ export interface ApplicationContext {
 }
 
 /**
+ * An application served by a CLI dev server. The workbench publishes it in the same shape as a
+ * deployed application; `local` marks it and names the dev server it is served from.
+ * @public
+ */
+export type LocalApplication = Application<ApplicationInclude> & {
+  readonly local: {readonly host: string; readonly port: number}
+}
+
+/**
  * Declares a topic that stores and replays its current value.
  * @public
  */
@@ -180,8 +190,16 @@ export interface DashboardTopics {
   'applications.context.update': EventTopicDef<ApplicationContext | null>
   /** The foreground application ID, or `null` on dashboard-level routes. */
   'applications.foreground': StateTopicDef<Application['id'] | null>
-  /** The dashboard applications available to the current user. */
-  'applications.list': StateTopicDef<TopicResult<Application<ApplicationInclude>[]> | null>
+  /**
+   * The dashboard applications and installations available to the current user. Each member
+   * publishes its own raw serialised record, so the kinds are distinguished by shape: an
+   * {@link Application} has a `type` of `'studio' | 'coreApp'`, a {@link LocalApplication} adds
+   * `local`, and an {@link Installation} has no `type` and carries `applicationId` with a nested
+   * `application` object.
+   */
+  'applications.list': StateTopicDef<TopicResult<
+    (Application<ApplicationInclude> | LocalApplication | Installation<InstallationInclude>)[]
+  > | null>
   'applications.status.update': EventTopicDef<ApplicationStatusUpdate>
   /**
    * The session token for the reading connection, or `null` while signed out. The host
