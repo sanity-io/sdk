@@ -1,5 +1,5 @@
 import {type DocumentResource, type SanityConfig} from '@sanity/sdk'
-import {isStudioConfig} from '@sanity/sdk/_internal'
+import {isDashboardEnvironment, isStudioConfig} from '@sanity/sdk/_internal'
 import {type ReactElement, useContext, useEffect, useMemo} from 'react'
 
 import {SDKStudioContext, type StudioWorkspaceHandle} from '../context/SDKStudioContext'
@@ -150,6 +150,8 @@ export function SanityApp({
     return []
   }, [configProp, studioWorkspace])
 
+  const shouldRedirect = !isInIframe() && !isDashboardEnvironment() && !isLocalUrl(window)
+
   useEffect(() => {
     let timeout: NodeJS.Timeout | undefined
     const primaryConfig = Array.isArray(resolvedConfig) ? resolvedConfig[0] : resolvedConfig
@@ -157,8 +159,7 @@ export function SanityApp({
       configProp === undefined && !studioWorkspace && !primaryConfig
 
     if (
-      !isInIframe() &&
-      !isLocalUrl(window) &&
+      shouldRedirect &&
       (shouldRedirectWithoutConfig || (!!primaryConfig && !isStudioConfig(primaryConfig)))
     ) {
       // If the app is not running in an iframe and is not a local url, redirect to core.
@@ -169,7 +170,7 @@ export function SanityApp({
       }, 1000)
     }
     return () => clearTimeout(timeout)
-  }, [configProp, resolvedConfig, studioWorkspace])
+  }, [configProp, resolvedConfig, shouldRedirect, studioWorkspace])
 
   return (
     <SDKProvider {...props} fallback={fallback} config={resolvedConfig}>
