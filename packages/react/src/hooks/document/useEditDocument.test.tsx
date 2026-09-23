@@ -36,6 +36,16 @@ const doc = {
   _updatedAt: '2025-02-06T00:11:00.000Z',
 } satisfies Book
 
+const variantDoc = {
+  ...doc,
+  title: 'Dune',
+  _system: {
+    bundleId: 'drafts',
+    variant: {_ref: '_.variants.french'},
+    group: {_ref: 'doc1', _weak: true},
+  },
+} satisfies Book
+
 const docHandle = createDocumentHandle({
   documentId: 'doc1',
   documentType: 'book',
@@ -158,6 +168,34 @@ describe('useEditDocument hook', () => {
 
     expect(editDocument).not.toHaveBeenCalled()
     expect(apply).toHaveBeenCalledWith([], resourceOptions)
+  })
+
+  it.each([
+    // e.g. spread from a fetch or projection that didn't select `_system`
+    ['omits it', {...doc, title: 'Dune Messiah'}],
+    // e.g. copied from another bundle or variant of the same document
+    [
+      'carries a different one',
+      {...variantDoc, title: 'Dune Messiah', _system: {...variantDoc._system, bundleId: 'summer'}},
+    ],
+  ])('preserves `_system` when the next document %s', async (_case, nextDocument) => {
+    const getCurrent = vi.fn().mockReturnValue(variantDoc)
+    const subscribe = vi.fn().mockReturnValue(vi.fn())
+    vi.mocked(getDocumentState).mockReturnValue({
+      getCurrent,
+      subscribe,
+    } as unknown as StateSource<SanityDocument>)
+
+    const apply = vi.fn().mockResolvedValue({transactionId: 'tx8'})
+    vi.mocked(useApplyDocumentActions).mockReturnValue(apply)
+
+    const {result} = renderHook(() => useEditDocument(docHandle))
+    await result.current(nextDocument)
+
+    expect(apply).toHaveBeenCalledWith(
+      [editDocument(normalizedDoc, {set: {title: 'Dune Messiah'}})],
+      resourceOptions,
+    )
   })
 
   it('applies no actions when a path is set to the value it already holds', async () => {

@@ -16,7 +16,7 @@ import {useNormalizedResourceOptions} from '../helpers/useNormalizedResourceOpti
 import {trackHookUsage} from '../helpers/useTrackHookUsage'
 import {useApplyDocumentActions} from './useApplyDocumentActions'
 
-const ignoredKeys = ['_id', '_type', '_createdAt', '_updatedAt', '_rev']
+const ignoredKeys = ['_id', '_type', '_createdAt', '_updatedAt', '_rev', '_system']
 
 type Updater<TValue> = TValue | ((currentValue: TValue) => TValue)
 
