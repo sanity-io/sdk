@@ -313,6 +313,63 @@ describe('bindActionByResourceAndPerspective', () => {
     )
   })
 
+  it('should include the variant in the key and store name only when present', () => {
+    const storeDefinition = {
+      name: 'PerspectiveStore',
+      getInitialState: () => ({counter: 0}),
+    }
+    const action = vi.fn((context) => context.key)
+    const boundAction = bindActionByResourceAndPerspective(storeDefinition, action)
+    const instance = createSanityInstance({projectId: 'proj1', dataset: 'ds1'})
+
+    expect(boundAction(instance, {})).toEqual({
+      name: 'proj1.ds1:drafts',
+      resource: {projectId: 'proj1', dataset: 'ds1'},
+      perspective: 'drafts',
+    })
+    expect(boundAction(instance, {variant: 'french'})).toEqual({
+      name: 'proj1.ds1:drafts:french',
+      resource: {projectId: 'proj1', dataset: 'ds1'},
+      perspective: 'drafts',
+      variant: 'french',
+    })
+  })
+
+  it('should use instance.config.variant when options.variant is not provided', () => {
+    const storeDefinition = {
+      name: 'PerspectiveStore',
+      getInitialState: () => ({counter: 0}),
+    }
+    const action = vi.fn((context) => context.key)
+    const boundAction = bindActionByResourceAndPerspective(storeDefinition, action)
+    const instance = createSanityInstance({projectId: 'proj1', dataset: 'ds1', variant: 'french'})
+
+    expect(boundAction(instance, {})).toEqual(
+      expect.objectContaining({name: 'proj1.ds1:drafts:french', variant: 'french'}),
+    )
+    expect(boundAction(instance, {variant: 'german'})).toEqual(
+      expect.objectContaining({name: 'proj1.ds1:drafts:german', variant: 'german'}),
+    )
+  })
+
+  it('should create separate store instances for different variants', () => {
+    const storeDefinition = {
+      name: 'PerspectiveStore',
+      getInitialState: () => ({counter: 0}),
+    }
+    const action = vi.fn((context, _options, increment: number) => {
+      context.state.counter += increment
+      return context.state.counter
+    })
+    const boundAction = bindActionByResourceAndPerspective(storeDefinition, action)
+    const instance = createSanityInstance({projectId: 'variant-isolation', dataset: 'ds1'})
+
+    expect(boundAction(instance, {variant: 'french'}, 3)).toBe(3)
+    expect(boundAction(instance, {variant: 'german'}, 4)).toBe(4)
+    expect(boundAction(instance, {}, 5)).toBe(5)
+    expect(vi.mocked(createStoreInstance)).toHaveBeenCalledTimes(3)
+  })
+
   it('should create separate store instances for different perspectives', () => {
     const storeDefinition = {
       name: 'PerspectiveStore',

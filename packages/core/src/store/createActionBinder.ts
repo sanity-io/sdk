@@ -20,6 +20,7 @@ export interface BoundResourceKey {
 }
 export interface BoundPerspectiveKey extends BoundResourceKey {
   perspective: ClientPerspective | ReleasePerspective
+  variant?: string
 }
 /**
  * Defines a store action that operates on a specific state type
@@ -206,10 +207,11 @@ export const bindActionByResourceAndPerspective = createActionBinder<
   BoundPerspectiveKey,
   [DatasetHandle, ...unknown[]]
 >((instance, options): BoundPerspectiveKey => {
-  const {resource, perspective} = options
+  const {resource, perspective, variant} = options
   // Same trade-off as the resource fallback in `createResourceKey`: configured once on the
   // instance rather than passed to every call. Kept for the same reason.
   const utilizedPerspective = perspective ?? instance.config.perspective ?? 'drafts'
+  const utilizedVariant = variant ?? instance.config.variant
   let perspectiveKey: string
   if (isReleasePerspective(utilizedPerspective)) {
     perspectiveKey = utilizedPerspective.releaseName
@@ -222,9 +224,12 @@ export const bindActionByResourceAndPerspective = createActionBinder<
   const sourceKey = createResourceKey(instance, resource)
 
   return {
-    name: `${sourceKey.name}:${perspectiveKey}`,
+    name: [sourceKey.name, perspectiveKey, utilizedVariant]
+      .filter((segment) => typeof segment !== 'undefined')
+      .join(':'),
     resource: sourceKey.resource,
     perspective: utilizedPerspective,
+    ...(utilizedVariant !== undefined ? {variant: utilizedVariant} : {}),
   }
 })
 
