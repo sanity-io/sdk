@@ -245,6 +245,39 @@ describe('useDocumentProjection', () => {
     expect(screen.getByText('Added Description')).toBeInTheDocument()
   })
 
+  test('it keeps its state source when re-rendered with an equal handle', async () => {
+    getCurrent.mockReturnValue({
+      data: {title: 'Title', description: 'Description'},
+      isPending: false,
+    })
+    subscribe.mockImplementation(() => vi.fn())
+    vi.mocked(getProjectionState).mockClear()
+
+    // Handles from a list query are new objects after every refetch
+    const {rerender} = render(
+      <ResourceProvider fallback={<div>Loading...</div>}>
+        <TestComponent document={{...mockDocument}} projection="{title, description}" />
+      </ResourceProvider>,
+    )
+    rerender(
+      <ResourceProvider fallback={<div>Loading...</div>}>
+        <TestComponent document={{...mockDocument}} projection="{title, description}" />
+      </ResourceProvider>,
+    )
+    expect(getProjectionState).toHaveBeenCalledTimes(1)
+
+    rerender(
+      <ResourceProvider fallback={<div>Loading...</div>}>
+        <TestComponent
+          document={{...mockDocument, documentId: 'doc2'}}
+          projection="{title, description}"
+        />
+      </ResourceProvider>,
+    )
+    expect(getProjectionState).toHaveBeenCalledTimes(2)
+    expect(vi.mocked(getProjectionState).mock.calls[1][1]).toMatchObject({documentId: 'doc2'})
+  })
+
   test('it subscribes immediately when no ref is provided', async () => {
     getCurrent.mockReturnValue({
       data: {title: 'Title', description: 'Description'},

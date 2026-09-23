@@ -34,6 +34,7 @@ import {
   isDatasetResource,
   isMediaLibraryResource,
 } from '../config/sanityConfig'
+import {requestQueryRefresh} from '../query/queryRefresh'
 import {
   bindActionByResource,
   type BoundResourceKey,
@@ -415,9 +416,10 @@ const subscribeToQueuedAndApplyNextTransaction = ({
 const subscribeToAppliedAndSubmitNextTransaction = ({
   state,
   instance,
-  key: {resource},
+  key,
 }: StoreContext<DocumentStoreState, BoundResourceKey>) => {
   const {events} = state.get()
+  const {resource} = key
 
   return scheduleOutgoingTransactions(state)
     .pipe(
@@ -463,7 +465,14 @@ const subscribeToAppliedAndSubmitNextTransaction = ({
             skipCrossDatasetReferenceValidation: true,
             tag: 'document.action',
           })
-          .pipe(revertOnError, toResult)
+          .pipe(
+            revertOnError,
+            // The Actions API responds once the change is visible to queries. The
+            // mutations above use `async` visibility, so their response does not
+            // mean that yet and they rely on the Live Content API instead.
+            tap(() => requestQueryRefresh(key.name)),
+            toResult,
+          )
       }),
       tap(({outgoing, result}) => {
         state.set('cleanupOutgoingTransaction', cleanupOutgoingTransaction)

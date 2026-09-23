@@ -35,6 +35,7 @@ import {afterEach, beforeEach, expect, it, vi} from 'vitest'
 
 import {getClientState} from '../client/clientStore'
 import {createDocumentHandle} from '../config/handles'
+import {requestQueryRefresh} from '../query/queryRefresh'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {type StateSource} from '../store/createStateSourceAction'
 import {randomUuid} from '../utils/ids'
@@ -720,12 +721,15 @@ it('submits liveEdit document edits through observable.mutate', async () => {
   })
 
   const callCountBefore = mutateSubmission.mock.calls.length
+  vi.mocked(requestQueryRefresh).mockClear()
 
   const result = await applyDocumentActions(instance, {
     actions: [editDocument(liveDoc, {set: {title: 'patched via mutate'}})],
     resource,
   })
   await result.submitted()
+  // `async` visibility: the response does not mean the change is queryable yet
+  expect(requestQueryRefresh).not.toHaveBeenCalled()
 
   expect(mutateSubmission.mock.calls.length).toBe(callCountBefore + 1)
   const [mutationList, mutateOptions] = mutateSubmission.mock.calls[callCountBefore]!
@@ -748,6 +752,34 @@ it('submits liveEdit document edits through observable.mutate', async () => {
   expect(client.action).not.toHaveBeenCalled()
 
   unsubscribe()
+})
+
+it('requests a query refresh once the Actions API acknowledges a transaction', async () => {
+  vi.mocked(requestQueryRefresh).mockClear()
+  const doc = createDocumentHandle({documentId: randomUuid(), documentType: 'article'})
+
+  const {submitted} = await applyDocumentActions(instance, {
+    actions: [createDocument(doc), publishDocument(doc)],
+    resource,
+  })
+  await submitted()
+
+  expect(requestQueryRefresh).toHaveBeenCalledTimes(1)
+  expect(requestQueryRefresh).toHaveBeenCalledWith('p.d')
+})
+
+it('does not request a query refresh when the Actions API rejects a transaction', async () => {
+  vi.mocked(requestQueryRefresh).mockClear()
+  vi.mocked(client.action).mockRejectedValueOnce(new Error('example error'))
+  const doc = createDocumentHandle({documentId: randomUuid(), documentType: 'article'})
+
+  const {submitted} = await applyDocumentActions(instance, {
+    actions: [createDocument(doc)],
+    resource,
+  })
+  await expect(submitted()).rejects.toThrowError(/example error/)
+
+  expect(requestQueryRefresh).not.toHaveBeenCalled()
 })
 
 it('provides the consistency status via `getDocumentSyncStatus`', async () => {
@@ -1373,6 +1405,11 @@ it('subscribeToSubscriptionsAndListenToDocuments recovers from an OutOfSyncError
 
 vi.mock('../client/clientStore.ts', () => ({
   getClientState: vi.fn().mockReturnValue({observable: new ReplaySubject(1)}),
+}))
+
+vi.mock('../query/queryRefresh.ts', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../query/queryRefresh')>()),
+  requestQueryRefresh: vi.fn(),
 }))
 
 vi.mock('./sharedListener.ts', () => {

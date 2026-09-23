@@ -14,6 +14,7 @@ import {LIVE_EVENTS_RETRY_DELAY} from '../client/liveEvents'
 import {isCanvasResource} from '../config/sanityConfig'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {type StateSource} from '../store/createStateSourceAction'
+import {requestQueryRefresh} from './queryRefresh'
 import {getQueryState, resolveQuery} from './queryStore'
 import {QUERY_STATE_CLEAR_DELAY} from './queryStoreConstants'
 
@@ -316,6 +317,47 @@ describe('queryStore', () => {
     expect(fetch).toHaveBeenCalledTimes(3)
     expect(vi.mocked(fetch).mock.calls[1][2]?.lastLiveEventId).toBe('event1')
     expect(vi.mocked(fetch).mock.calls[2][2]?.lastLiveEventId).toBe('event2')
+
+    unsubscribe()
+  })
+
+  it('refetches active queries without the CDN when a query refresh is requested', async () => {
+    const newMovie = {_id: 'movie3', _type: 'movie', title: 'Movie 3'}
+    vi.mocked(fetch).mockReturnValueOnce(
+      of({result: mockData.movies, syncTags: [], ms: 0}).pipe(delay(0)),
+    )
+    vi.mocked(fetch).mockReturnValueOnce(
+      of({result: [...mockData.movies, newMovie], syncTags: [], ms: 0}).pipe(delay(0)),
+    )
+
+    const query = '*[_type == "movie"]'
+    const state = getQueryState<typeof mockData.movies>(instance, {query, useCdn: true})
+    const unsubscribe = state.subscribe()
+    await advanceAndAwait(firstValueFrom(state.observable.pipe(filter((i) => i !== undefined))))
+    expect(vi.mocked(fetch).mock.calls[0][2]?.useCdn).toBe(true)
+
+    // The store name is derived from the instance's project and dataset
+    requestQueryRefresh('test.test')
+
+    const result = await advanceAndAwait(
+      firstValueFrom(state.observable.pipe(filter((data) => data?.length === 3))),
+    )
+    expect(fetch).toHaveBeenCalledTimes(2)
+    expect(vi.mocked(fetch).mock.calls[1][2]?.useCdn).toBe(false)
+    expect(result).toContainEqual(newMovie)
+
+    unsubscribe()
+  })
+
+  it('ignores query refresh requests for other resources', async () => {
+    const query = '*[_type == "movie"]'
+    const state = getQueryState(instance, {query})
+    const unsubscribe = state.subscribe()
+    await advanceAndAwait(firstValueFrom(state.observable.pipe(filter((i) => i !== undefined))))
+
+    requestQueryRefresh('other.dataset')
+    await vi.advanceTimersByTimeAsync(50)
+    expect(fetch).toHaveBeenCalledTimes(1)
 
     unsubscribe()
   })

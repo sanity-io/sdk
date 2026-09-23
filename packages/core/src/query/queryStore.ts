@@ -38,6 +38,7 @@ import {defineStore, type StoreContext} from '../store/defineStore'
 import {type ResolveQueryResult} from '../typegen/resolve'
 import {randomId} from '../utils/ids'
 import {setCleanupTimeout} from '../utils/setCleanupTimeout'
+import {observeQueryRefreshRequests} from './queryRefresh'
 import {
   QUERY_STATE_CLEAR_DELAY,
   QUERY_STORE_API_VERSION,
@@ -129,7 +130,12 @@ const errorHandler = (state: StoreState<{error?: unknown}>) => {
   return (error: unknown): void => state.set('setError', {error})
 }
 
-const listenForNewSubscribersAndFetch = ({state, instance}: StoreContext<QueryStoreState>) => {
+const listenForNewSubscribersAndFetch = ({
+  state,
+  instance,
+  key: {name: storeName},
+}: StoreContext<QueryStoreState, BoundResourceKey>) => {
+  const refreshRequests$ = observeQueryRefreshRequests(storeName)
   return state.observable
     .pipe(
       map((s) => new Set(Object.keys(s.queries))),
@@ -190,9 +196,19 @@ const listenForNewSubscribersAndFetch = ({state, instance}: StoreContext<QuerySt
               client: client$,
               perspective: perspective$,
             }).pipe(
-              switchMap(({lastLiveEventId, client, perspective}) =>
+              // A refresh follows this client's own write, so skip the CDN: a cached
+              // response can predate the write. The Live Content API event for the same
+              // write still arrives later and refetches as usual.
+              switchMap((inputs) =>
+                refreshRequests$.pipe(
+                  map(() => ({...inputs, bypassCdn: true})),
+                  startWith({...inputs, bypassCdn: false}),
+                ),
+              ),
+              switchMap(({lastLiveEventId, client, perspective, bypassCdn}) =>
                 client.observable.fetch(query, params, {
                   ...restOptions,
+                  ...(bypassCdn && {useCdn: false}),
                   perspective,
                   filterResponse: false,
                   returnQuery: false,
