@@ -24,8 +24,8 @@ type UpdateURLMessage = Bridge.Listeners.History.UpdateURLMessage
 export type DashboardNavigation = PathChangeMessage['data']
 
 /**
- * The outcome of a reported navigation; `reason` follows `navigation.location.update`. Resolves
- * `{ok: false, reason: 'failed'}` when the host never replies, so it never rejects.
+ * The outcome of a reported navigation; `reason` follows `navigation.location.update`. A host
+ * that never replies yields `{ok: false, reason: 'failed'}`.
  * @public
  */
 export type DashboardNavigationResult = ReplyOf<'navigation.location.update'>
@@ -40,13 +40,16 @@ const FAILED: DashboardNavigationResult = Object.freeze({ok: false, reason: 'fai
  * `scope` defaults to `'in-app'`, where `path` is relative to the app's route. With
  * `'dashboard'`, `path` is a Dashboard URL from {@link urlFor} and is navigated to as-is; only
  * the federated runtime supports it.
+ *
+ * `onResult` receives the host's reply once, asynchronously.
  * @public
  */
 export type NavigateToDashboardPath = (options: {
   path: string
   type?: 'push' | 'replace'
   scope?: 'in-app' | 'dashboard'
-}) => Promise<DashboardNavigationResult>
+  onResult?: (result: DashboardNavigationResult) => void
+}) => void
 
 /**
  * @public
@@ -74,8 +77,7 @@ export type NavigateToDashboardPath = (options: {
  * @param navigateFn - Function to handle navigation; should accept:
  * - `path`: a string, which will be a relative path (for example, 'my-route')
  * - `type`: 'push', 'replace', or 'pop', which will be the type of navigation to perform
- * @returns A function the app calls to report its own in-app navigations to the Dashboard. It
- * resolves with the host's reply.
+ * @returns A function the app calls to report its own in-app navigations to the Dashboard.
  *
  * @example
  * ```tsx
@@ -121,26 +123,31 @@ function useComlinkNavigate(
   })
 
   return useCallback<NavigateToDashboardPath>(
-    ({path, scope = 'in-app'}) => {
+    ({path, scope = 'in-app', onResult}) => {
       // The host rewrites every `update-url` into this app's route, so it can't leave the app.
       if (scope === 'dashboard') {
         // eslint-disable-next-line no-console
         console.warn('Dashboard-scoped navigation is not supported in the iframe runtime', path)
-        return Promise.resolve({ok: false, reason: 'not-navigable'})
+        Promise.resolve<DashboardNavigationResult>({ok: false, reason: 'not-navigable'}).then(
+          onResult,
+        )
+        return
       }
       // Comlink's own timeout warning is suppressed in favour of the one below.
-      return fetch<UpdateURLMessage['response']>(
+      fetch<UpdateURLMessage['response']>(
         'dashboard/v1/bridge/listeners/history/update-url',
         {url: new URL(path, window.location.origin).href},
         {suppressWarnings: true},
-      ).then(
-        ({success}) => (success ? {ok: true} : FAILED),
-        (error) => {
-          // eslint-disable-next-line no-console
-          console.warn('Failed to report navigation to the Dashboard', error)
-          return FAILED
-        },
       )
+        .then(
+          ({success}): DashboardNavigationResult => (success ? {ok: true} : FAILED),
+          (error) => {
+            // eslint-disable-next-line no-console
+            console.warn('Failed to report navigation to the Dashboard', error)
+            return FAILED
+          },
+        )
+        .then(onResult)
     },
     [fetch],
   )
@@ -199,7 +206,7 @@ function useBusNavigate(
   }, [bus])
 
   return useCallback<NavigateToDashboardPath>(
-    ({path, type = 'push', scope = 'in-app'}) => {
+    ({path, type = 'push', scope = 'in-app', onResult}) => {
       // The host commits paths without a leading slash; store the same form so the echo matches.
       // A dashboard-scoped report never moved our router, so its commit must reach navigateFn.
       const own = scope === 'in-app' ? path.replace(/^\//, '') : null
@@ -218,7 +225,7 @@ function useBusNavigate(
               if (!base.ok) throw new TopicError('applications.base-path')
               return joinPath(base.value, own)
             })
-      return url
+      url
         .then((resolved) => bus.emit('navigation.location.update', {url: resolved, history: type}))
         .then(
           (reply) => {
@@ -232,6 +239,7 @@ function useBusNavigate(
             return FAILED
           },
         )
+        .then(onResult)
     },
     [bus],
   )

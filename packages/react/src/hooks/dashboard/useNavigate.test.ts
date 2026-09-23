@@ -10,7 +10,12 @@ import {renderHook} from '@testing-library/react'
 import {afterEach, beforeEach, describe, expect, it, onTestFinished, vi} from 'vitest'
 
 import {act, renderHook as renderHookWithInstance} from '../../../test/test-utils'
-import {useNavigate} from './useNavigate'
+import {type NavigateToDashboardPath, useNavigate} from './useNavigate'
+
+const report = (
+  navigate: NavigateToDashboardPath,
+  options: Omit<Parameters<NavigateToDashboardPath>[0], 'onResult'>,
+) => new Promise((onResult) => navigate({...options, onResult}))
 
 const mockFetch = vi.fn()
 let mockMessageHandler: ((data: PathChangeMessage['data']) => void) | undefined
@@ -54,7 +59,7 @@ describe('useNavigate', () => {
     mockFetch.mockResolvedValue({success: true})
     const {result} = renderHook(() => useNavigate(mockNavigateFn))
 
-    await expect(result.current({path: 'documents/abc'})).resolves.toEqual({ok: true})
+    await expect(report(result.current, {path: 'documents/abc'})).resolves.toEqual({ok: true})
 
     // jsdom's origin is fixed at http://localhost:3000 in this test env.
     expect(mockFetch).toHaveBeenCalledWith(
@@ -68,7 +73,7 @@ describe('useNavigate', () => {
     mockFetch.mockResolvedValue({success: false})
     const {result} = renderHook(() => useNavigate(mockNavigateFn))
 
-    await expect(result.current({path: 'documents/abc'})).resolves.toEqual({
+    await expect(report(result.current, {path: 'documents/abc'})).resolves.toEqual({
       ok: false,
       reason: 'failed',
     })
@@ -80,7 +85,7 @@ describe('useNavigate', () => {
     mockFetch.mockRejectedValue(new Error('timeout'))
     const {result} = renderHook(() => useNavigate(mockNavigateFn))
 
-    await expect(result.current({path: 'documents/abc'})).resolves.toEqual({
+    await expect(report(result.current, {path: 'documents/abc'})).resolves.toEqual({
       ok: false,
       reason: 'failed',
     })
@@ -92,7 +97,9 @@ describe('useNavigate', () => {
     onTestFinished(() => warn.mockRestore())
     const {result} = renderHook(() => useNavigate(mockNavigateFn))
 
-    await expect(result.current({path: '/studios/abc', scope: 'dashboard'})).resolves.toEqual({
+    await expect(
+      report(result.current, {path: '/studios/abc', scope: 'dashboard'}),
+    ).resolves.toEqual({
       ok: false,
       reason: 'not-navigable',
     })
@@ -213,7 +220,9 @@ describe('useNavigate (message bus)', () => {
     const {result} = renderHookWithInstance(() => useNavigate(navigateFn))
 
     await act(async () => {
-      await expect(result.current({path: 'documents/def', type: 'replace'})).resolves.toEqual({
+      await expect(
+        report(result.current, {path: 'documents/def', type: 'replace'}),
+      ).resolves.toEqual({
         ok: true,
       })
     })
@@ -346,7 +355,7 @@ describe('useNavigate (message bus)', () => {
     const {result} = renderHookWithInstance(() => useNavigate(navigateFn))
 
     await act(async () => {
-      await expect(result.current({path: 'documents/def'})).resolves.toEqual({
+      await expect(report(result.current, {path: 'documents/def'})).resolves.toEqual({
         ok: false,
         reason: 'not-navigable',
       })
@@ -444,7 +453,7 @@ describe('useNavigate (message bus)', () => {
     const {result} = renderHookWithInstance(() => useNavigate(vi.fn()))
 
     await act(async () => {
-      await expect(result.current({path: 'documents/def'})).resolves.toEqual({
+      await expect(report(result.current, {path: 'documents/def'})).resolves.toEqual({
         ok: false,
         reason: 'failed',
       })
@@ -463,7 +472,7 @@ describe('useNavigate (message bus)', () => {
     const {result} = renderHookWithInstance(() => useNavigate(navigateFn))
 
     await act(async () => {
-      await expect(result.current({path: 'documents/def'})).resolves.toEqual({
+      await expect(report(result.current, {path: 'documents/def'})).resolves.toEqual({
         ok: false,
         reason: 'failed',
       })

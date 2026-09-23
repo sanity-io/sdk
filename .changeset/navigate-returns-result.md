@@ -2,4 +2,4 @@
 '@sanity/sdk-react': minor
 ---
 
-Resolve the `useNavigate` report function with the host's reply so apps can react to a refused navigation
+Add an `onResult` option to the `useNavigate` report function so apps can react to a refused navigation
