@@ -1,6 +1,11 @@
 import {type PathChangeMessage} from '@sanity/message-protocol'
 import {installMessageBus, resetMessageBus} from '@sanity/sdk/_internal'
-import {type MessageBusHost, type NavigationLocation, type ValueOf} from '@sanity/sdk/dashboard'
+import {
+  type MessageBusHost,
+  type NavigationLocation,
+  type ReplyOf,
+  type ValueOf,
+} from '@sanity/sdk/dashboard'
 import {renderHook} from '@testing-library/react'
 import {afterEach, beforeEach, describe, expect, it, onTestFinished, vi} from 'vitest'
 
@@ -89,10 +94,10 @@ describe('useNavigate (message bus)', () => {
   const MESSAGE_BUS_KEY = Symbol.for('sanity.os.bus')
   let host: MessageBusHost
   // The single navigation.location.update responder for the describe: it records every payload
-  // and replies with whatever `updateReply` currently holds, so a test can force a not-ok reply
-  // without registering a second competing responder.
+  // and replies with whatever `updateReply` currently holds (or refuses on `'refuse'`), so a test
+  // can force a not-ok reply without registering a second competing responder.
   let updates: {url: string; history?: string}[]
-  let updateReply: {ok: true} | {ok: false; reason: 'not-navigable' | 'interrupted' | 'failed'}
+  let updateReply: ReplyOf<'navigation.location.update'> | 'refuse'
 
   const emitLocation = (value: NavigationLocation | null) =>
     host.connections.subscribe((client) =>
@@ -111,7 +116,8 @@ describe('useNavigate (message bus)', () => {
     host = installMessageBus({appId: 'dashboard'})
     host.subscribe('navigation.location.update', (message) => {
       updates.push(message.payload)
-      message.reply(updateReply)
+      if (updateReply === 'refuse') message.reject()
+      else message.reply(updateReply)
     })
   })
 
@@ -416,7 +422,28 @@ describe('useNavigate (message bus)', () => {
     expect(navigateFn).toHaveBeenCalledWith({path: 'documents/abc', type: 'push'})
   })
 
+  it('resolves failed with a warning when the host refuses the report', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    onTestFinished(() => warn.mockRestore())
+    publishBasePath()
+    emitLocation({appId: 'app', path: 'documents/abc', transition: null})
+    updateReply = 'refuse'
+
+    const {result} = renderHookWithInstance(() => useNavigate(vi.fn()))
+
+    await act(async () => {
+      await expect(result.current({path: 'documents/def'})).resolves.toEqual({
+        ok: false,
+        reason: 'failed',
+      })
+    })
+
+    expect(warn).toHaveBeenCalledOnce()
+  })
+
   it('drops an outbound report when the base path is not ok and still fires a later host commit to that path', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    onTestFinished(() => warn.mockRestore())
     host.connections.subscribe((client) => client.emit('applications.base-path', {ok: false}))
     emitLocation({appId: 'app', path: 'documents/abc', transition: null})
 
@@ -431,6 +458,7 @@ describe('useNavigate (message bus)', () => {
     })
 
     expect(updates).toEqual([])
+    expect(warn).toHaveBeenCalledOnce()
 
     const hostTo = {appId: 'app', path: 'documents/def'}
     act(() => {
