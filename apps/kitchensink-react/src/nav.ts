@@ -102,6 +102,9 @@ export const navGroups: NavGroup[] = [
   },
   {
     title: 'Demos',
-    items: [{path: 'comlink-demo', title: 'Comlink', icon: LinkIcon}],
+    items: [
+      {path: 'todo', title: 'Todo', icon: ListIcon},
+      {path: 'comlink-demo', title: 'Comlink', icon: LinkIcon},
+    ],
   },
 ]
