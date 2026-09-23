@@ -57,8 +57,8 @@ export type NavigateToDashboardPath = (options: {
  *   is ignored and the host applies the URL as a `replace`.
  * - In a federated app (message bus), inbound `type` is `'push'` or `'replace'`; `'pop'` is never
  *   sent. Reporting is required because the app's router does not reach the host, and `type` is
- *   honoured. Until the Dashboard publishes the app's base path, reports are dropped with a
- *   console warning.
+ *   honoured. Until the Dashboard publishes the app's base path, in-app reports are dropped with
+ *   a console warning.
  *
  * @param navigateFn - Function to handle navigation; should accept:
  * - `path`: a string, which will be a relative path (for example, 'my-route')
