@@ -1,124 +1,180 @@
-import {type LiveEventMessage, type ReleaseDocument, type SanityClient} from '@sanity/client'
-import {of, Subject} from 'rxjs'
+import {type ListenEvent, type ReleaseDocument, type SanityClient} from '@sanity/client'
+import {BehaviorSubject, of, Subject, Subscription, throwError} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {getClientState} from '../client/clientStore'
-import {observeLiveEvents} from '../client/liveEvents'
+import {QUERY_CHANGE_INTERVAL} from '../client/observeQueryChanges'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
-import {type StateSource} from '../store/createStateSourceAction'
 import {observeReleases} from './observeReleases'
 
 vi.mock('../client/clientStore', () => ({getClientState: vi.fn()}))
-vi.mock('../client/liveEvents', () => ({observeLiveEvents: vi.fn()}))
 
 describe('observeReleases', () => {
   let instance: SanityInstance
-  let liveMessages: Subject<LiveEventMessage>
+  let events: Subject<ListenEvent>
   let fetch: ReturnType<typeof vi.fn>
+  let listen: ReturnType<typeof vi.fn>
+  let clients: BehaviorSubject<SanityClient>
+  let subscriptions: Subscription
 
   const release = {
-    _id: 'r1',
+    _id: '_.releases.r1',
     _type: 'system.release',
     name: 'r1',
+    state: 'active',
     metadata: {title: 'R1', releaseType: 'asap'},
   } as ReleaseDocument
 
   beforeEach(() => {
+    vi.useFakeTimers()
     vi.clearAllMocks()
     instance = createSanityInstance({projectId: 'test', dataset: 'test'})
-    liveMessages = new Subject<LiveEventMessage>()
-
-    fetch = vi.fn().mockReturnValue(of({result: [release], syncTags: ['s1:tag']}))
+    events = new Subject<ListenEvent>()
+    subscriptions = new Subscription()
+    fetch = vi.fn().mockReturnValue(of({result: [release]}))
+    listen = vi.fn().mockReturnValue(events)
+    clients = new BehaviorSubject({observable: {fetch, listen}} as unknown as SanityClient)
     vi.mocked(getClientState).mockReturnValue({
-      observable: of({observable: {fetch}} as unknown as SanityClient),
-    } as StateSource<SanityClient>)
-    vi.mocked(observeLiveEvents).mockReturnValue(liveMessages.asObservable())
+      observable: clients,
+      getCurrent: () => clients.value,
+      subscribe: () => () => {},
+    })
   })
 
   afterEach(() => {
+    subscriptions.unsubscribe()
     instance.dispose()
+    vi.useRealTimers()
   })
 
-  it('fetches releases through the raw perspective', () => {
-    const releases$ = observeReleases(instance, {onCorsError: vi.fn()})
+  function observe(onError = vi.fn()) {
     const emissions: (ReleaseDocument[] | undefined)[] = []
-    const subscription = releases$.subscribe((releases) => emissions.push(releases))
+    subscriptions.add(
+      observeReleases(instance, {onError}).subscribe((value) => emissions.push(value)),
+    )
+    return emissions
+  }
 
+  function mutate() {
+    events.next({type: 'mutation', documentId: release._id, visibility: 'query'} as ListenEvent)
+  }
+
+  const settle = () => vi.advanceTimersByTimeAsync(QUERY_CHANGE_INTERVAL + 10)
+
+  it('fetches uncached release metadata and listens only for release documents', async () => {
+    const emissions = observe()
+    await settle()
     expect(emissions).toEqual([[release]])
     expect(fetch).toHaveBeenCalledWith(
       'releases::all()',
       {},
-      expect.objectContaining({
+      {
         perspective: 'raw',
+        useCdn: false,
+        filterResponse: false,
+        returnQuery: false,
         tag: 'releases',
-        lastLiveEventId: undefined,
-      }),
+      },
     )
-    subscription.unsubscribe()
-  })
-
-  it('refetches with the live event id when a message matches the sync tags', () => {
-    const releases$ = observeReleases(instance, {onCorsError: vi.fn()})
-    const emissions: (ReleaseDocument[] | undefined)[] = []
-    const subscription = releases$.subscribe((releases) => emissions.push(releases))
-
-    liveMessages.next({type: 'message', id: 'event-1', tags: ['s1:tag']} as LiveEventMessage)
-
-    expect(fetch).toHaveBeenCalledTimes(2)
-    expect(fetch).toHaveBeenLastCalledWith(
-      'releases::all()',
+    expect(listen).toHaveBeenCalledWith(
+      '*[_type == "system.release" && _id in path("_.releases.*")]',
       {},
-      expect.objectContaining({lastLiveEventId: 'event-1'}),
+      expect.objectContaining({includeResult: false, visibility: 'query', tag: 'releases.listen'}),
     )
-    expect(emissions).toHaveLength(2)
-    subscription.unsubscribe()
   })
 
-  it('ignores live events that do not match the sync tags', () => {
-    const releases$ = observeReleases(instance, {onCorsError: vi.fn()})
-    const subscription = releases$.subscribe()
-
-    liveMessages.next({type: 'message', id: 'event-1', tags: ['s1:other']} as LiveEventMessage)
-
-    expect(fetch).toHaveBeenCalledTimes(1)
-    subscription.unsubscribe()
+  it('refreshes archived and published metadata as well as active releases', async () => {
+    const emissions = observe()
+    await settle()
+    const archived = {...release, state: 'archived'}
+    fetch.mockReturnValueOnce(of({result: [archived]}))
+    mutate()
+    await settle()
+    expect(emissions).toEqual([[release], [archived]])
   })
 
-  it('refetches for a matching message that arrived while a fetch was still in flight', () => {
-    const fetchResponses: Subject<{result: ReleaseDocument[]; syncTags: string[]}>[] = []
-    fetch.mockImplementation(() => {
-      const response$ = new Subject<{result: ReleaseDocument[]; syncTags: string[]}>()
-      fetchResponses.push(response$)
-      return response$
-    })
-
-    const releases$ = observeReleases(instance, {onCorsError: vi.fn()})
-    const emissions: (ReleaseDocument[] | undefined)[] = []
-    const subscription = releases$.subscribe((releases) => emissions.push(releases))
-
+  it('does not lose metadata changes that arrive during an in-flight fetch', async () => {
+    const pending = new Subject<{result: ReleaseDocument[]}>()
+    fetch.mockReturnValueOnce(pending)
+    const changed = {...release, metadata: {...release.metadata, title: 'Updated'}}
+    fetch.mockReturnValue(of({result: [changed]}))
+    const emissions = observe()
+    await settle()
+    mutate()
+    await settle()
+    mutate()
+    await settle()
     expect(fetch).toHaveBeenCalledTimes(1)
-
-    // A message lands while the initial fetch is in flight — its sync tags are
-    // not known yet, so it can't be evaluated right away…
-    liveMessages.next({type: 'message', id: 'event-1', tags: ['s1:tag']} as LiveEventMessage)
-    expect(fetch).toHaveBeenCalledTimes(1)
-
-    // …but once the fetch completes with matching tags, it must trigger a
-    // refetch instead of being dropped (which would leave the store stale)
-    fetchResponses[0].next({result: [release], syncTags: ['s1:tag']})
-    fetchResponses[0].complete()
-
+    pending.next({result: [release]})
+    pending.complete()
+    await settle()
     expect(fetch).toHaveBeenCalledTimes(2)
-    expect(fetch).toHaveBeenLastCalledWith(
-      'releases::all()',
-      {},
-      expect.objectContaining({lastLiveEventId: 'event-1'}),
-    )
+    expect(emissions).toEqual([[release], [changed]])
+  })
 
-    fetchResponses[1].next({result: [release], syncTags: ['s1:tag']})
-    fetchResponses[1].complete()
-    expect(emissions).toHaveLength(2)
+  it('keeps listening after a failed fetch and recovers on the next event', async () => {
+    const error = new Error('unavailable')
+    const onError = vi.fn()
+    fetch.mockReturnValueOnce(throwError(() => error))
+    const emissions = observe(onError)
+    await settle()
+    expect(onError).toHaveBeenCalledWith(error)
+    mutate()
+    await settle()
+    expect(emissions).toEqual([[release]])
+  })
 
-    subscription.unsubscribe()
+  it.each(['welcome', 'reconnect'] as const)('refreshes on %s', async (type) => {
+    observe()
+    await settle()
+    events.next({type} as ListenEvent)
+    await settle()
+    expect(fetch).toHaveBeenCalledTimes(2)
+  })
+
+  it('cancels requests and replaces the listener when the client changes', async () => {
+    const pending = new Subject<{result: ReleaseDocument[]}>()
+    fetch.mockReturnValueOnce(pending)
+    const emissions = observe()
+    await settle()
+    const nextEvents = new Subject<ListenEvent>()
+    const changed = {...release, state: 'published'}
+    clients.next({
+      observable: {fetch: () => of({result: [changed]}), listen: () => nextEvents},
+    } as unknown as SanityClient)
+    await settle()
+    expect(pending.observed).toBe(false)
+    expect(events.observed).toBe(false)
+    expect(nextEvents.observed).toBe(true)
+    expect(emissions).toEqual([[changed]])
+  })
+
+  it('surfaces a terminal listener error and can recover after a client change', async () => {
+    const onError = vi.fn()
+    observe(onError)
+    await settle()
+    const error = new Error('forbidden')
+    events.error(error)
+    expect(onError).toHaveBeenCalledWith(error)
+    const nextEvents = new Subject<ListenEvent>()
+    clients.next({observable: {fetch, listen: () => nextEvents}} as unknown as SanityClient)
+    await settle()
+    expect(nextEvents.observed).toBe(true)
+    expect(fetch).toHaveBeenCalledTimes(2)
+  })
+
+  it('cancels a trailing fetch on unsubscribe', async () => {
+    const pending = new Subject<{result: ReleaseDocument[]}>()
+    fetch.mockReturnValueOnce(pending)
+    observe()
+    await settle()
+    mutate()
+    await settle()
+    subscriptions.unsubscribe()
+    expect(pending.observed).toBe(false)
+    expect(events.observed).toBe(false)
+    pending.complete()
+    await settle()
+    expect(fetch).toHaveBeenCalledTimes(1)
   })
 })

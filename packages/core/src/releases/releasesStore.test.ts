@@ -1,5 +1,10 @@
-import {type ReleaseDocument, type SanityClient} from '@sanity/client'
-import {NEVER, Observable, type Observer, of, Subject} from 'rxjs'
+import {
+  ConnectionFailedError,
+  type ListenEvent,
+  type ReleaseDocument,
+  type SanityClient,
+} from '@sanity/client'
+import {BehaviorSubject, NEVER, Observable, type Observer, of, Subject} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {getClientState} from '../client/clientStore'
@@ -36,7 +41,7 @@ describe('releasesStore', () => {
       instance,
       expect.objectContaining({
         resource: {dataset: 'test', projectId: 'test'},
-        onCorsError: expect.any(Function),
+        onError: expect.any(Function),
       }),
     )
   })
@@ -195,7 +200,7 @@ describe('releasesStore', () => {
     expect(allNames).toHaveLength(3)
   })
 
-  it('surfaces CORS errors from the live connection as a store-wide error', async () => {
+  it('surfaces CORS errors from the listener connection as a store-wide error', async () => {
     const subject = new Subject<ReleaseDocument[]>()
     vi.mocked(observeReleases).mockReturnValue(subject.asObservable())
 
@@ -217,7 +222,7 @@ describe('releasesStore', () => {
 
     const [, options] = vi.mocked(observeReleases).mock.lastCall!
     const corsError = new Error('CORS misconfiguration')
-    options.onCorsError(corsError)
+    options.onError(corsError)
     await new Promise((resolve) => setTimeout(resolve, 0))
 
     // the CORS error is recorded as store state so the releases selector
@@ -270,6 +275,44 @@ describe('releasesStore', () => {
     }
   })
 
+  it.each(['listener', 'fetch'])('allows a remount after a terminal %s error', async (failure) => {
+    vi.useFakeTimers()
+    try {
+      const actual = await vi.importActual<typeof import('./observeReleases')>('./observeReleases')
+      vi.mocked(observeReleases).mockImplementation(actual.observeReleases)
+      const events = new Subject<ListenEvent>()
+      const responses = new Subject<{result: ReleaseDocument[]}>()
+      const client = {
+        observable: {fetch: () => responses, listen: () => events},
+      } as unknown as SanityClient
+      const clients = new BehaviorSubject(client)
+      vi.mocked(getClientState).mockReturnValue({
+        observable: clients,
+        getCurrent: () => clients.value,
+        subscribe: () => () => {},
+      })
+      const state = getActiveReleasesState(instance)
+      state.subscribe()
+      await vi.advanceTimersByTimeAsync(10)
+      const error = new ConnectionFailedError('expired token', {status: 401})
+      if (failure === 'listener') events.error(error)
+      else responses.error(error)
+      expect(() => state.getCurrent()).toThrow(error)
+      await vi.advanceTimersByTimeAsync(UPSTREAM_CLOSE_DELAY_MS + 10)
+      const release = {_id: 'r1', name: 'r1', state: 'active'} as ReleaseDocument
+      const listen = vi.fn().mockReturnValue(NEVER)
+      clients.next({
+        observable: {fetch: () => of({result: [release]}), listen},
+      } as unknown as SanityClient)
+      state.subscribe()
+      await vi.advanceTimersByTimeAsync(10)
+      expect(listen).toHaveBeenCalledTimes(1)
+      expect(state.getCurrent()).toEqual([release])
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('starts with an empty list before anything subscribes, so hooks do not suspend on first load', () => {
     expect(getActiveReleasesState(instance).getCurrent()).toEqual([])
     expect(getAllReleasesState(instance).getCurrent()).toEqual([])
@@ -285,14 +328,15 @@ describe('releasesStore', () => {
       vi.mocked(getClientState).mockReturnValue({
         observable: of({
           config: () => ({}),
-          live: {events: () => NEVER},
-          observable: {fetch: () => responses},
+          observable: {fetch: () => responses, listen: () => NEVER},
         } as unknown as SanityClient),
       } as unknown as StateSource<SanityClient>)
 
       const state = getActiveReleasesState(instance)
       const unsubscribe = state.subscribe()
+      await vi.advanceTimersByTimeAsync(10)
       responses.next({result: [release], syncTags: []})
+      await vi.advanceTimersByTimeAsync(10)
       expect(state.getCurrent()).toEqual([release])
 
       unsubscribe()
@@ -300,6 +344,7 @@ describe('releasesStore', () => {
       expect(responses.observed).toBe(false)
 
       state.subscribe()
+      await vi.advanceTimersByTimeAsync(10)
       expect(responses.observed).toBe(true)
       expect(state.getCurrent()).toEqual([release])
     } finally {
