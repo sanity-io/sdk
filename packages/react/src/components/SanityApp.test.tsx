@@ -52,6 +52,7 @@ describe('SanityApp', () => {
     vi.spyOn(console, 'warn').mockImplementation(() => {})
     onTestFinished(() => {
       vi.useRealTimers()
+      vi.restoreAllMocks()
     })
   })
 
