@@ -1,12 +1,11 @@
 import {AddIcon} from '@sanity/icons/Add'
 import {DocumentIcon} from '@sanity/icons/Document'
-import {randomUuid} from '@sanity/sdk/_internal'
 import {
-  createDocument,
   createDocumentHandle,
   type DocumentHandle,
   publishDocument,
   useApplyDocumentActions,
+  useCreateDocument,
   useDocument,
   useDocumentProjection,
   useDocuments,
@@ -32,6 +31,8 @@ import {LoadMore} from '../components/LoadMore'
 import {PageLayout} from '../components/PageLayout'
 
 const DOCUMENT_TYPE = 'article'
+// Shared by the list and the form so the selected document has a single projection subscription.
+const PROJECTION = '{title, subtitle}'
 
 type ArticleHandle = DocumentHandle<typeof DOCUMENT_TYPE>
 
@@ -70,10 +71,7 @@ function ArticleListItem({
   onSelect: (documentId: string) => void
   selected: boolean
 }): JSX.Element {
-  const {data} = useDocumentProjection<ArticlePreview>({
-    ...handle,
-    projection: '{title, subtitle}',
-  })
+  const {data} = useDocumentProjection<ArticlePreview>({...handle, projection: PROJECTION})
 
   return (
     <List.ButtonItem
@@ -159,14 +157,16 @@ function ArticleField({
 }
 
 function ArticleForm({handle}: {handle: ArticleHandle}): JSX.Element {
-  const {data} = useDocumentProjection<ArticlePreview>({...handle, projection: '{title}'})
+  // Read the title from local document state so the heading tracks the input as you type.
+  const {data: title} = useDocument<string>({...handle, path: 'title'})
+  const {data} = useDocumentProjection<ArticlePreview>({...handle, projection: PROJECTION})
   const apply = useApplyDocumentActions()
 
   return (
     <VStack gap={4}>
       <Flex alignItems="center" justifyContent="space-between">
         <Text size={2} weight="semibold">
-          {data.title || 'Untitled'}
+          {title || 'Untitled'}
         </Text>
         <Button
           disabled={!data._status?.lastEditedDraftAt}
@@ -184,24 +184,23 @@ function ArticleForm({handle}: {handle: ArticleHandle}): JSX.Element {
 
 export function StudioDemoRoute(): JSX.Element {
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const apply = useApplyDocumentActions()
+  const createArticle = useCreateDocument({documentType: DOCUMENT_TYPE})
 
-  const createArticle = async () => {
-    const documentId = randomUuid()
-    await apply(createDocument(createArticleHandle(documentId)))
-    setSelectedId(documentId)
+  const handleCreate = async () => {
+    const handle = await createArticle()
+    setSelectedId(handle.documentId)
   }
 
   return (
-    <PageLayout title="Studio" subtitle="A minimal document list and form, like Sanity Studio">
+    <PageLayout
+      icon={DocumentIcon}
+      title="Studio"
+      subtitle="A minimal document list and form, like Sanity Studio"
+    >
       <Card>
         <Flex>
           <Box borderRight padding={3} style={{flex: '0 0 320px'}}>
-            <ArticleList
-              onCreate={createArticle}
-              onSelect={setSelectedId}
-              selectedId={selectedId}
-            />
+            <ArticleList onCreate={handleCreate} onSelect={setSelectedId} selectedId={selectedId} />
           </Box>
           <Box flexGrow={1} padding={4}>
             {selectedId ? (
