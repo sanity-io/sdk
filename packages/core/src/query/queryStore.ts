@@ -19,7 +19,6 @@ import {
   startWith,
   switchMap,
   tap,
-  throwError,
 } from 'rxjs'
 
 import {getClientState} from '../client/clientStore'
@@ -39,7 +38,6 @@ import {defineStore, type StoreContext} from '../store/defineStore'
 import {type ResolveQueryResult} from '../typegen/resolve'
 import {randomId} from '../utils/ids'
 import {setCleanupTimeout} from '../utils/setCleanupTimeout'
-import {openQueryRefreshChannel} from './queryRefresh'
 import {
   QUERY_STATE_CLEAR_DELAY,
   QUERY_STORE_API_VERSION,
@@ -131,13 +129,8 @@ const errorHandler = (state: StoreState<{error?: unknown}>) => {
   return (error: unknown): void => state.set('setError', {error})
 }
 
-const listenForNewSubscribersAndFetch = ({
-  state,
-  instance,
-  key: {name: storeName},
-}: StoreContext<QueryStoreState, BoundResourceKey>) => {
-  const refresh = openQueryRefreshChannel(storeName)
-  const subscription = state.observable
+const listenForNewSubscribersAndFetch = ({state, instance}: StoreContext<QueryStoreState>) => {
+  return state.observable
     .pipe(
       map((s) => new Set(Object.keys(s.queries))),
       distinctUntilChanged((curr, next) => {
@@ -197,38 +190,16 @@ const listenForNewSubscribersAndFetch = ({
               client: client$,
               perspective: perspective$,
             }).pipe(
-              // A refresh follows this client's own write, so skip the CDN: a cached
-              // response can predate the write. The Live Content API event for the same
-              // write still arrives later and refetches as usual.
-              switchMap((inputs) =>
-                refresh.requests.pipe(
-                  map(() => ({...inputs, bypassCdn: true})),
-                  startWith({...inputs, bypassCdn: false}),
-                ),
-              ),
-              switchMap(({lastLiveEventId, client, perspective, bypassCdn}) => {
-                const fetch$ = client.observable.fetch(query, params, {
+              switchMap(({lastLiveEventId, client, perspective}) =>
+                client.observable.fetch(query, params, {
                   ...restOptions,
-                  ...(bypassCdn && {useCdn: false}),
                   perspective,
                   filterResponse: false,
                   returnQuery: false,
                   lastLiveEventId,
                   tag,
-                })
-                if (!bypassCdn) return fetch$
-                // A failed refresh keeps the current result instead of ending this query's
-                // updates. If the write changed the result, its Live Content API event still
-                // refetches it. A query with no result yet has no sync tags for that event to
-                // match, so its error still surfaces.
-                return fetch$.pipe(
-                  catchError((error: unknown) =>
-                    state.get().queries[group$.key]?.result === undefined
-                      ? throwError(() => error)
-                      : EMPTY,
-                  ),
-                )
-              }),
+                }),
+              ),
               tap(({result, syncTags}) => {
                 state.set('setQueryData', setQueryData(group$.key, result, syncTags))
               }),
@@ -246,8 +217,6 @@ const listenForNewSubscribersAndFetch = ({
       ),
     )
     .subscribe({error: errorHandler(state)})
-  subscription.add(refresh.close)
-  return subscription
 }
 
 const listenToLiveClientAndSetLastLiveEventIds = ({

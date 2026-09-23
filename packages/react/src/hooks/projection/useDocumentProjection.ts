@@ -189,26 +189,19 @@ export function useDocumentProjection<TData extends object>({
   // Normalize options: resolve resourceName to resource and strip resourceName
   const normalizedDocHandle = useNormalizedResourceOptions(docHandle)
 
-  // Key the state source on the handle's values, not its identity. The normalized handle is
-  // a new object on every render, and handles from a list query are new objects after every
-  // refetch. A new state source makes useSyncExternalStore resubscribe, and each resubscribe
-  // writes to the projection store, so a list re-render would otherwise resubscribe every row.
-  // Reading and suspending share these parsed options so both use the same store entry.
-  const docHandleKey = JSON.stringify(normalizedDocHandle)
-  const projectionOptions = useMemo(
-    () => ({
-      ...(JSON.parse(docHandleKey) as typeof normalizedDocHandle),
-      projection: normalizedProjection,
-    }),
-    [docHandleKey, normalizedProjection],
-  )
+  // Memoize stateSource based on normalized projection and docHandle properties
+  // This prevents creating a new StateSource on every render when projection content is the same
   const stateSource = useMemo(
-    () => getProjectionState<TData>(instance, projectionOptions),
-    [instance, projectionOptions],
+    () =>
+      getProjectionState<TData>(instance, {
+        ...normalizedDocHandle,
+        projection: normalizedProjection,
+      }),
+    [instance, normalizedDocHandle, normalizedProjection],
   )
 
   if (stateSource.getCurrent()?.data === null) {
-    throw resolveProjection(instance, projectionOptions)
+    throw resolveProjection(instance, {...normalizedDocHandle, projection: normalizedProjection})
   }
 
   // Create subscribe function for useSyncExternalStore

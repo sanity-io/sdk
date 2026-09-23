@@ -34,7 +34,6 @@ import {
   isDatasetResource,
   isMediaLibraryResource,
 } from '../config/sanityConfig'
-import {requestQueryRefresh} from '../query/queryRefresh'
 import {
   bindActionByResource,
   type BoundResourceKey,
@@ -416,10 +415,9 @@ const subscribeToQueuedAndApplyNextTransaction = ({
 const subscribeToAppliedAndSubmitNextTransaction = ({
   state,
   instance,
-  key,
+  key: {resource},
 }: StoreContext<DocumentStoreState, BoundResourceKey>) => {
   const {events} = state.get()
-  const {resource} = key
   const client$ = getClientState(instance, {apiVersion: API_VERSION, resource}).observable
 
   return scheduleOutgoingTransactions(state)
@@ -468,22 +466,7 @@ const subscribeToAppliedAndSubmitNextTransaction = ({
             skipCrossDatasetReferenceValidation: true,
             tag: 'document.action',
           })
-          .pipe(
-            revertOnError,
-            // The Actions API responds once the change is visible to queries, so refetch
-            // now instead of on the Live Content API event about a second later. Plain
-            // edits are skipped: a typing user produces one about every second, and each
-            // refresh refetches every active query. That includes the first edit of a
-            // published document, so its new draft reaches query results through the
-            // Live Content API as before. The mutations above use `async` visibility, so
-            // their response does not mean the change is queryable yet.
-            tap(() => {
-              if (outgoing.actions.some((action) => action.type !== 'document.edit')) {
-                requestQueryRefresh(key.name)
-              }
-            }),
-            toResult,
-          )
+          .pipe(revertOnError, toResult)
       }),
       tap(({outgoing, result}) => {
         state.set('cleanupOutgoingTransaction', cleanupOutgoingTransaction)

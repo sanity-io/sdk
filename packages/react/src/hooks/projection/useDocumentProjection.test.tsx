@@ -189,12 +189,6 @@ describe('useDocumentProjection', () => {
 
     expect(screen.getByText('Resolved Title')).toBeInTheDocument()
     expect(screen.getByText('Resolved Description')).toBeInTheDocument()
-
-    // Suspending must resolve the same store entry the hook reads
-    const resolveOptions = vi.mocked(resolveProjection).mock.calls.at(-1)?.[1]
-    expect(
-      vi.mocked(getProjectionState).mock.calls.some(([, options]) => options === resolveOptions),
-    ).toBe(true)
   })
 
   test('it handles environments without IntersectionObserver', async () => {
@@ -249,39 +243,6 @@ describe('useDocumentProjection', () => {
 
     expect(screen.getByText('Updated Title')).toBeInTheDocument()
     expect(screen.getByText('Added Description')).toBeInTheDocument()
-  })
-
-  test('it keeps its state source when re-rendered with an equal handle', async () => {
-    getCurrent.mockReturnValue({
-      data: {title: 'Title', description: 'Description'},
-      isPending: false,
-    })
-    subscribe.mockImplementation(() => vi.fn())
-    vi.mocked(getProjectionState).mockClear()
-
-    // Handles from a list query are new objects after every refetch
-    const {rerender} = render(
-      <ResourceProvider fallback={<div>Loading...</div>}>
-        <TestComponent document={{...mockDocument}} projection="{title, description}" />
-      </ResourceProvider>,
-    )
-    rerender(
-      <ResourceProvider fallback={<div>Loading...</div>}>
-        <TestComponent document={{...mockDocument}} projection="{title, description}" />
-      </ResourceProvider>,
-    )
-    expect(getProjectionState).toHaveBeenCalledTimes(1)
-
-    rerender(
-      <ResourceProvider fallback={<div>Loading...</div>}>
-        <TestComponent
-          document={{...mockDocument, documentId: 'doc2'}}
-          projection="{title, description}"
-        />
-      </ResourceProvider>,
-    )
-    expect(getProjectionState).toHaveBeenCalledTimes(2)
-    expect(vi.mocked(getProjectionState).mock.calls[1][1]).toMatchObject({documentId: 'doc2'})
   })
 
   test('it subscribes immediately when no ref is provided', async () => {
