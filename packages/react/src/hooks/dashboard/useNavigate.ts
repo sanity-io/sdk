@@ -48,13 +48,15 @@ export type NavigateToDashboardPath = (options: {
  * own in-app navigations back to the Dashboard so the browser URL and the Dashboard's router
  * follow along.
  *
- * A navigation the app reports is not echoed back through `navigateFn`. The returned function is
- * referentially stable.
+ * An in-app navigation the app reports is not echoed back through `navigateFn`. A
+ * dashboard-scoped one that lands in this app is, because the app's router has not moved. The
+ * returned function is referentially stable.
  *
  * The two Dashboard runtimes differ:
  * - In an iframe (Comlink), inbound `type` may be `'push'`, `'replace'` or `'pop'`. Reporting is
  *   optional because the bridge already forwards the iframe's own `pushState`; a reported `type`
- *   is ignored and the host applies the URL as a `replace`.
+ *   is ignored and the host applies the URL as a `replace`. Dashboard-scoped reports are dropped
+ *   with a console warning.
  * - In a federated app (message bus), inbound `type` is `'push'` or `'replace'`; `'pop'` is never
  *   sent. Reporting is required because the app's router does not reach the host, and `type` is
  *   honoured. Until the Dashboard publishes the app's base path, in-app reports are dropped with
@@ -182,7 +184,7 @@ function useBusNavigate(
   return useCallback<NavigateToDashboardPath>(
     ({path, type = 'push', scope = 'in-app'}) => {
       // The host commits paths without a leading slash; store the same form so the echo matches.
-      // A dashboard-scoped URL is not an app route, so its commit is never our own echo.
+      // A dashboard-scoped report never moved our router, so its commit must reach navigateFn.
       const own = scope === 'in-app' ? path.replace(/^\//, '') : null
       if (own !== null) ownRequest.current = own
       // A request that never landed must drop its suppression, or a later host navigation to the
