@@ -66,10 +66,25 @@ export interface PerspectiveHandle {
 }
 
 /**
+ * Selects a content variant. Where `perspective` chooses the bundle (drafts,
+ * published, or a release), `variant` chooses which variant of that bundle is
+ * read and written.
+ *
+ * Only a precise variant name is supported; the audience-conditions form
+ * offered by `@sanity/client` is not.
+ *
+ * @public
+ */
+export interface VariantHandle {
+  /** The name of a variant definition, as in `_.variants.{variant}`. */
+  variant?: string
+}
+
+/**
  * @public
  */
 export interface DatasetHandle<TDataset extends string = string, TProjectId extends string = string>
-  extends ProjectHandle<TProjectId>, PerspectiveHandle {
+  extends ProjectHandle<TProjectId>, PerspectiveHandle, VariantHandle {
   dataset?: TDataset
   /**
    * @beta

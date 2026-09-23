@@ -123,6 +123,7 @@ export {
   type SanityConfig,
   type StudioConfig,
   type TokenSource,
+  type VariantHandle,
 } from '../config/sanityConfig'
 export {getDashboardOrganizationId} from '../dashboard/messageBus/topicStore'
 export {datasets} from '../datasets/datasets'
@@ -165,6 +166,7 @@ export {
   applyDocumentActions,
   type ApplyDocumentActionsOptions,
 } from '../document/applyDocumentActions'
+export {getDocumentKey, isUnknownDocumentId, type UnknownDocumentId} from '../document/documentKey'
 export {
   type DocumentOptions,
   getDocumentState,
