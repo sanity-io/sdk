@@ -57,22 +57,34 @@ describe('useNavigate', () => {
     await expect(result.current({path: 'documents/abc'})).resolves.toEqual({ok: true})
 
     // jsdom's origin is fixed at http://localhost:3000 in this test env.
-    expect(mockFetch).toHaveBeenCalledWith('dashboard/v1/bridge/listeners/history/update-url', {
-      url: 'http://localhost:3000/documents/abc',
-    })
+    expect(mockFetch).toHaveBeenCalledWith(
+      'dashboard/v1/bridge/listeners/history/update-url',
+      {url: 'http://localhost:3000/documents/abc'},
+      {suppressWarnings: true},
+    )
   })
 
-  it.each([
-    ['refuses', () => mockFetch.mockResolvedValue({success: false})],
-    ['never replies', () => mockFetch.mockRejectedValue(new Error('timeout'))],
-  ])('resolves failed when the host %s', async (_, setup) => {
-    setup()
+  it('resolves failed when the host refuses', async () => {
+    mockFetch.mockResolvedValue({success: false})
     const {result} = renderHook(() => useNavigate(mockNavigateFn))
 
     await expect(result.current({path: 'documents/abc'})).resolves.toEqual({
       ok: false,
       reason: 'failed',
     })
+  })
+
+  it('resolves failed with a warning when the host never replies', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    onTestFinished(() => warn.mockRestore())
+    mockFetch.mockRejectedValue(new Error('timeout'))
+    const {result} = renderHook(() => useNavigate(mockNavigateFn))
+
+    await expect(result.current({path: 'documents/abc'})).resolves.toEqual({
+      ok: false,
+      reason: 'failed',
+    })
+    expect(warn).toHaveBeenCalledOnce()
   })
 
   it('drops a dashboard-scoped navigation with a warning', async () => {

@@ -30,7 +30,7 @@ export type DashboardNavigation = PathChangeMessage['data']
  */
 export type DashboardNavigationResult = ReplyOf<'navigation.location.update'>
 
-const FAILED: DashboardNavigationResult = {ok: false, reason: 'failed'}
+const FAILED: DashboardNavigationResult = Object.freeze({ok: false, reason: 'failed'})
 
 /**
  * Reports an in-app navigation to the Dashboard so the browser URL and the Dashboard's own
@@ -128,12 +128,18 @@ function useComlinkNavigate(
         console.warn('Dashboard-scoped navigation is not supported in the iframe runtime', path)
         return Promise.resolve({ok: false, reason: 'not-navigable'})
       }
+      // Comlink's own timeout warning is suppressed in favour of the one below.
       return fetch<UpdateURLMessage['response']>(
         'dashboard/v1/bridge/listeners/history/update-url',
         {url: new URL(path, window.location.origin).href},
+        {suppressWarnings: true},
       ).then(
         ({success}) => (success ? {ok: true} : FAILED),
-        () => FAILED,
+        (error) => {
+          // eslint-disable-next-line no-console
+          console.warn('Failed to report navigation to the Dashboard', error)
+          return FAILED
+        },
       )
     },
     [fetch],
