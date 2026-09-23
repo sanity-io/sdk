@@ -362,6 +362,70 @@ describe('queryStore', () => {
     unsubscribe()
   })
 
+  it('keeps the current result and live updates when a refresh fetch fails', async () => {
+    const mockSyncTags: SyncTag[] = ['s1:movies']
+    const newMovie = {_id: 'movie3', _type: 'movie', title: 'Movie 3'}
+    vi.mocked(fetch).mockReturnValueOnce(
+      of({result: mockData.movies, syncTags: mockSyncTags, ms: 0}).pipe(delay(0)),
+    )
+    vi.mocked(fetch).mockReturnValueOnce(
+      new Observable((observer) => {
+        observer.error(new Error('refresh failed'))
+      }),
+    )
+    vi.mocked(fetch).mockReturnValueOnce(
+      of({result: [...mockData.movies, newMovie], syncTags: mockSyncTags, ms: 0}).pipe(delay(0)),
+    )
+
+    const query = '*[_type == "movie"]'
+    const state = getQueryState<typeof mockData.movies>(instance, {query})
+    const unsubscribe = state.subscribe()
+    await advanceAndAwait(firstValueFrom(state.observable.pipe(filter((i) => i !== undefined))))
+
+    requestQueryRefresh('test.test')
+    await vi.advanceTimersByTimeAsync(0)
+    expect(fetch).toHaveBeenCalledTimes(2)
+    expect(state.getCurrent()).toEqual(mockData.movies)
+
+    liveEvents.next({
+      type: 'message',
+      id: 'event1',
+      tags: mockSyncTags,
+      documentId: 'movie3',
+      event: 'created',
+    } as LiveEvent)
+
+    const result = await advanceAndAwait(
+      firstValueFrom(state.observable.pipe(filter((data) => data?.length === 3))),
+    )
+    expect(fetch).toHaveBeenCalledTimes(3)
+    expect(result).toContainEqual(newMovie)
+
+    unsubscribe()
+  })
+
+  it('surfaces a failed refresh for a query that has no result yet', async () => {
+    vi.mocked(fetch).mockReturnValueOnce(
+      of({result: mockData.movies, syncTags: [], ms: 0}).pipe(delay(100)),
+    )
+    vi.mocked(fetch).mockReturnValueOnce(
+      new Observable((observer) => {
+        observer.error(new Error('refresh failed'))
+      }),
+    )
+
+    const query = '*[_type == "movie"]'
+    const state = getQueryState(instance, {query})
+    const unsubscribe = state.subscribe()
+
+    // The refresh replaces the initial fetch before it returns
+    requestQueryRefresh('test.test')
+    expect(fetch).toHaveBeenCalledTimes(2)
+    expect(() => state.getCurrent()).toThrow('refresh failed')
+
+    unsubscribe()
+  })
+
   it('handles errors in query fetching', async () => {
     const errorMessage = 'Query failed'
 

@@ -19,6 +19,7 @@ import {
   startWith,
   switchMap,
   tap,
+  throwError,
 } from 'rxjs'
 
 import {getClientState} from '../client/clientStore'
@@ -205,8 +206,8 @@ const listenForNewSubscribersAndFetch = ({
                   startWith({...inputs, bypassCdn: false}),
                 ),
               ),
-              switchMap(({lastLiveEventId, client, perspective, bypassCdn}) =>
-                client.observable.fetch(query, params, {
+              switchMap(({lastLiveEventId, client, perspective, bypassCdn}) => {
+                const fetch$ = client.observable.fetch(query, params, {
                   ...restOptions,
                   ...(bypassCdn && {useCdn: false}),
                   perspective,
@@ -214,8 +215,20 @@ const listenForNewSubscribersAndFetch = ({
                   returnQuery: false,
                   lastLiveEventId,
                   tag,
-                }),
-              ),
+                })
+                if (!bypassCdn) return fetch$
+                // A failed refresh keeps the current result instead of ending this query's
+                // updates. If the write changed the result, its Live Content API event still
+                // refetches it. A query with no result yet has no sync tags for that event to
+                // match, so its error still surfaces.
+                return fetch$.pipe(
+                  catchError((error: unknown) =>
+                    state.get().queries[group$.key]?.result === undefined
+                      ? throwError(() => error)
+                      : EMPTY,
+                  ),
+                )
+              }),
               tap(({result, syncTags}) => {
                 state.set('setQueryData', setQueryData(group$.key, result, syncTags))
               }),
