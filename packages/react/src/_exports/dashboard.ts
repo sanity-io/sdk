@@ -47,6 +47,7 @@ export {useCurrentUser} from '../hooks/dashboard/useCurrentUser'
 export {type TopicEmitter, useEmit} from '../hooks/dashboard/useEmit'
 export {
   type DashboardNavigation,
+  type DashboardNavigationResult,
   type NavigateToDashboardPath,
   useNavigate,
 } from '../hooks/dashboard/useNavigate'

@@ -7,7 +7,7 @@ import {afterEach, beforeEach, describe, expect, it, onTestFinished, vi} from 'v
 import {act, renderHook as renderHookWithInstance} from '../../../test/test-utils'
 import {useNavigate} from './useNavigate'
 
-const mockSendMessage = vi.fn()
+const mockFetch = vi.fn()
 let mockMessageHandler: ((data: PathChangeMessage['data']) => void) | undefined
 
 vi.mock('../comlink/useWindowConnection', () => {
@@ -19,7 +19,7 @@ vi.mock('../comlink/useWindowConnection', () => {
     }) => {
       mockMessageHandler = onMessage?.['dashboard/v1/history/change-path']
       return {
-        sendMessage: mockSendMessage,
+        fetch: mockFetch,
       }
     },
   }
@@ -45,26 +45,42 @@ describe('useNavigate', () => {
     expect(mockNavigateFn).toHaveBeenCalledWith(mockNavigationData)
   })
 
-  it('reports an in-app navigation over the Comlink update-url message', () => {
+  it('reports an in-app navigation over the Comlink update-url message', async () => {
+    mockFetch.mockResolvedValue({success: true})
     const {result} = renderHook(() => useNavigate(mockNavigateFn))
 
-    result.current({path: 'documents/abc'})
+    await expect(result.current({path: 'documents/abc'})).resolves.toEqual({ok: true})
 
     // jsdom's origin is fixed at http://localhost:3000 in this test env.
-    expect(mockSendMessage).toHaveBeenCalledWith(
-      'dashboard/v1/bridge/listeners/history/update-url',
-      {url: 'http://localhost:3000/documents/abc'},
-    )
+    expect(mockFetch).toHaveBeenCalledWith('dashboard/v1/bridge/listeners/history/update-url', {
+      url: 'http://localhost:3000/documents/abc',
+    })
   })
 
-  it('drops a dashboard-scoped navigation with a warning', () => {
+  it.each([
+    ['refuses', () => mockFetch.mockResolvedValue({success: false})],
+    ['never replies', () => mockFetch.mockRejectedValue(new Error('timeout'))],
+  ])('resolves failed when the host %s', async (_, setup) => {
+    setup()
+    const {result} = renderHook(() => useNavigate(mockNavigateFn))
+
+    await expect(result.current({path: 'documents/abc'})).resolves.toEqual({
+      ok: false,
+      reason: 'failed',
+    })
+  })
+
+  it('drops a dashboard-scoped navigation with a warning', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
     onTestFinished(() => warn.mockRestore())
     const {result} = renderHook(() => useNavigate(mockNavigateFn))
 
-    result.current({path: '/studios/abc', scope: 'dashboard'})
+    await expect(result.current({path: '/studios/abc', scope: 'dashboard'})).resolves.toEqual({
+      ok: false,
+      reason: 'not-navigable',
+    })
 
-    expect(mockSendMessage).not.toHaveBeenCalled()
+    expect(mockFetch).not.toHaveBeenCalled()
     expect(warn).toHaveBeenCalledOnce()
   })
 })
@@ -179,7 +195,9 @@ describe('useNavigate (message bus)', () => {
     const {result} = renderHookWithInstance(() => useNavigate(navigateFn))
 
     await act(async () => {
-      result.current({path: 'documents/def', type: 'replace'})
+      await expect(result.current({path: 'documents/def', type: 'replace'})).resolves.toEqual({
+        ok: true,
+      })
     })
 
     expect(updates).toEqual([{url: '/applications/app/documents/def', history: 'replace'}])
@@ -310,8 +328,10 @@ describe('useNavigate (message bus)', () => {
     const {result} = renderHookWithInstance(() => useNavigate(navigateFn))
 
     await act(async () => {
-      result.current({path: 'documents/def'})
-      await Promise.resolve()
+      await expect(result.current({path: 'documents/def'})).resolves.toEqual({
+        ok: false,
+        reason: 'not-navigable',
+      })
     })
 
     const hostTo = {appId: 'app', path: 'documents/def'}
@@ -404,7 +424,10 @@ describe('useNavigate (message bus)', () => {
     const {result} = renderHookWithInstance(() => useNavigate(navigateFn))
 
     await act(async () => {
-      result.current({path: 'documents/def'})
+      await expect(result.current({path: 'documents/def'})).resolves.toEqual({
+        ok: false,
+        reason: 'failed',
+      })
     })
 
     expect(updates).toEqual([])

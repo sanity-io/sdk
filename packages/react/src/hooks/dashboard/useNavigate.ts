@@ -6,7 +6,7 @@ import {
   SDK_NODE_NAME,
 } from '@sanity/message-protocol'
 import {isDashboardEnvironment, requireDashboardMessageBus} from '@sanity/sdk/_internal'
-import {type NavigationLocation, TopicError} from '@sanity/sdk/dashboard'
+import {type NavigationLocation, type ReplyOf, TopicError} from '@sanity/sdk/dashboard'
 import {useCallback, useEffect, useEffectEvent, useRef} from 'react'
 import {filter, map, pairwise} from 'rxjs'
 
@@ -24,6 +24,15 @@ type UpdateURLMessage = Bridge.Listeners.History.UpdateURLMessage
 export type DashboardNavigation = PathChangeMessage['data']
 
 /**
+ * The outcome of a reported navigation; `reason` follows `navigation.location.update`. Resolves
+ * `{ok: false, reason: 'failed'}` when the host never replies, so it never rejects.
+ * @public
+ */
+export type DashboardNavigationResult = ReplyOf<'navigation.location.update'>
+
+const FAILED: DashboardNavigationResult = {ok: false, reason: 'failed'}
+
+/**
  * Reports an in-app navigation to the Dashboard so the browser URL and the Dashboard's own
  * router follow the app. `type` defaults to `'push'` and only applies in the federated runtime;
  * see {@link useNavigate}.
@@ -37,7 +46,7 @@ export type NavigateToDashboardPath = (options: {
   path: string
   type?: 'push' | 'replace'
   scope?: 'in-app' | 'dashboard'
-}) => void
+}) => Promise<DashboardNavigationResult>
 
 /**
  * @public
@@ -65,7 +74,8 @@ export type NavigateToDashboardPath = (options: {
  * @param navigateFn - Function to handle navigation; should accept:
  * - `path`: a string, which will be a relative path (for example, 'my-route')
  * - `type`: 'push', 'replace', or 'pop', which will be the type of navigation to perform
- * @returns A function the app calls to report its own in-app navigations to the Dashboard.
+ * @returns A function the app calls to report its own in-app navigations to the Dashboard. It
+ * resolves with the host's reply.
  *
  * @example
  * ```tsx
@@ -100,10 +110,7 @@ export function useNavigate(
 function useComlinkNavigate(
   navigateFn: (options: DashboardNavigation) => void,
 ): NavigateToDashboardPath {
-  const {sendMessage} = useWindowConnection<
-    UpdateURLMessage | PathChangeMessage,
-    PathChangeMessage
-  >({
+  const {fetch} = useWindowConnection<UpdateURLMessage | PathChangeMessage, PathChangeMessage>({
     name: SDK_NODE_NAME,
     connectTo: SDK_CHANNEL_NAME,
     onMessage: {
@@ -119,13 +126,17 @@ function useComlinkNavigate(
       if (scope === 'dashboard') {
         // eslint-disable-next-line no-console
         console.warn('Dashboard-scoped navigation is not supported in the iframe runtime', path)
-        return
+        return Promise.resolve({ok: false, reason: 'not-navigable'})
       }
-      sendMessage('dashboard/v1/bridge/listeners/history/update-url', {
-        url: new URL(path, window.location.origin).href,
-      })
+      return fetch<UpdateURLMessage['response']>(
+        'dashboard/v1/bridge/listeners/history/update-url',
+        {url: new URL(path, window.location.origin).href},
+      ).then(
+        ({success}) => (success ? {ok: true} : FAILED),
+        () => FAILED,
+      )
     },
-    [sendMessage],
+    [fetch],
   )
 }
 
@@ -201,16 +212,18 @@ function useBusNavigate(
               if (!base.ok) throw new TopicError('applications.base-path')
               return joinPath(base.value, own)
             })
-      url
+      return url
         .then((resolved) => bus.emit('navigation.location.update', {url: resolved, history: type}))
         .then(
           (reply) => {
             if (!reply.ok) clearIfStale()
+            return reply
           },
           (error) => {
             // eslint-disable-next-line no-console
             console.warn('Failed to report navigation to the Dashboard', error)
             clearIfStale()
+            return FAILED
           },
         )
     },
