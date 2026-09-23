@@ -78,6 +78,26 @@ describe('normalizeActionsForResource', () => {
     expect(warnSpy).not.toHaveBeenCalled()
   })
 
+  it('leaves dataset edits with a variant alone', () => {
+    const action = editAction({documentId: 'doc1', documentType: 'author', variant: 'french'})
+
+    const result = normalizeActionsForResource([action], datasetResource)
+
+    expect(result[0]).toBe(action)
+    expect(warnSpy).not.toHaveBeenCalled()
+  })
+
+  it('strips the variant for resources without release support, warning once', () => {
+    const action = editAction({documentId: 'doc1', documentType: 'page', variant: 'french'})
+
+    const [result] = normalizeActionsForResource([action], canvasResource) as [EditDocumentAction]
+
+    expect(result.variant).toBeUndefined()
+    expect(result.liveEdit).toBe(true)
+    expect(warnSpy).toHaveBeenCalledTimes(1)
+    expect(warnSpy.mock.calls[0][0]).toContain('variants')
+  })
+
   it('strips release perspective and forces liveEdit for canvas, warning once', () => {
     const action = editAction({
       documentId: 'versions.relA.doc1',

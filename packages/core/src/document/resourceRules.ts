@@ -6,7 +6,7 @@ import {
   isMediaLibraryResource,
 } from '../config/sanityConfig'
 import {isReleasePerspective} from '../releases/utils/isReleasePerspective'
-import {type Action, type DocumentAction} from './actions'
+import {type Action, type EditDocumentAction} from './actions'
 import {getEffectiveDocumentId} from './util'
 
 export interface EffectiveDocModel {
@@ -16,8 +16,8 @@ export interface EffectiveDocModel {
    */
   liveEdit: boolean | undefined
   /**
-   * When `false`, the resource does not support release perspectives. Callers
-   * should drop any release perspective and fall back to the standard path.
+   * When `false`, the resource does not support release perspectives or
+   * variants. Callers should drop both and fall back to the standard path.
    */
   supportsReleases: boolean
 }
@@ -57,12 +57,13 @@ function describeResource(resource: DocumentResource | undefined): string {
 /**
  * Rewrites edit actions to match the editing model of the bound resource.
  *
- * Canvas and Media Library resources do not support release perspectives, and
- * Canvas (plus most Media Library types) does not have a draft/published
- * model. When an edit action arrives with a release perspective for a resource
- * that doesn't support it, the perspective is stripped and a single warning
- * is logged. When the resource forces liveEdit, the action's `liveEdit` flag
- * is set so the dispatcher takes the liveEdit branch.
+ * Canvas and Media Library resources do not support release perspectives or
+ * variants, and Canvas (plus most Media Library types) does not have a
+ * draft/published model. When an edit action arrives with a release
+ * perspective or variant for a resource that doesn't support it, that field is
+ * stripped and a single warning is logged. When the resource forces liveEdit,
+ * the action's `liveEdit` flag is set so the dispatcher takes the liveEdit
+ * branch.
  *
  * Only `document.edit` actions are normalized today — other action types
  * (publish, unpublish, release actions, etc.) pass through unchanged.
@@ -78,30 +79,10 @@ export function normalizeActionsForResource(
 
   const normalized = actions.map((action) => {
     if (action.type !== 'document.edit') return action
-
-    const {liveEdit: forcedLiveEdit, supportsReleases} = getEffectiveDocumentModel(
-      resource,
-      action.documentType,
-    )
-    const shouldRemovePerspective = isReleasePerspective(action.perspective) && !supportsReleases
-    const shouldForceLiveEdit = forcedLiveEdit === true && !action.liveEdit
-
-    if (!shouldRemovePerspective && !shouldForceLiveEdit) return action
-
-    const corrected: DocumentAction = {...action}
-    if (shouldForceLiveEdit) corrected.liveEdit = true
-    if (shouldRemovePerspective) corrected.perspective = undefined
-
-    // ensure we're using the right document ID for the corrected model
-    corrected.documentId = getEffectiveDocumentId({
-      ...corrected,
-      documentId: getPublishedId(DocumentId(corrected.documentId)),
-    })
-
-    if (shouldRemovePerspective) {
+    const {corrected, strippedVersioning} = normalizeEditAction(action, resource)
+    if (strippedVersioning) {
       stripped.push({documentType: action.documentType, documentId: corrected.documentId})
     }
-
     return corrected
   })
 
@@ -109,9 +90,54 @@ export function normalizeActionsForResource(
     const docs = stripped.map((e) => `${e.documentType} (${e.documentId})`).join(', ')
     // eslint-disable-next-line no-console
     console.warn(
-      `[sanity-sdk] ${describeResource(resource)} does not support release perspectives — falling back to the standard editing path for: ${docs}`,
+      `[sanity-sdk] ${describeResource(resource)} does not support release perspectives or variants — falling back to the standard editing path for: ${docs}`,
     )
   }
 
   return normalized
+}
+
+/**
+ * Applies the resource's editing model to a single edit action. Reports whether
+ * a release perspective or variant was stripped so the caller can warn once.
+ */
+function normalizeEditAction(
+  action: EditDocumentAction,
+  resource: DocumentResource | undefined,
+): {corrected: EditDocumentAction; strippedVersioning: boolean} {
+  const changes = getEditActionCorrections(action, resource)
+  const strippedVersioning = changes.perspective || changes.variant
+  if (!strippedVersioning && !changes.liveEdit) {
+    return {corrected: action, strippedVersioning: false}
+  }
+
+  const corrected: EditDocumentAction = {
+    ...action,
+    ...(changes.liveEdit && {liveEdit: true}),
+    ...(changes.perspective && {perspective: undefined}),
+    ...(changes.variant && {variant: undefined}),
+  }
+  // ensure we're using the right document ID for the corrected model
+  corrected.documentId = getEffectiveDocumentId({
+    ...corrected,
+    documentId: getPublishedId(DocumentId(corrected.documentId)),
+  })
+
+  return {corrected, strippedVersioning}
+}
+
+/** Which fields of an edit action the resource's editing model requires changing. */
+function getEditActionCorrections(
+  action: EditDocumentAction,
+  resource: DocumentResource | undefined,
+): {liveEdit: boolean; perspective: boolean; variant: boolean} {
+  const {liveEdit: forcedLiveEdit, supportsReleases} = getEffectiveDocumentModel(
+    resource,
+    action.documentType,
+  )
+  return {
+    liveEdit: forcedLiveEdit === true && !action.liveEdit,
+    perspective: isReleasePerspective(action.perspective) && !supportsReleases,
+    variant: action.variant !== undefined && !supportsReleases,
+  }
 }
