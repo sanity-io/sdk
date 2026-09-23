@@ -768,6 +768,23 @@ it('requests a query refresh once the Actions API acknowledges a transaction', a
   expect(requestQueryRefresh).toHaveBeenCalledWith('p.d')
 })
 
+it('does not request a query refresh for a transaction that only edits', async () => {
+  const doc = createDocumentHandle({documentId: randomUuid(), documentType: 'article'})
+  const created = await applyDocumentActions(instance, {actions: [createDocument(doc)], resource})
+  await created.submitted()
+  vi.mocked(requestQueryRefresh).mockClear()
+  const actionCallsBefore = vi.mocked(client.action).mock.calls.length
+
+  const edited = await applyDocumentActions(instance, {
+    actions: [editDocument(doc, {set: {title: 'edited'}})],
+    resource,
+  })
+  await edited.submitted()
+
+  expect(vi.mocked(client.action).mock.calls.length).toBe(actionCallsBefore + 1)
+  expect(requestQueryRefresh).not.toHaveBeenCalled()
+})
+
 it('does not request a query refresh when the Actions API rejects a transaction', async () => {
   vi.mocked(requestQueryRefresh).mockClear()
   vi.mocked(client.action).mockRejectedValueOnce(new Error('example error'))

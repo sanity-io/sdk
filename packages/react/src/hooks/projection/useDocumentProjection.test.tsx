@@ -189,6 +189,12 @@ describe('useDocumentProjection', () => {
 
     expect(screen.getByText('Resolved Title')).toBeInTheDocument()
     expect(screen.getByText('Resolved Description')).toBeInTheDocument()
+
+    // Suspending must resolve the same store entry the hook reads
+    const resolveOptions = vi.mocked(resolveProjection).mock.calls.at(-1)?.[1]
+    expect(
+      vi.mocked(getProjectionState).mock.calls.some(([, options]) => options === resolveOptions),
+    ).toBe(true)
   })
 
   test('it handles environments without IntersectionObserver', async () => {

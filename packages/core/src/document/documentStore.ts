@@ -19,10 +19,10 @@ import {
   startWith,
   Subject,
   switchMap,
+  take,
   tap,
   throwError,
   timer,
-  withLatestFrom,
 } from 'rxjs'
 
 import {getCurrentUserState} from '../auth/authStore'
@@ -420,14 +420,17 @@ const subscribeToAppliedAndSubmitNextTransaction = ({
 }: StoreContext<DocumentStoreState, BoundResourceKey>) => {
   const {events} = state.get()
   const {resource} = key
+  const client$ = getClientState(instance, {apiVersion: API_VERSION, resource}).observable
 
   return scheduleOutgoingTransactions(state)
     .pipe(
-      withLatestFrom(
-        getClientState(instance, {
-          apiVersion: API_VERSION,
-          resource,
-        }).observable,
+      // The scheduler has already moved this transaction to `outgoing`. Wait for a client
+      // instead of dropping the transaction, which would leave the queue blocked for good.
+      concatMap((outgoing) =>
+        client$.pipe(
+          take(1),
+          map((client) => [outgoing, client] as const),
+        ),
       ),
       concatMap(([outgoing, client]) => {
         const revertOnError = catchError((error: unknown) => {
@@ -467,10 +470,18 @@ const subscribeToAppliedAndSubmitNextTransaction = ({
           })
           .pipe(
             revertOnError,
-            // The Actions API responds once the change is visible to queries. The
-            // mutations above use `async` visibility, so their response does not
-            // mean that yet and they rely on the Live Content API instead.
-            tap(() => requestQueryRefresh(key.name)),
+            // The Actions API responds once the change is visible to queries, so refetch
+            // now instead of on the Live Content API event about a second later. Plain
+            // edits are skipped: a typing user produces one about every second, and each
+            // refresh refetches every active query. That includes the first edit of a
+            // published document, so its new draft reaches query results through the
+            // Live Content API as before. The mutations above use `async` visibility, so
+            // their response does not mean the change is queryable yet.
+            tap(() => {
+              if (outgoing.actions.some((action) => action.type !== 'document.edit')) {
+                requestQueryRefresh(key.name)
+              }
+            }),
             toResult,
           )
       }),

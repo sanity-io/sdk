@@ -155,6 +155,13 @@ describe('scheduleOutgoingTransactions', () => {
     expect(submissions[1].transaction.batchedTransactionIds).toEqual(['live'])
   })
 
+  it('submits an edit followed only by a transaction without actions', async () => {
+    enqueue(transaction('edit'), transaction('empty', []))
+    await vi.advanceTimersByTimeAsync(0)
+    expect(submissions).toHaveLength(1)
+    expect(submissions[0].transaction.batchedTransactionIds).toEqual(['edit'])
+  })
+
   it('cancels a scheduled flush if reversion removes the pending work', async () => {
     enqueue(transaction('first'))
     await vi.advanceTimersByTimeAsync(0)

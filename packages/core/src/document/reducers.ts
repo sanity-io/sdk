@@ -7,7 +7,7 @@ import {type StoreContext} from '../store/defineStore'
 import {randomId} from '../utils/ids'
 import {isDeepEqual, omitProperty} from '../utils/object'
 import {setCleanupTimeout} from '../utils/setCleanupTimeout'
-import {type Action} from './actions'
+import {type Action, type EditDocumentAction} from './actions'
 import {DOCUMENT_STATE_CLEAR_DELAY, UNVERIFIED_REVISION_RETENTION_TIME} from './documentConstants'
 import {type DocumentState, type DocumentStoreState} from './documentStore'
 import {type RemoteDocument} from './listen'
@@ -265,7 +265,9 @@ export function applyFirstQueuedTransaction(prev: SyncTransactionState): SyncTra
 }
 
 /** Whether a transaction can be combined with adjacent edits in the submission queue. */
-export function isBatchableTransaction(transaction: QueuedTransaction): boolean {
+export function isBatchableTransaction<TTransaction extends QueuedTransaction>(
+  transaction: TTransaction,
+): transaction is TTransaction & {actions: [EditDocumentAction]} {
   return (
     !transaction.disableBatching &&
     transaction.actions.length === 1 &&
@@ -304,15 +306,15 @@ export function batchAppliedTransactions([curr, ...rest]: AppliedTransaction[]):
   }
   if (!rest.length) return editAction
 
+  // The rest may hold only transactions without actions; submit this edit on its own.
   const next = batchAppliedTransactions(rest)
-  if (!next) return undefined
+  if (!next) return editAction
   if (next.disableBatching) return editAction
 
   // Don't batch a liveEdit edit with a non-liveEdit edit — they route to different APIs
   const nextFirst = next.actions[0]
   const nextLiveEdit = nextFirst && 'liveEdit' in nextFirst ? nextFirst.liveEdit : false
-  const liveEdit = 'liveEdit' in action && action.liveEdit
-  if (!!liveEdit !== !!nextLiveEdit) return editAction
+  if (!!action.liveEdit !== !!nextLiveEdit) return editAction
 
   return {
     disableBatching: false,

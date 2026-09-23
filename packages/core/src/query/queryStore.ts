@@ -38,7 +38,7 @@ import {defineStore, type StoreContext} from '../store/defineStore'
 import {type ResolveQueryResult} from '../typegen/resolve'
 import {randomId} from '../utils/ids'
 import {setCleanupTimeout} from '../utils/setCleanupTimeout'
-import {observeQueryRefreshRequests} from './queryRefresh'
+import {openQueryRefreshChannel} from './queryRefresh'
 import {
   QUERY_STATE_CLEAR_DELAY,
   QUERY_STORE_API_VERSION,
@@ -135,8 +135,8 @@ const listenForNewSubscribersAndFetch = ({
   instance,
   key: {name: storeName},
 }: StoreContext<QueryStoreState, BoundResourceKey>) => {
-  const refreshRequests$ = observeQueryRefreshRequests(storeName)
-  return state.observable
+  const refresh = openQueryRefreshChannel(storeName)
+  const subscription = state.observable
     .pipe(
       map((s) => new Set(Object.keys(s.queries))),
       distinctUntilChanged((curr, next) => {
@@ -200,7 +200,7 @@ const listenForNewSubscribersAndFetch = ({
               // response can predate the write. The Live Content API event for the same
               // write still arrives later and refetches as usual.
               switchMap((inputs) =>
-                refreshRequests$.pipe(
+                refresh.requests.pipe(
                   map(() => ({...inputs, bypassCdn: true})),
                   startWith({...inputs, bypassCdn: false}),
                 ),
@@ -233,6 +233,8 @@ const listenForNewSubscribersAndFetch = ({
       ),
     )
     .subscribe({error: errorHandler(state)})
+  subscription.add(refresh.close)
+  return subscription
 }
 
 const listenToLiveClientAndSetLastLiveEventIds = ({
