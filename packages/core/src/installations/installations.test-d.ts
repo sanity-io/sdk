@@ -27,6 +27,7 @@ test('Installation — no includes: only the base shape', () => {
   expectTypeOf<Installation>().toEqualTypeOf<InstallationBase>()
   expectTypeOf<Installation<never>>().toEqualTypeOf<InstallationBase>()
   expectTypeOf<Extract<keyof Installation, IncludeKeys>>().toEqualTypeOf<never>()
+  expectTypeOf<Extract<keyof Installation['application'], 'config'>>().toEqualTypeOf<never>()
 })
 
 test('InstallationBase — the application sub-object carries name and reference', () => {
@@ -53,11 +54,21 @@ test('Installation — multiple tokens add each field', () => {
   expectTypeOf<Extract<keyof Both, 'activeConfig'>>().toEqualTypeOf<never>()
 })
 
+test('Installation — module federation manifest include adds the manifest', () => {
+  type Item = Installation<'config.mfManifest'>
+  expectTypeOf<Item['application']['config']['mfManifest']>().toEqualTypeOf<unknown>()
+  expectTypeOf<
+    KeyModifier<Item['application']['config'], 'mfManifest'>
+  >().toEqualTypeOf<'optional'>()
+  expectTypeOf<Extract<keyof Item, IncludeKeys>>().toEqualTypeOf<never>()
+})
+
 test('Installation — a wide include array makes the fields optional', () => {
   type Wide = Installation<InstallationInclude>
   expectTypeOf<KeyModifier<Wide, 'access'>>().toEqualTypeOf<'optional'>()
   expectTypeOf<KeyModifier<Wide, 'interfaces'>>().toEqualTypeOf<'optional'>()
   expectTypeOf<KeyModifier<Wide, 'activeConfig'>>().toEqualTypeOf<'optional'>()
+  expectTypeOf<KeyModifier<Wide['application'], 'config'>>().toEqualTypeOf<'optional'>()
 })
 
 test('installations.resolveState — resolves the wide list envelope', () => {

@@ -69,6 +69,31 @@ const bookType = defineType({
   ],
 })
 
+const todoType = defineType({
+  name: 'todo',
+  type: 'document',
+  title: 'Todo',
+  fields: [
+    defineField({
+      name: 'text',
+      type: 'string',
+      title: 'Text',
+      validation: (Rule) => Rule.required(),
+    }),
+    defineField({
+      name: 'completed',
+      type: 'boolean',
+      title: 'Completed',
+      initialValue: false,
+    }),
+    defineField({
+      name: 'createdAtMs',
+      type: 'number',
+      title: 'Created at (milliseconds)',
+    }),
+  ],
+})
+
 const movieType = defineType({
   name: 'movie',
   title: 'Movie',
@@ -116,7 +141,7 @@ export default defineConfig([
     projectId: 'ppsg7ml5',
     dataset: 'test',
     schema: {
-      types: [bookType, authorType],
+      types: [bookType, authorType, todoType],
     },
   },
   {

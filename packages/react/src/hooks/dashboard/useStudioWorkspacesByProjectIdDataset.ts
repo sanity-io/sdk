@@ -1,7 +1,11 @@
+/* eslint-disable react-compiler/react-compiler -- the transport branch in `useStudioWorkspacesByProjectIdDataset` is a deliberate rules-of-hooks exception; the compiler refuses files that disable it */
 import {SDK_CHANNEL_NAME, SDK_NODE_NAME} from '@sanity/message-protocol'
-import {useEffect, useState} from 'react'
+import {getApplicationOrigin, isDashboardEnvironment} from '@sanity/sdk/_internal'
+import {type TopicData} from '@sanity/sdk/dashboard'
+import {useEffect, useMemo, useState} from 'react'
 
 import {useWindowConnection} from '../comlink/useWindowConnection'
+import {useTopic} from './useTopic'
 
 export interface DashboardResource {
   id: string
@@ -24,8 +28,13 @@ interface StudioWorkspacesResult {
   error: string | null
 }
 
+type DashboardApplications = NonNullable<TopicData<'applications.list'>>
+
 /**
  * Hook that fetches studio workspaces and organizes them by projectId:dataset
+ *
+ * Works in both Dashboard runtimes: it derives workspaces from the `applications.list` message
+ * bus topic when a host has installed the bus, and falls back to the Comlink connection otherwise.
  * @internal
  *
  * @example
@@ -59,6 +68,55 @@ interface StudioWorkspacesResult {
  * ```
  */
 export function useStudioWorkspacesByProjectIdDataset(): StudioWorkspacesResult {
+  // The branch is stable: the transport is fixed for the page lifetime, so one set of hooks
+  // always runs and the other never does.
+  // eslint-disable-next-line react-hooks/rules-of-hooks -- transport is fixed for the page lifetime
+  if (isDashboardEnvironment()) return useBusStudioWorkspaces()
+  // eslint-disable-next-line react-hooks/rules-of-hooks -- transport is fixed for the page lifetime
+  return useComlinkStudioWorkspaces()
+}
+
+// The legacy Comlink protocol models studios at the workspace level, so each workspace of a
+// studio's active deployment becomes one resource, addressed by the studio's origin.
+function toResources(application: DashboardApplications[number]): DashboardResource[] {
+  // Installations join the topic union without a `type`; only studios yield workspace resources.
+  if (!('type' in application) || application.type !== 'studio') return []
+  const url = getApplicationOrigin(application) ?? ''
+  return (application.activeDeployment?.workspaces ?? []).map((workspace) => ({
+    id: workspace.id,
+    name: workspace.name,
+    title: workspace.title ?? application.title,
+    basePath: workspace.basePath ?? '',
+    projectId: workspace.projectId,
+    dataset: workspace.dataset,
+    type: 'studio',
+    userApplicationId: application.id,
+    url,
+  }))
+}
+
+function toWorkspaceMap(applications: DashboardApplications): WorkspacesByProjectIdDataset {
+  const workspaceMap: WorkspacesByProjectIdDataset = {}
+  for (const resource of applications.flatMap(toResources)) {
+    const key = `${resource.projectId}:${resource.dataset}` as const
+    workspaceMap[key] ??= []
+    workspaceMap[key].push(resource)
+  }
+  return workspaceMap
+}
+
+// Suspends until the host publishes its application list and throws a `TopicError` on failure,
+// like every bus hook, so `error` is always `null` on this path.
+function useBusStudioWorkspaces(): StudioWorkspacesResult {
+  const applications = useTopic('applications.list')
+  const workspacesByProjectIdAndDataset = useMemo(
+    () => toWorkspaceMap(applications ?? []),
+    [applications],
+  )
+  return {workspacesByProjectIdAndDataset, error: null}
+}
+
+function useComlinkStudioWorkspaces(): StudioWorkspacesResult {
   const [workspacesByProjectIdAndDataset, setWorkspacesByProjectIdAndDataset] =
     useState<WorkspacesByProjectIdDataset>({})
   const [error, setError] = useState<string | null>(null)

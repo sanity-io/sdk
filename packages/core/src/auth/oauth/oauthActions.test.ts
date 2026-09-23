@@ -9,14 +9,15 @@ import {subscribeToStateAndFetchCurrentUser} from '../subscribeToStateAndFetchCu
 import {
   getOAuthTokensState,
   handleOAuthCallback,
+  OAUTH_RETURN_TO_KEY,
   OAUTH_STATE_KEY,
   OAUTH_VERIFIER_KEY,
   refreshOAuthTokens,
   revokeOAuthTokens,
-  serializeTokens,
   startOAuthAuthorization,
 } from './oauthActions'
 import {deserializeTokens, OAUTH_TOKENS_KEY} from './oauthAuth'
+import {serializeTokens} from './oauthClient'
 import {type OAuthTokens} from './types'
 
 const readStored = (storage: Storage) => deserializeTokens(storage.getItem(OAUTH_TOKENS_KEY))
@@ -40,6 +41,11 @@ const oauthConfig = {
   clientId: 'client-abc',
   redirectUri: 'https://app.example.com/callback',
   organizationId: 'org123',
+}
+
+const oauthConfigNoOrg = {
+  clientId: 'client-abc',
+  redirectUri: 'https://app.example.com/callback',
 }
 
 const seededTokens: OAuthTokens = {
@@ -93,6 +99,7 @@ interface SetupOptions {
   sessionSeed?: Record<string, string>
   initialLocationHref?: string
   withOAuthConfig?: boolean
+  oauthConfig?: {clientId: string; redirectUri: string; organizationId?: string}
   apiHost?: string
 }
 
@@ -111,7 +118,7 @@ function setup(options: SetupOptions = {}) {
       storageArea,
       initialLocationHref: options.initialLocationHref ?? 'https://app.example.com/',
       ...(options.apiHost && {apiHost: options.apiHost}),
-      ...(options.withOAuthConfig === false ? {} : {oauth: oauthConfig}),
+      ...(options.withOAuthConfig === false ? {} : {oauth: options.oauthConfig ?? oauthConfig}),
     },
   })
 
@@ -154,6 +161,39 @@ describe('startOAuthAuthorization', () => {
     expect(url.searchParams.get('code_challenge')).toBeTruthy()
     expect(url.searchParams.get('state')).toBe(session.getItem(OAUTH_STATE_KEY))
     expect(url.searchParams.getAll('resource')).toEqual(['urn:io.sanity:organization:org123'])
+  })
+
+  it('stashes the current location to return to, keeping app params intact', async () => {
+    const href = 'https://app.example.com/documents/abc?state=draft&code=x#h'
+    vi.stubGlobal('window', {location: {assign: vi.fn(), href}})
+    vi.stubGlobal('location', {href})
+    const {session} = setup()
+
+    await startOAuthAuthorization(instance!)
+
+    expect(session.getItem(OAUTH_RETURN_TO_KEY)).toBe(href)
+  })
+
+  it('strips stale OAuth params from the stashed location when already on the callback route', async () => {
+    const href = 'https://app.example.com/callback?x=1&code=old&state=old'
+    vi.stubGlobal('window', {location: {assign: vi.fn(), href}})
+    vi.stubGlobal('location', {href})
+    const {session} = setup()
+
+    await startOAuthAuthorization(instance!)
+
+    expect(session.getItem(OAUTH_RETURN_TO_KEY)).toBe('https://app.example.com/callback?x=1')
+  })
+
+  it('omits the resource param when no organizationId is configured', async () => {
+    const assign = vi.fn()
+    vi.stubGlobal('window', {location: {assign}})
+    setup({initialLocationHref: 'https://app.example.com/', oauthConfig: oauthConfigNoOrg})
+
+    await startOAuthAuthorization(instance!)
+
+    const url = new URL(assign.mock.calls[0][0])
+    expect(url.searchParams.has('resource')).toBe(false)
   })
 
   it('throws when OAuth is not configured', async () => {
@@ -203,6 +243,75 @@ describe('handleOAuthCallback', () => {
     })
   })
 
+  it('returns the stashed same-origin location after a successful exchange', async () => {
+    const returnTo = 'https://app.example.com/documents/abc?x=1'
+    const {session} = setup({
+      sessionSeed: {
+        [OAUTH_STATE_KEY]: 'state-xyz',
+        [OAUTH_VERIFIER_KEY]: 'verifier-1',
+        [OAUTH_RETURN_TO_KEY]: returnTo,
+      },
+    })
+
+    expect(await handleOAuthCallback(instance!, callbackHref)).toBe(returnTo)
+    expect(session.getItem(OAUTH_RETURN_TO_KEY)).toBeNull()
+  })
+
+  it('ignores a stashed location on a different origin', async () => {
+    setup({
+      sessionSeed: {
+        [OAUTH_STATE_KEY]: 'state-xyz',
+        [OAUTH_VERIFIER_KEY]: 'verifier-1',
+        [OAUTH_RETURN_TO_KEY]: 'https://evil.example.com/',
+      },
+    })
+
+    expect(await handleOAuthCallback(instance!, callbackHref)).toBe(
+      'https://app.example.com/callback',
+    )
+  })
+
+  it('ignores a stashed location that is not a URL', async () => {
+    setup({
+      sessionSeed: {
+        [OAUTH_STATE_KEY]: 'state-xyz',
+        [OAUTH_VERIFIER_KEY]: 'verifier-1',
+        [OAUTH_RETURN_TO_KEY]: 'not a url',
+      },
+    })
+
+    expect(await handleOAuthCallback(instance!, callbackHref)).toBe(
+      'https://app.example.com/callback',
+    )
+  })
+
+  it('does not restore the stashed location on a state mismatch', async () => {
+    const {session} = setup({
+      sessionSeed: {
+        [OAUTH_STATE_KEY]: 'different',
+        [OAUTH_VERIFIER_KEY]: 'verifier-1',
+        [OAUTH_RETURN_TO_KEY]: 'https://app.example.com/deep',
+      },
+    })
+
+    expect(await handleOAuthCallback(instance!, callbackHref)).toBe(
+      'https://app.example.com/callback',
+    )
+    expect(session.getItem(OAUTH_RETURN_TO_KEY)).toBeNull()
+  })
+
+  it('does not restore the stashed location on an ?error= callback', async () => {
+    const {session} = setup({sessionSeed: {[OAUTH_RETURN_TO_KEY]: 'https://app.example.com/deep'}})
+
+    const result = await handleOAuthCallback(
+      instance!,
+      'https://app.example.com/callback?error=access_denied',
+    )
+
+    expect(result).toBe('https://app.example.com/callback')
+    expect(session.getItem(OAUTH_RETURN_TO_KEY)).toBeNull()
+  })
+
   it('does not perform a second exchange on a duplicate concurrent invocation', async () => {
     const pending = deferred<typeof tokenResponse>()
     const request = vi.fn().mockReturnValue(pending.promise)
@@ -221,6 +330,31 @@ describe('handleOAuthCallback', () => {
     expect(await first).toBe('https://app.example.com/callback')
   })
 
+  it('does not clobber LOGGED_IN when called again with a stale callback URL', async () => {
+    const {request} = setup({
+      sessionSeed: {[OAUTH_STATE_KEY]: 'state-xyz', [OAUTH_VERIFIER_KEY]: 'verifier-1'},
+    })
+
+    expect(await handleOAuthCallback(instance!, callbackHref)).toBe(
+      'https://app.example.com/callback',
+    )
+    // Artifacts are now cleared; a repeat with the same URL fails state validation.
+    // Seed fresh artifacts as if a re-authorization started in this tab: the
+    // ignored stale callback must not wipe them.
+    sessionStorage.setItem(OAUTH_STATE_KEY, 'state-next')
+    sessionStorage.setItem(OAUTH_VERIFIER_KEY, 'verifier-next')
+    const result = await handleOAuthCallback(instance!, callbackHref)
+
+    expect(result).toBe('https://app.example.com/callback')
+    expect(request).toHaveBeenCalledTimes(1)
+    expect(getAuthState(instance!).getCurrent()).toMatchObject({
+      type: AuthStateType.LOGGED_IN,
+      token: 'new-access',
+    })
+    expect(sessionStorage.getItem(OAUTH_STATE_KEY)).toBe('state-next')
+    expect(sessionStorage.getItem(OAUTH_VERIFIER_KEY)).toBe('verifier-next')
+  })
+
   it('surfaces an ?error= callback as ERROR without exchanging', async () => {
     const {request} = setup()
 
@@ -232,6 +366,25 @@ describe('handleOAuthCallback', () => {
     expect(result).toBe('https://app.example.com/callback')
     expect(request).not.toHaveBeenCalled()
     expect(getAuthState(instance!).getCurrent()).toMatchObject({type: AuthStateType.ERROR})
+  })
+
+  it('ignores an ?error= callback when a session is already established', async () => {
+    setup({
+      storageSeed: {[OAUTH_TOKENS_KEY]: serializeTokens(seededTokens)},
+      sessionSeed: {[OAUTH_STATE_KEY]: 'state-next', [OAUTH_VERIFIER_KEY]: 'verifier-next'},
+    })
+
+    const result = await handleOAuthCallback(
+      instance!,
+      'https://app.example.com/callback?error=access_denied',
+    )
+
+    expect(result).toBe('https://app.example.com/callback')
+    expect(getAuthState(instance!).getCurrent()).toMatchObject({
+      type: AuthStateType.LOGGED_IN,
+      token: seededTokens.accessToken,
+    })
+    expect(sessionStorage.getItem(OAUTH_STATE_KEY)).toBe('state-next')
   })
 
   it('surfaces an ?error= callback without a description', async () => {
@@ -269,6 +422,18 @@ describe('handleOAuthCallback', () => {
     expect(request).not.toHaveBeenCalled()
   })
 
+  it('omits the resource param when no organizationId is configured', async () => {
+    const {request} = setup({
+      oauthConfig: oauthConfigNoOrg,
+      sessionSeed: {[OAUTH_STATE_KEY]: 'state-xyz', [OAUTH_VERIFIER_KEY]: 'verifier-1'},
+    })
+
+    await handleOAuthCallback(instance!, callbackHref)
+
+    const body = parseBody(request.mock.calls[0][0].body)
+    expect(body.has('resource')).toBe(false)
+  })
+
   it('sets ERROR when the token exchange fails', async () => {
     const request = vi.fn().mockRejectedValue(new Error('boom'))
     const {session} = setup({
@@ -299,8 +464,25 @@ describe('refreshOAuthTokens', () => {
     expect(body.get('client_id')).toBe('client-abc')
     expect(body.get('resource')).toBe('urn:io.sanity:organization:org123')
 
-    expect(result).toMatchObject({accessToken: 'new-access', refreshToken: 'new-refresh'})
-    expect(readStored(storageArea)).toMatchObject({accessToken: 'new-access'})
+    expect(result).toMatchObject({accessToken: 'new-access'})
+    expect(result).not.toHaveProperty('refreshToken')
+    // Storage retains the refresh token so core can refresh again later.
+    expect(readStored(storageArea)).toMatchObject({
+      accessToken: 'new-access',
+      refreshToken: 'new-refresh',
+    })
+  })
+
+  it('omits the resource param when no organizationId is configured', async () => {
+    const {request} = setup({
+      oauthConfig: oauthConfigNoOrg,
+      storageSeed: {[OAUTH_TOKENS_KEY]: serializeTokens(seededTokens)},
+    })
+
+    await refreshOAuthTokens(instance!)
+
+    const body = parseBody(request.mock.calls[0][0].body)
+    expect(body.has('resource')).toBe(false)
   })
 
   it('shares a single in-flight request across concurrent callers', async () => {
@@ -445,9 +627,19 @@ describe('revokeOAuthTokens', () => {
 })
 
 describe('getOAuthTokensState', () => {
-  it('exposes the current OAuth tokens', () => {
+  it('exposes the current OAuth tokens without the refresh token', () => {
     setup({storageSeed: {[OAUTH_TOKENS_KEY]: serializeTokens(seededTokens)}})
-    expect(getOAuthTokensState(instance!).getCurrent()).toEqual(seededTokens)
+    const current = getOAuthTokensState(instance!).getCurrent()
+    const {refreshToken: _refreshToken, ...expected} = seededTokens
+    expect(current).toEqual(expected)
+    expect(current).not.toHaveProperty('refreshToken')
+  })
+
+  it('returns the same reference while the tokens are unchanged', () => {
+    // useSyncExternalStore loops forever on a snapshot that changes identity every read
+    setup({storageSeed: {[OAUTH_TOKENS_KEY]: serializeTokens(seededTokens)}})
+    const source = getOAuthTokensState(instance!)
+    expect(source.getCurrent()).toBe(source.getCurrent())
   })
 
   it('returns null when there are no OAuth tokens', () => {

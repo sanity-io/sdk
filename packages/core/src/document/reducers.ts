@@ -814,7 +814,7 @@ export function manageSubscriberIds(
 // pull the correct document ids from action bodies, which have similar but not
 // identical shapes to the document handles. release actions also flow through
 // here, and resolve to the underlying release document id.
-function getDocumentIdsFromHandleLikes(handles: (DocumentHandleLike | Action)[]): string[] {
+export function getDocumentIdsFromHandleLikes(handles: (DocumentHandleLike | Action)[]): string[] {
   return handles.flatMap((handle) => {
     if ('type' in handle && isReleaseAction(handle)) {
       return [getReleaseDocumentId(handle.releaseId)]
@@ -829,8 +829,8 @@ function getDocumentIdsFromHandleLikes(handles: (DocumentHandleLike | Action)[])
         getVersionId(DocumentId(handle.documentId), handle.perspective.releaseName),
       )
     }
-    idsForDocument.push(getPublishedId(DocumentId(handle.documentId)))
     idsForDocument.push(getDraftId(DocumentId(handle.documentId)))
+    idsForDocument.push(getPublishedId(DocumentId(handle.documentId)))
     return idsForDocument
   })
 }

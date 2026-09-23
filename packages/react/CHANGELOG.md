@@ -1,5 +1,88 @@
 # Changelog
 
+## 3.4.0
+
+### Minor Changes
+
+- [#1288](https://github.com/sanity-io/sdk/pull/1288) [`9c2104a`](https://github.com/sanity-io/sdk/commit/9c2104a799f7b00b18b287b8735ef11b352d676b) Thanks [@joshuaellis](https://github.com/joshuaellis)! - `useAgentResourceContext` works in both Dashboard runtimes. Under the message bus it publishes the new `applications.context.update` topic instead of the Comlink event. A new `useApplicationContext` hook publishes what an application is currently showing, and new `applications.context` and `applications.context.update` topics carry it.
+
+- [#1274](https://github.com/sanity-io/sdk/pull/1274) [`efad8fe`](https://github.com/sanity-io/sdk/commit/efad8fe1e719e865120feb19bcacece9e86b14ec) Thanks [@joshuaellis](https://github.com/joshuaellis)! - `useNavigate` and `useNavigateToStudioDocument` work in both Dashboard runtimes. Under the message bus, `useNavigate` follows the `navigation.location` topic and its returned function reports in-app navigation back to the Dashboard; `useNavigateToStudioDocument` requests the studio edit intent over `navigation.location.update`. `MessageBusConnection` exposes `appId`.
+
+- [#1279](https://github.com/sanity-io/sdk/pull/1279) [`73a24d6`](https://github.com/sanity-io/sdk/commit/73a24d681375b8294f8660b2eaa501d8c589545b) Thanks [@joshuaellis](https://github.com/joshuaellis)! - Add the `applications.capabilities` state topic, the `Capability`, `CapabilityRecord`, and `capabilities` exports on `@sanity/sdk/dashboard`, and the `useCapabilities()` hook on `@sanity/sdk-react/dashboard` so an application can read the capabilities the host provides and hide its own implementation of anything the host provides.
+
+- [#1287](https://github.com/sanity-io/sdk/pull/1287) [`1ea6b4a`](https://github.com/sanity-io/sdk/commit/1ea6b4a251f4ec701e7044c9043613368440048a) Thanks [@joshuaellis](https://github.com/joshuaellis)! - `useRecordDocumentHistoryEvent` works in both Dashboard runtimes. Under the message bus it reports document activity over the new `applications.activity` topic, requires `resourceId`, and no-ops when the host does not provide the `history` capability. The Comlink behaviour and the public signature are unchanged.
+
+### Patch Changes
+
+- [#1292](https://github.com/sanity-io/sdk/pull/1292) [`fe0d62b`](https://github.com/sanity-io/sdk/commit/fe0d62b51660204583bfda5dbf054ef5c2abbb4c) Thanks [@squiggler-app](https://github.com/apps/squiggler-app)! - Update dependencies: `react-error-boundary@6.1.6`
+
+- [#1284](https://github.com/sanity-io/sdk/pull/1284) [`36889e2`](https://github.com/sanity-io/sdk/commit/36889e2d61adb8ea04265d9c2c5d2d13b434fe33) Thanks [@squiggler-app](https://github.com/apps/squiggler-app)! - Update dependencies: `groq@6.15.0`, `sanity@6.15.0`
+
+- [#1277](https://github.com/sanity-io/sdk/pull/1277) [`04e1723`](https://github.com/sanity-io/sdk/commit/04e17230f26c53156d57815f38939af713f43e12) Thanks [@squiggler-app](https://github.com/apps/squiggler-app)! - Update dependencies: `@sanity/types@6.15.0`
+- Updated dependencies [[`9c2104a`](https://github.com/sanity-io/sdk/commit/9c2104a799f7b00b18b287b8735ef11b352d676b), [`73a24d6`](https://github.com/sanity-io/sdk/commit/73a24d681375b8294f8660b2eaa501d8c589545b), [`1ea6b4a`](https://github.com/sanity-io/sdk/commit/1ea6b4a251f4ec701e7044c9043613368440048a), [`eaaa7fb`](https://github.com/sanity-io/sdk/commit/eaaa7fb37c670aaa04b70e0eb597329f7f736ea0), [`fe0d62b`](https://github.com/sanity-io/sdk/commit/fe0d62b51660204583bfda5dbf054ef5c2abbb4c), [`36889e2`](https://github.com/sanity-io/sdk/commit/36889e2d61adb8ea04265d9c2c5d2d13b434fe33), [`04e1723`](https://github.com/sanity-io/sdk/commit/04e17230f26c53156d57815f38939af713f43e12), [`d764d35`](https://github.com/sanity-io/sdk/commit/d764d354fc85b8ffcdd41cf86f280294a28c1d71)]:
+  - @sanity/sdk@3.4.0
+
+## 3.3.0 (2026-09-17)
+
+
+### Features
+
+* **dashboard:** add new topic `applications.base-path` ([#1265](https://github.com/sanity-io/sdk/issues/1265)) ([7168c5f](https://github.com/sanity-io/sdk/commit/7168c5f8d800822301702eaaea313a9ba2411014))
+* **dashboard:** add new topic `applications.status.update` ([#1266](https://github.com/sanity-io/sdk/issues/1266)) ([336e854](https://github.com/sanity-io/sdk/commit/336e8543e93755923386a95a692cd9b591562896))
+* **installations:** expose federated manifests in application config ([#1256](https://github.com/sanity-io/sdk/issues/1256)) ([bbabcb8](https://github.com/sanity-io/sdk/commit/bbabcb8fe27e4bc50c18f6bbeb9f59043f05d775))
+* **react:** add useAuthToken and useCurrentUser to the dashboard entry ([#1263](https://github.com/sanity-io/sdk/issues/1263)) ([7bd6253](https://github.com/sanity-io/sdk/commit/7bd6253b3645f1a65c21e89b0524c148c535ceb2))
+* **react:** make useOrganizationId and useWindowTitle work under the message bus ([#1264](https://github.com/sanity-io/sdk/issues/1264)) ([341b63d](https://github.com/sanity-io/sdk/commit/341b63d815d509d3d6e90837427a71a973d01f10))
+* **react:** make useStudioWorkspacesByProjectIdDataset work under the message bus ([#1270](https://github.com/sanity-io/sdk/issues/1270)) ([ad3e2fa](https://github.com/sanity-io/sdk/commit/ad3e2fac41d0e74208a766fd9c8c5578f7fedfd8))
+
+
+### Bug Fixes
+
+* **react:** preserve full applications in useApplications (SDK-2591) ([#1269](https://github.com/sanity-io/sdk/issues/1269)) ([b649384](https://github.com/sanity-io/sdk/commit/b6493845a8223d0c3e2ed7f940528118183c56fc))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk bumped to 3.3.0
+
+## [3.2.0](https://github.com/sanity-io/sdk/compare/sdk-react-v3.1.0...sdk-react-v3.2.0) (2026-09-15)
+
+
+### Features
+
+* **core:** connect one message bus per SanityInstance with module identity ([#1200](https://github.com/sanity-io/sdk/issues/1200)) ([c17f440](https://github.com/sanity-io/sdk/commit/c17f4409e0699e27a4e6f8306401794a21a41f94))
+* **core:** give each message bus connection its own state ([#1251](https://github.com/sanity-io/sdk/issues/1251)) ([911ff88](https://github.com/sanity-io/sdk/commit/911ff8861d35fd1a75e45d6af6da2fc283e4fa16))
+* **core:** stamp moduleId on message bus meta and add per-connection disconnect ([#1199](https://github.com/sanity-io/sdk/issues/1199)) ([a265484](https://github.com/sanity-io/sdk/commit/a265484f24a01e4e9760636491a2c7c04857fc93))
+* **react:** `useApplicationConfig` ([#1148](https://github.com/sanity-io/sdk/issues/1148)) ([456d3fc](https://github.com/sanity-io/sdk/commit/456d3fc38e04288490e372100d638fdb9fba3537))
+* **react:** add `useApplicationForegroundId` ([#1128](https://github.com/sanity-io/sdk/issues/1128)) ([f50ecf0](https://github.com/sanity-io/sdk/commit/f50ecf0757211a850411ac7a43c17f621130c0c5))
+* **react:** add `useApplications` and `useApplication` ([#1144](https://github.com/sanity-io/sdk/issues/1144)) ([263c7b0](https://github.com/sanity-io/sdk/commit/263c7b00e27208a7c7ebe96c9fa6485348c4f49b))
+* **react:** add `useEmit` ([#1146](https://github.com/sanity-io/sdk/issues/1146)) ([3a788c9](https://github.com/sanity-io/sdk/commit/3a788c9c3b3496f609f6f2c1836910c059a409fe))
+* **react:** add `useTopic` ([#1212](https://github.com/sanity-io/sdk/issues/1212)) ([13c3e25](https://github.com/sanity-io/sdk/commit/13c3e2588fb9c7adf1ffc410d6fe0db18e2587c2))
+* **react:** add typed dashboard URL builder ([#1125](https://github.com/sanity-io/sdk/issues/1125)) ([f520604](https://github.com/sanity-io/sdk/commit/f5206042932cf0821cdb6daf259530dc34dd2c81))
+* **react:** port message bus ([#1126](https://github.com/sanity-io/sdk/issues/1126)) ([d3519ee](https://github.com/sanity-io/sdk/commit/d3519eec069a1ad4e6714dc61823e5e1a8e4aac4))
+* **sdk-react:** add lazy instance-scoped useRemoteClient ([#1248](https://github.com/sanity-io/sdk/issues/1248)) ([a8cef14](https://github.com/sanity-io/sdk/commit/a8cef144777acf4ec5f4364d1b47023c497cf515))
+* **sdk-react:** expose federation setup through dashboard ([#1247](https://github.com/sanity-io/sdk/issues/1247)) ([8dcb416](https://github.com/sanity-io/sdk/commit/8dcb41603452317fa0343ebe1ea189166d5cbe30))
+* **typegen:** drop the experimental groq fork behind a compatibility shim ([#1179](https://github.com/sanity-io/sdk/issues/1179)) ([f19d95f](https://github.com/sanity-io/sdk/commit/f19d95f1c7e14bb5cc8f5fa71586d4d1d4713b82))
+
+
+### Bug Fixes
+
+* **core:** align application types with brett ([#1160](https://github.com/sanity-io/sdk/issues/1160)) ([115e74e](https://github.com/sanity-io/sdk/commit/115e74e0d7e3d1743699502dd1a15d1ac44d8926))
+* **react:** resolve fallow unused-export on SanityDocument ([#1219](https://github.com/sanity-io/sdk/issues/1219)) ([1db8f9a](https://github.com/sanity-io/sdk/commit/1db8f9ac8fe0f372bf6bccb2db4ecec3a422c04d))
+
+
+### Documentation
+
+* **react:** correct editDocument patch shape in useApplyDocumentActions example ([#1158](https://github.com/sanity-io/sdk/issues/1158)) ([e410ce5](https://github.com/sanity-io/sdk/commit/e410ce55dad9291377b841881f944f9a5ed9f8eb))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk bumped to 3.2.0
+
 ## [3.1.0](https://github.com/sanity-io/sdk/compare/sdk-react-v3.0.0...sdk-react-v3.1.0) (2026-09-03)
 
 

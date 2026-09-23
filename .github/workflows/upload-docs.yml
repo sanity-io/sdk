@@ -114,42 +114,59 @@ jobs:
 
             The package TypeDoc JSON files and combined HTML site have been generated successfully.
 
+      # A release cuts a single `sdk-vX.Y.Z` tag for both packages, so on release
+      # we derive the shared VERSION from the tag and upload both. The manual
+      # workflow_dispatch path still uploads the single selected package.
       - name: Extract package info
         if: github.event_name == 'release' || inputs.upload == true
         id: package_info
         run: |
           if [ "${{ github.event_name }}" = "release" ]; then
-            # Extract package name (everything before -v)
-            PACKAGE_NAME=$(echo "${{ github.ref_name }}" | sed 's/-v.*//')
-
-            # Extract version (everything after -v)
+            # Extract version (everything after -v); both packages share it.
             VERSION=$(echo "${{ github.ref_name }}" | sed 's/.*-v//')
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
           else
             PACKAGE_NAME="${{ inputs.package }}"
+            if [ "$PACKAGE_NAME" = "sdk" ]; then
+              echo "package_name=@sanity/sdk" >> $GITHUB_OUTPUT
+              echo "typedoc_path=packages/core/docs/typedoc.json" >> $GITHUB_OUTPUT
+              echo "version=$(node -p "require('./packages/core/package.json').version")" >> $GITHUB_OUTPUT
+            elif [ "$PACKAGE_NAME" = "sdk-react" ]; then
+              echo "package_name=@sanity/sdk-react" >> $GITHUB_OUTPUT
+              echo "typedoc_path=packages/react/docs/typedoc.json" >> $GITHUB_OUTPUT
+              echo "version=$(node -p "require('./packages/react/package.json').version")" >> $GITHUB_OUTPUT
+            else
+              echo "Unsupported package: $PACKAGE_NAME"
+              exit 1
+            fi
           fi
 
-          # Set package name and docs path based on release tag or manual input
-          if [ "$PACKAGE_NAME" = "sdk" ]; then
-            echo "package_name=@sanity/sdk" >> $GITHUB_OUTPUT
-            echo "typedoc_path=packages/core/docs/typedoc.json" >> $GITHUB_OUTPUT
-            VERSION=${VERSION:-$(node -p "require('./packages/core/package.json').version")}
-          elif [ "$PACKAGE_NAME" = "sdk-react" ]; then
-            echo "package_name=@sanity/sdk-react" >> $GITHUB_OUTPUT
-            echo "typedoc_path=packages/react/docs/typedoc.json" >> $GITHUB_OUTPUT
-            VERSION=${VERSION:-$(node -p "require('./packages/react/package.json').version")}
-          else
-            echo "Unsupported package: $PACKAGE_NAME"
-            exit 1
-          fi
-
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-
-      - name: Upload Docs
-        if: github.event_name == 'release' || inputs.upload == true
+      - name: Upload Docs (workflow_dispatch single package)
+        if: inputs.upload == true
         uses: sanity-io/reference-api-typedoc/.github/actions/typedoc-upload@6e7add0dc02df874b4c52111e59f1fe10de014ed # main
         with:
           packageName: ${{ steps.package_info.outputs.package_name }}
           version: ${{ steps.package_info.outputs.version }}
           typedocJsonPath: ${{ steps.package_info.outputs.typedoc_path }}
+        env:
+          SANITY_DOCS_API_TOKEN: ${{ secrets.SANITY_DOCS_API_TOKEN }}
+
+      - name: Upload Docs (@sanity/sdk)
+        if: github.event_name == 'release'
+        uses: sanity-io/reference-api-typedoc/.github/actions/typedoc-upload@6e7add0dc02df874b4c52111e59f1fe10de014ed # main
+        with:
+          packageName: '@sanity/sdk'
+          version: ${{ steps.package_info.outputs.version }}
+          typedocJsonPath: packages/core/docs/typedoc.json
+        env:
+          SANITY_DOCS_API_TOKEN: ${{ secrets.SANITY_DOCS_API_TOKEN }}
+
+      - name: Upload Docs (@sanity/sdk-react)
+        if: github.event_name == 'release'
+        uses: sanity-io/reference-api-typedoc/.github/actions/typedoc-upload@6e7add0dc02df874b4c52111e59f1fe10de014ed # main
+        with:
+          packageName: '@sanity/sdk-react'
+          version: ${{ steps.package_info.outputs.version }}
+          typedocJsonPath: packages/react/docs/typedoc.json
         env:
           SANITY_DOCS_API_TOKEN: ${{ secrets.SANITY_DOCS_API_TOKEN }}

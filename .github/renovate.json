@@ -32,7 +32,7 @@
   "automergeStrategy": "squash",
   "dependencyDashboard": true,
   "dependencyDashboardApproval": false,
-  "dependencyDashboardHeader": "## How to use this dashboard\n\nFull playbook: [RENOVATE_STRATEGY.md](../blob/main/.github/RENOVATE_STRATEGY.md)\n\n**Quick section reference**\n\n- **Pending Approval**: should stay empty; we no longer gate updates behind dashboard approval.\n- **Awaiting Schedule** / **Rate-Limited**: automatic, no action needed.\n- **Pending Status Checks**: investigate if an item remains after a later Renovate run.\n- **PR Closed (Blocked)**: previously closed. Only tick to retry.\n- **Detected Dependencies**: reference only.\n\nRelease-age policy follows the shared Sanity preset. The playbook documents the scoped timestamp exceptions for GitHub Action digests and lock file maintenance.\n\n<details>\n<summary><b>Common actions</b></summary>\n\n**Retry a closed PR**: find it under \"PR Closed (Blocked)\" and tick the box.\n\n**A breaking major landed**: majors automerge after CI and applicable release-age checks clear. If a major breaks our public API, change its commit type from `fix(deps)` to `feat(deps)!` (or add a `BREAKING CHANGE:` footer) when squashing so release-please produces the right version bump.\n\n**A PR won't automerge**: check CI, the release-age status, and approval. A GitHub Action digest should not remain pending after a later Renovate run; see the playbook if it does.\n\n**A lockfile looks broken**: run `pnpm install` locally, commit, and push to the Renovate branch. Renovate won't overwrite manual commits.\n\n**Rate-limited queue is huge**: drain it by merging open Renovate PRs. The throttles are `prHourlyLimit` (currently 5) and `prConcurrentLimit` (currently 20) in `.github/renovate.json`.\n\n**The pnpm version** comes from the root `package.json` `packageManager` field.\n\n</details>",
+  "dependencyDashboardHeader": "## How to use this dashboard\n\nFull playbook: [RENOVATE_STRATEGY.md](../blob/main/.github/RENOVATE_STRATEGY.md)\n\n**Quick section reference**\n\n- **Pending Approval**: should stay empty; we no longer gate updates behind dashboard approval.\n- **Awaiting Schedule** / **Rate-Limited**: automatic, no action needed.\n- **Pending Status Checks**: investigate if an item remains after a later Renovate run.\n- **PR Closed (Blocked)**: previously closed. Only tick to retry.\n- **Detected Dependencies**: reference only.\n\nRelease-age policy follows the shared Sanity preset. The playbook documents the scoped timestamp exceptions for GitHub Action digests and lock file maintenance.\n\n<details>\n<summary><b>Common actions</b></summary>\n\n**Retry a closed PR**: find it under \"PR Closed (Blocked)\" and tick the box.\n\n**A breaking major landed**: majors automerge after CI and applicable release-age checks clear. If a major breaks our public API, edit the bump in the `.changeset/renovate-*.md` file on the Renovate branch from `patch` to `minor` or `major` before merge.\n\n**A PR won't automerge**: check CI, the release-age status, and approval. A GitHub Action digest should not remain pending after a later Renovate run; see the playbook if it does.\n\n**A lockfile looks broken**: run `pnpm install` locally, commit, and push to the Renovate branch. Renovate won't overwrite manual commits.\n\n**Rate-limited queue is huge**: drain it by merging open Renovate PRs. The throttles are `prHourlyLimit` (currently 5) and `prConcurrentLimit` (currently 20) in `.github/renovate.json`.\n\n**The pnpm version** comes from the root `package.json` `packageManager` field.\n\n</details>",
   "prCreation": "immediate",
   "vulnerabilityAlerts": {
     "enabled": true,
@@ -67,18 +67,18 @@
       "minimumReleaseAge": null
     },
     {
-      "description": "Group @sanity/* deps; production, triggers a patch release",
+      "description": "Group @sanity/* deps; production. Changeset written by the changeset rules below",
       "matchPackageNames": ["@sanity/*"],
       "groupName": "sanity",
       "rangeStrategy": "bump",
-      "semanticCommitType": "fix",
+      "semanticCommitType": "chore",
       "semanticCommitScope": "deps"
     },
     {
-      "description": "All other production deps; triggers a patch release",
+      "description": "All other production deps; changeset written by the changeset rules below",
       "matchDepTypes": ["dependencies"],
       "rangeStrategy": "bump",
-      "semanticCommitType": "fix",
+      "semanticCommitType": "chore",
       "semanticCommitScope": "deps"
     },
     {
@@ -130,16 +130,51 @@
       "semanticCommitScope": "apps"
     },
     {
-      "description": "Update released groq; production dependency, triggers a patch release",
+      "description": "Update released groq; production dependency. Changeset written by the changeset rules below",
       "matchDepNames": ["groq"],
       "rangeStrategy": "bump",
-      "semanticCommitType": "fix",
+      "semanticCommitType": "chore",
       "semanticCommitScope": "deps"
     },
     {
       "description": "Keep the kitchensink generator on the experimental release until its migration",
       "matchDepNames": ["@sanity/codegen"],
       "enabled": false
+    },
+    {
+      "description": "Inline (non-catalog) production deps of the published packages ship a patch release via changeset",
+      "matchFileNames": ["packages/core/package.json", "packages/react/package.json"],
+      "matchDepTypes": ["dependencies"],
+      "postUpgradeTasks": {
+        "commands": [
+          "pnpm changeset:renovate '{{{branchName}}}' {{#each upgrades}}'{{{depName}}}@{{{newVersion}}}' {{/each}}"
+        ],
+        "fileFilters": [".changeset/renovate-*.md"],
+        "executionMode": "branch",
+        "installTools": {"pnpm": {}}
+      }
+    },
+    {
+      "description": "Catalog runtime deps of the published packages; ship a patch release via changeset. Add new catalog runtime deps of core/react here",
+      "matchPackageNames": [
+        "@sanity/client",
+        "@sanity/comlink",
+        "@sanity/message-protocol",
+        "@sanity/types",
+        "groq",
+        "groq-js",
+        "rxjs",
+        "react-compiler-runtime",
+        "react-error-boundary"
+      ],
+      "postUpgradeTasks": {
+        "commands": [
+          "pnpm changeset:renovate '{{{branchName}}}' {{#each upgrades}}'{{{depName}}}@{{{newVersion}}}' {{/each}}"
+        ],
+        "fileFilters": [".changeset/renovate-*.md"],
+        "executionMode": "branch",
+        "installTools": {"pnpm": {}}
+      }
     }
   ]
 }

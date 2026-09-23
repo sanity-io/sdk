@@ -1,6 +1,6 @@
 {
   "name": "@sanity/sdk-react",
-  "version": "3.1.0",
+  "version": "3.4.0",
   "private": false,
   "description": "Sanity SDK React toolkit for Content OS",
   "keywords": [
@@ -71,6 +71,7 @@
     "ts:check": "tsc --noEmit"
   },
   "dependencies": {
+    "@module-federation/runtime": "^2.9.0",
     "@sanity/client": "catalog:",
     "@sanity/message-protocol": "catalog:",
     "@sanity/sdk": "workspace:*",
@@ -99,7 +100,7 @@
     "eslint": "catalog:",
     "groq": "catalog:",
     "groq-js": "catalog:",
-    "jsdom": "^30.0.1",
+    "jsdom": "catalog:",
     "oxfmt": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",

@@ -3,14 +3,22 @@ import {DEFAULT_API_VERSION, REQUEST_TAG_PREFIX} from './authConstants'
 import {getAuthLogger} from './authLogger'
 import {AuthStateType} from './authStateType'
 import {authStore} from './authStore'
+import {revokeOAuthTokens} from './oauth/oauthActions'
 
 /**
+ * Logs the current user out. In OAuth mode this revokes the OAuth tokens
+ * instead of calling the legacy `/auth/logout` endpoint; revocation is
+ * best-effort, so the OAuth path resolves even if the revoke request fails,
+ * whereas the legacy path rejects when `/auth/logout` fails. Local state and
+ * storage are cleared in both cases.
+ *
  * @public
  */
 export const logout = bindActionGlobally(authStore, async ({state, instance}) => {
   const logger = getAuthLogger(instance)
 
-  const {clientFactory, apiHost, providedToken, storageArea, storageKey} = state.get().options
+  const {clientFactory, apiHost, providedToken, storageArea, storageKey, oauth} =
+    state.get().options
 
   // If a token is statically provided, logout does nothing
   if (providedToken) {
@@ -23,6 +31,15 @@ export const logout = bindActionGlobally(authStore, async ({state, instance}) =>
   // If we already have an inflight request, no-op
   if (authState.type === AuthStateType.LOGGED_OUT && authState.isDestroyingSession) {
     logger.debug('Skipping logout - already in progress')
+    return
+  }
+
+  if (oauth) {
+    logger.debug('OAuth mode - revoking tokens instead of calling /auth/logout')
+    state.set('loggingOut', {
+      authState: {type: AuthStateType.LOGGED_OUT, isDestroyingSession: true},
+    })
+    await revokeOAuthTokens(instance)
     return
   }
   const token = authState.type === AuthStateType.LOGGED_IN && authState.token

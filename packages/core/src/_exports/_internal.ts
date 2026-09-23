@@ -1,3 +1,4 @@
+export {getApplicationOrigin} from '../applications/applicationOrigin'
 export {isStudioConfig} from '../auth/authMode'
 export {
   type ApiErrorBody,
@@ -13,8 +14,18 @@ export {
   parseCommentsQueryOptionsKey,
   parseDocumentCommentsOptionsKey,
 } from '../comments/commentsStore'
-export {installMessageBus, resetMessageBus} from '../dashboard/messageBus/bus'
-export {getDashboardMessageBus, isDashboardEnvironment} from '../dashboard/messageBus/client'
+export {
+  installMessageBus,
+  type InstallMessageBusOptions,
+  resetMessageBus,
+} from '../dashboard/messageBus/bus'
+export {
+  getDashboardMessageBus,
+  isDashboardEnvironment,
+  requireDashboardMessageBus,
+} from '../dashboard/messageBus/store'
+export type {ApplicationStatus, ApplicationStatusUpdate} from '../dashboard/messageBus/topics'
+export {getTopicState, resolveTopic} from '../dashboard/messageBus/topicStore'
 export {PREVIEW_PROJECTION} from '../preview/previewConstants'
 export {transformProjectionToPreview} from '../preview/previewProjectionUtils'
 export {getQueryKey, parseQueryKey} from '../query/queryStore' // only used for memoizing in React, not needed for actual functionality
@@ -35,4 +46,5 @@ export {getUsersKey, parseUsersKey} from '../users/reducers' // only used for me
 export {getUsersWithGrantsKey, parseUsersWithGrantsKey} from '../users/usersWithGrants'
 export {createGroqSearchFilter} from '../utils/createGroqSearchFilter'
 export {randomId, randomUuid} from '../utils/ids'
+export {createLogger} from '../utils/logger'
 export {isDeepEqual, pickProperties} from '../utils/object'

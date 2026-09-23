@@ -1,8 +1,12 @@
+/* eslint-disable react-compiler/react-compiler -- the transport branch in `useAgentResourceContext` is a deliberate rules-of-hooks exception; the compiler refuses files that disable it */
 import {type Events, SDK_CHANNEL_NAME, SDK_NODE_NAME} from '@sanity/message-protocol'
+import {isDashboardEnvironment} from '@sanity/sdk/_internal'
 import {type FrameMessage} from '@sanity/sdk/comlink'
-import {useCallback, useEffect, useRef} from 'react'
+import {type ApplicationContext} from '@sanity/sdk/dashboard'
+import {useCallback, useEffect, useMemo, useRef} from 'react'
 
 import {useWindowConnection} from '../comlink/useWindowConnection'
+import {useApplicationContext} from './useApplicationContext'
 
 /**
  * @public
@@ -24,12 +28,14 @@ export interface AgentResourceContextOptions {
 
 /**
  * @public
- * Hook for emitting agent resource context updates to the Dashboard.
- * This allows the Agent to understand what resource the user is currently
- * interacting with (e.g., which document they're editing).
+ * Hook for reporting the resource the user is currently interacting with (for example, which
+ * document they're editing) so the Agent can understand their context. The hook reports on mount
+ * and again whenever the context changes.
  *
- * The hook will automatically emit the context when it changes, and also
- * emit the initial context when the hook is first mounted.
+ * The two Dashboard runtimes differ in transport, but the signature is the same:
+ * - In an iframe (Comlink), it emits the `dashboard/v1/events/agent/resource/update` event.
+ * - In a federated app (message bus), it publishes {@link useApplicationContext}'s
+ *   `applications.context.update` topic. Reach for `useApplicationContext` directly in new code.
  *
  * @category Agent
  * @param options - The resource context options containing projectId, dataset, and optional documentId
@@ -53,6 +59,29 @@ export interface AgentResourceContextOptions {
  * ```
  */
 export function useAgentResourceContext(options: AgentResourceContextOptions): void {
+  // The branch is stable: the transport is fixed for the page lifetime, so one set of hooks
+  // always runs and the other never does.
+  // eslint-disable-next-line react-hooks/rules-of-hooks -- transport is fixed for the page lifetime
+  if (isDashboardEnvironment()) return useBusAgentResourceContext(options)
+  // eslint-disable-next-line react-hooks/rules-of-hooks -- transport is fixed for the page lifetime
+  return useComlinkAgentResourceContext(options)
+}
+
+function useBusAgentResourceContext({projectId, dataset, documentId}: AgentResourceContextOptions) {
+  const context = useMemo<ApplicationContext | null>(
+    () =>
+      projectId && dataset
+        ? {
+            resource: {id: `${projectId}.${dataset}`, type: 'dataset'},
+            document: documentId ? {id: documentId} : null,
+          }
+        : null,
+    [projectId, dataset, documentId],
+  )
+  useApplicationContext(context)
+}
+
+function useComlinkAgentResourceContext(options: AgentResourceContextOptions): void {
   const {projectId, dataset, documentId} = options
   const {sendMessage} = useWindowConnection<Events.AgentResourceUpdateMessage, FrameMessage>({
     name: SDK_NODE_NAME,

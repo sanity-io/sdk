@@ -1,6 +1,6 @@
 import {switchMap} from 'rxjs'
 
-import {type ApplicationInterface} from '../applications/applications'
+import {type Application, type ApplicationInterface} from '../applications/applications'
 import {getClientState} from '../client/clientStore'
 import {defineFetcher} from '../store/fetcherStore'
 import {buildQuery} from '../utils/buildQuery'
@@ -16,7 +16,7 @@ const API_VERSION = 'vX'
  * @see https://www.sanity.io/docs/http-reference/applications-api
  * @public
  */
-export type InstallationInclude = 'activeConfig' | 'access' | 'interfaces'
+export type InstallationInclude = 'activeConfig' | 'access' | 'interfaces' | 'config.mfManifest'
 
 /**
  * A resource an installation accesses, embedded when `access` is included.
@@ -67,6 +67,10 @@ export interface InstallationBase {
     /** Qualified, globally-unique handle of the installed singleton (e.g. `sanity/<name>`). */
     reference: string
     slug: string | null
+    /** Sanitized SVG icon markup, or `null` when the singleton has no icon. */
+    icon: string | null
+    /** The singleton's publishing organization; the top-level `organizationId` is the installing one. */
+    organizationId: string
   }
 }
 
@@ -80,6 +84,17 @@ export interface InstallationBase {
  * @public
  */
 export type Installation<Include extends InstallationInclude = never> = InstallationBase &
+  Included<
+    InstallationInclude,
+    'config.mfManifest',
+    Include,
+    {
+      application: InstallationBase['application'] &
+        ([InstallationInclude] extends [Include]
+          ? Partial<Pick<Application<'config.mfManifest'>, 'config'>>
+          : Pick<Application<'config.mfManifest'>, 'config'>)
+    }
+  > &
   Included<
     InstallationInclude,
     'activeConfig',

@@ -1,0 +1,104 @@
+import {
+  getOAuthTokensState,
+  type OAuthTokens,
+  refreshOAuthTokens,
+  revokeOAuthTokens,
+  type SanityInstance,
+} from '@sanity/sdk'
+
+import {createCallbackHook} from '../helpers/createCallbackHook'
+import {createStateSourceHook} from '../helpers/createStateSourceHook'
+
+/**
+ * The current OAuth token state, plus actions to refresh and revoke it.
+ *
+ * @public
+ */
+export interface UseOAuthTokensResult {
+  /**
+   * The stored OAuth tokens, or `null` when not logged in via OAuth. The
+   * refresh token is omitted — core retains it internally for `refresh`.
+   */
+  tokens: Omit<OAuthTokens, 'refreshToken'> | null
+  /**
+   * Returns whether the access token has expired, comparing the latest stored
+   * `expiresAt` against the current time at the moment it is called. Both the
+   * tokens and the clock are read at call time, so a reference captured in an
+   * earlier render stays accurate after a `refresh`. Reading the clock does not
+   * trigger a re-render, so call this in an event handler or effect rather than
+   * during render. Returns `false` when there are no tokens.
+   */
+  isExpired: () => boolean
+  /**
+   * Refresh via the OAuth `refresh_token` grant. When there is no refresh token,
+   * core clears the stored tokens, logs the user out, and this resolves `null`.
+   * Rejects on transient failures (network, 5xx, 408, 429), leaving tokens
+   * unchanged so the call can be retried. Also rejects when the server rejects
+   * the refresh token itself (other 4xx); core clears the tokens and logs out
+   * first, so check `tokens` before retrying.
+   */
+  refresh: () => Promise<Omit<OAuthTokens, 'refreshToken'> | null>
+  /** Revoke the tokens at the OAuth server, clear them locally, and log out. */
+  revoke: () => Promise<void>
+}
+
+const useOAuthTokensState = createStateSourceHook(getOAuthTokensState)
+const useRefreshOAuthTokens = createCallbackHook(refreshOAuthTokens)
+const useRevokeOAuthTokens = createCallbackHook(revokeOAuthTokens)
+
+// Reads core's state source directly rather than the render-time `tokens`
+// snapshot, so a reference captured in an earlier render (e.g. in an event
+// handler that awaits `refresh()`) still reflects the latest tokens.
+const useIsOAuthTokenExpired = createCallbackHook((instance: SanityInstance): boolean => {
+  const tokens = getOAuthTokensState(instance).getCurrent()
+  return tokens ? tokens.expiresAt.getTime() <= Date.now() : false
+})
+
+/**
+ * A React hook that exposes the stored OAuth token state along with `refresh`
+ * and `revoke` actions.
+ *
+ * @remarks
+ * The token view is a synchronous read over core's token state source, so the
+ * hook re-renders whenever tokens change — including changes made in another
+ * tab, which core propagates via `storage` events.
+ *
+ * @returns The current {@link UseOAuthTokensResult}
+ *
+ * @example
+ * ```tsx
+ * function TokenStatus() {
+ *   const {tokens, isExpired, refresh, revoke} = useOAuthTokens()
+ *
+ *   if (!tokens) return <div>Not signed in</div>
+ *
+ *   const handleRefresh = async () => {
+ *     if (!isExpired()) return
+ *     try {
+ *       await refresh()
+ *     } catch {
+ *       // Transient failure (tokens unchanged, retry later) or the refresh
+ *       // token was rejected (tokens now null, user is logged out).
+ *     }
+ *   }
+ *
+ *   return (
+ *     <div>
+ *       <p>Expires at {tokens.expiresAt.toLocaleTimeString()}</p>
+ *       <button onClick={handleRefresh}>Refresh if expired</button>
+ *       <button onClick={() => revoke()}>Revoke tokens</button>
+ *     </div>
+ *   )
+ * }
+ * ```
+ *
+ * @public
+ */
+export function useOAuthTokens(): UseOAuthTokensResult {
+  return {
+    tokens: useOAuthTokensState(),
+    isExpired: useIsOAuthTokenExpired(),
+    refresh: useRefreshOAuthTokens(),
+    revoke: useRevokeOAuthTokens(),
+  }
+}

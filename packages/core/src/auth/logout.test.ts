@@ -5,8 +5,9 @@ import {createSanityInstance, type SanityInstance} from '../store/createSanityIn
 import {AuthStateType} from './authStateType'
 import {getAuthState} from './authStore'
 import {logout} from './logout'
-import {getOAuthTokensState, serializeTokens} from './oauth/oauthActions'
+import {getOAuthTokensState} from './oauth/oauthActions'
 import {OAUTH_TOKENS_KEY} from './oauth/oauthAuth'
+import {serializeTokens} from './oauth/oauthClient'
 import {type OAuthTokens} from './oauth/types'
 import {subscribeToStateAndFetchCurrentUser} from './subscribeToStateAndFetchCurrentUser'
 import {subscribeToStorageEventsAndSetToken} from './subscribeToStorageEventsAndSetToken'
@@ -169,7 +170,7 @@ describe('logout', () => {
     expect(removeItem).toHaveBeenCalledWith('__sanity_auth_token')
   })
 
-  it('clears the OAuth tokens from the store on logout', async () => {
+  it('revokes OAuth tokens instead of calling /auth/logout in OAuth mode', async () => {
     const oauthTokens: OAuthTokens = {
       accessToken: 'oauth-access',
       tokenType: 'bearer',
@@ -204,8 +205,16 @@ describe('logout', () => {
     // Boots logged in with the persisted OAuth tokens exposed on the store.
     expect(getOAuthTokensState(instance).getCurrent()).toMatchObject({accessToken: 'oauth-access'})
 
+    const first = logout(instance)
+    // Session is marked as destroying so a concurrent call is a no-op
+    expect(getAuthState(instance).getCurrent()).toMatchObject({isDestroyingSession: true})
     await logout(instance)
+    await first
 
+    expect(mockRequest).toHaveBeenCalledTimes(1)
+    expect(mockRequest).toHaveBeenCalledWith(
+      expect.objectContaining({url: '/auth/oauth/revoke', tag: 'oauth.revoke'}),
+    )
     expect(getOAuthTokensState(instance).getCurrent()).toBeNull()
     expect(getAuthState(instance).getCurrent()).toMatchObject({type: AuthStateType.LOGGED_OUT})
     expect(map.get(OAUTH_TOKENS_KEY)).toBeUndefined()

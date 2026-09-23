@@ -1,6 +1,7 @@
 import {type CurrentUser} from '@sanity/types'
 
 import {type Application, type ApplicationInclude} from '../../applications/applications'
+import {type Installation, type InstallationInclude} from '../../installations/installations'
 import {type OrganizationBase} from '../../organization/organization'
 
 /**
@@ -15,9 +16,12 @@ export interface RemoteModuleRef {
 
 /**
  * Application types that can receive configuration modules.
+ *
+ * The dashboard supplies this value over the message bus, so any string is accepted; known
+ * types are listed for autocomplete. `& {}` keeps the literal from collapsing into `string`.
  * @public
  */
-export type ApplicationConfigAppType = 'media-library'
+export type ApplicationConfigAppType = 'media-library' | (string & {})
 
 /**
  * Identifies a configuration module for an application or application type.
@@ -26,6 +30,92 @@ export type ApplicationConfigAppType = 'media-library'
 export interface ApplicationConfig extends RemoteModuleRef {
   readonly appId?: Application['id']
   readonly appType: ApplicationConfigAppType
+}
+
+/**
+ * The capabilities a host can provide.
+ *
+ * Reuses the Studio's rendering-context identifiers so an application can hide its own
+ * implementation of anything the host provides.
+ * @public
+ */
+export const capabilities = ['globalUserMenu', 'favorites', 'history'] as const
+
+/**
+ * A capability a host can provide.
+ * @public
+ */
+export type Capability = (typeof capabilities)[number]
+
+/**
+ * The capabilities the host provides. A missing key means the host does not provide it.
+ * @public
+ */
+export type CapabilityRecord = Partial<Record<Capability, boolean>>
+
+/**
+ * A document a user viewed, edited, created, or deleted in an application.
+ * @public
+ */
+export interface DocumentActivity {
+  readonly kind: 'document'
+  readonly eventType: 'viewed' | 'edited' | 'created' | 'deleted'
+  readonly document: {
+    readonly id: string
+    readonly type: string
+    readonly resource: {
+      readonly id: string
+      readonly type: 'dataset' | 'media-library' | 'canvas'
+      /** Schema collection the document belongs to; the workspace name for studios. */
+      readonly schemaName?: string
+    }
+  }
+}
+
+/**
+ * Activity an application reports to the host. Discriminated on `kind`.
+ * @public
+ */
+export type ApplicationActivity = DocumentActivity
+
+/**
+ * A label rendered for an application interface; `null` clears it.
+ * @internal
+ */
+export type ApplicationStatus = {label: string | null}
+
+/**
+ * Updates the status rendered for an application interface.
+ * @internal
+ */
+export type ApplicationStatusUpdate = {
+  /** The application interface name. */
+  name: string
+  /** The status to render. */
+  value: ApplicationStatus
+}
+
+/**
+ * What an application is currently showing: the Comlink agent resource context, made generic.
+ * @public
+ */
+export interface ApplicationContext {
+  /** The resource the application is working in. Types follow `@sanity/client`'s resource config. */
+  readonly resource: {
+    readonly id: string
+    readonly type: 'dataset' | 'media-library' | 'canvas'
+  }
+  /** The open document, or `null` when none is open. */
+  readonly document: {readonly id: string} | null
+}
+
+/**
+ * An application served by a CLI dev server. The workbench publishes it in the same shape as a
+ * deployed application; `local` marks it and names the dev server it is served from.
+ * @public
+ */
+export type LocalApplication = Application<ApplicationInclude> & {
+  readonly local: {readonly host: string; readonly port: number}
 }
 
 /**
@@ -80,13 +170,41 @@ export type NavigationLocation = NavigationTarget & {
  * @public
  */
 export interface DashboardTopics {
+  /** Reports user activity in an application, e.g. for the recents feed. Fire-and-forget. */
+  'applications.activity': EventTopicDef<ApplicationActivity>
+  /**
+   * The base path for an application.
+   *
+   * An unknown application returns `{ok: false}`.
+   */
+  'applications.base-path': StateTopicDef<TopicResult<string>>
+  /** The capabilities the host provides. A missing key means the host does not provide it. */
+  'applications.capabilities': StateTopicDef<CapabilityRecord>
   /** The available application configuration modules. */
   'applications.config': StateTopicDef<ApplicationConfig[] | null>
+  /** The foreground application's context, or `null` when it has published none. */
+  'applications.context': StateTopicDef<
+    (ApplicationContext & {readonly appId: Application['id']}) | null
+  >
+  /** Publishes the sending application's context. `null` clears it. Fire-and-forget. */
+  'applications.context.update': EventTopicDef<ApplicationContext | null>
   /** The foreground application ID, or `null` on dashboard-level routes. */
   'applications.foreground': StateTopicDef<Application['id'] | null>
-  /** The dashboard applications available to the current user. */
-  'applications.list': StateTopicDef<TopicResult<Application<ApplicationInclude>[]> | null>
-  /** The dashboard session token, or `null` while signed out. */
+  /**
+   * The dashboard applications and installations available to the current user. Each member
+   * publishes its own raw serialised record, so the kinds are distinguished by shape: an
+   * {@link Application} has a `type` of `'studio' | 'coreApp'`, a {@link LocalApplication} adds
+   * `local`, and an {@link Installation} has no `type` and carries `applicationId` with a nested
+   * `application` object.
+   */
+  'applications.list': StateTopicDef<TopicResult<
+    (Application<ApplicationInclude> | LocalApplication | Installation<InstallationInclude>)[]
+  > | null>
+  'applications.status.update': EventTopicDef<ApplicationStatusUpdate>
+  /**
+   * The session token for the reading connection, or `null` while signed out. The host
+   * writes it to each connection separately, so one application never sees another's token.
+   */
   'auth.token': StateTopicDef<string | null>
   /** Requests a dashboard session token. */
   'auth.token.refresh': EventTopicDef<void, string>
@@ -124,7 +242,7 @@ export interface DashboardTopics {
   /** Whether the dashboard dock is pinned open. */
   'preferences.dock-locked': StateTopicDef<boolean>
   /** The signed-in user, or `null` while signed out. */
-  'users.current': StateTopicDef<Pick<CurrentUser, 'id' | 'name' | 'email' | 'profileImage'> | null>
+  'users.current': StateTopicDef<CurrentUser | null>
 }
 
 /**
@@ -135,71 +253,68 @@ export interface DashboardTopics {
 export interface Topics extends DashboardTopics {}
 
 /**
+ * Hides provisional topics from the public message bus methods.
+ * @internal
+ */
+export type MessageBusTopics = Omit<Topics, 'applications.status.update'>
+
+/**
  * Every declared topic name.
  * @public
  */
-export type TopicName = keyof Topics
+export type TopicName<TTopics = Topics> = keyof TTopics
 
 type StateTopicsOf<T> = {
   [K in keyof T]: T[K] extends {kind: 'state'} ? K : never
 }[keyof T]
 
 /**
- * Names of all declared state topics.
+ * Names of state topics exposed by message bus methods.
  * @public
  */
-export type StateTopic = StateTopicsOf<Topics>
+export type StateTopic<TTopics = MessageBusTopics> = StateTopicsOf<TTopics>
 
 type TopicOwnership = {readonly type: 'same_app'} | {readonly type: 'any_app'}
 
+// State is only ever written by the host, one connection at a time, so it carries no ownership.
 type TopicManifestEntry<T> = T extends {kind: 'state'; value: infer V}
-  ? {
-      readonly kind: 'state'
-      readonly ownership: TopicOwnership
-      readonly seed: V | undefined
-    }
+  ? {readonly kind: 'state'; readonly seed: V | undefined}
   : {readonly kind: 'event'; readonly ownership: TopicOwnership}
 
-const withOwnership =
-  <const Ownership extends TopicOwnership>(ownership: Ownership) =>
-  <const Topic extends {readonly kind: 'state'; readonly seed: unknown} | {readonly kind: 'event'}>(
-    topic: Topic,
-  ) => ({...topic, ownership})
+// The value a connection's copy of the topic starts with; `undefined` means unpublished.
+const stateTopic = <const V>(seed: V) => ({kind: 'state', seed}) as const
 
-// `same_app` restricts publishing and responding to the application that installed the bus.
-const dashboardTopic = withOwnership({type: 'same_app'})
-// `any_app` allows every connected application to publish and respond.
-const sharedTopic = withOwnership({type: 'any_app'})
+// `same_app` restricts responding to the application that installed the bus.
+const dashboardEvent = {kind: 'event', ownership: {type: 'same_app'}} as const
+
+type DashboardTopicManifest = {
+  readonly [K in keyof DashboardTopics]: TopicManifestEntry<DashboardTopics[K]>
+}
 
 /**
  * Defines the runtime kind, ownership, and initial value of dashboard topics.
  * @internal
  */
-export const DASHBOARD_TOPIC_MANIFEST: {
-  readonly [K in keyof DashboardTopics]: TopicManifestEntry<DashboardTopics[K]>
-} = {
-  'applications.config': dashboardTopic({kind: 'state', seed: undefined}),
-  'applications.foreground': dashboardTopic({kind: 'state', seed: null}),
-  'applications.list': dashboardTopic({kind: 'state', seed: undefined}),
-  'auth.token': dashboardTopic({kind: 'state', seed: undefined}),
-  'auth.token.refresh': dashboardTopic({kind: 'event'}),
-  'navigation.location': dashboardTopic({kind: 'state', seed: undefined}),
-  'navigation.location.update': dashboardTopic({kind: 'event'}),
-  'organizations.current': dashboardTopic({kind: 'state', seed: undefined}),
-  'panels.mode': sharedTopic({
-    kind: 'state',
-    seed: {ok: true, value: null},
-  }),
-  'panels.mode.set': dashboardTopic({kind: 'event'}),
-  'preferences.color-scheme': sharedTopic({
-    kind: 'state',
-    seed: undefined,
-  }),
-  'preferences.dock-locked': sharedTopic({
-    kind: 'state',
-    seed: undefined,
-  }),
-  'users.current': dashboardTopic({kind: 'state', seed: undefined}),
+export const DASHBOARD_TOPIC_MANIFEST: DashboardTopicManifest = {
+  'applications.activity': dashboardEvent,
+  'applications.base-path': stateTopic(undefined),
+  'applications.capabilities': stateTopic(undefined),
+  'applications.config': stateTopic(undefined),
+  'applications.context': stateTopic(undefined),
+  'applications.context.update': dashboardEvent,
+  'applications.foreground': stateTopic(undefined),
+  'applications.list': stateTopic(undefined),
+  'applications.status.update': dashboardEvent,
+  'auth.token': stateTopic(undefined),
+  'auth.token.refresh': dashboardEvent,
+  'navigation.location': stateTopic(undefined),
+  'navigation.location.update': dashboardEvent,
+  'organizations.current': stateTopic(undefined),
+  'panels.mode': stateTopic({ok: true, value: null}),
+  'panels.mode.set': dashboardEvent,
+  'preferences.color-scheme': stateTopic(undefined),
+  'preferences.dock-locked': stateTopic(undefined),
+  'users.current': stateTopic(undefined),
 }
 
 /**
@@ -209,42 +324,39 @@ export const DASHBOARD_TOPIC_MANIFEST: {
 export type TopicManifest = Readonly<
   Record<
     string,
-    | {
-        readonly kind: 'state'
-        readonly ownership: TopicOwnership
-        readonly seed: unknown
-      }
+    | {readonly kind: 'state'; readonly seed: unknown}
     | {readonly kind: 'event'; readonly ownership: TopicOwnership}
   >
 >
 
 /**
- * Names of all declared event topics.
+ * Names of event topics exposed by message bus methods.
  * @public
  */
-export type EventTopic = {
-  [K in TopicName]: Topics[K] extends {kind: 'event'} ? K : never
-}[TopicName]
+export type EventTopic<TTopics = MessageBusTopics> = {
+  [K in keyof TTopics]: TTopics[K] extends {kind: 'event'} ? K : never
+}[keyof TTopics]
 
 /**
  * The value type of a state topic.
  * @public
  */
-export type ValueOf<K extends StateTopic> = Topics[K] extends StateTopicDef<infer T> ? T : never
+export type ValueOf<K extends StateTopic<TTopics>, TTopics = Topics> =
+  TTopics[K] extends StateTopicDef<infer T> ? T : never
 
 /**
  * The payload type of an event topic.
  * @public
  */
-export type PayloadOf<K extends EventTopic> =
-  Topics[K] extends EventTopicDef<infer P, infer _R> ? P : never
+export type PayloadOf<K extends EventTopic<TTopics>, TTopics = Topics> =
+  TTopics[K] extends EventTopicDef<infer P, infer _R> ? P : never
 
 /**
  * The reply type of an event topic (`never` if it declares none).
  * @public
  */
-export type ReplyOf<K extends EventTopic> =
-  Topics[K] extends EventTopicDef<infer _P, infer R> ? R : never
+export type ReplyOf<K extends EventTopic<TTopics>, TTopics = Topics> =
+  TTopics[K] extends EventTopicDef<infer _P, infer R> ? R : never
 
 /**
  * Converts a topic value between 2 adjacent versions.

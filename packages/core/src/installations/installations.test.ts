@@ -31,7 +31,7 @@ describe('installations', () => {
 
     const result = await installations.resolveState(instance, {
       organizationId: 'org1',
-      include: ['interfaces'],
+      include: ['interfaces', 'config.mfManifest'],
     })
 
     expect(result).toEqual(response)
@@ -41,7 +41,7 @@ describe('installations', () => {
     })
     expect(request).toHaveBeenCalledWith({
       url: '/installations',
-      query: {organizationId: 'org1', include: 'interfaces'},
+      query: {organizationId: 'org1', include: 'config.mfManifest,interfaces'},
       tag: 'installations.list',
     })
   })
@@ -50,12 +50,14 @@ describe('installations', () => {
     const inst = {id: 'inst1', applicationId: 'app1'}
     request.mockReturnValue(of(inst))
 
-    const result = await installation.resolveState(instance, 'inst1')
+    const result = await installation.resolveState(instance, 'inst1', {
+      include: ['config.mfManifest'],
+    })
 
     expect(result).toEqual(inst)
     expect(request).toHaveBeenCalledWith({
       url: '/installations/inst1',
-      query: {},
+      query: {include: 'config.mfManifest'},
       tag: 'installations.get',
     })
   })

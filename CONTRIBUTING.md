@@ -105,6 +105,58 @@ You can also add the package at the specific SHA to a package.json file:
 - Preview packages remain available as long as the PR is open
 - Preview packages are automatically cleaned up after the PR is closed
 
+## Releasing
+
+Releases are managed with [Changesets](https://github.com/changesets/changesets). Both published packages — `@sanity/sdk` and `@sanity/sdk-react` — always ship the same version.
+
+### Adding a changeset
+
+A change that users should receive needs a changeset. From the repo root:
+
+```bash
+pnpm changeset
+```
+
+Pick the bump for the change:
+
+- `feat` → **minor**
+- `fix` / `perf` / `revert` → **patch**
+- a breaking change → **major**
+
+`chore` / `docs` / `test` / `ci` changes, and changes that only touch `apps/*`, carry no changeset and do not release. You can pick either published package when prompted — they are version-fixed, so both bump together. Commit the generated file under `.changeset/`.
+
+To preview the version bump and changelog entries locally, run `GITHUB_TOKEN=$(gh auth token) pnpm changeset version` — the `GITHUB_TOKEN` is required because `@changesets/changelog-github` calls the GitHub API to enrich each entry. Discard the result afterwards; the Version PR does this in CI.
+
+### The Version PR
+
+When your PR merges to `main`, Changesets opens (or updates) a `chore: release` "Version PR" that collects the pending bumps and updates each `CHANGELOG.md`. Merging that Version PR bumps the versions, publishes both packages to npm, and cuts a single `sdk-vX.Y.Z` tag and GitHub release.
+
+### Installing unreleased changes
+
+```bash
+pnpm add @sanity/sdk@next @sanity/sdk-react@next
+```
+
+A snapshot is a throwaway prerelease published to the `next` dist-tag. One is published on every push to `main` that still has pending changesets — that is, after your PR merges but before the Version PR does. Its version is the upcoming calculated version with a timestamp, e.g. `3.2.1-next.<datetime>` while `3.2.0` is on `latest`. Snapshots carry no changelog and are never a commit on `main`.
+
+To test changes before they merge, request a `pkg.pr.new` preview package (see [Testing with Preview Packages](#testing-with-preview-packages)). To pick up merged-but-unreleased changes, install `@next`.
+
+### Release candidates
+
+To publish an rc from your branch, dispatch the **Release - Release Candidate** workflow on it. The branch needs at least one changeset — the rc version comes from the pending changesets, not from an input (a minor changeset yields `3.3.0-rc.0`, a major `4.0.0-rc.0`). The workflow enters pre-release mode, publishes to the `rc` dist-tag, then commits `.changeset/pre.json` and the version bumps back to your branch.
+
+To cut the next rc (`rc.N+1`), push a follow-up fix with its own changeset and dispatch the workflow again. Versioning consumes each changeset into `.changeset/pre/`, so a re-dispatch with no new top-level changeset is rejected by the "Require a changeset" guard rather than advancing the rc number.
+
+Before opening the PR to `main`, leave pre-release mode:
+
+```bash
+pnpm changeset pre exit
+git commit -am "chore: exit rc pre-release mode"
+git push
+```
+
+`pnpm changeset pre exit` only flips `"mode"` in `.changeset/pre.json` from `"pre"` to `"exit"`. It does not delete the file, and the consumed changesets stay in `.changeset/pre/` — that is expected, and `changeset version` still reads them from there. Commit the one-line `pre.json` change. Never merge a branch whose `pre.json` still has `"mode": "pre"` — it would put `main` into pre-release mode. The Version PR on `main` removes `pre.json` and `.changeset/pre/` when it runs `changeset version`, turns `3.3.0-rc.N` into `3.3.0`, and collapses the rc changelog entries into the final release.
+
 ## Contributing
 
 ### Branch Guidelines

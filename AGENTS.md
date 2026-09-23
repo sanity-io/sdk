@@ -2,7 +2,7 @@
 
 This is the `@sanity/sdk` monorepo, the SDK for building Sanity-powered apps.
 
-- `packages/core` publishes as `@sanity/sdk-core`. Framework-agnostic TypeScript core, no React.
+- `packages/core` publishes as `@sanity/sdk`. Framework-agnostic TypeScript core, no React.
 - `packages/react` publishes as `@sanity/sdk-react`. React hooks and components on top of core.
 - `packages/@repo/*` are workspace-internal shared configs (ESLint, TypeScript, test config).
 - `packages/e2e` is the end-to-end test package.
@@ -23,7 +23,7 @@ This repo uses pnpm with Turbo. Common commands run from the root:
 - `pnpm build` builds packages and apps.
 - `pnpm fallow audit` checks changed files for dead code, complexity, and duplication.
 
-Use `pnpm --filter @sanity/sdk-core ...` (or `--filter @sanity/sdk-react`) to scope a command to a single package.
+Use `pnpm --filter @sanity/sdk ...` (or `--filter @sanity/sdk-react`) to scope a command to a single package.
 
 ## Before you report work as complete
 

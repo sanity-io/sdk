@@ -2,10 +2,11 @@ import {type ClientError} from '@sanity/client'
 import {AuthStateType, setAuthToken} from '@sanity/sdk'
 import {getDashboardMessageBus} from '@sanity/sdk/_internal'
 import {type MessageBus} from '@sanity/sdk/dashboard'
-import React, {type PropsWithChildren, useEffect, useRef} from 'react'
+import React, {type PropsWithChildren, useContext, useEffect, useRef, useState} from 'react'
 import {defer, of} from 'rxjs'
 import {catchError} from 'rxjs/operators'
 
+import {getDashboardModuleContext} from '../dashboard/module'
 import {useAuthState} from '../hooks/auth/useAuthState'
 import {useSanityInstance} from '../hooks/context/useSanityInstance'
 
@@ -93,7 +94,15 @@ function DashboardTokenRefresh({
  * @public
  */
 export const DashboardTokenRefreshProvider: React.FC<PropsWithChildren> = ({children}) => {
-  const messageBus = getDashboardMessageBus()
+  const instance = useSanityInstance()
+  const moduleId = useContext(getDashboardModuleContext())
+  // The connection is first-caller-wins per instance, and hooks below read it during their
+  // render, before any effect here could run. Connecting in the first render pins the module
+  // identity before they do; nothing has subscribed to the store yet, so the write is safe.
+  // The module id is read once: the CLI wrapper provides it statically above this tree.
+  // No retry: the host installs the bus at module evaluation, before any remote renders, and
+  // a standalone app has no host to wait for.
+  const [messageBus] = useState(() => getDashboardMessageBus(instance, moduleId))
   if (messageBus) {
     return <DashboardTokenRefresh messageBus={messageBus}>{children}</DashboardTokenRefresh>
   }

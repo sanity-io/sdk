@@ -1,6 +1,7 @@
 import {expectTypeOf, test} from 'vitest'
 
 import {
+  type CapabilityRecord,
   type DashboardTopics,
   type EventTopic,
   type EventTopicDef,
@@ -10,6 +11,7 @@ import {
   type MessageBusEmitResult,
   type MessageBusError,
   type MessageBusErrorCode,
+  type MessageBusHost,
   type MessageBusMessage,
   type MessageBusMeta,
   type MessageBusQueryOptions,
@@ -18,8 +20,15 @@ import {
   type StateTopicDef,
   type TopicName,
   type Topics,
+  useApplicationBasePath,
+  useCapabilities,
 } from './dashboard'
-import {type installMessageBus, type resetMessageBus} from './dashboard-internal'
+import {
+  type ApplicationStatus,
+  type ApplicationStatusUpdate,
+  type installMessageBus,
+  type resetMessageBus,
+} from './dashboard-internal'
 
 // Guards issue #1: every `@public` message bus type must be reachable from the
 // `@sanity/sdk-react/dashboard` entrypoint. A missing export fails `ts:check`
@@ -54,11 +63,31 @@ test('dashboard entrypoint exposes the message bus public types', () => {
   expectTypeOf<MessageBusQueryOptions['timeout']>().toEqualTypeOf<number | null | undefined>()
   expectTypeOf<MessageBusEmitResult<string>>().toExtend<PromiseLike<string>>()
   expectTypeOf<MessageBus['query']>().toBeFunction()
+  expectTypeOf<ReturnType<typeof useApplicationBasePath>>().toEqualTypeOf<string>()
+  expectTypeOf<ReturnType<typeof useCapabilities>>().toEqualTypeOf<CapabilityRecord>()
+  expectTypeOf<MessageBusHost['connections']['subscribe']>().toBeFunction()
 })
 
-// Guards issue #3: the test-isolation helpers stay on the internal entrypoint,
-// not the public one.
-test('internal entrypoint exposes install and reset', () => {
+test('internal entrypoint exposes dashboard internals', () => {
+  expectTypeOf<ApplicationStatus>().toEqualTypeOf<{label: string | null}>()
+  expectTypeOf<ApplicationStatusUpdate>().toEqualTypeOf<{
+    name: string
+    value: ApplicationStatus
+  }>()
+  expectTypeOf<PayloadOf<'applications.status.update'>>().toEqualTypeOf<ApplicationStatusUpdate>()
+  const emitApplicationStatus = (messageBus: ReturnType<typeof installMessageBus>) => {
+    messageBus.emit('applications.status.update', {name: 'list', value: {label: null}})
+    // @ts-expect-error application statuses always carry a label field
+    messageBus.emit('applications.status.update', {name: 'list', value: null})
+  }
+  const subscribeToApplicationStatus = (messageBus: ReturnType<typeof installMessageBus>) => {
+    messageBus.subscribe('applications.status.update')
+    messageBus.subscribe('applications.status.update', (message) => {
+      expectTypeOf(message.type).toEqualTypeOf<'applications.status.update'>()
+    })
+  }
+  expectTypeOf(emitApplicationStatus).toBeFunction()
+  expectTypeOf(subscribeToApplicationStatus).toBeFunction()
   expectTypeOf<typeof installMessageBus>().toBeFunction()
   expectTypeOf<typeof resetMessageBus>().toBeFunction()
 })

@@ -1,12 +1,15 @@
 import {AuthStateType} from '@sanity/sdk'
+import {installMessageBus} from '@sanity/sdk/_internal'
 import {render, screen, waitFor} from '@testing-library/react'
 import React from 'react'
 import {type FallbackProps} from 'react-error-boundary'
 import {beforeEach, describe, expect, it, type MockInstance, vi} from 'vitest'
 
+import {DashboardTokenRefreshProvider} from '../../context/DashboardTokenRefresh'
 import {ResourceProvider} from '../../context/ResourceProvider'
 import {useAuthState} from '../../hooks/auth/useAuthState'
 import {useLoginUrl} from '../../hooks/auth/useLoginUrl'
+import {useOAuthAuthorize} from '../../hooks/auth/useOAuthAuthorize'
 import {useVerifyOrgProjects} from '../../hooks/auth/useVerifyOrgProjects'
 import {AuthBoundary} from './AuthBoundary'
 
@@ -15,6 +18,9 @@ vi.mock('../../hooks/auth/useAuthState', () => ({
   useAuthState: vi.fn(() => 'logged-out'),
 }))
 vi.mock('../../hooks/auth/useLoginUrl')
+vi.mock('../../hooks/auth/useOAuthAuthorize', () => ({
+  useOAuthAuthorize: vi.fn(() => vi.fn().mockResolvedValue(undefined)),
+}))
 vi.mock('../../hooks/auth/useVerifyOrgProjects')
 vi.mock('../../hooks/auth/useHandleAuthCallback', () => ({
   useHandleAuthCallback: vi.fn(() => async () => {}),
@@ -32,8 +38,8 @@ vi.mock('./AuthError', async (importOriginal) => {
   return {
     ...actual,
     AuthError: class MockAuthError extends Error {
-      constructor(error: Error) {
-        super(error.message)
+      constructor(error: unknown) {
+        super(error instanceof Error ? error.message : undefined)
         this.name = 'AuthError'
         this.cause = error
       }
@@ -139,6 +145,113 @@ describe('AuthBoundary', () => {
     // Wait for the redirect to happen
     await waitFor(() => {
       expect(window.location.href).toBe('https://sanity.io/login')
+    })
+  })
+
+  it('does not redirect when a host bus is installed but the provider has not connected yet', () => {
+    // Workbench remotes start LOGGED_OUT (the host mints the token over the bus) and are not
+    // in an iframe, so the only thing standing between them and a login redirect is the
+    // dashboard check. AuthSwitch's effect runs before its parent provider's, so the check
+    // must not depend on the provider having connected first.
+    vi.mocked(useAuthState).mockReturnValue({
+      type: AuthStateType.LOGGED_OUT,
+      isDestroyingSession: false,
+    })
+    const originalLocation = window.location
+    const location = {href: 'http://remote.test/'}
+    Object.defineProperty(window, 'location', {value: location, writable: true})
+    vi.stubGlobal('__SANITY_APP_ID__', 'remote')
+    const globals = globalThis as {[key: symbol]: unknown}
+    const busKey = Symbol.for('sanity.os.bus')
+    installMessageBus({appId: 'dashboard'})
+    try {
+      render(
+        <ResourceProvider projectId="p" dataset="d" fallback={null}>
+          <DashboardTokenRefreshProvider>
+            <AuthBoundary projectIds={testProjectIds}>Protected Content</AuthBoundary>
+          </DashboardTokenRefreshProvider>
+        </ResourceProvider>,
+      )
+      expect(location.href).toBe('http://remote.test/')
+    } finally {
+      delete globals[busKey]
+      vi.unstubAllGlobals()
+      Object.defineProperty(window, 'location', {value: originalLocation, writable: true})
+    }
+  })
+
+  describe('oauth mode', () => {
+    const oauth = {
+      clientId: 'client-abc',
+      redirectUri: 'https://app.example.com/callback',
+      organizationId: 'org123',
+    }
+
+    it('starts the OAuth authorization flow when authState="logged-out"', async () => {
+      const authorize = vi.fn().mockResolvedValue(undefined)
+      vi.mocked(useOAuthAuthorize).mockReturnValue(authorize)
+      vi.mocked(useAuthState).mockReturnValue({
+        type: AuthStateType.LOGGED_OUT,
+        isDestroyingSession: false,
+      })
+      render(
+        <ResourceProvider projectId="p" dataset="d" auth={{oauth}} fallback={null}>
+          <AuthBoundary projectIds={testProjectIds}>Protected Content</AuthBoundary>
+        </ResourceProvider>,
+      )
+
+      await waitFor(() => expect(authorize).toHaveBeenCalledTimes(1))
+      expect(screen.queryByText('Protected Content')).not.toBeInTheDocument()
+    })
+
+    it('does not start the OAuth flow when logged out without oauth config', async () => {
+      const authorize = vi.fn().mockResolvedValue(undefined)
+      vi.mocked(useOAuthAuthorize).mockReturnValue(authorize)
+      vi.mocked(useAuthState).mockReturnValue({
+        type: AuthStateType.LOGGED_OUT,
+        isDestroyingSession: false,
+      })
+      render(
+        <ResourceProvider projectId="p" dataset="d" fallback={null}>
+          <AuthBoundary projectIds={testProjectIds}>Protected Content</AuthBoundary>
+        </ResourceProvider>,
+      )
+
+      await waitFor(() => expect(screen.queryByText('Protected Content')).not.toBeInTheDocument())
+      expect(authorize).not.toHaveBeenCalled()
+    })
+
+    it('renders the error fallback when starting the OAuth flow rejects', async () => {
+      // A falsy rejection reason must still surface as an error, not a blank screen.
+      vi.mocked(useOAuthAuthorize).mockReturnValue(vi.fn().mockRejectedValue(undefined))
+      vi.mocked(useAuthState).mockReturnValue({
+        type: AuthStateType.LOGGED_OUT,
+        isDestroyingSession: false,
+      })
+      render(
+        <ResourceProvider projectId="p" dataset="d" auth={{oauth}} fallback={null}>
+          <AuthBoundary projectIds={testProjectIds}>Protected Content</AuthBoundary>
+        </ResourceProvider>,
+      )
+
+      await waitFor(() => expect(screen.getByText('Authentication Error')).toBeInTheDocument())
+    })
+
+    it('renders the error fallback without restarting the flow when authState="error"', async () => {
+      const authorize = vi.fn().mockResolvedValue(undefined)
+      vi.mocked(useOAuthAuthorize).mockReturnValue(authorize)
+      vi.mocked(useAuthState).mockReturnValue({
+        type: AuthStateType.ERROR,
+        error: new Error('access_denied'),
+      })
+      render(
+        <ResourceProvider projectId="p" dataset="d" auth={{oauth}} fallback={null}>
+          <AuthBoundary projectIds={testProjectIds}>Protected Content</AuthBoundary>
+        </ResourceProvider>,
+      )
+
+      await waitFor(() => expect(screen.getByText('Authentication Error')).toBeInTheDocument())
+      expect(authorize).not.toHaveBeenCalled()
     })
   })
 

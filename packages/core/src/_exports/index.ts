@@ -202,6 +202,12 @@ export {
 export {type JsonMatch} from '../document/patchOperations'
 export {type DocumentPermissionsResult, type PermissionDeniedReason} from '../document/permissions'
 export {getReleaseDocumentId} from '../document/processActions/releaseUtil'
+export {
+  type DocumentSet,
+  patchOperations,
+  processMutations,
+  type ProcessMutationsOptions,
+} from '../document/processMutations'
 export type {
   FavoriteDocumentContext,
   FavoriteStatusResponse,

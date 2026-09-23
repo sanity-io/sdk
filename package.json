@@ -22,6 +22,7 @@
     "build:docs": "turbo run docs && typedoc",
     "build:packages": "turbo run build --filter='./packages/*' --filter='!./packages/@repo/*'",
     "build:visualizer": "VISUALIZER=true turbo run build --filter='./packages/*'",
+    "changeset:renovate": "node scripts/changeset-renovate.mjs",
     "clean": "run-s clean:build clean:deps",
     "clean:build": "turbo run clean",
     "clean:deps": "rimraf packages/*/node_modules apps/*/node_modules node_modules",
@@ -38,8 +39,6 @@
     "format:check": "oxfmt --check",
     "lint": "turbo run lint -- --fix && eslint . --fix",
     "prepare": "husky",
-    "release:current-branch": "tsx scripts/release-branch.mts",
-    "release:rc": "tsx scripts/release-rc.mts",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:coverage:open": "open coverage/index.html",
@@ -53,6 +52,8 @@
     "upload:bundles": "tsx scripts/uploadBundles.mts"
   },
   "devDependencies": {
+    "@changesets/changelog-github": "^1.0.1",
+    "@changesets/cli": "^3.0.3",
     "@commitlint/cli": "^21.2.2",
     "@commitlint/config-conventional": "^21.2.2",
     "@commitlint/types": "^21.2.0",
@@ -68,6 +69,7 @@
     "eslint": "catalog:",
     "fallow": "^3.24.1",
     "husky": "^9.1.7",
+    "jsdom": "catalog:",
     "knip": "^6.35.1",
     "lint-staged": "^17.5.1",
     "npm-run-all2": "^9.0.3",
@@ -78,8 +80,7 @@
     "turbo": "^2.10.12",
     "typedoc": "^0.28.20",
     "typescript": "catalog:",
-    "vitest": "catalog:",
-    "zx": "^8.8.5"
+    "vitest": "catalog:"
   },
   "devEngines": {
     "runtime": {
