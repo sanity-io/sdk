@@ -23,16 +23,15 @@ env:
   MARKER: '<!-- kitchensink-preview -->'
   GH_TOKEN: ${{ github.token }}
 
-# SANITY_AUTH_TOKEN is set per step, only where it's needed, so it isn't exposed
-# to `pnpm install` or the build, which run code from the PR.
+# SANITY_AUTH_TOKEN is set only on the steps that call Sanity.
 
 jobs:
   deploy:
-    # Fork PRs can't read secrets, and Renovate opens too many PRs to give each an app.
+    # Skip fork PRs (no secrets) and Renovate PRs (too many).
     if: >-
       github.event.action != 'closed' &&
       !github.event.pull_request.head.repo.fork &&
-      github.event.pull_request.user.login != 'renovate[bot]'
+      !startsWith(github.event.pull_request.head.ref, 'renovate/')
     runs-on: ubuntu-latest
     env:
       TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
@@ -48,8 +47,7 @@ jobs:
       - name: Build dependencies
         run: pnpm turbo run build --filter=@sanity/kitchensink-react^...
 
-      # pipefail so a failed request fails the step. An empty app_id means "create",
-      # so swallowing the error would create a duplicate app.
+      # pipefail: a failed request must not look like "no app yet", or we'd create a duplicate.
       - name: Find preview app
         id: find
         env:
@@ -104,12 +102,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      - name: Setup Environment
-        uses: ./.github/actions/setup
-        with:
-          node-version: 24.21.0
-
-      # pipefail so a failed request fails the step instead of skipping cleanup.
+      # Look up first so PRs without a preview skip the install.
       - name: Find preview app
         id: find
         env:
@@ -120,6 +113,12 @@ jobs:
             "https://api.sanity.io/v2024-08-01/user-applications?appType=coreApp&organizationId=$ORGANIZATION_ID" \
             | jq -r --arg title "$APP_TITLE" 'map(select(.title == $title)) | first | .id // empty')
           echo "app_id=$APP_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Setup Environment
+        if: steps.find.outputs.app_id != ''
+        uses: ./.github/actions/setup
+        with:
+          node-version: 24.21.0
 
       - name: Undeploy preview
         if: steps.find.outputs.app_id != ''
