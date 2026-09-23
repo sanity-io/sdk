@@ -83,29 +83,29 @@ const EMPTY_ARRAY: never[] = []
 
 /** @internal */
 export const getQueryKey = (instance: SanityInstance, options: QueryOptions): string =>
-  JSON.stringify(normalizeOptionsWithPerspective(instance, options))
+  JSON.stringify(normalizeQueryOptions(instance, options))
 /** @internal */
 export const parseQueryKey = (key: string): QueryOptions => JSON.parse(key)
 
 /**
- * Ensures the query key includes an effective perspective so that
- * implicit differences (e.g. different instance.config.perspective)
- * don't collide in the dataset-scoped store.
+ * Ensures the query key includes an effective perspective and variant so that
+ * implicit differences (e.g. different instance.config.perspective) don't
+ * collide in the dataset-scoped store.
  *
- * Since perspectives are unique, we can depend on the release stacks
- * to be correct when we retrieve the results.
- *
+ * Since perspectives are unique, we can depend on the release stacks to be
+ * correct when we retrieve the results. The variant has no default: when
+ * neither the options nor the instance config specify one, the key is left
+ * without it so non-variant callers keep their existing keys.
  */
-function normalizeOptionsWithPerspective(
-  instance: SanityInstance,
-  options: QueryOptions,
-): QueryOptions {
-  if (options.perspective !== undefined) return options
-  const instancePerspective = instance.config.perspective
+function normalizeQueryOptions(instance: SanityInstance, options: QueryOptions): QueryOptions {
+  const perspective =
+    options.perspective ?? instance.config.perspective ?? QUERY_STORE_DEFAULT_PERSPECTIVE
+  const variant = options.variant ?? instance.config.variant
+  if (perspective === options.perspective && variant === options.variant) return options
   return {
     ...options,
-    perspective:
-      instancePerspective !== undefined ? instancePerspective : QUERY_STORE_DEFAULT_PERSPECTIVE,
+    perspective,
+    ...(variant !== undefined ? {variant} : {}),
   }
 }
 
@@ -358,7 +358,7 @@ export function resolveQuery(...args: Parameters<typeof _resolveQuery>): Promise
 const _resolveQuery = bindActionByResource(
   queryStore,
   ({state, instance}, {signal, ...options}: ResolveQueryOptions) => {
-    const normalized = normalizeOptionsWithPerspective(instance, options)
+    const normalized = normalizeQueryOptions(instance, options)
     const {getCurrent} = getQueryState(instance, normalized)
     const key = getQueryKey(instance, normalized)
 
