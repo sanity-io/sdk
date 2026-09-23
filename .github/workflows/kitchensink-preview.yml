@@ -1,0 +1,121 @@
+name: Kitchensink Preview
+
+# Deploys the kitchensink to its own Sanity app per PR and undeploys it when the
+# PR closes. Each app is titled "Kitchensink PR #<number>", and both jobs find it
+# by that title, so no app IDs are stored between runs.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+
+concurrency:
+  group: kitchensink-preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pull-requests: write
+
+env:
+  APP_TITLE: 'Kitchensink PR #${{ github.event.pull_request.number }}'
+  ORGANIZATION_ID: oblZgbTFj
+  PR_NUMBER: ${{ github.event.pull_request.number }}
+  MARKER: '<!-- kitchensink-preview -->'
+  SANITY_AUTH_TOKEN: ${{ secrets.SANITY_AUTH_TOKEN_DEPLOY }}
+  GH_TOKEN: ${{ github.token }}
+
+jobs:
+  deploy:
+    # Fork PRs can't read secrets, and Renovate opens too many PRs to give each an app.
+    if: >-
+      github.event.action != 'closed' &&
+      !github.event.pull_request.head.repo.fork &&
+      github.event.pull_request.user.login != 'renovate[bot]'
+    runs-on: ubuntu-latest
+    env:
+      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+      TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Setup Environment
+        uses: ./.github/actions/setup
+        with:
+          node-version: 24.21.0
+
+      - name: Build dependencies
+        run: pnpm turbo run build --filter=@sanity/kitchensink-react^...
+
+      - name: Find preview app
+        id: find
+        run: |
+          APP_ID=$(curl -fsS -H "Authorization: Bearer $SANITY_AUTH_TOKEN" \
+            "https://api.sanity.io/v2024-08-01/user-applications?appType=coreApp&organizationId=$ORGANIZATION_ID" \
+            | jq -r --arg title "$APP_TITLE" 'map(select(.title == $title)) | first | .id // empty')
+          echo "app_id=$APP_ID" >> "$GITHUB_OUTPUT"
+
+      # An empty KITCHENSINK_APP_ID makes sanity.cli.ts fall through to --create.
+      - name: Deploy preview
+        id: deploy
+        working-directory: apps/kitchensink-react
+        env:
+          KITCHENSINK_APP_ID: ${{ steps.find.outputs.app_id }}
+        run: |
+          if [ -z "$KITCHENSINK_APP_ID" ]; then
+            pnpm exec sanity deploy --create --title "$APP_TITLE" --yes --json > deploy.json
+          else
+            pnpm exec sanity deploy --yes --json > deploy.json
+          fi
+          cat deploy.json
+          echo "url=$(jq -r '.url' deploy.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Comment preview URL
+        env:
+          PREVIEW_URL: ${{ steps.deploy.outputs.url }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          BODY=$(printf '%s\n### Kitchensink preview\n\n%s\n\nDeployed from %s. The app is undeployed when this PR closes.\n' \
+            "$MARKER" "$PREVIEW_URL" "$HEAD_SHA")
+          EXISTING=$(gh api "repos/${{ github.repository }}/issues/$PR_NUMBER/comments" \
+            --paginate --jq ".[] | select(.body | startswith(\"$MARKER\")) | .id" | head -1)
+          if [ -n "$EXISTING" ]; then
+            gh api -X PATCH "repos/${{ github.repository }}/issues/comments/$EXISTING" -f body="$BODY"
+          else
+            gh pr comment "$PR_NUMBER" --repo "${{ github.repository }}" --body "$BODY"
+          fi
+
+  undeploy:
+    if: github.event.action == 'closed' && !github.event.pull_request.head.repo.fork
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Setup Environment
+        uses: ./.github/actions/setup
+        with:
+          node-version: 24.21.0
+
+      - name: Find preview app
+        id: find
+        run: |
+          APP_ID=$(curl -fsS -H "Authorization: Bearer $SANITY_AUTH_TOKEN" \
+            "https://api.sanity.io/v2024-08-01/user-applications?appType=coreApp&organizationId=$ORGANIZATION_ID" \
+            | jq -r --arg title "$APP_TITLE" 'map(select(.title == $title)) | first | .id // empty')
+          echo "app_id=$APP_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Undeploy preview
+        if: steps.find.outputs.app_id != ''
+        working-directory: apps/kitchensink-react
+        env:
+          KITCHENSINK_APP_ID: ${{ steps.find.outputs.app_id }}
+        run: pnpm exec sanity undeploy --yes --json
+
+      - name: Update comment
+        if: steps.find.outputs.app_id != ''
+        run: |
+          EXISTING=$(gh api "repos/${{ github.repository }}/issues/$PR_NUMBER/comments" \
+            --paginate --jq ".[] | select(.body | startswith(\"$MARKER\")) | .id" | head -1)
+          if [ -n "$EXISTING" ]; then
+            BODY=$(printf '%s\n### Kitchensink preview\n\nUndeployed because this PR closed.\n' "$MARKER")
+            gh api -X PATCH "repos/${{ github.repository }}/issues/comments/$EXISTING" -f body="$BODY"
+          fi
