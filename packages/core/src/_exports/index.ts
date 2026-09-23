@@ -263,7 +263,12 @@ export {getActiveReleasesState, getAllReleasesState} from '../releases/releasesS
 export {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 export {type Selector, type StateSource} from '../store/createStateSourceAction'
 export {defineProjection} from '../typegen/defineProjection'
-export type {ResolveDocument, ResolveProjectionResult, ResolveQueryResult} from '../typegen/resolve'
+export type {
+  DocumentValue,
+  ResolveDocument,
+  ResolveProjectionResult,
+  ResolveQueryResult,
+} from '../typegen/resolve'
 export {
   type GetUserOptions,
   type GetUsersOptions,

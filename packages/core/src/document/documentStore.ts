@@ -54,7 +54,7 @@ import {
 import {type SanityInstance} from '../store/createSanityInstance'
 import {createStateSourceAction, type StateSource} from '../store/createStateSourceAction'
 import {defineStore, type StoreContext} from '../store/defineStore'
-import {type ResolveDocument} from '../typegen/resolve'
+import {type DocumentValue, type ResolveDocument} from '../typegen/resolve'
 import {omitProperty} from '../utils/object'
 import {type DocumentAction} from './actions'
 import {
@@ -244,7 +244,9 @@ export function getDocumentState<
 >(
   instance: SanityInstance,
   options: DocumentOptions<undefined, TDocumentType, TDataset, TProjectId>,
-): StateSource<ResolveDocument<TDocumentType, `${TProjectId}.${TDataset}`> | undefined | null>
+): StateSource<
+  DocumentValue<ResolveDocument<TDocumentType, `${TProjectId}.${TDataset}`>> | undefined | null
+>
 
 /** @beta */
 export function getDocumentState<
@@ -396,7 +398,7 @@ export function resolveDocument<
 >(
   instance: SanityInstance,
   docHandle: DocumentHandle<TDocumentType, TDataset, TProjectId>,
-): Promise<ResolveDocument<TDocumentType, `${TProjectId}.${TDataset}`> | null>
+): Promise<DocumentValue<ResolveDocument<TDocumentType, `${TProjectId}.${TDataset}`>> | null>
 /** @beta */
 export function resolveDocument<TData extends ResolveDocument>(
   instance: SanityInstance,

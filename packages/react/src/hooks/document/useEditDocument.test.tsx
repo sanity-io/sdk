@@ -1,6 +1,7 @@
 // tests/useEditDocument.test.ts
 import {
   createDocumentHandle,
+  type DocumentValue,
   editDocument,
   getDocumentState,
   resolveDocument,
@@ -211,7 +212,8 @@ describe('useEditDocument hook', () => {
     vi.mocked(useApplyDocumentActions).mockReturnValue(apply)
 
     const {result} = renderHook(() => useEditDocument(docHandle))
-    const promise = result.current((prevDoc: Book) => ({...prevDoc, foo: 'baz'}))
+    // the document SDK hands back may lack _id while a variant is pending creation
+    const promise = result.current((prevDoc: DocumentValue<Book>) => ({...prevDoc, foo: 'baz'}))
     expect(apply).toHaveBeenCalledWith(
       [editDocument(normalizedDoc, {set: {foo: 'baz'}})],
       resourceOptions,
