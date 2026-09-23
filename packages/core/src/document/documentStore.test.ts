@@ -70,7 +70,7 @@ import {DEFAULT_MAX_BUFFER_SIZE} from './listen'
 import {type DatasetAcl} from './permissions'
 import {type DocumentSet, processMutations} from './processMutations'
 import {type HttpAction} from './reducers'
-import {createFetchDocument, createSharedListener} from './sharedListener'
+import {createFetchDocument, createFetchDocumentGroup, createSharedListener} from './sharedListener'
 
 // Define a single generic TestDocument type
 interface TestDocument extends SanityDocument {
@@ -1429,6 +1429,7 @@ vi.mock('./sharedListener.ts', () => {
 
   return {
     createFetchDocument: vi.fn(),
+    createFetchDocumentGroup: vi.fn(),
     createSharedListener: vi.fn().mockReturnValue({
       dispose: vi.fn(),
       events: Object.assign(
@@ -1628,6 +1629,23 @@ beforeEach(() => {
         // add a bit of delay to simulate async doc resolution
         delay(0),
       ),
+    ),
+  )
+
+  // mirrors the server: `includeAllVersions` on a published id returns every
+  // document in the group, matched by `_system.group` for variants and by id
+  // prefix for drafts and release versions
+  vi.mocked(createFetchDocumentGroup).mockReturnValue(
+    vi.fn((groupId: string) =>
+      of({
+        documents: Object.values(documents).filter(
+          (doc): doc is SanityDocument =>
+            !!doc &&
+            (doc._system?.group?._ref === groupId ||
+              getPublishedId(DocumentId(doc._id)) === groupId),
+        ),
+        omitted: [],
+      }).pipe(delay(0)),
     ),
   )
 
@@ -2333,4 +2351,153 @@ it('resubmits held text edits as soon as the credentials change, in order and on
     unsubscribeEvents()
     vi.mocked(client.action).mockImplementation(actualAction)
   }
+})
+
+describe('variants (read)', () => {
+  const groupId = 'variant-doc'
+  const french = (bundleId: 'drafts' | undefined, title: string): SanityDocument => ({
+    // variant ids are opaque hashes; the test just needs a distinct version id
+    _id: `versions.${bundleId ?? 'pub'}h4sh.${groupId}`,
+    _type: 'article',
+    _createdAt: '2025-02-06T06:43:46.236Z',
+    _updatedAt: '2025-02-06T06:43:46.236Z',
+    _rev: 'variant-rev',
+    _system: {
+      ...(bundleId ? {bundleId} : {}),
+      variant: {_ref: '_.variants.french'},
+      group: {_ref: groupId, _weak: true},
+    },
+    title,
+  })
+  const base = (id: string, title: string): SanityDocument => ({
+    _id: id,
+    _type: 'article',
+    _createdAt: '2025-02-06T06:43:46.236Z',
+    _updatedAt: '2025-02-06T06:43:46.236Z',
+    _rev: 'base-rev',
+    title,
+  })
+  // seeds the shared in-memory dataset as another client would, emitting the
+  // corresponding listener events
+  const seed = (...docs: SanityDocument[]) =>
+    mutateSubmission(
+      docs.map((doc) => ({create: doc})),
+      {transactionId: `seed-${randomUuid()}`},
+    )
+  const remove = (...ids: string[]) =>
+    mutateSubmission(
+      ids.map((id) => ({delete: {id}})),
+      {transactionId: `remove-${randomUuid()}`},
+    )
+
+  const handle = createDocumentHandle({
+    documentId: groupId,
+    documentType: 'article',
+    variant: 'french',
+  })
+
+  it('resolves the variant over drafts ahead of the draft and published documents', async () => {
+    await seed(base(groupId, 'published'), base(`drafts.${groupId}`, 'draft'))
+    await seed(french(undefined, 'french published'), french('drafts', 'french draft'))
+
+    const state = getDocumentState<TestDocument>(instance, handle)
+    const unsubscribe = state.subscribe()
+    await firstValueFrom(state.observable.pipe(first((document) => document !== undefined)))
+
+    expect(state.getCurrent()).toMatchObject({
+      _id: `versions.draftsh4sh.${groupId}`,
+      title: 'french draft',
+    })
+    unsubscribe()
+  })
+
+  it('falls through to the variant over published, then the draft, then published', async () => {
+    await seed(base(groupId, 'published'), base(`drafts.${groupId}`, 'draft'))
+    await seed(french(undefined, 'french published'))
+
+    const state = getDocumentState<TestDocument>(instance, handle)
+    const unsubscribe = state.subscribe()
+    await firstValueFrom(state.observable.pipe(first((document) => document !== undefined)))
+    expect(state.getCurrent()).toMatchObject({title: 'french published'})
+
+    // the base draft/published documents remain the same store entries a
+    // non-variant handle would read
+    const plain = getDocumentState<TestDocument>(instance, {...handle, variant: undefined})
+    const unsubscribePlain = plain.subscribe()
+    await firstValueFrom(plain.observable.pipe(first((document) => document !== undefined)))
+    expect(plain.getCurrent()).toMatchObject({title: 'draft'})
+
+    unsubscribe()
+    unsubscribePlain()
+  })
+
+  it('does not wait forever when no variant exists', async () => {
+    await seed(base(groupId, 'published'))
+
+    const state = getDocumentState<TestDocument>(instance, handle)
+    const unsubscribe = state.subscribe()
+    await firstValueFrom(state.observable.pipe(first((document) => document !== undefined)))
+
+    // both variant keys are known to be absent, so the published document wins
+    expect(state.getCurrent()).toMatchObject({_id: groupId, title: 'published'})
+    unsubscribe()
+  })
+
+  it('discovers a variant that appears remotely after subscribing', async () => {
+    await seed(base(groupId, 'published'))
+
+    const state = getDocumentState<TestDocument>(instance, handle)
+    const unsubscribe = state.subscribe()
+    await firstValueFrom(state.observable.pipe(first((document) => document !== undefined)))
+    expect(state.getCurrent()).toMatchObject({title: 'published'})
+
+    await seed(french('drafts', 'french draft'))
+    await firstValueFrom(
+      state.observable.pipe(first((doc) => (doc as TestDocument | null)?.title === 'french draft')),
+    )
+    expect(state.getCurrent()).toMatchObject({_id: `versions.draftsh4sh.${groupId}`})
+    unsubscribe()
+  })
+
+  it('falls back when the variant disappears remotely', async () => {
+    await seed(base(groupId, 'published'), french('drafts', 'french draft'))
+
+    const state = getDocumentState<TestDocument>(instance, handle)
+    const unsubscribe = state.subscribe()
+    await firstValueFrom(
+      state.observable.pipe(first((doc) => (doc as TestDocument | null)?.title === 'french draft')),
+    )
+
+    await remove(`versions.draftsh4sh.${groupId}`)
+    await firstValueFrom(
+      state.observable.pipe(first((doc) => (doc as TestDocument | null)?.title === 'published')),
+    )
+    expect(state.getCurrent()).toMatchObject({_id: groupId})
+    unsubscribe()
+  })
+
+  it('reports sync status once every candidate is tracked', async () => {
+    await seed(base(groupId, 'published'), french('drafts', 'french draft'))
+
+    const status = getDocumentSyncStatus(instance, handle)
+    const unsubscribe = status.subscribe()
+    await firstValueFrom(status.observable.pipe(first((syncStatus) => syncStatus !== undefined)))
+    expect(status.getCurrent()).toBe(true)
+    unsubscribe()
+  })
+
+  it('cleans up variant subscriptions when the last subscriber leaves', async () => {
+    await seed(base(groupId, 'published'), french('drafts', 'french draft'))
+
+    const state = getDocumentState<TestDocument>(instance, handle)
+    const unsubscribe = state.subscribe()
+    await firstValueFrom(state.observable.pipe(first((document) => document !== undefined)))
+    unsubscribe()
+
+    // longer than the mocked DOCUMENT_STATE_CLEAR_DELAY
+    await new Promise((resolve) => setTimeout(resolve, 50))
+
+    // with every state entry evicted, a fresh selector has nothing to read
+    expect(getDocumentState<TestDocument>(instance, handle).getCurrent()).toBeUndefined()
+  })
 })

@@ -6,7 +6,7 @@ import {describe, expect, it} from 'vitest'
 import {createSanityInstance} from '../store/createSanityInstance'
 import {type DocumentAction} from './actions'
 import {calculatePermissions, createGrantsLookup, type DatasetAcl, type Grant} from './permissions'
-import {type SyncTransactionState} from './reducers'
+import {type VariantTrackingState} from './variantTracking'
 
 const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
 
@@ -33,8 +33,10 @@ const createState = (
   docStates: Record<string, {local: unknown}>,
   grants?: Record<Grant, ExprNode>,
   identity?: string,
-): SyncTransactionState => ({
-  documentStates: docStates as SyncTransactionState['documentStates'],
+): VariantTrackingState => ({
+  documentStates: docStates as VariantTrackingState['documentStates'],
+  variantIndex: {},
+  variantSubscriptions: {},
   grants,
   identity,
   queued: [],

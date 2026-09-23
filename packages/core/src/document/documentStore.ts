@@ -6,7 +6,7 @@ import {
   type SanityClient,
   ServerError,
 } from '@sanity/client'
-import {DocumentId, getDraftId} from '@sanity/id-utils'
+import {DocumentId, getDraftId, getPublishedId, getVersionId} from '@sanity/id-utils'
 import {jsonMatch} from '@sanity/json-match'
 import {type ExprNode} from 'groq-js'
 import {
@@ -45,6 +45,7 @@ import {
   isDatasetResource,
   isMediaLibraryResource,
 } from '../config/sanityConfig'
+import {isReleasePerspective} from '../releases/utils/isReleasePerspective'
 import {
   bindActionByResource,
   type BoundResourceKey,
@@ -54,6 +55,7 @@ import {type SanityInstance} from '../store/createSanityInstance'
 import {createStateSourceAction, type StateSource} from '../store/createStateSourceAction'
 import {defineStore, type StoreContext} from '../store/defineStore'
 import {type ResolveDocument} from '../typegen/resolve'
+import {omitProperty} from '../utils/object'
 import {type DocumentAction} from './actions'
 import {
   ACL_RETRY_BASE_DELAY,
@@ -66,6 +68,7 @@ import {
   SUBMISSION_RETRY_BASE_DELAY,
   SUBMISSION_RETRY_MAX_DELAY,
 } from './documentConstants'
+import {isUnknownDocumentId, type UnknownDocumentId} from './documentKey'
 import {
   type DocumentEvent,
   type DocumentTransactionSubmissionResult,
@@ -96,11 +99,39 @@ import {
   transitionAppliedTransactionsToOutgoing,
   type UnverifiedDocumentRevision,
 } from './reducers'
-import {createFetchDocument, createSharedListener, type SharedListener} from './sharedListener'
+import {
+  createFetchDocument,
+  createFetchDocumentGroup,
+  createSharedListener,
+  type DocumentGroupResponse,
+  type SharedListener,
+} from './sharedListener'
 import {classifySubmissionError} from './submissionErrors'
+import {
+  getVariantCandidateKeys,
+  resolveVariantKey,
+  subscribeToVariantSubscriptionsAndDiscover,
+} from './variantTracking'
 
 export interface DocumentStoreState {
   documentStates: {[TDocumentId in string]?: DocumentState}
+  /**
+   * Maps a variant's document key (see `getDocumentKey`) to the store key
+   * currently holding it. Variant ids are opaque hashes, so this index is the
+   * only way to go from a handle to a variant's `documentStates` entry.
+   *
+   * - absent: not yet resolved; the group has not been fetched
+   * - `null`: the remote confirmed no such variant exists
+   * - a concrete id: the variant's `_id`
+   * - an `UnknownDocumentId` (equal to the key): created locally, pending
+   */
+  variantIndex: {[VariantKey in string]?: DocumentId | UnknownDocumentId | null}
+  /**
+   * Subscription ids interested in each variant key. Kept separately from
+   * `documentStates` because until the key resolves there is no document
+   * state to attach them to.
+   */
+  variantSubscriptions: {[VariantKey in string]?: string[]}
   queued: QueuedTransaction[]
   applied: AppliedTransaction[]
   outgoing?: OutgoingTransaction
@@ -112,6 +143,7 @@ export interface DocumentStoreState {
   error?: unknown
   sharedListener: SharedListener
   fetchDocument: (documentId: string) => Observable<ResolveDocument | null>
+  fetchDocumentGroup: (groupId: string) => Observable<DocumentGroupResponse>
   events: Subject<DocumentEvent>
 }
 
@@ -163,11 +195,14 @@ export const documentStore = defineStore<DocumentStoreState, BoundResourceKey>({
   name: 'Document',
   getInitialState: (instance, {resource}) => ({
     documentStates: {},
+    variantIndex: {},
+    variantSubscriptions: {},
     // these can be emptied on refetch
     queued: [],
     applied: [],
     sharedListener: createSharedListener(instance, resource),
     fetchDocument: createFetchDocument(instance, resource),
+    fetchDocumentGroup: createFetchDocumentGroup(instance, resource),
     events: new Subject(),
   }),
   initialize(context) {
@@ -175,6 +210,7 @@ export const documentStore = defineStore<DocumentStoreState, BoundResourceKey>({
     const subscriptions = [
       subscribeToQueuedAndApplyNextTransaction(context),
       subscribeToSubscriptionsAndListenToDocuments(context),
+      subscribeToVariantSubscriptionsAndDiscover(context),
       subscribeToAppliedAndSubmitNextTransaction(context),
       subscribeToClientAndFetchDatasetAcl(context),
       subscribeToCurrentUserAndSetIdentity(context),
@@ -236,46 +272,14 @@ export function getDocumentState(
   return _getDocumentState(...args)
 }
 
-function throwDocumentError(
-  documentStates: DocumentStoreState['documentStates'],
-  documentIds: string[],
-): void {
-  for (const documentId of documentIds) {
-    const documentError = documentStates[documentId]?.error
-    if (documentError) throw documentError
-  }
-}
-
-/** Version wins over draft, and draft over published. Undefined until every read has arrived. */
-function selectLocalDocument(
-  documentStates: DocumentStoreState['documentStates'],
-  documentIds: string[],
-): ResolveDocument | null | undefined {
-  throwDocumentError(documentStates, documentIds)
-  let selected: ResolveDocument | null = null
-  for (const documentId of documentIds) {
-    const local = documentStates[documentId]?.local
-    if (local === undefined) return undefined
-    if (selected === null) selected = local
-  }
-  return selected
-}
-
-function hasEveryDocumentArrived(
-  documentStates: DocumentStoreState['documentStates'],
-  documentIds: string[],
-): boolean {
-  throwDocumentError(documentStates, documentIds)
-  return documentIds.every((documentId) => documentStates[documentId] !== undefined)
-}
-
 const _getDocumentState = bindActionByResource(
   documentStore,
   createStateSourceAction({
-    selector: ({state: {error, documentStates}}, options: DocumentOptions<string | undefined>) => {
+    selector: ({state}, options: DocumentOptions<string | undefined>) => {
       const {path} = options
-      if (error) throw error
-      const document = selectLocalDocument(documentStates, getDocumentIdsFromHandleLikes([options]))
+      if (state.error) throw state.error
+
+      const document = resolveDocumentFromCandidates(state, options)
       if (document === undefined) return undefined
 
       if (!path) return document
@@ -288,6 +292,101 @@ const _getDocumentState = bindActionByResource(
       manageSubscriberIds(context, [options]),
   }),
 )
+
+type CandidateState = Pick<DocumentStoreState, 'documentStates' | 'variantIndex'>
+
+const isStoreKey = (
+  key: DocumentId | UnknownDocumentId | null | undefined,
+): key is DocumentId | UnknownDocumentId => typeof key === 'string'
+
+/** Rethrows the first per-document read error among the given store keys. */
+function throwDocumentError(
+  documentStates: DocumentStoreState['documentStates'],
+  documentIds: string[],
+): void {
+  for (const documentId of documentIds) {
+    const documentError = documentStates[documentId]?.error
+    if (documentError) throw documentError
+  }
+}
+
+/**
+ * The store keys a handle's document may resolve through, most specific first,
+ * following Content Lake's precedence: variant beats bundle, bundle beats
+ * published.
+ *
+ *   drafts / default, variant v:  v-over-drafts → v-over-published → drafts.g → g
+ *   release r, variant v:         v-over-r → v-over-published → versions.r.g → g
+ *   no variant:                   versions.r.g → drafts.g → g
+ *   liveEdit:                     g
+ *
+ * A variant candidate is `undefined` until its key is resolved and `null` when
+ * the remote confirmed it doesn't exist.
+ */
+function getDocumentCandidateKeys(
+  state: Pick<DocumentStoreState, 'variantIndex'>,
+  handle: DocumentHandle,
+): (DocumentId | UnknownDocumentId | null | undefined)[] {
+  const documentId = DocumentId(handle.documentId)
+  if (handle.liveEdit) return [documentId]
+
+  const variantKeys = getVariantCandidateKeys(handle).map((key) => resolveVariantKey(state, key))
+  const versionId = isReleasePerspective(handle.perspective)
+    ? getVersionId(documentId, handle.perspective.releaseName)
+    : undefined
+  return [
+    ...variantKeys,
+    ...(versionId ? [versionId] : []),
+    getDraftId(documentId),
+    getPublishedId(documentId),
+  ]
+}
+
+/**
+ * The `local` document behind each candidate key. `undefined` means that
+ * candidate is still loading; `null` means it is known not to exist.
+ */
+function getDocumentCandidates(
+  state: CandidateState,
+  handle: DocumentHandle,
+): (ResolveDocument | null | undefined)[] {
+  return getDocumentCandidateKeys(state, handle).map((key) => {
+    if (key === null) return null
+    if (key === undefined) return undefined
+    return state.documentStates[key]?.local
+  })
+}
+
+/**
+ * Resolves the document a handle currently displays: the first candidate that
+ * exists. Returns `undefined` while any candidate ahead of the winner is still
+ * loading, and `null` when none exist.
+ *
+ * A release version that hasn't loaded blocks resolution outright, matching
+ * the previous behaviour; drafts and published must both be loaded before
+ * either is shown so the published document never flashes before the draft.
+ */
+function resolveDocumentFromCandidates(
+  state: CandidateState,
+  handle: DocumentHandle,
+): ResolveDocument | null | undefined {
+  const keys = getDocumentCandidateKeys(state, handle)
+  throwDocumentError(state.documentStates, keys.filter(isStoreKey))
+  const candidates = getDocumentCandidates(state, handle)
+  const tail = candidates.slice(-2)
+  if (!handle.liveEdit && tail.some((candidate) => candidate === undefined)) return undefined
+
+  for (const [index, candidate] of candidates.entries()) {
+    if (candidate === undefined) return undefined
+    if (candidate === null) continue
+    // a document held under a pending key has no concrete id yet; it must not
+    // leak the key in its place
+    return isUnknownDocumentId(keys[index] ?? '')
+      ? (omitProperty(candidate, '_id') as ResolveDocument)
+      : candidate
+  }
+  return null
+}
 
 /** @beta */
 export function resolveDocument<
@@ -325,13 +424,19 @@ const _resolveDocument = bindActionByResource(
 export const getDocumentSyncStatus = bindActionByResource(
   documentStore,
   createStateSourceAction({
-    selector: (
-      {state: {error, documentStates: documents, outgoing, applied, queued}},
-      doc: DocumentHandle,
-    ) => {
+    selector: ({state}, doc: DocumentHandle) => {
+      const {error, outgoing, applied, queued} = state
       if (error) throw error
-      if (!hasEveryDocumentArrived(documents, getDocumentIdsFromHandleLikes([doc])))
-        return undefined
+
+      // every candidate the handle may resolve through must at least have a
+      // state entry (and every variant key be resolved) before sync status is
+      // meaningful
+      const keys = getDocumentCandidateKeys(state, doc)
+      throwDocumentError(state.documentStates, keys.filter(isStoreKey))
+      const tracked = keys.every((key) =>
+        key === null ? true : key !== undefined && state.documentStates[key] !== undefined,
+      )
+      if (!tracked) return undefined
       return !queued.length && !applied.length && !outgoing
     },
     onSubscribe: (context, doc: DocumentHandle) => {
@@ -550,7 +655,9 @@ const subscribeToSubscriptionsAndListenToDocuments = (
   return state.observable
     .pipe(
       filter((s) => !!s.grants),
-      map((s) => Object.keys(s.documentStates)),
+      // a pending variant's entry is keyed by an unknown id that the remote
+      // can't be asked about; it is populated through the variant index instead
+      map((s) => Object.keys(s.documentStates).filter((id) => !isUnknownDocumentId(id))),
       distinctUntilChanged((curr, next) => {
         if (curr.length !== next.length) return false
         const currSet = new Set(curr)
