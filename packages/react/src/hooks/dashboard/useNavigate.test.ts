@@ -56,6 +56,17 @@ describe('useNavigate', () => {
       {url: 'http://localhost:3000/documents/abc'},
     )
   })
+
+  it('drops a dashboard-scoped navigation with a warning', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const {result} = renderHook(() => useNavigate(mockNavigateFn))
+
+    result.current({path: '/studios/abc', scope: 'dashboard'})
+
+    expect(mockSendMessage).not.toHaveBeenCalled()
+    expect(warn).toHaveBeenCalledOnce()
+    warn.mockRestore()
+  })
 })
 
 describe('useNavigate (message bus)', () => {
@@ -414,6 +425,27 @@ describe('useNavigate (message bus)', () => {
     })
 
     expect(navigateFn).toHaveBeenCalledTimes(1)
+    expect(navigateFn).toHaveBeenCalledWith({path: 'documents/def', type: 'push'})
+  })
+
+  it('emits a dashboard-scoped URL as-is and fires the commit it lands in this app', async () => {
+    emitLocation({appId: 'app', path: 'documents/abc', transition: null})
+
+    const navigateFn = vi.fn()
+    const {result} = renderHookWithInstance(() => useNavigate(navigateFn))
+
+    await act(async () => {
+      result.current({path: '/applications/app/documents/def', scope: 'dashboard'})
+    })
+
+    expect(updates).toEqual([{url: '/applications/app/documents/def', history: 'push'}])
+
+    const to = {appId: 'app', path: 'documents/def'}
+    act(() => {
+      emitLocation({appId: 'app', path: 'documents/abc', transition: {navigationType: 'push', to}})
+      emitLocation({appId: 'app', path: 'documents/def', transition: null})
+    })
+
     expect(navigateFn).toHaveBeenCalledWith({path: 'documents/def', type: 'push'})
   })
 

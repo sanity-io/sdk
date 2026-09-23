@@ -27,9 +27,17 @@ export type DashboardNavigation = PathChangeMessage['data']
  * Reports an in-app navigation to the Dashboard so the browser URL and the Dashboard's own
  * router follow the app. `type` defaults to `'push'` and only applies in the federated runtime;
  * see {@link useNavigate}.
+ *
+ * `scope` defaults to `'in-app'`, where `path` is relative to the app's route. With
+ * `'dashboard'`, `path` is a Dashboard URL from {@link urlFor} and is navigated to as-is; only
+ * the federated runtime supports it.
  * @public
  */
-export type NavigateToDashboardPath = (options: {path: string; type?: 'push' | 'replace'}) => void
+export type NavigateToDashboardPath = (options: {
+  path: string
+  type?: 'push' | 'replace'
+  scope?: 'in-app' | 'dashboard'
+}) => void
 
 /**
  * @public
@@ -104,10 +112,17 @@ function useComlinkNavigate(
   })
 
   return useCallback<NavigateToDashboardPath>(
-    ({path}) =>
+    ({path, scope = 'in-app'}) => {
+      // The host rewrites every `update-url` into this app's route, so it can't leave the app.
+      if (scope === 'dashboard') {
+        // eslint-disable-next-line no-console
+        console.warn('Dashboard-scoped navigation is not supported in the iframe runtime', path)
+        return
+      }
       sendMessage('dashboard/v1/bridge/listeners/history/update-url', {
         url: new URL(path, window.location.origin).href,
-      }),
+      })
+    },
     [sendMessage],
   )
 }
@@ -165,10 +180,11 @@ function useBusNavigate(
   }, [bus])
 
   return useCallback<NavigateToDashboardPath>(
-    ({path, type = 'push'}) => {
+    ({path, type = 'push', scope = 'in-app'}) => {
       // The host commits paths without a leading slash; store the same form so the echo matches.
-      const own = path.replace(/^\//, '')
-      ownRequest.current = own
+      // A dashboard-scoped URL is not an app route, so its commit is never our own echo.
+      const own = scope === 'in-app' ? path.replace(/^\//, '') : null
+      if (own !== null) ownRequest.current = own
       // A request that never landed must drop its suppression, or a later host navigation to the
       // same path would be dropped. Best-effort: never throws.
       const clearIfStale = () => {
@@ -176,15 +192,15 @@ function useBusNavigate(
       }
       // The base path is read per call, not in render, so a host that has not published it only
       // loses outbound reporting; the inbound subscription above still installs.
-      bus
-        .query('applications.base-path')
-        .then((base) => {
-          if (!base.ok) throw new TopicError('applications.base-path')
-          return bus.emit('navigation.location.update', {
-            url: joinPath(base.value, own),
-            history: type,
-          })
-        })
+      const url =
+        own === null
+          ? Promise.resolve(path)
+          : bus.query('applications.base-path').then((base) => {
+              if (!base.ok) throw new TopicError('applications.base-path')
+              return joinPath(base.value, own)
+            })
+      url
+        .then((resolved) => bus.emit('navigation.location.update', {url: resolved, history: type}))
         .then(
           (reply) => {
             if (!reply.ok) clearIfStale()
