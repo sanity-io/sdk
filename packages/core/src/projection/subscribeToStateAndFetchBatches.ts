@@ -25,7 +25,7 @@ import {
   processProjectionQuery,
   type ProjectionQueryResult,
 } from './projectionQuery'
-import {buildStatusQueryIds, processStatusQueryResults} from './statusQuery'
+import {buildStatusQuery, processStatusQueryResults} from './statusQuery'
 import {type ProjectionStoreState} from './types'
 import {PROJECTION_TAG} from './util'
 
@@ -37,6 +37,7 @@ const isSetEqual = <T>(a: Set<T>, b: Set<T>) =>
 interface StatusQueryResult {
   _id: string
   _updatedAt: string
+  bundleId?: string | null
 }
 
 export const subscribeToStateAndFetchBatches = ({
@@ -99,10 +100,11 @@ export const subscribeToStateAndFetchBatches = ({
         const {query, params} = createProjectionQuery(ids, documentProjections)
         const controller = new AbortController()
 
-        // Build status query IDs and query
-        const statusQueryIds = buildStatusQueryIds(ids, perspective)
-        const statusQuery = `*[_id in $statusIds]{_id, _updatedAt}`
-        const statusParams = {statusIds: statusQueryIds}
+        const {query: statusQuery, params: statusParams} = buildStatusQuery(
+          ids,
+          perspective,
+          variant,
+        )
 
         const projectionQuery$ = new Observable<ProjectionQueryResult[]>((observer) => {
           const {getCurrent, observable} = getQueryState<ProjectionQueryResult[]>(instance, {
@@ -197,7 +199,7 @@ export const subscribeToStateAndFetchBatches = ({
       }),
       map(({ids, data, statusResults}) => {
         // Process status results into documentStatuses (same shape as _status returned to users)
-        const documentStatuses = processStatusQueryResults(statusResults)
+        const documentStatuses = processStatusQueryResults(statusResults, perspective, variant)
         state.set('updateStatuses', (prev) => ({
           documentStatuses: {
             ...prev.documentStatuses,
