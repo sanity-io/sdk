@@ -26,6 +26,7 @@ import {PerspectivesRoute} from './routes/PerspectivesRoute'
 import {PortableTextRoute} from './routes/PortableTextRoute'
 import {ProjectsRoute} from './routes/ProjectsRoute'
 import {ReleasesRoute} from './routes/releases/ReleasesRoute'
+import {StudioDemoRoute} from './routes/StudioDemoRoute'
 import {TodoRoute} from './routes/TodoRoute'
 import {UserDetailRoute} from './routes/UserDetailRoute'
 import {UsersRoute} from './routes/UsersRoute'
@@ -135,6 +136,7 @@ export function AppRoutes(): JSX.Element {
           <Route path="projects" element={<ProjectsRoute />} />
           <Route path="perspectives" element={<PerspectivesRoute />} />
           <Route path="todo" element={<TodoRoute />} />
+          <Route path="studio-demo" element={<StudioDemoRoute />} />
         </Route>
         <Route path="comlink-demo">
           {frameRoutes.map((route) => (

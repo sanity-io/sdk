@@ -94,6 +94,16 @@ const todoType = defineType({
   ],
 })
 
+const articleType = defineType({
+  name: 'article',
+  type: 'document',
+  title: 'Article',
+  fields: [
+    defineField({name: 'title', type: 'string', title: 'Title'}),
+    defineField({name: 'subtitle', type: 'string', title: 'Subtitle'}),
+  ],
+})
+
 const movieType = defineType({
   name: 'movie',
   title: 'Movie',
@@ -141,7 +151,7 @@ export default defineConfig([
     projectId: 'ppsg7ml5',
     dataset: 'test',
     schema: {
-      types: [bookType, authorType, todoType],
+      types: [bookType, authorType, todoType, articleType],
     },
   },
   {
