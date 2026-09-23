@@ -21,8 +21,10 @@ env:
   ORGANIZATION_ID: oblZgbTFj
   PR_NUMBER: ${{ github.event.pull_request.number }}
   MARKER: '<!-- kitchensink-preview -->'
-  SANITY_AUTH_TOKEN: ${{ secrets.SANITY_AUTH_TOKEN_DEPLOY }}
   GH_TOKEN: ${{ github.token }}
+
+# SANITY_AUTH_TOKEN is set per step, only where it's needed, so it isn't exposed
+# to `pnpm install` or the build, which run code from the PR.
 
 jobs:
   deploy:
@@ -46,9 +48,14 @@ jobs:
       - name: Build dependencies
         run: pnpm turbo run build --filter=@sanity/kitchensink-react^...
 
+      # pipefail so a failed request fails the step. An empty app_id means "create",
+      # so swallowing the error would create a duplicate app.
       - name: Find preview app
         id: find
+        env:
+          SANITY_AUTH_TOKEN: ${{ secrets.SANITY_AUTH_TOKEN_DEPLOY }}
         run: |
+          set -o pipefail
           APP_ID=$(curl -fsS -H "Authorization: Bearer $SANITY_AUTH_TOKEN" \
             "https://api.sanity.io/v2024-08-01/user-applications?appType=coreApp&organizationId=$ORGANIZATION_ID" \
             | jq -r --arg title "$APP_TITLE" 'map(select(.title == $title)) | first | .id // empty')
@@ -59,15 +66,22 @@ jobs:
         id: deploy
         working-directory: apps/kitchensink-react
         env:
+          SANITY_AUTH_TOKEN: ${{ secrets.SANITY_AUTH_TOKEN_DEPLOY }}
           KITCHENSINK_APP_ID: ${{ steps.find.outputs.app_id }}
+          DEPLOY_JSON: ${{ runner.temp }}/deploy.json
         run: |
           if [ -z "$KITCHENSINK_APP_ID" ]; then
-            pnpm exec sanity deploy --create --title "$APP_TITLE" --yes --json > deploy.json
+            pnpm exec sanity deploy --create --title "$APP_TITLE" --yes --json > "$DEPLOY_JSON"
           else
-            pnpm exec sanity deploy --yes --json > deploy.json
+            pnpm exec sanity deploy --yes --json > "$DEPLOY_JSON"
           fi
-          cat deploy.json
-          echo "url=$(jq -r '.url' deploy.json)" >> "$GITHUB_OUTPUT"
+          cat "$DEPLOY_JSON"
+          URL=$(jq -r '.url // empty' "$DEPLOY_JSON")
+          if [ -z "$URL" ]; then
+            echo "::error::sanity deploy output has no url"
+            exit 1
+          fi
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
 
       - name: Comment preview URL
         env:
@@ -77,7 +91,7 @@ jobs:
           BODY=$(printf '%s\n### Kitchensink preview\n\n%s\n\nDeployed from %s. The app is undeployed when this PR closes.\n' \
             "$MARKER" "$PREVIEW_URL" "$HEAD_SHA")
           EXISTING=$(gh api "repos/${{ github.repository }}/issues/$PR_NUMBER/comments" \
-            --paginate --jq ".[] | select(.body | startswith(\"$MARKER\")) | .id" | head -1)
+            --paginate --jq "first(.[] | select(.body | startswith(\"$MARKER\")) | .id)" | head -n1)
           if [ -n "$EXISTING" ]; then
             gh api -X PATCH "repos/${{ github.repository }}/issues/comments/$EXISTING" -f body="$BODY"
           else
@@ -95,9 +109,13 @@ jobs:
         with:
           node-version: 24.21.0
 
+      # pipefail so a failed request fails the step instead of skipping cleanup.
       - name: Find preview app
         id: find
+        env:
+          SANITY_AUTH_TOKEN: ${{ secrets.SANITY_AUTH_TOKEN_DEPLOY }}
         run: |
+          set -o pipefail
           APP_ID=$(curl -fsS -H "Authorization: Bearer $SANITY_AUTH_TOKEN" \
             "https://api.sanity.io/v2024-08-01/user-applications?appType=coreApp&organizationId=$ORGANIZATION_ID" \
             | jq -r --arg title "$APP_TITLE" 'map(select(.title == $title)) | first | .id // empty')
@@ -107,6 +125,7 @@ jobs:
         if: steps.find.outputs.app_id != ''
         working-directory: apps/kitchensink-react
         env:
+          SANITY_AUTH_TOKEN: ${{ secrets.SANITY_AUTH_TOKEN_DEPLOY }}
           KITCHENSINK_APP_ID: ${{ steps.find.outputs.app_id }}
         run: pnpm exec sanity undeploy --yes --json
 
@@ -114,7 +133,7 @@ jobs:
         if: steps.find.outputs.app_id != ''
         run: |
           EXISTING=$(gh api "repos/${{ github.repository }}/issues/$PR_NUMBER/comments" \
-            --paginate --jq ".[] | select(.body | startswith(\"$MARKER\")) | .id" | head -1)
+            --paginate --jq "first(.[] | select(.body | startswith(\"$MARKER\")) | .id)" | head -n1)
           if [ -n "$EXISTING" ]; then
             BODY=$(printf '%s\n### Kitchensink preview\n\nUndeployed because this PR closed.\n' "$MARKER")
             gh api -X PATCH "repos/${{ github.repository }}/issues/comments/$EXISTING" -f body="$BODY"
