@@ -1,6 +1,7 @@
 import {AuthStateType, type SanityConfig} from '@sanity/sdk'
+import {installMessageBus, resetMessageBus} from '@sanity/sdk/_internal'
 import {render, screen} from '@testing-library/react'
-import {describe, expect, it, vi} from 'vitest'
+import {describe, expect, it, onTestFinished, vi} from 'vitest'
 
 import {SanityApp} from './SanityApp'
 import {type SDKProviderProps} from './SDKProvider'
@@ -205,6 +206,41 @@ describe('SanityApp', () => {
       writable: true,
     })
     consoleWarnSpy.mockRestore()
+  })
+
+  it('does not redirect to core if a message bus is installed', async () => {
+    const originalLocation = window.location
+    const mockLocation = {
+      replace: vi.fn(),
+      href: 'http://sanity-test.app',
+    }
+
+    Object.defineProperty(window, 'location', {
+      value: mockLocation,
+      writable: true,
+    })
+    installMessageBus({appId: 'workbench'})
+    onTestFinished(() => {
+      resetMessageBus()
+      delete (globalThis as {[key: symbol]: unknown})[Symbol.for('sanity.os.bus')]
+      Object.defineProperty(window, 'location', {
+        value: originalLocation,
+        writable: true,
+      })
+    })
+
+    render(
+      <SanityApp
+        config={[{projectId: 'test-project', dataset: 'test-dataset'}]}
+        fallback={<div>Fallback</div>}
+      >
+        <div>Test Child</div>
+      </SanityApp>,
+    )
+
+    await new Promise((resolve) => setTimeout(resolve, 1010))
+
+    expect(mockLocation.replace).not.toHaveBeenCalled()
   })
 
   it('redirects to core if config is omitted and no studio context is available', async () => {
