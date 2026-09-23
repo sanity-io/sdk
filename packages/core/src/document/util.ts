@@ -42,6 +42,10 @@ export function getEditingDocumentId(
 export function getEffectiveDocumentId(doc: DocumentHandle): string {
   if (doc.liveEdit) {
     return doc.documentId
+  } else if (doc.variant) {
+    // a variant's id is opaque; actions address it by group, bundle, and
+    // variant, so the group id is the only meaningful id to carry
+    return getPublishedId(DocumentId(doc.documentId))
   } else if (isReleasePerspective(doc.perspective)) {
     return getVersionId(DocumentId(doc.documentId), doc.perspective.releaseName)
   } else {

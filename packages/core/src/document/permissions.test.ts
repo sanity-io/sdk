@@ -5,6 +5,7 @@ import {describe, expect, it} from 'vitest'
 
 import {createSanityInstance} from '../store/createSanityInstance'
 import {type DocumentAction} from './actions'
+import {getVariantKeys, toUnknownDocumentId} from './documentKey'
 import {calculatePermissions, createGrantsLookup, type DatasetAcl, type Grant} from './permissions'
 import {type VariantTrackingState} from './variantTracking'
 
@@ -316,5 +317,93 @@ describe('calculatePermissions', () => {
         expect.arrayContaining([expect.objectContaining({type: 'access', documentId: 'canvas-1'})]),
       )
     })
+  })
+})
+
+describe('calculatePermissions with variant actions', () => {
+  const grants = {
+    create: alwaysAllow,
+    update: alwaysAllow,
+    read: alwaysAllow,
+    history: alwaysAllow,
+  }
+  const keys = getVariantKeys({documentId: 'doc1', variant: 'french'})
+  const baseDocuments = {
+    'doc1': {local: createDoc('doc1', 'Published')},
+    'drafts.doc1': {local: null},
+  }
+  const editVariant: DocumentAction = {
+    type: 'document.edit',
+    documentId: 'doc1',
+    documentType: 'article',
+    variant: 'french',
+    patches: [{set: {title: 'Titre'}}],
+  }
+  const withVariantIndex = (
+    state: VariantTrackingState,
+    variantIndex: VariantTrackingState['variantIndex'],
+  ): VariantTrackingState => ({...state, variantIndex})
+
+  it('allows editing a variant that does not exist yet, forking it from published', () => {
+    const state = withVariantIndex(createState(baseDocuments, grants), {
+      [keys.overBundle]: null,
+      [keys.overPublished]: null,
+    })
+    expect(calculatePermissions({instance, state}, {actions: [editVariant]})).toEqual({
+      allowed: true,
+    })
+  })
+
+  it('reports an access reason when creating the variant is not permitted', () => {
+    const state = withVariantIndex(createState(baseDocuments, {...grants, create: alwaysDeny}), {
+      [keys.overBundle]: null,
+      [keys.overPublished]: null,
+    })
+    const result = calculatePermissions({instance, state}, {actions: [editVariant]})
+    expect(result?.allowed).toBe(false)
+    expect(result?.reasons).toEqual([
+      expect.objectContaining({
+        type: 'access',
+        message: expect.stringContaining('permission to create variant "french"'),
+      }),
+    ])
+  })
+
+  it('checks edits against a variant pending creation', () => {
+    const pendingKey = toUnknownDocumentId(keys.overBundle)
+    const state = withVariantIndex(
+      createState(
+        {...baseDocuments, [pendingKey]: {local: createDoc(pendingKey, 'En attente')}},
+        {...grants, create: alwaysDeny},
+      ),
+      {[keys.overBundle]: pendingKey, [keys.overPublished]: null},
+    )
+    // the variant already exists locally, so only the update grant applies
+    expect(calculatePermissions({instance, state}, {actions: [editVariant]})).toEqual({
+      allowed: true,
+    })
+  })
+
+  it('checks publishing an existing variant', () => {
+    const draftVariantId = 'versions.h4sh.doc1'
+    const state = withVariantIndex(
+      createState(
+        {...baseDocuments, [draftVariantId]: {local: createDoc(draftVariantId, 'Brouillon')}},
+        grants,
+      ),
+      {[keys.overBundle]: DocumentId(draftVariantId), [keys.overPublished]: null},
+    )
+    const publish: DocumentAction = {
+      type: 'document.publish',
+      documentId: 'doc1',
+      documentType: 'article',
+      variant: 'french',
+    }
+    expect(calculatePermissions({instance, state}, {actions: [publish]})).toEqual({allowed: true})
+  })
+
+  it('waits while a variant key is unresolved', () => {
+    const state = createState(baseDocuments, grants)
+    expect(calculatePermissions({instance, state}, {actions: [editVariant]})).toBeUndefined()
   })
 })

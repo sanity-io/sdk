@@ -13,6 +13,7 @@ import {checkGrant} from './processActions/shared'
 import {type DocumentSet} from './processMutations'
 import {
   getVariantCandidateKeys,
+  resolveVariantIds,
   resolveVariantKey,
   type VariantTrackingState,
 } from './variantTracking'
@@ -74,7 +75,7 @@ const documentsSelector = createSelector(
   (documentStates, variantIndex, actions) => {
     const documentIds = new Set<string>()
     for (const action of actions) {
-      const ids = getActionDocumentIds(action, variantIndex)
+      const ids = getActionDocumentIds(action, {documentStates, variantIndex})
       // an unresolved variant key means we don't yet know whether the document
       // exists, so wait
       if (ids === undefined) return undefined
@@ -114,7 +115,7 @@ const documentsSelector = createSelector(
  */
 function getActionDocumentIds(
   action: DocumentAction,
-  variantIndex: VariantTrackingState['variantIndex'],
+  state: Pick<VariantTrackingState, 'variantIndex' | 'documentStates'>,
 ): string[] | undefined {
   if (typeof action.documentId !== 'string') return []
   if (action.liveEdit) return [action.documentId]
@@ -124,12 +125,17 @@ function getActionDocumentIds(
   if (isReleasePerspective(action.perspective)) {
     ids.push(getVersionId(documentId, action.perspective.releaseName))
   }
-  for (const key of getVariantCandidateKeys({...action, documentId: action.documentId})) {
-    const resolved = resolveVariantKey({variantIndex}, key)
+  for (const key of getActionVariantKeys(action)) {
+    const resolved = resolveVariantKey(state, key)
     if (resolved === undefined) return undefined
     if (resolved !== null) ids.push(resolved)
   }
   return ids
+}
+
+function getActionVariantKeys(action: DocumentAction): string[] {
+  if (typeof action.documentId !== 'string') return []
+  return getVariantCandidateKeys({...action, documentId: action.documentId})
 }
 
 // Cache the actions array based on a serialized version, but “attach” the cache
@@ -194,16 +200,22 @@ const _calculatePermissions = createSelector(
     ({state: {identity}}: SelectorContext<VariantTrackingState>) => identity,
     documentsSelector,
     memoizedActionsSelector,
+    ({state: {variantIndex}}: SelectorContext<VariantTrackingState>) => variantIndex,
   ],
   (
     grants: Record<Grant, ExprNode> | undefined,
     identity: string | undefined,
     documents: DocumentSet | undefined,
     actions: DocumentAction[] | undefined,
+    variantIndex: VariantTrackingState['variantIndex'],
   ): DocumentPermissionsResult | undefined => {
     if (!documents) return undefined
     if (!grants) return undefined
     if (!actions) return undefined
+    // variant documents are addressed by store key, which the handlers can't
+    // derive from the actions themselves
+    const variants = resolveVariantIds({variantIndex}, actions.flatMap(getActionVariantKeys))
+    if (!variants) return undefined
 
     const timestamp = new Date().toISOString()
     const reasons: PermissionDeniedReason[] = []
@@ -217,6 +229,7 @@ const _calculatePermissions = createSelector(
         timestamp,
         grants,
         identity,
+        variantIds: variants.variantIds,
       })
     } catch (error) {
       if (error instanceof PermissionActionError) {

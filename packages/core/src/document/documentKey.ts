@@ -4,6 +4,8 @@ import {type DocumentSystem} from '@sanity/types'
 import {type DocumentHandle, type PerspectiveHandle} from '../config/sanityConfig'
 import {isReleasePerspective} from '../releases/utils/isReleasePerspective'
 
+type VariantHandleLike = Pick<DocumentHandle, 'documentId' | 'perspective' | 'variant' | 'liveEdit'>
+
 const KEY_PREFIX = '!'
 const VARIANT_DEFINITION_PREFIX = '_.variants.'
 
@@ -48,12 +50,49 @@ export function getBundleId(perspective: PerspectiveHandle['perspective']): stri
  *
  * @beta
  */
-export function getDocumentKey(
-  handle: Pick<DocumentHandle, 'documentId' | 'perspective' | 'variant' | 'liveEdit'>,
-): string {
+export function getDocumentKey(handle: VariantHandleLike): string {
   const groupId = getPublishedId(DocumentId(handle.documentId))
   const bundleId = handle.liveEdit ? undefined : getBundleId(handle.perspective)
   return buildKey(groupId, bundleId, handle.variant)
+}
+
+/**
+ * The keys of the two documents a variant handle can resolve through: the
+ * variant over the handle's bundle and the variant over the published bundle.
+ * They are always distinct, since {@link getBundleId} never addresses the
+ * published bundle.
+ *
+ * @internal
+ */
+export function getVariantKeys(handle: VariantHandleLike & {variant: string}): {
+  overBundle: string
+  overPublished: string
+} {
+  const groupId = getPublishedId(DocumentId(handle.documentId))
+  return {
+    overBundle: buildKey(groupId, getBundleId(handle.perspective), handle.variant),
+    overPublished: buildKey(groupId, undefined, handle.variant),
+  }
+}
+
+/**
+ * The `_system` identity a variant document of this handle's group and variant
+ * will carry once Content Lake writes it to the given bundle. Set
+ * optimistically on locally written variants so they stay addressable before
+ * their concrete id is known. Pass `undefined` for the published bundle, which
+ * `_system` conveys by omitting `bundleId`.
+ *
+ * @internal
+ */
+export function buildVariantSystem(
+  handle: Pick<DocumentHandle, 'documentId'> & {variant: string},
+  bundleId: string | undefined,
+): Partial<DocumentSystem> {
+  return {
+    ...(bundleId !== undefined && {bundleId}),
+    variant: {_ref: `${VARIANT_DEFINITION_PREFIX}${handle.variant}`},
+    group: {_ref: getPublishedId(DocumentId(handle.documentId)), _weak: true},
+  }
 }
 
 /**

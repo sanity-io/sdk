@@ -21,7 +21,7 @@ export function handleDelete(
 
   const documentId = action.documentId
 
-  if (isReleasePerspective(action.perspective)) {
+  if (isReleasePerspective(action.perspective) || action.variant) {
     throw new ActionError({
       documentId,
       transactionId,
@@ -29,34 +29,7 @@ export function handleDelete(
     })
   }
 
-  if (action.liveEdit) {
-    if (!working[documentId]) {
-      throw new ActionError({
-        documentId,
-        transactionId,
-        message: 'The document you are trying to delete does not exist.',
-      })
-    }
-
-    if (!checkGrant(grants.update, working[documentId], identity)) {
-      throw new PermissionActionError({
-        documentId,
-        transactionId,
-        message: `You do not have permission to delete this document.`,
-      })
-    }
-
-    const mutations: Mutation[] = [{delete: {id: documentId}}]
-
-    base = processMutations({documents: base, transactionId, mutations, timestamp})
-    working = processMutations({documents: working, transactionId, mutations, timestamp})
-
-    // although liveEdit documents can use the actions API for deletion,
-    // having this be an action while other operations are mutations creates an inconsistency
-    // (and a possible race condition in document store where mutations might get skipped)
-    outgoingMutations.push(...mutations)
-    return {base, working}
-  }
+  if (action.liveEdit) return handleLiveEditDelete(documentId, ctx)
 
   // Standard draft/published logic
   const draftId = getDraftId(DocumentId(documentId))
@@ -97,4 +70,35 @@ export function handleDelete(
     ...(includeDrafts ? {includeDrafts} : {}),
   })
   return {base, working}
+}
+
+function handleLiveEditDelete(documentId: string, ctx: ActionHandlerContext): ActionHandlerResult {
+  const {transactionId, timestamp, grants, identity, outgoingMutations, base, working} = ctx
+
+  if (!working[documentId]) {
+    throw new ActionError({
+      documentId,
+      transactionId,
+      message: 'The document you are trying to delete does not exist.',
+    })
+  }
+
+  if (!checkGrant(grants.update, working[documentId], identity)) {
+    throw new PermissionActionError({
+      documentId,
+      transactionId,
+      message: `You do not have permission to delete this document.`,
+    })
+  }
+
+  const mutations: Mutation[] = [{delete: {id: documentId}}]
+
+  // although liveEdit documents can use the actions API for deletion,
+  // having this be an action while other operations are mutations creates an inconsistency
+  // (and a possible race condition in document store where mutations might get skipped)
+  outgoingMutations.push(...mutations)
+  return {
+    base: processMutations({documents: base, transactionId, mutations, timestamp}),
+    working: processMutations({documents: working, transactionId, mutations, timestamp}),
+  }
 }

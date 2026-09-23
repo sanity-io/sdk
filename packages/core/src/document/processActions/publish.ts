@@ -1,7 +1,6 @@
 import {DocumentId, getDraftId, getPublishedId} from '@sanity/id-utils'
 import {type Mutation, type Reference, type SanityDocument} from '@sanity/types'
 
-import {isReleasePerspective} from '../../releases/utils/isReleasePerspective'
 import {isDeepEqual} from '../../utils/object'
 import {type PublishDocumentAction} from '../actions'
 import {getId, processMutations} from '../processMutations'
@@ -9,9 +8,11 @@ import {
   ActionError,
   type ActionHandlerContext,
   type ActionHandlerResult,
+  assertDraftPublishedAction,
   checkGrant,
   PermissionActionError,
 } from './shared'
+import {handleVariantPublish, isVariantAction} from './variant'
 
 export function handlePublish(
   action: PublishDocumentAction,
@@ -20,15 +21,11 @@ export function handlePublish(
   const {transactionId, timestamp, grants, identity, outgoingActions, outgoingMutations} = ctx
   let {base, working} = ctx
 
+  if (isVariantAction(action)) return handleVariantPublish(action, ctx)
+
   const documentId = getId(action.documentId)
 
-  if (action.liveEdit || isReleasePerspective(action.perspective)) {
-    throw new ActionError({
-      documentId,
-      transactionId,
-      message: `Cannot publish this document. Publishing is not supported for liveEdit or version (release) documents.`,
-    })
-  }
+  assertDraftPublishedAction(action, documentId, transactionId, 'publish')
 
   // Standard draft/published logic
   const draftId = getDraftId(DocumentId(documentId))

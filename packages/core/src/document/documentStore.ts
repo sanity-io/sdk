@@ -324,7 +324,7 @@ function throwDocumentError(
  * the remote confirmed it doesn't exist.
  */
 function getDocumentCandidateKeys(
-  state: Pick<DocumentStoreState, 'variantIndex'>,
+  state: CandidateState,
   handle: DocumentHandle,
 ): (DocumentId | UnknownDocumentId | null | undefined)[] {
   const documentId = DocumentId(handle.documentId)

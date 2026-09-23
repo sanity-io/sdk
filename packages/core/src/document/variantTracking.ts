@@ -1,5 +1,6 @@
-import {type MutationEvent, type SanityDocument} from '@sanity/client'
+import {type MutationEvent} from '@sanity/client'
 import {DocumentId, getPublishedId, isVersionId} from '@sanity/id-utils'
+import {type SanityDocument} from '@sanity/types'
 import {
   distinctUntilChanged,
   EMPTY,
@@ -22,17 +23,19 @@ import {type BoundResourceKey} from '../store/createActionBinder'
 import {type StoreContext} from '../store/defineStore'
 import {omitProperty} from '../utils/object'
 import {
-  getDocumentKey,
   getDocumentKeyFromSystem,
   getGroupIdFromStoreKey,
+  getVariantKeys,
   isUnknownDocumentId,
+  toUnknownDocumentId,
   type UnknownDocumentId,
 } from './documentKey'
-import {type DocumentStoreState} from './documentStore'
+import {type DocumentState, type DocumentStoreState} from './documentStore'
 import {
   addSubscriptionIdToDocument,
   removeSubscriptionIdFromDocument,
 } from './documentSubscriptions'
+import {type AppliedTransaction} from './reducers'
 
 /**
  * The slice of store state the variant reducers operate on. Widened from
@@ -61,12 +64,7 @@ type VariantHandleLike = Pick<DocumentHandle, 'documentId' | 'perspective' | 'va
  */
 export function getVariantCandidateKeys(handle: VariantHandleLike): string[] {
   if (!handle.variant || handle.liveEdit) return []
-  const overBundle = getDocumentKey(handle)
-  const overPublished = getDocumentKey({
-    documentId: handle.documentId,
-    variant: handle.variant,
-    liveEdit: true,
-  })
+  const {overBundle, overPublished} = getVariantKeys({...handle, variant: handle.variant})
   return [overBundle, overPublished]
 }
 
@@ -75,10 +73,56 @@ export function getVariantCandidateKeys(handle: VariantHandleLike): string[] {
  * been resolved yet and callers should treat the document as loading.
  */
 export function resolveVariantKey(
-  state: Pick<VariantTrackingState, 'variantIndex'>,
+  state: Pick<VariantTrackingState, 'variantIndex' | 'documentStates'>,
   key: string,
 ): DocumentId | UnknownDocumentId | null | undefined {
-  return state.variantIndex[key]
+  const id = state.variantIndex[key]
+  // a pending entry can be evicted (or rebuilt away by a revert) while the
+  // index still points at it. with nothing behind the key, the variant reads as
+  // absent rather than loading forever
+  if (id && isUnknownDocumentId(id) && !state.documentStates[id]) return null
+  return id
+}
+
+/**
+ * The store key behind each of a set of variant keys, as action processing
+ * needs them. See `ActionHandlerContext.variantIds`.
+ */
+export interface ResolvedVariantIds {
+  /** key → store key, for every variant key given */
+  variantIds: Record<string, string>
+  /** store keys of variants that exist remotely and must be loaded */
+  concreteIds: string[]
+  /** store keys of variants that don't exist remotely (pending or absent) */
+  unknownIds: UnknownDocumentId[]
+}
+
+/**
+ * Resolves variant keys through the variant index for action processing. A
+ * variant that doesn't exist remotely (pending creation, or confirmed absent)
+ * is addressed by its key, which is where a locally created variant lives.
+ * Returns `undefined` while any key is still unresolved.
+ */
+export function resolveVariantIds(
+  state: Pick<VariantTrackingState, 'variantIndex'>,
+  keys: string[],
+): ResolvedVariantIds | undefined {
+  const resolved: ResolvedVariantIds = {variantIds: {}, concreteIds: [], unknownIds: []}
+  for (const key of keys) {
+    // pending and absent variants are both addressed by their key, so a pending
+    // entry that no longer exists needs no special handling here
+    const id = state.variantIndex[key]
+    if (id === undefined) return undefined
+    if (id === null || isUnknownDocumentId(id)) {
+      const unknownId = toUnknownDocumentId(key)
+      resolved.variantIds[key] = unknownId
+      resolved.unknownIds.push(unknownId)
+    } else {
+      resolved.variantIds[key] = id
+      resolved.concreteIds.push(id)
+    }
+  }
+  return resolved
 }
 
 export function addVariantSubscription<State extends VariantTrackingState>(
@@ -103,7 +147,9 @@ export function addVariantSubscription<State extends VariantTrackingState>(
  * Releases a subscriber's interest in a variant key, and in the document the
  * key resolves to. Once the key has no subscribers left its index entry is
  * dropped too: nothing watches the group any more, so the entry would go stale,
- * and a later subscriber rediscovers the key from scratch.
+ * and a later subscriber rediscovers the key from scratch. The exception is a
+ * pending variant whose entry outlives its subscribers while it awaits its own
+ * echo; dropping the index would orphan that entry.
  */
 export function removeVariantSubscription<State extends VariantTrackingState>(
   prev: State,
@@ -122,13 +168,43 @@ export function removeVariantSubscription<State extends VariantTrackingState>(
     ? removeSubscriptionIdFromDocument(next, resolved, subscriptionId)
     : next
   if (remaining.length || !(key in released.variantIndex)) return released
+  const isPendingEntryAlive =
+    !!resolved && isUnknownDocumentId(resolved) && !!released.documentStates[resolved]
+  if (isPendingEntryAlive) return released
   return {...released, variantIndex: omitProperty(released.variantIndex, key)}
+}
+
+/**
+ * Gives a variant created locally a `documentStates` entry under its key,
+ * held by the subscribers waiting on that key, and points the index at it.
+ * The entry has no remote counterpart yet; `remote` is `null` so a revert
+ * rebuilds it from nothing.
+ */
+export function createPendingVariantEntry<State extends VariantTrackingState>(
+  prev: State,
+  key: UnknownDocumentId,
+  local: SanityDocument,
+): State {
+  const withEntry = (prev.variantSubscriptions[key] ?? []).reduce(
+    (acc, subscriptionId) => addSubscriptionIdToDocument(acc, key, subscriptionId),
+    prev,
+  )
+  const entry = withEntry.documentStates[key] ?? {id: key, subscriptions: []}
+  return {
+    ...withEntry,
+    variantIndex: {...withEntry.variantIndex, [key]: key},
+    documentStates: {
+      ...withEntry.documentStates,
+      [key]: {...entry, local, remote: null, remoteRev: undefined},
+    },
+  }
 }
 
 /**
  * Records that a variant key resolves to a concrete document, attaching every
  * subscriber waiting on the key to that document so the ordinary per-id
- * fetch-and-listen flow picks it up. Exported for tests.
+ * fetch-and-listen flow picks it up. A variant that was pending creation
+ * locally is reconciled with the announced document first. Exported for tests.
  *
  * @internal
  */
@@ -137,8 +213,85 @@ export function resolveVariantToDocument<State extends VariantTrackingState>(
   key: string,
   documentId: DocumentId,
 ): State {
-  if (prev.variantIndex[key] === documentId) return prev
-  return retargetVariantKey(prev, key, documentId)
+  const current = prev.variantIndex[key]
+  if (current === documentId) return prev
+  // a pending variant's subscribers move with its entry; retargeting never
+  // detaches from an unknown id
+  const reconciled =
+    current && isUnknownDocumentId(current)
+      ? reconcileUnknownDocumentId(prev, current, documentId)
+      : prev
+  return retargetVariantKey(reconciled, key, documentId)
+}
+
+/**
+ * Migrates everything held under a pending variant's key to the concrete id
+ * the remote announced: its document state (subscriptions, optimistic `local`,
+ * echo-recognition memory) and every reference in applied and outgoing
+ * transactions, so rebases and reverts keep addressing the same document.
+ * Afterwards the variant is addressed by id like any other document.
+ */
+function reconcileUnknownDocumentId<State extends VariantTrackingState>(
+  prev: State,
+  key: UnknownDocumentId,
+  documentId: DocumentId,
+): State {
+  const pending = prev.documentStates[key]
+  if (!pending) return prev
+
+  const existing = prev.documentStates[documentId]
+  const rekeyDocument = (document: SanityDocument | null | undefined) =>
+    document ? {...document, _id: documentId} : document
+  const rekeySet = <KeyedSet extends Record<string, unknown>>(set: KeyedSet): KeyedSet => {
+    if (!(key in set)) return set
+    const {[key]: value, ...rest} = set
+    return {
+      ...rest,
+      [documentId]: rekeyDocument(value as SanityDocument | null | undefined),
+    } as KeyedSet
+  }
+  const rekeyTransaction = <Transaction extends AppliedTransaction>(
+    transaction: Transaction,
+  ): Transaction => ({
+    ...transaction,
+    working: rekeySet(transaction.working),
+    previous: rekeySet(transaction.previous),
+    base: rekeySet(transaction.base),
+    previousRevs: rekeySet(transaction.previousRevs),
+    variantIds: Object.fromEntries(
+      Object.entries(transaction.variantIds ?? {}).map(([variantKey, id]) => [
+        variantKey,
+        id === key ? documentId : id,
+      ]),
+    ),
+  })
+
+  const merged: DocumentState = {
+    ...pending,
+    ...existing,
+    id: documentId,
+    local: rekeyDocument(pending.local),
+    subscriptions: [...new Set([...pending.subscriptions, ...(existing?.subscriptions ?? [])])],
+    unverifiedRevisions: Object.fromEntries(
+      Object.entries({...existing?.unverifiedRevisions, ...pending.unverifiedRevisions}).map(
+        ([transactionId, revision]) => [
+          transactionId,
+          revision ? {...revision, documentId} : revision,
+        ],
+      ),
+    ),
+    recentOwnTransactionIds: [
+      ...(existing?.recentOwnTransactionIds ?? []),
+      ...(pending.recentOwnTransactionIds ?? []),
+    ],
+  }
+
+  return {
+    ...prev,
+    documentStates: {...omitProperty(prev.documentStates, key), [documentId]: merged},
+    applied: prev.applied.map(rekeyTransaction),
+    outgoing: prev.outgoing ? rekeyTransaction(prev.outgoing) : prev.outgoing,
+  }
 }
 
 /**
@@ -293,7 +446,7 @@ export const subscribeToVariantSubscriptionsAndDiscover = ({
         const {next, found} = resolveDiscovered(prev, documents)
         return Object.keys(prev.variantSubscriptions).reduce((acc, key) => {
           if (getGroupIdFromStoreKey(key) !== groupId || found.has(key)) return acc
-          if (isUnknownDocumentId(prev.variantIndex[key] ?? '')) return acc
+          if (isUnknownDocumentId(resolveVariantKey(prev, key) ?? '')) return acc
           return markVariantAbsent(acc, key)
         }, next)
       })

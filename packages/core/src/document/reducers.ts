@@ -1,3 +1,10 @@
+import {
+  type CreateVariantAction,
+  type DeleteVariantAction,
+  type EditVariantAction,
+  type PublishVariantAction,
+  type UnpublishVariantAction,
+} from '@sanity/client'
 import {DocumentId, getDraftId, getPublishedId, getVersionId} from '@sanity/id-utils'
 import {type Mutation, type PatchOperations, type SanityDocumentLike} from '@sanity/types'
 
@@ -9,6 +16,7 @@ import {isDeepEqual, omitProperty} from '../utils/object'
 import {setCleanupTimeout} from '../utils/setCleanupTimeout'
 import {type Action} from './actions'
 import {DOCUMENT_STATE_CLEAR_DELAY} from './documentConstants'
+import {isUnknownDocumentId} from './documentKey'
 import {type DocumentState, type DocumentStoreState} from './documentStore'
 import {
   addSubscriptionIdToDocument,
@@ -22,8 +30,10 @@ import {getReleaseDocumentId, isReleaseAction} from './processActions/releaseUti
 import {type DocumentSet} from './processMutations'
 import {
   addVariantSubscription,
+  createPendingVariantEntry,
   getVariantCandidateKeys,
   removeVariantSubscription,
+  resolveVariantIds,
   type VariantTrackingState,
 } from './variantTracking'
 
@@ -97,6 +107,13 @@ export type HttpAction =
   | {actionType: ActionMap['releaseArchive']; releaseId: string}
   | {actionType: ActionMap['releaseUnarchive']; releaseId: string}
   | {actionType: ActionMap['releaseDelete']; releaseId: string}
+  // variant actions address a document by (publishedId, variantId, bundleId)
+  // rather than by id, since variant ids are opaque
+  | CreateVariantAction
+  | EditVariantAction
+  | DeleteVariantAction
+  | PublishVariantAction
+  | UnpublishVariantAction
 
 /**
  * Represents a transaction that is queued to be applied but has not yet been
@@ -119,6 +136,12 @@ export interface QueuedTransaction {
    * other transactions.
    */
   disableBatching?: boolean
+  /**
+   * The store key behind each variant document key these actions touch,
+   * resolved when the transaction is applied. See
+   * `ActionHandlerContext.variantIds`.
+   */
+  variantIds?: Record<string, string>
 }
 
 /**
@@ -201,15 +224,57 @@ export function queueTransaction(
   transaction: QueuedTransaction,
 ): SyncTransactionState {
   const {transactionId, actions} = transaction
-  const prevWithSubscriptionIds = getDocumentIdsFromHandleLikes(actions).reduce(
+  const withDocuments = getDocumentIdsFromHandleLikes(actions).reduce(
     (acc, id) => addSubscriptionIdToDocument(acc, id, transactionId),
     prev,
   )
+  const withVariants = getVariantKeysFromHandleLikes(actions).reduce(
+    (acc, key) => addVariantSubscription(acc, key, transactionId),
+    withVariantTracking(withDocuments),
+  )
 
   return {
-    ...prevWithSubscriptionIds,
+    ...withVariants,
     queued: [...prev.queued, transaction],
   }
+}
+
+/**
+ * Releases the subscriptions a set of transactions held on the documents
+ * (and variant keys) their actions address. Used when a transaction fails to
+ * apply, is acknowledged, or is reverted.
+ */
+function removeTransactionSubscriptions(
+  prev: SyncTransactionState,
+  actions: Action[],
+  transactionIds: string[],
+): SyncTransactionState {
+  const documentIds = getDocumentIdsFromHandleLikes(actions)
+  const variantKeys = getVariantKeysFromHandleLikes(actions)
+  let next = withVariantTracking(prev)
+  for (const transactionId of transactionIds) {
+    next = documentIds.reduce(
+      (acc, id) => removeSubscriptionIdFromDocument(acc, id, transactionId),
+      next,
+    )
+    next = variantKeys.reduce(
+      (acc, key) => removeVariantSubscription(acc, key, transactionId),
+      next,
+    )
+  }
+  return next
+}
+
+/**
+ * Widens a `SyncTransactionState` to a `VariantTrackingState`, defaulting the
+ * variant maps for the many callers (and test fixtures) that don't carry them.
+ */
+function withVariantTracking<State extends SyncTransactionState>(
+  state: State,
+): State & VariantTrackingState {
+  const variantIndex = (state as Partial<VariantTrackingState>).variantIndex ?? {}
+  const variantSubscriptions = (state as Partial<VariantTrackingState>).variantSubscriptions ?? {}
+  return {...state, variantIndex, variantSubscriptions}
 }
 
 export function removeQueuedTransaction(
@@ -219,13 +284,8 @@ export function removeQueuedTransaction(
   const transaction = prev.queued.find((t) => t.transactionId === transactionId)
   if (!transaction) return prev
 
-  const prevWithSubscriptionIds = getDocumentIdsFromHandleLikes(transaction.actions).reduce(
-    (acc, id) => removeSubscriptionIdFromDocument(acc, id, transactionId),
-    prev,
-  )
-
   return {
-    ...prevWithSubscriptionIds,
+    ...removeTransactionSubscriptions(prev, transaction.actions, [transactionId]),
     queued: prev.queued.filter((t) => transactionId !== t.transactionId),
   }
 }
@@ -235,13 +295,22 @@ export function applyFirstQueuedTransaction(prev: SyncTransactionState): SyncTra
   if (!queued) return prev
   if (!prev.grants) return prev
 
-  const ids = getDocumentIdsFromHandleLikes(queued.actions)
+  const tracked = withVariantTracking(prev)
+  const variants = resolveVariantIds(tracked, getVariantKeysFromHandleLikes(queued.actions))
+  // a variant key that hasn't been resolved yet means we don't know whether the
+  // document exists, so the transaction can't be applied yet
+  if (!variants) return prev
+
+  const ids = [...getDocumentIdsFromHandleLikes(queued.actions), ...variants.concreteIds]
   // the local value is only ever `undefined` if it has not been loaded yet
   // we can't get the next applied state unless all relevant documents are ready
   if (ids.some((id) => prev.documentStates[id]?.local === undefined)) return prev
 
-  const working = ids.reduce<DocumentSet>((acc, id) => {
-    acc[id] = prev.documentStates[id]?.local
+  // a variant pending creation lives under its key; one confirmed absent has
+  // no entry at all and is simply missing from the working set
+  const working = [...ids, ...variants.unknownIds].reduce<DocumentSet>((acc, id) => {
+    const local = prev.documentStates[id]?.local
+    if (local !== undefined) acc[id] = local
     return acc
   }, {})
 
@@ -249,6 +318,7 @@ export function applyFirstQueuedTransaction(prev: SyncTransactionState): SyncTra
 
   const result = processActions({
     ...queued,
+    variantIds: variants.variantIds,
     working,
     base: working,
     timestamp,
@@ -258,24 +328,29 @@ export function applyFirstQueuedTransaction(prev: SyncTransactionState): SyncTra
   const applied: AppliedTransaction = {
     ...queued,
     ...result,
+    variantIds: variants.variantIds,
     base: result.previous,
     timestamp,
   }
 
-  return {
-    ...prev,
-    applied: [...prev.applied, applied],
-    queued: prev.queued.filter((t) => t.transactionId !== queued.transactionId),
-    documentStates: Object.entries(result.working).reduce(
-      (acc, [id, next]) => {
-        const prevDoc = acc[id]
-        if (!prevDoc) return acc
-        acc[id] = {...prevDoc, local: next}
-        return acc
-      },
-      {...prev.documentStates},
-    ),
-  }
+  return Object.entries(result.working).reduce(
+    (acc, [id, next]) => {
+      const prevDoc = acc.documentStates[id]
+      if (prevDoc) {
+        return {...acc, documentStates: {...acc.documentStates, [id]: {...prevDoc, local: next}}}
+      }
+      // a variant created by this transaction: give it an entry under its key,
+      // owned by the subscribers waiting on that key, until the remote
+      // announces its concrete id
+      if (isUnknownDocumentId(id) && next) return createPendingVariantEntry(acc, id, next)
+      return acc
+    },
+    {
+      ...tracked,
+      applied: [...prev.applied, applied],
+      queued: prev.queued.filter((t) => t.transactionId !== queued.transactionId),
+    },
+  )
 }
 
 export function batchAppliedTransactions([curr, ...rest]: AppliedTransaction[]):
@@ -407,13 +482,11 @@ export function cleanupOutgoingTransaction(prev: SyncTransactionState): SyncTran
   const {outgoing} = prev
   if (!outgoing) return prev
 
-  let next = prev
-  const ids = getDocumentIdsFromHandleLikes(outgoing.actions)
-  for (const transactionId of outgoing.batchedTransactionIds) {
-    for (const documentId of ids) {
-      next = removeSubscriptionIdFromDocument(next, documentId, transactionId)
-    }
-  }
+  const next = removeTransactionSubscriptions(
+    prev,
+    outgoing.actions,
+    outgoing.batchedTransactionIds,
+  )
 
   // every ack is also when a previously retained document's echo may have
   // stopped being expected, so re-make that eviction decision here
@@ -431,15 +504,13 @@ export function revertOutgoingTransaction(prev: SyncTransactionState): SyncTrans
   // with `cleanupOutgoingTransaction` on ack and `removeQueuedTransaction` on
   // apply failure. without this, a reverted document's subscription IDs are
   // never released and it can never be evicted
-  let base = prev
-  if (prev.outgoing) {
-    const ids = getDocumentIdsFromHandleLikes(prev.outgoing.actions)
-    for (const transactionId of prev.outgoing.batchedTransactionIds) {
-      for (const documentId of ids) {
-        base = removeSubscriptionIdFromDocument(base, documentId, transactionId)
-      }
-    }
-  }
+  const base = prev.outgoing
+    ? removeTransactionSubscriptions(
+        prev,
+        prev.outgoing.actions,
+        prev.outgoing.batchedTransactionIds,
+      )
+    : prev
 
   let working = Object.fromEntries(
     Object.entries(base.documentStates).map(([documentId, documentState]) => [
@@ -703,9 +774,7 @@ export function manageSubscriberIds(
   const documentIds = getDocumentIdsFromHandleLikes(handles)
   // variant documents can't be named by id up front; they are subscribed to by
   // key and attached to their concrete document once discovered
-  const variantKeys = handles.flatMap((handle) =>
-    handle.documentId ? getVariantCandidateKeys({...handle, documentId: handle.documentId}) : [],
-  )
+  const variantKeys = getVariantKeysFromHandleLikes(handles)
 
   const subscriptionId = randomId(16)
   state.set('addSubscribers', (prev) => {
@@ -733,6 +802,18 @@ export function manageSubscriberIds(
       })
     }, DOCUMENT_STATE_CLEAR_DELAY)
   }
+}
+
+/**
+ * The variant keys the handles (or actions) address, for subscription and
+ * resolution. Release actions and liveEdit handles have none.
+ */
+function getVariantKeysFromHandleLikes(handles: (DocumentHandleLike | Action)[]): string[] {
+  return handles.flatMap((handle) => {
+    if ('type' in handle && isReleaseAction(handle)) return []
+    if (!handle.documentId) return []
+    return getVariantCandidateKeys({...handle, documentId: handle.documentId})
+  })
 }
 
 // document handles are passed in via the public facing API, but we also need to
