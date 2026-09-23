@@ -14,6 +14,7 @@ import {PerspectiveContext} from './PerspectiveContext'
 import {ProjectContext} from './ProjectContext'
 import {SanityInstanceContext} from './SanityInstanceContext'
 import {SanityInstanceProvider} from './SanityInstanceProvider'
+import {VariantContext} from './VariantContext'
 
 const DEFAULT_FALLBACK = (
   <>
@@ -65,11 +66,12 @@ export function ResourceProvider({
   ...config
 }: ResourceProviderProps): React.ReactNode {
   const parentPerspective = useContext(PerspectiveContext)
+  const parentVariant = useContext(VariantContext)
   const parentResource = useContext(ResourceContext)
   const parentInstance = useContext(SanityInstanceContext)
   const parentProjectId = useContext(ProjectContext)
 
-  const {projectId, dataset, perspective} = config
+  const {projectId, dataset, perspective, variant} = config
 
   const [instance] = useState<SanityInstance>(() => parentInstance ?? createSanityInstance(config))
 
@@ -114,7 +116,9 @@ export function ResourceProvider({
       <ResourceContext.Provider value={effectiveResource}>
         <ProjectContext.Provider value={effectiveProjectId}>
           <PerspectiveContext.Provider value={perspective ?? parentPerspective}>
-            {children}
+            <VariantContext.Provider value={variant ?? parentVariant}>
+              {children}
+            </VariantContext.Provider>
           </PerspectiveContext.Provider>
         </ProjectContext.Provider>
       </ResourceContext.Provider>
