@@ -1,5 +1,35 @@
 # Changelog
 
+## 3.5.0
+
+### Minor Changes
+
+- [#1307](https://github.com/sanity-io/sdk/pull/1307) [`6aaac93`](https://github.com/sanity-io/sdk/commit/6aaac9398bd9b10ecb2f5839a624fdfa696e41c5) Thanks [@gu-stav](https://github.com/gu-stav)! - Add a `scope` option to the `useNavigate` report function so federated apps can navigate to any Dashboard URL
+
+- [#1223](https://github.com/sanity-io/sdk/pull/1223) [`50c3918`](https://github.com/sanity-io/sdk/commit/50c39184d43409ae887d469a7bb09e576cbc8302) Thanks [@joshuaellis](https://github.com/joshuaellis)! - Drive the OAuth login flow from `AuthBoundary` ([#1223](https://github.com/sanity-io/sdk/pull/1223))
+
+- [#1271](https://github.com/sanity-io/sdk/pull/1271) [`b4bf2b9`](https://github.com/sanity-io/sdk/commit/b4bf2b9b631d92129e9752df42e411c05571d1b7) Thanks [@joshuaellis](https://github.com/joshuaellis)! - Make the OAuth `organizationId` optional ([#1271](https://github.com/sanity-io/sdk/pull/1271))
+
+- [#1236](https://github.com/sanity-io/sdk/pull/1236) [`f2bce91`](https://github.com/sanity-io/sdk/commit/f2bce91d0d603450dced13e624ebd442f29cce72) Thanks [@joshuaellis](https://github.com/joshuaellis)! - Return to the pre-login location after the OAuth callback ([#1236](https://github.com/sanity-io/sdk/pull/1236))
+
+- [#1217](https://github.com/sanity-io/sdk/pull/1217) [`3c783f7`](https://github.com/sanity-io/sdk/commit/3c783f71cd8f587dae27e0a18a406ded8a58b749) Thanks [@joshuaellis](https://github.com/joshuaellis)! - Add the `useOAuthAuthorize` hook to start the OAuth authorization-code + PKCE flow ([#1217](https://github.com/sanity-io/sdk/pull/1217))
+
+- [#1216](https://github.com/sanity-io/sdk/pull/1216) [`0217b88`](https://github.com/sanity-io/sdk/commit/0217b8868b8cbd455ac821009327f74cc42b39ef) Thanks [@joshuaellis](https://github.com/joshuaellis)! - Add the `useHandleOAuthCallback` hook to complete the OAuth authorization-code callback ([#1216](https://github.com/sanity-io/sdk/pull/1216))
+
+- [#1213](https://github.com/sanity-io/sdk/pull/1213) [`13c4166`](https://github.com/sanity-io/sdk/commit/13c4166a69dec422c4fe672d0d12cb7631670745) Thanks [@joshuaellis](https://github.com/joshuaellis)! - Add the `useOAuthTokens` hook exposing stored OAuth token state with `refresh` and `revoke`. The public OAuth token surface (`getOAuthTokensState`, `refreshOAuthTokens`, and the hook) now omits the refresh token, which core retains internally for refreshing. ([#1213](https://github.com/sanity-io/sdk/pull/1213))
+
+- [#1295](https://github.com/sanity-io/sdk/pull/1295) [`304643a`](https://github.com/sanity-io/sdk/commit/304643ae4646e80639d5bc7a19da948af273b243) Thanks [@joshuaellis](https://github.com/joshuaellis)! - `useApplications` now lists installations and local dev-server applications alongside studios and core apps in one shape: `type` distinguishes `'studio' | 'coreApp' | 'installation'`, `isLocal` marks dev-server applications, and installations keep their raw record under `installation`. The `applications.list` topic carries `Application | LocalApplication | Installation` records, so code reading the topic directly must narrow on `'type' in record`, and code reading `activeDeployment` or `config` off `useApplications()` entries must narrow on `type !== 'installation'` first.
+
+### Patch Changes
+
+- [#1235](https://github.com/sanity-io/sdk/pull/1235) [`553a867`](https://github.com/sanity-io/sdk/commit/553a867e131b8796067af6db2db2d06e9636ade0) Thanks [@joshuaellis](https://github.com/joshuaellis)! - Ignore stale OAuth callbacks once a session is established ([#1235](https://github.com/sanity-io/sdk/pull/1235))
+
+- [#1234](https://github.com/sanity-io/sdk/pull/1234) [`3f6bc0a`](https://github.com/sanity-io/sdk/commit/3f6bc0ac664f9396759c6485bf2467f95b6bd2c2) Thanks [@joshuaellis](https://github.com/joshuaellis)! - Reject persisted OAuth tokens with an unparseable `expiresAt`, and refresh persisted tokens that expired while the app was closed instead of starting with a dead access token ([#1234](https://github.com/sanity-io/sdk/pull/1234))
+
+- [#1302](https://github.com/sanity-io/sdk/pull/1302) [`91fb18d`](https://github.com/sanity-io/sdk/commit/91fb18d2bcb582579fef733b57b632f59ef7fed3) Thanks [@gu-stav](https://github.com/gu-stav)! - Stop `SanityApp` from redirecting to sanity.io/welcome when a message bus is installed, so apps render in workbench.
+- Updated dependencies [[`50c3918`](https://github.com/sanity-io/sdk/commit/50c39184d43409ae887d469a7bb09e576cbc8302), [`553a867`](https://github.com/sanity-io/sdk/commit/553a867e131b8796067af6db2db2d06e9636ade0), [`b4bf2b9`](https://github.com/sanity-io/sdk/commit/b4bf2b9b631d92129e9752df42e411c05571d1b7), [`3f6bc0a`](https://github.com/sanity-io/sdk/commit/3f6bc0ac664f9396759c6485bf2467f95b6bd2c2), [`f2bce91`](https://github.com/sanity-io/sdk/commit/f2bce91d0d603450dced13e624ebd442f29cce72), [`3c783f7`](https://github.com/sanity-io/sdk/commit/3c783f71cd8f587dae27e0a18a406ded8a58b749), [`0217b88`](https://github.com/sanity-io/sdk/commit/0217b8868b8cbd455ac821009327f74cc42b39ef), [`13c4166`](https://github.com/sanity-io/sdk/commit/13c4166a69dec422c4fe672d0d12cb7631670745), [`304643a`](https://github.com/sanity-io/sdk/commit/304643ae4646e80639d5bc7a19da948af273b243)]:
+  - @sanity/sdk@3.5.0
+
 ## 3.4.0
 
 ### Minor Changes
