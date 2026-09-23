@@ -11,7 +11,13 @@ import {
 import {createLogger} from '../utils/logger'
 import {CORE_SDK_VERSION} from '../version'
 import {type TelemetryEnvironment} from './environment'
-import {SDKError, SDKHookMounted, SDKSessionEnded, SDKSessionStarted} from './events'
+import {
+  SDKError,
+  SDKHookMounted,
+  SDKSessionEnded,
+  SDKSessionStarted,
+  type TelemetryRuntimeContext,
+} from './events'
 
 const FLUSH_INTERVAL_MS = 30_000
 const CONSENT_TAG = 'telemetry-consent.sdk'
@@ -40,7 +46,7 @@ export interface TelemetryManager {
   checkConsent(): Promise<boolean>
 
   /** Log a "SDK Session Started" event */
-  logSessionStarted(data: {projectId: string; perspective: string; authMethod: string}): void
+  logSessionStarted(data: {projectId: string; perspective: string}): void
 
   /** Log a "SDK Hook Mounted" event (deduplicated per hook name) */
   logHookFirstUsed(hookName: string): void
@@ -63,6 +69,8 @@ interface TelemetryManagerOptions {
   getClient: () => SanityClient
   projectId: string
   environment: TelemetryEnvironment
+  authMethod: string
+  runtimeContext: TelemetryRuntimeContext
 }
 
 /**
@@ -75,7 +83,7 @@ interface TelemetryManagerOptions {
  * @internal
  */
 export function createTelemetryManager(options: TelemetryManagerOptions): TelemetryManager {
-  const {sessionId, getClient, projectId, environment} = options
+  const {sessionId, getClient, projectId, environment, authMethod, runtimeContext} = options
   const startedAt = Date.now()
   const emittedHooks = new Set<string>()
 
@@ -148,21 +156,24 @@ export function createTelemetryManager(options: TelemetryManagerOptions): Teleme
       log.debug('event: SDK Session Started', {
         projectId: data.projectId,
         perspective: data.perspective,
-        authMethod: data.authMethod,
+        authMethod,
+        runtimeContext,
         version: CORE_SDK_VERSION,
         environment,
       })
       logger.log(SDKSessionStarted, {
         version: CORE_SDK_VERSION,
         ...data,
+        authMethod,
+        runtimeContext,
       })
     },
 
     logHookFirstUsed(hookName: string) {
       if (emittedHooks.has(hookName)) return
       emittedHooks.add(hookName)
-      log.debug('event: SDK Hook Mounted', {hookName})
-      logger.log(SDKHookMounted, {hookName})
+      log.debug('event: SDK Hook Mounted', {hookName, authMethod, runtimeContext})
+      logger.log(SDKHookMounted, {hookName, authMethod, runtimeContext})
     },
 
     logError(errorType: string, hookName: string) {
@@ -175,11 +186,15 @@ export function createTelemetryManager(options: TelemetryManagerOptions): Teleme
       log.debug('event: SDK Session Ended', {
         durationSeconds,
         hooksUsed: [...emittedHooks],
+        authMethod,
+        runtimeContext,
         environment,
       })
       logger.log(SDKSessionEnded, {
         durationSeconds,
         hooksUsed: [...emittedHooks],
+        authMethod,
+        runtimeContext,
       })
 
       store.flush().catch(() => {
