@@ -3,6 +3,7 @@ import {createSelector} from 'reselect'
 import {type DocumentResource, type PerspectiveHandle} from '../config/sanityConfig'
 import {bindActionByResource, type BoundStoreAction} from '../store/createActionBinder'
 import {createStateSourceAction, type SelectorContext} from '../store/createStateSourceAction'
+import {omitProperty} from '../utils/object'
 import {releasesStore, type ReleasesStoreState} from './releasesStore'
 import {isReleasePerspective} from './utils/isReleasePerspective'
 import {sortReleases} from './utils/sortReleases'
@@ -18,7 +19,12 @@ const selectActiveReleases = (context: SelectorContext<ReleasesStoreState>) =>
   context.state.activeReleases
 const selectOptions = (
   _context: SelectorContext<ReleasesStoreState>,
-  options: PerspectiveHandle & {projectId?: string; dataset?: string; resource?: DocumentResource},
+  options: PerspectiveHandle & {
+    projectId?: string
+    dataset?: string
+    resource?: DocumentResource
+    variant?: string
+  },
 ) => options
 
 const memoizedOptionsSelector = createSelector(
@@ -34,7 +40,9 @@ const memoizedOptionsSelector = createSelector(
       optionsCache.set(releaseIds, nestedCache)
     }
 
-    const optionsKey = JSON.stringify(options)
+    // The variant is unrelated to the perspective.
+    const dependencies = omitProperty(options, 'variant')
+    const optionsKey = JSON.stringify(dependencies)
     let cachedOptions = nestedCache.get(optionsKey)
 
     if (!cachedOptions) {
