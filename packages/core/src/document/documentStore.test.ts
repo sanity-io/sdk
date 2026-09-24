@@ -2809,6 +2809,30 @@ describe('variants (write)', () => {
     unsubscribe()
   })
 
+  it('returns a stable snapshot while the variant is pending creation', async () => {
+    await seed(base(groupId, 'published'))
+
+    const state = getDocumentState<TestDocument>(instance, handle)
+    const unsubscribe = state.subscribe()
+    await firstValueFrom(state.observable.pipe(first((document) => document !== undefined)))
+
+    const pending = applyDocumentActions(instance, {
+      actions: [editDocument(handle, {set: {title: 'en attente'}})],
+      resource,
+    })
+
+    // useSyncExternalStore re-renders whenever getSnapshot returns a new
+    // reference, so the _id-less view of a pending variant must be memoised
+    const snapshot = state.getCurrent()
+    expect(snapshot).toMatchObject({title: 'en attente'})
+    expect(snapshot?._id).toBeUndefined()
+    expect(state.getCurrent()).toBe(snapshot)
+    expect(state.getCurrent()).toBe(snapshot)
+
+    await pending.then((result) => result.submitted())
+    unsubscribe()
+  })
+
   it('refuses to delete a document group through a variant handle', async () => {
     await seed(base(groupId, 'published'))
     await expect(

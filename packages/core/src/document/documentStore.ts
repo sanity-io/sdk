@@ -371,7 +371,7 @@ function getDocumentCandidates(
 function resolveDocumentFromCandidates(
   state: CandidateState,
   handle: DocumentHandle,
-): ResolveDocument | null | undefined {
+): DocumentValue<ResolveDocument> | null | undefined {
   const keys = getDocumentCandidateKeys(state, handle)
   throwDocumentError(state.documentStates, keys.filter(isStoreKey))
   const candidates = getDocumentCandidates(state, handle)
@@ -383,11 +383,32 @@ function resolveDocumentFromCandidates(
     if (candidate === null) continue
     // a document held under a pending key has no concrete id yet; it must not
     // leak the key in its place
-    return isUnknownDocumentId(keys[index] ?? '')
-      ? (omitProperty(candidate, '_id') as ResolveDocument)
-      : candidate
+    return isUnknownDocumentId(keys[index] ?? '') ? withoutId(candidate) : candidate
   }
   return null
+}
+
+/**
+ * Memoised per source document: selectors feed `useSyncExternalStore`, which
+ * requires a stable snapshot reference between store changes. Recomputing the
+ * stripped view on every call would make React see a new snapshot each render
+ * and re-render forever.
+ */
+const withoutIdCache = new WeakMap<ResolveDocument, DocumentValue<ResolveDocument>>()
+
+function withoutId(document: ResolveDocument): DocumentValue<ResolveDocument> {
+  let stripped = withoutIdCache.get(document)
+
+  if (!stripped) {
+    // `ResolveDocument` is a union of every schema type, and `Omit` over a
+    // union keeps only the keys they share, so TypeScript can't relate
+    // `omitProperty`'s result to the distributive `DocumentValue`. The shapes
+    // are the same, but `_id` is removed.
+    stripped = omitProperty(document, '_id') as DocumentValue<ResolveDocument>
+    withoutIdCache.set(document, stripped)
+  }
+
+  return stripped
 }
 
 /** @beta */

@@ -154,9 +154,9 @@ export type ResolveDocument<
  *
  * @beta
  */
-export type DocumentValue<SourceDocument> = {
-  [Key in keyof SourceDocument as Exclude<Key, '_id'>]: SourceDocument[Key]
-} & {_id?: string}
+export type DocumentValue<SourceDocument> = SourceDocument extends unknown
+  ? {[Key in keyof SourceDocument as Exclude<Key, '_id'>]: SourceDocument[Key]} & {_id?: string}
+  : never
 
 /**
  * Resolves a query result for one resource, selected by the exact query text.
