@@ -1,7 +1,7 @@
 import {favorites, type FavoriteStatusResponse, type StateSource} from '@sanity/sdk'
 import {type FetcherSnapshot, installMessageBus, resetMessageBus} from '@sanity/sdk/_internal'
 import {type FavoriteDocument, type MessageBusHost} from '@sanity/sdk/dashboard'
-import {act} from '@testing-library/react'
+import {act, waitFor} from '@testing-library/react'
 import {type ReactNode} from 'react'
 import {BehaviorSubject, type Subscription} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
@@ -140,6 +140,7 @@ describe('useFavorite (message bus)', () => {
     resetMessageBus()
     delete (globalThis as {[MESSAGE_BUS_KEY]?: unknown})[MESSAGE_BUS_KEY]
     vi.unstubAllGlobals()
+    vi.useRealTimers()
   })
 
   it('suspends until the host publishes favorites.documents, then reads it', async () => {
@@ -206,6 +207,31 @@ describe('useFavorite (message bus)', () => {
     expect(result.current).toBe(false)
     act(() => void provideFavorites(true))
     expect(result.current).toBe(true)
+  })
+
+  it('is not favorited when the host provides favorites but never publishes them', async () => {
+    // Only the query deadline is faked; React's scheduler keeps real timers so the retry renders.
+    vi.useFakeTimers({toFake: ['setTimeout', 'clearTimeout']})
+    const {result, rerender} = renderHook(() => useFavorite(handle))
+    expect(result.current).toBeNull()
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5000)
+    })
+    expect(result.current).toBe(false)
+
+    // Like Comlink's cached status, a late publish only shows once the hook renders again.
+    await act(async () => void publish([favorite]))
+    expect(result.current).toBe(false)
+    rerender()
+    expect(result.current).toBe(true)
+  })
+
+  it('is not favorited when the host refuses favorites.documents', async () => {
+    host.connections.subscribe((client) => client.reject('favorites.documents', 'hidden'))
+    const {result} = renderHook(() => useFavorite(handle))
+
+    await waitFor(() => expect(result.current).toBe(false))
   })
 
   it('is not favorited without waiting when the host does not provide favorites', () => {

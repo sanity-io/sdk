@@ -1,3 +1,4 @@
+import {FETCH_TIMEOUT_DEFAULT} from '@sanity/comlink'
 import {type FavoriteStatusResponse, setFavorite} from '@sanity/sdk'
 import {installMessageBus, type MutationResult, resetMessageBus} from '@sanity/sdk/_internal'
 import {type MessageBusHost, type MessageBusMessage, type PayloadOf} from '@sanity/sdk/dashboard'
@@ -177,6 +178,7 @@ describe('useUpdateFavorite (message bus)', () => {
     delete (globalThis as {[MESSAGE_BUS_KEY]?: unknown})[MESSAGE_BUS_KEY]
     vi.unstubAllGlobals()
     vi.clearAllMocks()
+    vi.useRealTimers()
   })
 
   it('emits favorites.update and stays pending until the host replies', async () => {
@@ -233,6 +235,29 @@ describe('useUpdateFavorite (message bus)', () => {
 
     expect(result.current.isPending).toBe(false)
     expect(result.current.error).toMatchObject({code: 'NO_RESPONDER'})
+  })
+
+  it('waits as long as the comlink write before timing out', async () => {
+    vi.useFakeTimers({toFake: ['setTimeout', 'clearTimeout']})
+    // A host that accepts the update but never replies.
+    captureUpdates()
+    const {result} = renderHook(() => useUpdateFavorite(handle))
+
+    let pending!: Promise<FavoriteStatusResponse>
+    act(() => {
+      pending = result.current.favorite()
+    })
+    const settled = expect(pending).rejects.toMatchObject({code: 'TIMEOUT'})
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(FETCH_TIMEOUT_DEFAULT - 1)
+    })
+    expect(result.current.isPending).toBe(true)
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1)
+      await settled
+    })
+    expect(result.current.error).toMatchObject({code: 'TIMEOUT'})
   })
 
   it('rejects when the host refuses the update', async () => {

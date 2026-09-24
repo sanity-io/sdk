@@ -13,13 +13,17 @@ import {toFavoriteDocument, useFavoriteContext, type UseFavoriteProps} from './u
 
 const useSetFavorite = createMutationHook(setFavorite)
 
+// Comlink's `FETCH_TIMEOUT_DEFAULT`, the reply timeout of the Dashboard write.
+const FAVORITE_WRITE_TIMEOUT_MS = 10_000
+
 // The host keeps `favorites.documents` current, so there is no cache to invalidate.
 const useSetBusFavorite = createMutationHook(
   async (instance: SanityInstance, {isFavorited, ...context}: SetFavoriteInput) => {
-    await requireDashboardMessageBus(instance, 'update a favorite').emit('favorites.update', {
-      document: toFavoriteDocument(context),
-      favorited: isFavorited,
-    })
+    await requireDashboardMessageBus(instance, 'update a favorite').emit(
+      'favorites.update',
+      {document: toFavoriteDocument(context), favorited: isFavorited},
+      {timeout: FAVORITE_WRITE_TIMEOUT_MS},
+    )
     return {data: {isFavorited}, invalidated: Promise.resolve()}
   },
 )
@@ -53,10 +57,15 @@ export interface UpdateFavorite {
  *
  * | Runtime | Transport | `favorite`/`unfavorite` resolve | They reject when |
  * | --- | --- | --- | --- |
- * | iframe | Comlink | once Dashboard confirms the write | Dashboard reports a failure |
- * | federated | message bus | once `favorites.documents` reflects the change | no host answers or the host refuses, eg without the `favorites` capability |
+ * | iframe | Comlink | once Dashboard confirms the write | Dashboard reports a failure or does not reply within 10 seconds |
+ * | federated | message bus | once `favorites.documents` reflects the change | no host answers, the host refuses, or it does not reply within 10 seconds |
  *
- * A rejection also lands in `error`, so catch the returned promise or render `error`.
+ * A rejection also lands in `error`, so catch the returned promise or render `error`. A timed-out
+ * write may still apply.
+ *
+ * Dashboard always provides favorites, a message bus host may not. There `favorite`/`unfavorite`
+ * reject with `NO_RESPONDER` while {@link useFavorite} returns `false`, so hide the control unless
+ * `useCapabilities().favorites` from `@sanity/sdk-react/dashboard` is `true`.
  *
  * @param props - The document handle plus the resource it lives in.
  * @returns `favorite`/`unfavorite` actions and the `{isPending, error, reset}`
