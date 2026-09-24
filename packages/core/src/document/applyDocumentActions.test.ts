@@ -61,6 +61,29 @@ describe('applyDocumentActions', () => {
     instance.dispose()
   })
 
+  it('resolves an empty transaction without queueing it', async () => {
+    const result = await applyDocumentActions(instance, {
+      actions: [],
+      transactionId: 'txn-empty',
+      resource: {projectId: 'p', dataset: 'd'},
+    })
+
+    expect(result).toMatchObject({
+      transactionId: 'txn-empty',
+      documents: {},
+      previous: {},
+      previousRevs: {},
+      appeared: [],
+      updated: [],
+      disappeared: [],
+    })
+    // Nothing was sent, so `submitted()` resolves instead of waiting for an
+    // accepted event that never arrives.
+    await expect(result.submitted()).resolves.toEqual({transactionId: 'txn-empty'})
+    expect(state.get().queued).toEqual([])
+    expect(state.get().applied).toEqual([])
+  })
+
   it('resolves with a successful applied transaction and accepted event', async () => {
     const action: DocumentAction = {
       type: 'document.edit',
