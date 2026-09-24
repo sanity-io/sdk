@@ -2733,6 +2733,31 @@ describe('variants (read)', () => {
     failing.dispose()
   })
 
+  it('resolves a variant key added to a group that was already discovered', async () => {
+    await seed(base(groupId, 'published'), french('drafts', 'french draft'))
+
+    // discovery ran for the group under the drafts perspective
+    const drafts = getDocumentState<TestDocument>(instance, handle)
+    const unsubscribeDrafts = drafts.subscribe()
+    await firstValueFrom(drafts.observable.pipe(first((document) => document !== undefined)))
+    expect(drafts.getCurrent()).toMatchObject({title: 'french draft'})
+
+    // switching the same document to a release adds a new key to that group;
+    // it must be settled (here: absent) rather than left loading forever
+    const release = getDocumentState<TestDocument>(instance, {
+      ...handle,
+      perspective: {releaseName: 'summer'},
+    })
+    const unsubscribeRelease = release.subscribe()
+    await firstValueFrom(release.observable.pipe(first((document) => document !== undefined)))
+    // no variant over summer, no version in summer: falls through to the
+    // variant over published, then to published
+    expect(release.getCurrent()).toMatchObject({_id: groupId, title: 'published'})
+
+    unsubscribeDrafts()
+    unsubscribeRelease()
+  })
+
   it('reports sync status once every candidate is tracked', async () => {
     await seed(base(groupId, 'published'), french('drafts', 'french draft'))
 

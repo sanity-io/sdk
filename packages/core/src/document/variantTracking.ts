@@ -369,26 +369,27 @@ function retargetVariantKey<State extends VariantTrackingState>(
 
 /**
  * Watches the set of variant keys with subscribers and discovers the documents
- * behind them. Variant ids can't be derived from a handle, so this fetches
- * each document group in full (on first interest and whenever the shared
- * listener reconnects) and matches the returned documents to keys by their
- * `_system` identity. Thereafter it watches the shared listener for variant
- * documents appearing or disappearing in a watched group.
+ * behind them. Variant ids can't be derived from a handle, so this fetches a
+ * key's document group in full (whenever a new key appears in it, and
+ * whenever the shared listener reconnects) and matches the returned documents
+ * to keys by their `_system` identity. Thereafter it watches the shared
+ * listener for variant documents appearing or disappearing in a watched group.
+ *
+ * Fetches are triggered per key, not per group: a group fetch only settles the
+ * keys registered when it ran, so a key added later to an already-watched
+ * group (say, the same variant under a newly selected release) needs its own.
  */
 export const subscribeToVariantSubscriptionsAndDiscover = ({
   state,
 }: StoreContext<DocumentStoreState, BoundResourceKey>): Subscription => {
   const {sharedListener, fetchDocumentGroup, fetchDocument} = state.get()
 
-  const watchedGroups$ = state.observable.pipe(
+  const watchedKeys$ = state.observable.pipe(
     filter((storeState) => !!storeState.grants),
-    map(
-      (storeState) =>
-        new Set(Object.keys(storeState.variantSubscriptions).map(getGroupIdFromStoreKey)),
-    ),
+    map((storeState) => new Set(Object.keys(storeState.variantSubscriptions))),
     distinctUntilChanged(
       (previous, current) =>
-        previous.size === current.size && [...previous].every((groupId) => current.has(groupId)),
+        previous.size === current.size && [...previous].every((key) => current.has(key)),
     ),
   )
 
@@ -423,11 +424,12 @@ export const subscribeToVariantSubscriptionsAndDiscover = ({
       catchError((error: unknown) => of<GroupFetchResult>({status: 'failed', groupId, error})),
     )
 
-  const groupFetches = watchedGroups$.pipe(
+  const groupFetches = watchedKeys$.pipe(
     startWith(new Set<string>()),
     pairwise(),
+    // the groups of the keys that just appeared, each once
     switchMap(([previous, current]) =>
-      from([...current].filter((groupId) => !previous.has(groupId))),
+      from(new Set([...current].filter((key) => !previous.has(key)).map(getGroupIdFromStoreKey))),
     ),
     groupBy((groupId) => groupId),
     mergeMap((group$) =>
