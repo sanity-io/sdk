@@ -1,32 +1,13 @@
 /* eslint-disable react-compiler/react-compiler -- the transport branch in `useUpdateFavorite` is a deliberate rules-of-hooks exception; the compiler refuses files that disable it */
-import {
-  type FavoriteStatusResponse,
-  type SanityInstance,
-  setFavorite,
-  type SetFavoriteInput,
-} from '@sanity/sdk'
-import {isDashboardEnvironment, requireDashboardMessageBus} from '@sanity/sdk/_internal'
+import {type FavoriteStatusResponse, setFavorite} from '@sanity/sdk'
+import {isDashboardEnvironment, setBusFavorite} from '@sanity/sdk/_internal'
 import {useCallback} from 'react'
 
 import {createMutationHook} from '../helpers/createMutationHook'
-import {toFavoriteDocument, useFavoriteContext, type UseFavoriteProps} from './useFavoriteContext'
+import {useFavoriteContext, type UseFavoriteProps} from './useFavoriteContext'
 
 const useSetFavorite = createMutationHook(setFavorite)
-
-// Comlink's `FETCH_TIMEOUT_DEFAULT`, the reply timeout of the Dashboard write.
-const FAVORITE_WRITE_TIMEOUT_MS = 10_000
-
-// The host keeps `favorites.documents` current, so there is no cache to invalidate.
-const useSetBusFavorite = createMutationHook(
-  async (instance: SanityInstance, {isFavorited, ...context}: SetFavoriteInput) => {
-    await requireDashboardMessageBus(instance, 'update a favorite').emit(
-      'favorites.update',
-      {document: toFavoriteDocument(context), favorited: isFavorited},
-      {timeout: FAVORITE_WRITE_TIMEOUT_MS},
-    )
-    return {data: {isFavorited}, invalidated: Promise.resolve()}
-  },
-)
+const useSetBusFavorite = createMutationHook(setBusFavorite)
 
 /**
  * The value returned by {@link useUpdateFavorite}.

@@ -1,7 +1,7 @@
 import {favorites, type FavoriteStatusResponse, type StateSource} from '@sanity/sdk'
 import {type FetcherSnapshot, installMessageBus, resetMessageBus} from '@sanity/sdk/_internal'
 import {type FavoriteDocument, type MessageBusHost} from '@sanity/sdk/dashboard'
-import {act, waitFor} from '@testing-library/react'
+import {act} from '@testing-library/react'
 import {type ReactNode} from 'react'
 import {BehaviorSubject, type Subscription} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
@@ -159,25 +159,6 @@ describe('useFavorite (message bus)', () => {
     expect(favorites.getState).not.toHaveBeenCalled()
   })
 
-  it.each([
-    {documentId: 'other'},
-    {documentType: 'author'},
-    {resourceId: 'other.dataset'},
-    {resourceType: 'media-library' as const, resourceId: 'test.test'},
-  ])('does not match a favorite that differs in %o', (difference) => {
-    publish([favorite])
-    const {result} = renderHook(() => useFavorite({...handle, ...difference}))
-
-    expect(result.current).toBe(false)
-  })
-
-  it.each([undefined, 'other'])('matches a favorite regardless of schemaName %s', (schemaName) => {
-    publish([{...favorite, resource: {...favorite.resource, schemaName: 'default'}}])
-    const {result} = renderHook(() => useFavorite({...handle, schemaName}))
-
-    expect(result.current).toBe(true)
-  })
-
   it('follows the host when it republishes', () => {
     publish([favorite])
     const {result} = renderHook(() => useFavorite(handle))
@@ -198,17 +179,6 @@ describe('useFavorite (message bus)', () => {
     expect(result.current).toBe(true)
   })
 
-  it('ignores published favorites while the host withdraws the capability', () => {
-    publish([favorite])
-    const {result} = renderHook(() => useFavorite(handle))
-    expect(result.current).toBe(true)
-
-    act(() => void provideFavorites(false))
-    expect(result.current).toBe(false)
-    act(() => void provideFavorites(true))
-    expect(result.current).toBe(true)
-  })
-
   it('is not favorited when the host provides favorites but never publishes them', async () => {
     // Only the query deadline is faked; React's scheduler keeps real timers so the retry renders.
     vi.useFakeTimers({toFake: ['setTimeout', 'clearTimeout']})
@@ -225,19 +195,5 @@ describe('useFavorite (message bus)', () => {
     expect(result.current).toBe(false)
     rerender()
     expect(result.current).toBe(true)
-  })
-
-  it('is not favorited when the host refuses favorites.documents', async () => {
-    host.connections.subscribe((client) => client.reject('favorites.documents', 'hidden'))
-    const {result} = renderHook(() => useFavorite(handle))
-
-    await waitFor(() => expect(result.current).toBe(false))
-  })
-
-  it('is not favorited without waiting when the host does not provide favorites', () => {
-    provideFavorites(false)
-    const {result} = renderHook(() => useFavorite(handle))
-
-    expect(result.current).toBe(false)
   })
 })

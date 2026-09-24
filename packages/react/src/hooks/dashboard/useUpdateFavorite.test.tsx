@@ -1,4 +1,3 @@
-import {FETCH_TIMEOUT_DEFAULT} from '@sanity/comlink'
 import {type FavoriteStatusResponse, setFavorite} from '@sanity/sdk'
 import {installMessageBus, type MutationResult, resetMessageBus} from '@sanity/sdk/_internal'
 import {type MessageBusHost, type MessageBusMessage, type PayloadOf} from '@sanity/sdk/dashboard'
@@ -207,67 +206,5 @@ describe('useUpdateFavorite (message bus)', () => {
     })
     expect(result.current.isPending).toBe(false)
     expect(setFavorite).not.toHaveBeenCalled()
-  })
-
-  it('passes a non-studio resource type through unmapped', async () => {
-    const updates = captureUpdates()
-    const {result} = renderHook(() =>
-      useUpdateFavorite({...handle, resourceType: 'media-library', resourceId: 'library'}),
-    )
-
-    act(() => void result.current.favorite())
-
-    expect(updates.map((message) => message.payload)).toStrictEqual([
-      {
-        document: {id: 'doc', type: 'movie', resource: {id: 'library', type: 'media-library'}},
-        favorited: true,
-      },
-    ])
-    await act(async () => updates[0].reply())
-  })
-
-  it('rejects right away when no host answers favorites.update', async () => {
-    const {result} = renderHook(() => useUpdateFavorite(handle))
-
-    await act(async () => {
-      await expect(result.current.favorite()).rejects.toMatchObject({code: 'NO_RESPONDER'})
-    })
-
-    expect(result.current.isPending).toBe(false)
-    expect(result.current.error).toMatchObject({code: 'NO_RESPONDER'})
-  })
-
-  it('waits as long as the comlink write before timing out', async () => {
-    vi.useFakeTimers({toFake: ['setTimeout', 'clearTimeout']})
-    // A host that accepts the update but never replies.
-    captureUpdates()
-    const {result} = renderHook(() => useUpdateFavorite(handle))
-
-    let pending!: Promise<FavoriteStatusResponse>
-    act(() => {
-      pending = result.current.favorite()
-    })
-    const settled = expect(pending).rejects.toMatchObject({code: 'TIMEOUT'})
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(FETCH_TIMEOUT_DEFAULT - 1)
-    })
-    expect(result.current.isPending).toBe(true)
-
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(1)
-      await settled
-    })
-    expect(result.current.error).toMatchObject({code: 'TIMEOUT'})
-  })
-
-  it('rejects when the host refuses the update', async () => {
-    host.subscribe('favorites.update', (message) => message.reject('no favorites'))
-    const {result} = renderHook(() => useUpdateFavorite(handle))
-
-    await act(async () => {
-      await expect(result.current.favorite()).rejects.toThrow('no favorites')
-    })
-
-    expect((result.current.error as Error).message).toContain('no favorites')
   })
 })

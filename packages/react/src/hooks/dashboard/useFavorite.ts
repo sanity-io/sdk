@@ -1,40 +1,22 @@
 /* eslint-disable react-compiler/react-compiler -- the transport branch in `useFavorite` is a deliberate rules-of-hooks exception; the compiler refuses files that disable it */
-import {favorites, type SanityInstance, type StateSource} from '@sanity/sdk'
-import {getTopicState, isDashboardEnvironment, resolveTopic} from '@sanity/sdk/_internal'
-import {type FavoriteDocument} from '@sanity/sdk/dashboard'
+import {type FavoriteDocumentContext, favorites, type SanityInstance} from '@sanity/sdk'
+import {
+  getBusFavoriteState,
+  isDashboardEnvironment,
+  resolveBusFavorite,
+} from '@sanity/sdk/_internal'
 
 import {createFetcherHook} from '../helpers/createFetcherHook'
 import {createStateSourceHook} from '../helpers/createStateSourceHook'
-import {useCapabilities} from './useCapabilities'
-import {toFavoriteDocument, useFavoriteContext, type UseFavoriteProps} from './useFavoriteContext'
+import {useFavoriteContext, type UseFavoriteProps} from './useFavoriteContext'
 
 const useFavoriteStatus = createFetcherHook(favorites)
 
-const NO_FAVORITES: FavoriteDocument[] = []
-
-// A failed read degrades to "not favorited", like the Comlink fetcher.
-function getFavoriteDocuments(
-  instance: SanityInstance,
-): StateSource<FavoriteDocument[] | undefined> {
-  const source = getTopicState(instance, 'favorites.documents') as StateSource<
-    FavoriteDocument[] | undefined
-  >
-  const getCurrent = () => {
-    try {
-      return source.getCurrent()
-    } catch {
-      return NO_FAVORITES
-    }
-  }
-  return {...source, getCurrent}
-}
-
-// Only suspends while the host provides favorites: a host without them never publishes the topic.
-const useFavoriteDocuments = createStateSourceHook({
-  getState: (instance: SanityInstance, _provided: boolean) => getFavoriteDocuments(instance),
-  shouldSuspend: (instance: SanityInstance, provided: boolean) =>
-    provided && getFavoriteDocuments(instance).getCurrent() === undefined,
-  suspender: (instance: SanityInstance) => resolveTopic(instance, 'favorites.documents'),
+const useBusFavoriteStatus = createStateSourceHook({
+  getState: getBusFavoriteState,
+  shouldSuspend: (instance: SanityInstance, context: FavoriteDocumentContext) =>
+    getBusFavoriteState(instance, context).getCurrent() === undefined,
+  suspender: resolveBusFavorite,
 })
 
 /**
@@ -54,8 +36,9 @@ const useFavoriteDocuments = createStateSourceHook({
  * {@link useUpdateFavorite} rejects, so hide the control unless `useCapabilities().favorites`
  * from `@sanity/sdk-react/dashboard` is `true`.
  *
- * Wrap the component in a `<Suspense>` boundary. A favorite matches on document ID and type
- * and resource ID and type; `schemaName` does not take part, like in Dashboard.
+ * Wrap the component in a `<Suspense>` boundary. A favorite is identified by its published
+ * document ID, type, resource and `schemaName` (workspace), like in Dashboard, so draft and
+ * version IDs read the favorite of their document.
  *
  * @param props - The document handle plus the resource it lives in.
  * @returns `true` when the document is favorited, otherwise `false`.
@@ -85,16 +68,6 @@ function useComlinkFavorite(props: UseFavoriteProps): boolean {
   return data.isFavorited
 }
 
-// `schemaName` only records which workspace opens the document; Dashboard doesn't match on it.
-const isSameFavorite = (a: FavoriteDocument, b: FavoriteDocument): boolean =>
-  a.id === b.id &&
-  a.type === b.type &&
-  a.resource.id === b.resource.id &&
-  a.resource.type === b.resource.type
-
 function useBusFavorite(props: UseFavoriteProps): boolean {
-  const target = toFavoriteDocument(useFavoriteContext(props))
-  const provided = useCapabilities().favorites === true
-  const documents = useFavoriteDocuments(provided)
-  return provided && (documents?.some((document) => isSameFavorite(document, target)) ?? false)
+  return useBusFavoriteStatus(useFavoriteContext(props)) === true
 }

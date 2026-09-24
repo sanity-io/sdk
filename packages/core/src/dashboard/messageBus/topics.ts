@@ -218,8 +218,8 @@ export interface DashboardTopics {
   'favorites.documents': StateTopicDef<FavoriteDocument[]>
   /**
    * Favorites or unfavorites a document. The host replies once `favorites.documents` reflects
-   * the change, so a read after the reply sees it. A favorite is identified by document and
-   * resource ID and type; `schemaName` is stored but not matched.
+   * the change, so a read after the reply sees it. A favorite is identified by its published
+   * document ID, type, resource and `schemaName` (workspace).
    */
   'favorites.update': EventTopicDef<{document: FavoriteDocument; favorited: boolean}, void>
   /** The current dashboard location and active navigation. */
