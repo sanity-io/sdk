@@ -1,11 +1,11 @@
+import {type StateSource} from '@sanity/sdk'
 import {
   type CommentsOptions,
   type CommentThread,
   getDocumentCommentsErrorState,
   getDocumentCommentsState,
   resolveDocumentComments,
-  type StateSource,
-} from '@sanity/sdk'
+} from '@sanity/sdk/collaboration'
 import {act, render, screen} from '@testing-library/react'
 import {Suspense} from 'react'
 import {type Observable, Subject} from 'rxjs'
@@ -15,8 +15,8 @@ import {ResourceProvider} from '../../context/ResourceProvider'
 import {ResourcesContext} from '../../context/ResourcesContext'
 import {useDocumentComments} from './useDocumentComments'
 
-vi.mock('@sanity/sdk', async (importOriginal) => {
-  const original = await importOriginal<typeof import('@sanity/sdk')>()
+vi.mock('@sanity/sdk/collaboration', async (importOriginal) => {
+  const original = await importOriginal<typeof import('@sanity/sdk/collaboration')>()
   return {
     ...original,
     getDocumentCommentsState: vi.fn(),

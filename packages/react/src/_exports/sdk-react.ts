@@ -48,12 +48,12 @@ export {
   type WindowConnection,
   type WindowMessageHandler,
 } from '../hooks/comlink/useWindowConnection'
-export {type CommentActions, useCommentActions} from '../hooks/comments/useCommentActions'
-export {useCommentsQuery, type UseCommentsQueryResult} from '../hooks/comments/useCommentsQuery'
+export {type CommentActions, useCommentActions} from '../hooks/comments/legacy/useCommentActions'
+export {useComments, type UseCommentsResult} from '../hooks/comments/legacy/useComments'
 export {
-  useDocumentComments,
-  type UseDocumentCommentsResult,
-} from '../hooks/comments/useDocumentComments'
+  useCommentThreads,
+  type UseCommentThreadsResult,
+} from '../hooks/comments/legacy/useCommentThreads'
 export {useResource} from '../hooks/context/useResource'
 export {useSanityInstance} from '../hooks/context/useSanityInstance'
 export {useFavorite} from '../hooks/dashboard/useFavorite'

@@ -719,16 +719,16 @@ function DocStatus({handle}: {handle: DocumentHandle}) {
 
 ## Quick Reference
 
-| Task                  | Hook/Function                                                  |
-| --------------------- | -------------------------------------------------------------- |
-| List documents        | `useDocuments`, `usePaginatedDocuments`                        |
-| Read document         | `useDocument`, `useDocumentProjection`                         |
-| Edit field            | `useEditDocument`                                              |
-| Publish/Delete/Create | `useApplyDocumentActions` + action creators                    |
-| GROQ query            | `useQuery`                                                     |
-| Check permissions     | `useDocumentPermissions`                                       |
-| Listen to changes     | `useDocumentEvent`                                             |
-| Comments              | `useDocumentComments`, `useCommentsQuery`, `useCommentActions` |
+| Task                  | Hook/Function                                                                                          |
+| --------------------- | ------------------------------------------------------------------------------------------------------ |
+| List documents        | `useDocuments`, `usePaginatedDocuments`                                                                |
+| Read document         | `useDocument`, `useDocumentProjection`                                                                 |
+| Edit field            | `useEditDocument`                                                                                      |
+| Publish/Delete/Create | `useApplyDocumentActions` + action creators                                                            |
+| GROQ query            | `useQuery`                                                                                             |
+| Check permissions     | `useDocumentPermissions`                                                                               |
+| Listen to changes     | `useDocumentEvent`                                                                                     |
+| Comments              | `useDocumentComments`, `useCommentsQuery`, `useCommentActions`, from `@sanity/sdk-react/collaboration` |
 
 Comments have their own guide: [Collaboration](./guides/Collaboration.md).
 

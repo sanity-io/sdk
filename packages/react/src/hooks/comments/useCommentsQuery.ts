@@ -1,11 +1,11 @@
+import {getCommentsQueryOptionsKey, parseCommentsQueryOptionsKey} from '@sanity/sdk/_internal'
 import {
   type Comment,
   type CommentsQueryOptions,
   getCommentsQueryErrorState,
   getCommentsQueryState,
   resolveCommentsQuery,
-} from '@sanity/sdk'
-import {getCommentsQueryOptionsKey, parseCommentsQueryOptionsKey} from '@sanity/sdk/_internal'
+} from '@sanity/sdk/collaboration'
 import {useMemo} from 'react'
 
 import {type WithResourceNameSupport} from '../helpers/useNormalizedResourceOptions'

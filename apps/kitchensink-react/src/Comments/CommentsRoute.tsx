@@ -1,4 +1,5 @@
 import {randomUuid} from '@sanity/sdk/_internal'
+import {useCurrentUser} from '@sanity/sdk-react'
 import {
   type Comment,
   type CommentMessage,
@@ -8,9 +9,8 @@ import {
   type CommentThread,
   type CommentVariants,
   useCommentActions,
-  useCurrentUser,
   useDocumentComments,
-} from '@sanity/sdk-react'
+} from '@sanity/sdk-react/collaboration'
 import {Badge, Button, Card, Select, TextInput} from '@sanity/ui'
 import {type JSX, useState} from 'react'
 import {useSearchParams} from 'react-router'

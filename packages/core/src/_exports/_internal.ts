@@ -14,6 +14,8 @@ export {
   parseCommentsQueryOptionsKey,
   parseDocumentCommentsOptionsKey,
 } from '../comments/commentsStore'
+// only used for memoizing in React, not needed for actual functionality
+export {getCommentsOptionsKey, parseCommentsOptionsKey} from '../comments/legacy/commentsStore'
 export {
   installMessageBus,
   type InstallMessageBusOptions,
