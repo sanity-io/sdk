@@ -134,10 +134,12 @@ describe('useFavorite (message bus)', () => {
     vi.unstubAllGlobals()
   })
 
-  it('suspends until the host publishes favorites.documents', () => {
+  it('suspends until the host publishes favorites.documents, then reads it', async () => {
     const {result} = renderHook(() => useFavorite(handle))
-
     expect(result.current).toBeNull()
+
+    await act(async () => void publish([favorite]))
+    expect(result.current).toBe(true)
   })
 
   it('reads the status from favorites.documents instead of comlink', () => {
@@ -168,6 +170,27 @@ describe('useFavorite (message bus)', () => {
     act(() => void publish([]))
     expect(result.current).toBe(false)
     act(() => void publish([favorite]))
+    expect(result.current).toBe(true)
+  })
+
+  it('reads favorites once the host starts providing them mid-session', async () => {
+    provideFavorites(false)
+    const {result} = renderHook(() => useFavorite(handle))
+    expect(result.current).toBe(false)
+
+    act(() => void provideFavorites(true))
+    await act(async () => void publish([favorite]))
+    expect(result.current).toBe(true)
+  })
+
+  it('ignores published favorites while the host withdraws the capability', () => {
+    publish([favorite])
+    const {result} = renderHook(() => useFavorite(handle))
+    expect(result.current).toBe(true)
+
+    act(() => void provideFavorites(false))
+    expect(result.current).toBe(false)
+    act(() => void provideFavorites(true))
     expect(result.current).toBe(true)
   })
 

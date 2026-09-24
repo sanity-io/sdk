@@ -188,7 +188,7 @@ describe('useUpdateFavorite (message bus)', () => {
       pending = result.current.unfavorite()
     })
     expect(result.current.isPending).toBe(true)
-    expect(updates.map((message) => message.payload)).toEqual([
+    expect(updates.map((message) => message.payload)).toStrictEqual([
       {
         document: {
           id: 'doc',
@@ -215,8 +215,22 @@ describe('useUpdateFavorite (message bus)', () => {
 
     act(() => void result.current.favorite())
 
-    expect(updates[0].payload.document.resource).toEqual({id: 'library', type: 'media-library'})
+    expect(updates[0].payload.document.resource).toStrictEqual({
+      id: 'library',
+      type: 'media-library',
+    })
     await act(async () => updates[0].reply())
+  })
+
+  it('rejects right away when no host answers favorites.update', async () => {
+    const {result} = renderHook(() => useUpdateFavorite(handle))
+
+    await act(async () => {
+      await expect(result.current.favorite()).rejects.toMatchObject({code: 'NO_RESPONDER'})
+    })
+
+    expect(result.current.isPending).toBe(false)
+    expect(result.current.error).toMatchObject({code: 'NO_RESPONDER'})
   })
 
   it('rejects when the host refuses the update', async () => {
