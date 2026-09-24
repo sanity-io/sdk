@@ -7,7 +7,7 @@
  */
 export const DOCUMENT_STATE_CLEAR_DELAY = 1000
 export const INITIAL_OUTGOING_THROTTLE_TIME = 1000
-export const API_VERSION = 'v2025-05-06'
+export const API_VERSION = 'vX'
 
 /**
  * How long a submitted transaction's revision is kept around waiting to be
