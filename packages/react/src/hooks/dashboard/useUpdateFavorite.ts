@@ -1,10 +1,28 @@
-import {type FavoriteStatusResponse, setFavorite} from '@sanity/sdk'
+/* eslint-disable react-compiler/react-compiler -- the transport branch in `useUpdateFavorite` is a deliberate rules-of-hooks exception; the compiler refuses files that disable it */
+import {
+  type FavoriteStatusResponse,
+  type SanityInstance,
+  setFavorite,
+  type SetFavoriteInput,
+} from '@sanity/sdk'
+import {isDashboardEnvironment, requireDashboardMessageBus} from '@sanity/sdk/_internal'
 import {useCallback} from 'react'
 
 import {createMutationHook} from '../helpers/createMutationHook'
-import {useFavoriteContext, type UseFavoriteProps} from './useFavoriteContext'
+import {toFavoriteDocument, useFavoriteContext, type UseFavoriteProps} from './useFavoriteContext'
 
 const useSetFavorite = createMutationHook(setFavorite)
+
+// The host keeps `favorites.documents` current, so there is no cache to invalidate.
+const useSetBusFavorite = createMutationHook(
+  async (instance: SanityInstance, {isFavorited, ...context}: SetFavoriteInput) => {
+    await requireDashboardMessageBus(instance, 'update a favorite').emit('favorites.update', {
+      document: toFavoriteDocument(context),
+      favorited: isFavorited,
+    })
+    return {data: {isFavorited}, invalidated: Promise.resolve()}
+  },
+)
 
 /**
  * The value returned by {@link useUpdateFavorite}.
@@ -64,8 +82,19 @@ export interface UpdateFavorite {
  * ```
  */
 export function useUpdateFavorite(props: UseFavoriteProps): UpdateFavorite {
+  // The branch is stable: the transport is fixed for the page lifetime, so one set of hooks
+  // always runs and the other never does.
+  // eslint-disable-next-line react-hooks/rules-of-hooks -- transport is fixed for the page lifetime
+  if (isDashboardEnvironment()) return useFavoriteActions(props, useSetBusFavorite())
+  // eslint-disable-next-line react-hooks/rules-of-hooks -- transport is fixed for the page lifetime
+  return useFavoriteActions(props, useSetFavorite())
+}
+
+function useFavoriteActions(
+  props: UseFavoriteProps,
+  {mutate, isPending, error, reset}: ReturnType<typeof useSetFavorite>,
+): UpdateFavorite {
   const context = useFavoriteContext(props)
-  const {mutate, isPending, error, reset} = useSetFavorite()
 
   const favorite = useCallback(() => mutate({...context, isFavorited: true}), [mutate, context])
   const unfavorite = useCallback(() => mutate({...context, isFavorited: false}), [mutate, context])

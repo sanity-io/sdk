@@ -9,9 +9,6 @@ import {catchError, first, from, map, type Observable, of, switchMap} from 'rxjs
 
 import {getNodeState} from '../comlink/node/getNodeState'
 import {type DocumentHandle} from '../config/sanityConfig'
-import {type MessageBusConnection} from '../dashboard/messageBus/bus'
-import {getDashboardMessageBus} from '../dashboard/messageBus/store'
-import {type FavoriteDocument} from '../dashboard/messageBus/topics'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {defineFetcher, defineMutation} from '../store/fetcherStore'
 
@@ -38,40 +35,9 @@ function createFavoriteKey(context: FavoriteDocumentContext): string {
   }`
 }
 
-// The bus addresses a studio by its dataset resource, like `applications.activity`.
-function toFavoriteDocument(context: FavoriteDocumentContext): FavoriteDocument {
-  return {
-    id: context.documentId,
-    type: context.documentType,
-    resource: {
-      id: context.resourceId,
-      type: context.resourceType === 'studio' ? 'dataset' : context.resourceType,
-      schemaName: context.schemaName,
-    },
-  }
-}
-
-const isSameFavorite = (a: FavoriteDocument, b: FavoriteDocument): boolean =>
-  a.id === b.id &&
-  a.resource.id === b.resource.id &&
-  a.resource.type === b.resource.type &&
-  a.resource.schemaName === b.resource.schemaName
-
-async function queryBusFavorite(
-  bus: MessageBusConnection,
-  context: FavoriteDocumentContext,
-): Promise<FavoriteStatusResponse> {
-  // Without the capability no host publishes `favorites.documents`; reading it would time out.
-  const capabilities = await bus.query('applications.capabilities')
-  if (!capabilities.favorites) return {isFavorited: false}
-  const target = toFavoriteDocument(context)
-  const documents = await bus.query('favorites.documents')
-  return {isFavorited: documents.some((document) => isSameFavorite(document, target))}
-}
-
 /**
- * Fetcher for a document's favorite status, read from the dashboard over the
- * message bus or comlink, on the shared fetcher cache.
+ * Fetcher for a document's favorite status, read from the dashboard over
+ * comlink, on the shared fetcher cache.
  *
  * @internal
  */
@@ -83,17 +49,6 @@ export const favorites = defineFetcher<[context: FavoriteDocumentContext], Favor
   tags: (_data, context) => [{type: 'favorite', id: createFavoriteKey(context)}],
   fetch: (instance) => {
     return (context: FavoriteDocumentContext): Observable<FavoriteStatusResponse> => {
-      const bus = getDashboardMessageBus(instance)
-      if (bus) {
-        return from(
-          queryBusFavorite(bus, context).catch((err: unknown) => {
-            // eslint-disable-next-line no-console
-            console.error('Favorites service connection error', err)
-            return {isFavorited: false}
-          }),
-        )
-      }
-
       const nodeStateSource = getNodeState(instance, {
         name: SDK_NODE_NAME,
         connectTo: SDK_CHANNEL_NAME,
@@ -146,7 +101,7 @@ export type SetFavoriteInput = FavoriteDocumentContext & {
 }
 
 /**
- * Sets a document's favorite state over the message bus or comlink, then invalidates the cached
+ * Sets a document's favorite state over comlink, then invalidates the cached
  * {@link favorites} status for that document so active readers reconverge on
  * server truth. The write-side counterpart to {@link favorites}.
  *
@@ -156,16 +111,6 @@ export const setFavorite = defineMutation<SetFavoriteInput, FavoriteStatusRespon
   name: 'setFavorite',
   mutationFn: (instance) => {
     return ({isFavorited, ...context}: SetFavoriteInput): Observable<FavoriteStatusResponse> => {
-      const bus = getDashboardMessageBus(instance)
-      if (bus) {
-        return from(
-          bus.emit('favorites.update', {
-            document: toFavoriteDocument(context),
-            favorited: isFavorited,
-          }),
-        ).pipe(map(() => ({isFavorited})))
-      }
-
       const nodeStateSource = getNodeState(instance, {
         name: SDK_NODE_NAME,
         connectTo: SDK_CHANNEL_NAME,

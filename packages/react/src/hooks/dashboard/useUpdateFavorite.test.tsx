@@ -1,9 +1,11 @@
 import {type FavoriteStatusResponse, setFavorite} from '@sanity/sdk'
-import {type MutationResult} from '@sanity/sdk/_internal'
-import {act, renderHook, waitFor} from '@testing-library/react'
+import {installMessageBus, type MutationResult, resetMessageBus} from '@sanity/sdk/_internal'
+import {type MessageBusHost, type MessageBusMessage, type PayloadOf} from '@sanity/sdk/dashboard'
+import {act, waitFor} from '@testing-library/react'
 import {type ReactNode} from 'react'
 import {afterEach, beforeEach, describe, expect, it, type Mock, vi} from 'vitest'
 
+import {renderHook} from '../../../test/test-utils'
 import {ResourceProvider} from '../../context/ResourceProvider'
 import {useUpdateFavorite} from './useUpdateFavorite'
 
@@ -149,5 +151,86 @@ describe('useUpdateFavorite', () => {
         {wrapper},
       ),
     ).toThrow('resourceId is required for media-library and canvas resources')
+  })
+})
+
+describe('useUpdateFavorite (message bus)', () => {
+  const MESSAGE_BUS_KEY = Symbol.for('sanity.os.bus')
+  const handle = {documentId: 'doc', documentType: 'movie', resourceType: 'studio' as const}
+
+  let host: MessageBusHost
+
+  // Holds the update so a test decides when the host replies.
+  const captureUpdates = () => {
+    const updates: MessageBusMessage<PayloadOf<'favorites.update'>, void>[] = []
+    host.subscribe('favorites.update', (message) => void updates.push(message))
+    return updates
+  }
+
+  beforeEach(() => {
+    vi.stubGlobal('__SANITY_APP_ID__', 'app')
+    host = installMessageBus({appId: 'dashboard'})
+  })
+
+  afterEach(() => {
+    resetMessageBus()
+    delete (globalThis as {[MESSAGE_BUS_KEY]?: unknown})[MESSAGE_BUS_KEY]
+    vi.unstubAllGlobals()
+    vi.clearAllMocks()
+  })
+
+  it('emits favorites.update and stays pending until the host replies', async () => {
+    const updates = captureUpdates()
+    const {result} = renderHook(() => useUpdateFavorite(handle))
+
+    let pending!: Promise<FavoriteStatusResponse>
+    act(() => {
+      pending = result.current.unfavorite()
+    })
+    expect(result.current.isPending).toBe(true)
+    expect(updates.map((message) => message.payload)).toEqual([
+      {
+        document: {
+          id: 'doc',
+          type: 'movie',
+          resource: {id: 'test.test', type: 'dataset', schemaName: undefined},
+        },
+        favorited: false,
+      },
+    ])
+
+    await act(async () => {
+      updates[0].reply()
+      await expect(pending).resolves.toEqual({isFavorited: false})
+    })
+    expect(result.current.isPending).toBe(false)
+    expect(setFavorite).not.toHaveBeenCalled()
+  })
+
+  it('passes a non-studio resource type through unmapped', async () => {
+    const updates = captureUpdates()
+    const {result} = renderHook(() =>
+      useUpdateFavorite({...handle, resourceType: 'media-library', resourceId: 'library'}),
+    )
+
+    act(() => void result.current.favorite())
+
+    expect(updates[0].payload.document.resource).toEqual({
+      id: 'library',
+      type: 'media-library',
+      schemaName: undefined,
+    })
+    await act(async () => updates[0].reply())
+  })
+
+  it('rejects when the host refuses the update', async () => {
+    host.subscribe('favorites.update', (message) => message.reject('no favorites'))
+    const {result} = renderHook(() => useUpdateFavorite(handle))
+
+    await act(async () => {
+      await expect(result.current.favorite()).rejects.toThrow('no favorites')
+    })
+
+    expect((result.current.error as Error).message).toContain('no favorites')
   })
 })

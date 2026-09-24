@@ -4,6 +4,7 @@ import {
   type StudioResource,
 } from '@sanity/message-protocol'
 import {type DocumentHandle, type FavoriteDocumentContext} from '@sanity/sdk'
+import {type FavoriteDocument} from '@sanity/sdk/dashboard'
 import {useMemo} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
@@ -58,4 +59,21 @@ export function useFavoriteContext({
     () => ({documentId, documentType, resourceId, resourceType, schemaName}),
     [documentId, documentType, resourceId, resourceType, schemaName],
   )
+}
+
+/**
+ * Addresses a favorite on the message bus, where a studio travels as its dataset resource.
+ *
+ * @internal
+ */
+export function toFavoriteDocument(context: FavoriteDocumentContext): FavoriteDocument {
+  return {
+    id: context.documentId,
+    type: context.documentType,
+    resource: {
+      id: context.resourceId,
+      type: context.resourceType === 'studio' ? 'dataset' : context.resourceType,
+      schemaName: context.schemaName,
+    },
+  }
 }

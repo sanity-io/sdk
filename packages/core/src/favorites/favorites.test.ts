@@ -4,13 +4,6 @@ import {describe, expect, it, type Mock, vi} from 'vitest'
 
 import {getNodeState, type NodeState} from '../comlink/node/getNodeState'
 import {type FrameMessage, type WindowMessage} from '../comlink/types'
-import {
-  installMessageBus,
-  type MessageBusClient,
-  type MessageBusHost,
-  resetMessageBus,
-} from '../dashboard/messageBus/bus'
-import {type CapabilityRecord, type FavoriteDocument} from '../dashboard/messageBus/topics'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {type StateSource} from '../store/createStateSourceAction'
 import {favorites, setFavorite} from './favorites'
@@ -241,95 +234,5 @@ describe('favoritesStore', () => {
         'Failed to update favorite status',
       )
     })
-  })
-})
-
-describe('favorites over the message bus', () => {
-  const MESSAGE_BUS_KEY = Symbol.for('sanity.os.bus')
-  const context = {
-    documentId: 'doc123',
-    documentType: 'movie',
-    resourceId: 'res456',
-    resourceType: 'studio' as const,
-    schemaName: 'movieSchema',
-  }
-  const favorite: FavoriteDocument = {
-    id: 'doc123',
-    type: 'movie',
-    resource: {id: 'res456', type: 'dataset', schemaName: 'movieSchema'},
-  }
-
-  let host: MessageBusHost
-  let clients: MessageBusClient[]
-  let documents: FavoriteDocument[]
-
-  // Mirrors the Workbench: publish capabilities and favorites to every connection.
-  const serve = (capabilities: CapabilityRecord) =>
-    host.connections.subscribe((client) => {
-      clients.push(client)
-      client.emit('applications.capabilities', capabilities)
-      if (capabilities.favorites) client.emit('favorites.documents', documents)
-    })
-
-  beforeEach(() => {
-    vi.resetAllMocks()
-    vi.stubGlobal('__SANITY_APP_ID__', 'app')
-    host = installMessageBus({appId: 'dashboard'})
-    clients = []
-    documents = [favorite]
-    instance = createSanityInstance({projectId: 'p', dataset: 'd'})
-  })
-
-  afterEach(() => {
-    instance?.dispose()
-    resetMessageBus()
-    delete (globalThis as {[MESSAGE_BUS_KEY]?: unknown})[MESSAGE_BUS_KEY]
-    vi.unstubAllGlobals()
-  })
-
-  it('reads the status from favorites.documents, addressing studios by their dataset', async () => {
-    serve({favorites: true})
-
-    await expect(favorites.resolveState(instance!, context)).resolves.toEqual({isFavorited: true})
-    await expect(
-      favorites.resolveState(instance!, {...context, schemaName: 'other'}),
-    ).resolves.toEqual({isFavorited: false})
-    expect(getNodeState).not.toHaveBeenCalled()
-  })
-
-  it('is not favorited when the host does not provide favorites', async () => {
-    serve({})
-
-    await expect(favorites.resolveState(instance!, context)).resolves.toEqual({isFavorited: false})
-  })
-
-  it('updates through favorites.update and reads the change back', async () => {
-    serve({favorites: true})
-    host.subscribe('favorites.update', ({payload, reply}) => {
-      documents = payload.favorited
-        ? [...documents, payload.document]
-        : documents.filter((document) => document.id !== payload.document.id)
-      for (const client of clients) client.emit('favorites.documents', documents)
-      reply()
-    })
-
-    // An active reader, like a mounted `useFavorite`, refetches when the update invalidates it.
-    const state = favorites.getState(instance!, context)
-    const unsubscribe = state.subscribe(() => {})
-    await favorites.resolveState(instance!, context)
-    expect(state.getCurrent()?.data).toEqual({isFavorited: true})
-
-    const result = await setFavorite(instance!, {...context, isFavorited: false})
-    await result.invalidated
-
-    expect(result.data).toEqual({isFavorited: false})
-    expect(state.getCurrent()?.data).toEqual({isFavorited: false})
-    unsubscribe()
-  })
-
-  it('rejects the update when no host responds', async () => {
-    serve({favorites: true})
-
-    await expect(setFavorite(instance!, {...context, isFavorited: true})).rejects.toThrow()
   })
 })

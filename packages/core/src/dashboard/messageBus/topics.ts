@@ -214,8 +214,10 @@ export interface DashboardTopics {
   'auth.token': StateTopicDef<string | null>
   /** Requests a dashboard session token. */
   'auth.token.refresh': EventTopicDef<void, string>
-  /** The signed-in user's favorited documents. */
-  'favorites.documents': StateTopicDef<FavoriteDocument[]>
+  /**
+   * The signed-in user's favorited documents, or `null` when the host does not provide favorites.
+   */
+  'favorites.documents': StateTopicDef<FavoriteDocument[] | null>
   /**
    * Favorites or unfavorites a document. The host replies once `favorites.documents` reflects
    * the change, so a read after the reply sees it.

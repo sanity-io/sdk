@@ -1,10 +1,12 @@
 import {favorites, type FavoriteStatusResponse, type StateSource} from '@sanity/sdk'
-import {type FetcherSnapshot} from '@sanity/sdk/_internal'
-import {renderHook} from '@testing-library/react'
+import {type FetcherSnapshot, installMessageBus, resetMessageBus} from '@sanity/sdk/_internal'
+import {type FavoriteDocument, type MessageBusHost} from '@sanity/sdk/dashboard'
+import {act} from '@testing-library/react'
 import {type ReactNode} from 'react'
 import {BehaviorSubject} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
+import {renderHook} from '../../../test/test-utils'
 import {ResourceProvider} from '../../context/ResourceProvider'
 import {useFavorite} from './useFavorite'
 
@@ -97,5 +99,76 @@ describe('useFavorite', () => {
     // Suspended on the initial fetch — the ResourceProvider fallback renders instead.
     expect(result.current).toBeNull()
     expect(favorites.resolveState).toHaveBeenCalled()
+  })
+})
+
+describe('useFavorite (message bus)', () => {
+  const MESSAGE_BUS_KEY = Symbol.for('sanity.os.bus')
+  const handle = {documentId: 'doc', documentType: 'movie', resourceType: 'studio' as const}
+  // Studios travel as their dataset resource: the test providers' `test.test`.
+  const favorite: FavoriteDocument = {
+    id: 'doc',
+    type: 'movie',
+    resource: {id: 'test.test', type: 'dataset', schemaName: undefined},
+  }
+
+  let host: MessageBusHost
+
+  // Reaches open connections and every connection that opens later.
+  const publish = (documents: FavoriteDocument[] | null) =>
+    host.connections.subscribe((client) => client.emit('favorites.documents', documents))
+
+  beforeEach(() => {
+    vi.stubGlobal('__SANITY_APP_ID__', 'app')
+    host = installMessageBus({appId: 'dashboard'})
+  })
+
+  afterEach(() => {
+    resetMessageBus()
+    delete (globalThis as {[MESSAGE_BUS_KEY]?: unknown})[MESSAGE_BUS_KEY]
+    vi.unstubAllGlobals()
+  })
+
+  it('suspends until the host publishes favorites.documents', () => {
+    const {result} = renderHook(() => useFavorite(handle))
+
+    expect(result.current).toBeNull()
+  })
+
+  it('reads the status from favorites.documents instead of comlink', () => {
+    publish([favorite])
+    const {result} = renderHook(() => useFavorite(handle))
+
+    expect(result.current).toBe(true)
+    expect(favorites.getState).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    {documentId: 'other'},
+    {resourceId: 'other.dataset'},
+    {resourceType: 'media-library' as const, resourceId: 'test.test'},
+    {schemaName: 'other'},
+  ])('does not match a favorite that differs in %o', (difference) => {
+    publish([favorite])
+    const {result} = renderHook(() => useFavorite({...handle, ...difference}))
+
+    expect(result.current).toBe(false)
+  })
+
+  it('follows the host when it republishes', () => {
+    publish([favorite])
+    const {result} = renderHook(() => useFavorite(handle))
+
+    act(() => void publish([]))
+    expect(result.current).toBe(false)
+    act(() => void publish([favorite]))
+    expect(result.current).toBe(true)
+  })
+
+  it('is not favorited when the host does not provide favorites', () => {
+    publish(null)
+    const {result} = renderHook(() => useFavorite(handle))
+
+    expect(result.current).toBe(false)
   })
 })
