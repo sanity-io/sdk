@@ -1,6 +1,7 @@
 import {
   type CommentsOptions,
   type CommentThread,
+  getDocumentCommentsErrorState,
   getDocumentCommentsState,
   resolveDocumentComments,
   type StateSource,
@@ -16,7 +17,12 @@ import {useDocumentComments} from './useDocumentComments'
 
 vi.mock('@sanity/sdk', async (importOriginal) => {
   const original = await importOriginal<typeof import('@sanity/sdk')>()
-  return {...original, getDocumentCommentsState: vi.fn(), resolveDocumentComments: vi.fn()}
+  return {
+    ...original,
+    getDocumentCommentsState: vi.fn(),
+    getDocumentCommentsErrorState: vi.fn(),
+    resolveDocumentComments: vi.fn(),
+  }
 })
 
 const HANDLE = {documentId: 'doc-1', documentType: 'author'}
@@ -49,6 +55,24 @@ function mockSource(
           throw new Error('Not implemented')
         },
       }) as StateSource<CommentThread[] | undefined>,
+  )
+  mockErrorSource(() => undefined)
+}
+
+/** The companion source, live by default. Call again to override. */
+function mockErrorSource(getCurrent: () => unknown, changed$?: Subject<void>) {
+  vi.mocked(getDocumentCommentsErrorState).mockImplementation(
+    () =>
+      ({
+        getCurrent,
+        subscribe: vi.fn((cb?: () => void) => {
+          const subscription = changed$?.subscribe(() => cb?.())
+          return () => subscription?.unsubscribe()
+        }),
+        get observable(): Observable<unknown> {
+          throw new Error('Not implemented')
+        },
+      }) as StateSource<unknown>,
   )
 }
 
@@ -252,5 +276,39 @@ describe('useDocumentComments', () => {
     })
 
     expect(screen.getByTestId('out').textContent).toBe('2 idle')
+  })
+
+  it('reports a listener that failed after the threads had loaded', async () => {
+    const loaded = [thread('t1')]
+    mockSource(() => loaded)
+    const failure: {current: unknown} = {current: undefined}
+    const changed$ = new Subject<void>()
+    mockErrorSource(() => failure.current, changed$)
+
+    function TestComponent() {
+      const {threads, error} = useDocumentComments(HANDLE)
+      return (
+        <div data-testid="out">{`${threads.length} ${error instanceof Error ? error.message : 'live'}`}</div>
+      )
+    }
+
+    render(<TestComponent />, {wrapper: Wrapper})
+    expect(screen.getByTestId('out').textContent).toBe('1 live')
+
+    await act(async () => {
+      failure.current = new Error('connection failed')
+      changed$.next()
+    })
+
+    // The threads are still on screen; only their claim to being current is
+    // withdrawn.
+    expect(screen.getByTestId('out').textContent).toBe('1 connection failed')
+
+    await act(async () => {
+      failure.current = undefined
+      changed$.next()
+    })
+
+    expect(screen.getByTestId('out').textContent).toBe('1 live')
   })
 })

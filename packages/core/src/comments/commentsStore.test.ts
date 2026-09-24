@@ -12,6 +12,7 @@ import {
   commentsStore,
   getCommentsQueryOptionsKey,
   getCommentsQueryState,
+  getDocumentCommentsErrorState,
   getDocumentCommentsOptionsKey,
   getDocumentCommentsState,
   parseCommentsQueryOptionsKey,
@@ -79,13 +80,7 @@ beforeEach(() => {
   writes = {update: vi.fn().mockResolvedValue(undefined)}
 
   client = {
-    collaboration: {
-      comments: {
-        ...writes,
-        getTargetDocumentRef: (documentId: string) =>
-          `dataset:p.d:${documentId.replace(/^drafts\.|^versions\.[^.]+\./, '')}`,
-      },
-    },
+    collaboration: {comments: writes},
     observable: {collaboration: {comments}},
   } as unknown as SanityClient
 
@@ -607,5 +602,47 @@ describe('listener recovery', () => {
     client$.next(client)
 
     expect(listeners.size).toBe(1)
+  })
+
+  it('reports why a loaded list stopped following the server', () => {
+    const source = getDocumentCommentsState(instance, HANDLE)
+    const errorSource = getDocumentCommentsErrorState(instance, HANDLE)
+    source.subscribe()
+    snapshot([storedComment({_id: 'a'})])
+
+    // Serving a stale list silently would leave an app with no way to say so.
+    expect(errorSource.getCurrent()).toBeUndefined()
+
+    listeners.values().next().value!.error(new Error('connection failed'))
+
+    expect(errorSource.getCurrent()).toEqual(new Error('connection failed'))
+  })
+
+  it('clears the report once a listener comes back', () => {
+    const source = getDocumentCommentsState(instance, HANDLE)
+    const errorSource = getDocumentCommentsErrorState(instance, HANDLE)
+    source.subscribe()
+    snapshot([storedComment({_id: 'a'})])
+
+    listeners.values().next().value!.error(new Error('connection failed'))
+    listeners.clear()
+    fetches.length = 0
+    client$.next(client)
+    snapshot([storedComment({_id: 'a'})])
+
+    expect(errorSource.getCurrent()).toBeUndefined()
+  })
+
+  it('leaves a failure before the first snapshot to the read itself', () => {
+    const source = getDocumentCommentsState(instance, HANDLE)
+    const errorSource = getDocumentCommentsErrorState(instance, HANDLE)
+    source.subscribe()
+
+    listeners.values().next().value!.error(new Error('connection failed'))
+
+    // There is no list to be stale here, so this is a failed read rather than
+    // one that has stopped updating.
+    expect(errorSource.getCurrent()).toBeUndefined()
+    expect(() => source.getCurrent()).toThrow('connection failed')
   })
 })

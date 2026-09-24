@@ -5,6 +5,7 @@ import {
   addComment,
   addSubscriber,
   applyCommentUpdate,
+  clearPendingRemovals,
   clearPendingTransaction,
   type CommentsStoreState,
   getCommentsKey,
@@ -42,6 +43,7 @@ function stateWith(comments: StoredComment[]): CommentsStoreState {
     pendingCreates: {},
     pendingTransactions: {},
     droppedEchoes: {},
+    pendingRemovals: {},
   })
 }
 
@@ -62,6 +64,7 @@ const emptyState = (): CommentsStoreState => ({
   pendingCreates: {},
   pendingTransactions: {},
   droppedEchoes: {},
+  pendingRemovals: {},
 })
 
 describe('comment list keys', () => {
@@ -196,11 +199,76 @@ describe('setComments', () => {
     expect(next.pendingCreates).toEqual({})
   })
 
+  it('keeps a local edit whose write has not been answered yet', () => {
+    // A reconnect refetches, so a snapshot can land at any moment. This one
+    // predates the edit, and taking it at face value would put the old message
+    // back on screen until the echo of the write arrived.
+    const edited = applyCommentUpdate('a', {status: 'resolved'})(
+      setPendingTransaction('a', 'tx-1')(stateWith([comment({_id: 'a', status: 'open'})])),
+    )
+
+    const next = setComments(KEY, [comment({_id: 'a', status: 'open'})])(edited)
+
+    expect(next.entries[KEY]!.comments!['a'].status).toBe('resolved')
+  })
+
+  it('takes the snapshot once the write it was racing has settled', () => {
+    const settled = clearPendingTransaction(
+      'a',
+      'tx-1',
+    )(
+      applyCommentUpdate('a', {status: 'resolved'})(
+        setPendingTransaction('a', 'tx-1')(stateWith([comment({_id: 'a', status: 'open'})])),
+      ),
+    )
+
+    const next = setComments(KEY, [comment({_id: 'a', status: 'open'})])(settled)
+
+    expect(next.entries[KEY]!.comments!['a'].status).toBe('open')
+  })
+
+  it('leaves out a comment whose delete is still in flight', () => {
+    // Same race the other way round: the server still holds the comment, so a
+    // snapshot fetched now carries it and would undo the removal on screen.
+    const removing = removeCommentById('a')(stateWith([comment({_id: 'a'})]))
+
+    const next = setComments(KEY, [comment({_id: 'a'})])(removing)
+
+    expect(next.entries[KEY]!.comments!['a']).toBeUndefined()
+  })
+
+  it('takes the comment back once a failed delete has released it', () => {
+    const before = stateWith([comment({_id: 'a'})])
+    const restored = restoreComments([{key: KEY, comments: [comment({_id: 'a'})]}])(
+      removeCommentById('a')(before),
+    )
+
+    const next = setComments(KEY, [comment({_id: 'a'})])(restored)
+
+    expect(next.entries[KEY]!.comments!['a']).toBeDefined()
+  })
+
   it('stores comment ids such as __proto__ as ordinary keys', () => {
     const special = comment({_id: '__proto__'})
     const next = setComments(KEY, [special])(stateWith([]))
 
     expect(Object.values(next.entries[KEY]!.comments!)).toEqual([special])
+  })
+})
+
+describe('clearPendingRemovals', () => {
+  it('releases only the ids it is given', () => {
+    const removing = removeCommentById('a')(stateWith([comment({_id: 'a'}), comment({_id: 'b'})]))
+    const stillRemoving = removeCommentById('b')(removing)
+
+    const next = clearPendingRemovals(['a'])(stillRemoving)
+
+    expect(next.pendingRemovals).toEqual({b: true})
+  })
+
+  it('leaves state untouched when none of them is marked', () => {
+    const before = stateWith([comment({_id: 'a'})])
+    expect(clearPendingRemovals(['a'])(before)).toBe(before)
   })
 })
 
@@ -215,6 +283,18 @@ describe('addComment', () => {
   it('ignores a create for an entry nobody is reading', () => {
     const empty = emptyState()
     expect(addComment(KEY, comment({_id: 'new'}))(empty)).toBe(empty)
+  })
+
+  it('leaves a list that has yet to load alone', () => {
+    // A create reaches every list the comment belongs in, including ones still
+    // waiting for their first snapshot. Putting it in one of those would answer
+    // a suspended reader with a list of one comment.
+    const loading = addSubscriber(KEY, 'sub-1')(emptyState())
+
+    const next = addComment(KEY, comment({_id: 'new'}))(loading)
+
+    expect(next).toBe(loading)
+    expect(next.entries[KEY]!.comments).toBeUndefined()
   })
 
   it('keeps the createdAt the comment first appeared with', () => {
@@ -379,6 +459,15 @@ describe('receiveComment', () => {
     const before: CommentsStoreState = {...emptyState(), pendingCreates: {a: true}}
 
     expect(receiveComment(KEY, comment({_id: 'a'}))(before).pendingCreates).toEqual({})
+  })
+
+  it('leaves a list that has yet to load alone, but still settles the create', () => {
+    const loading = addSubscriber(KEY, 'sub-1')({...emptyState(), pendingCreates: {a: true}})
+
+    const next = receiveComment(KEY, comment({_id: 'a'}))(loading)
+
+    expect(next.entries[KEY]!.comments).toBeUndefined()
+    expect(next.pendingCreates).toEqual({})
   })
 })
 

@@ -38,7 +38,7 @@ import {randomId} from '../utils/ids'
 import {setCleanupTimeout} from '../utils/setCleanupTimeout'
 import {buildCommentThreads} from './buildCommentThreads'
 import {toCommentFieldPath} from './commentFieldPath'
-import {getCommentsClient, observeCommentsClient, requireOrganizationId} from './commentsClient'
+import {observeCommentsClient, requireOrganizationId, toTargetDocumentRef} from './commentsClient'
 import {
   buildCommentsQueryFilter,
   buildDocumentCommentsQuery,
@@ -86,6 +86,12 @@ export interface CommentsOptions extends DocumentHandle {
    * - `'drafts'` pools draft and published and ignores releases.
    * - `'exact'` matches only the precise document id passed.
    * - `'all'` returns every comment on the document.
+   *
+   * `'perspective'` recognises a release from the `{releaseName}` form. A
+   * stacked `ClientPerspective` array names several layers at once, with no
+   * single release to read comments from, so it pools draft and published as
+   * any other non-release perspective does. Pass a version id as the
+   * `documentId`, or `variants: 'exact'`, to name a release yourself.
    *
    * @defaultValue 'perspective'
    */
@@ -222,9 +228,8 @@ function toCommentsScope(instance: SanityInstance, options: CommentsOptions): Co
 /**
  * Which entry a document read addresses.
  *
- * The target reference comes from the client, which turns whatever id the
- * caller passed into the published one, so callers keep passing the id they
- * have.
+ * The target reference turns whatever id the caller passed into the published
+ * one, so callers keep passing the id they have.
  *
  * @internal
  */
@@ -233,8 +238,7 @@ export function toDocumentCommentsKey(
   options: CommentsOptions & {resource: DocumentResource},
 ): string {
   const organizationId = requireOrganizationId(instance, options)
-  const client = getCommentsClient(instance, {resource: options.resource, organizationId})
-  const targetRef = client.collaboration.comments.getTargetDocumentRef(options.documentId)
+  const targetRef = toTargetDocumentRef(options.resource, options.documentId)
 
   return toEntryKey(organizationId, targetRef, toCommentsScope(instance, options))
 }
@@ -387,6 +391,7 @@ export const commentsStore = defineStore<CommentsStoreState, BoundResourceKey>({
     pendingCreates: {},
     pendingTransactions: {},
     droppedEchoes: {},
+    pendingRemovals: {},
   }),
   initialize: (context) => {
     const subscription = watchSubscribedQueries(context)
@@ -487,6 +492,20 @@ function selectCommentsQuery(
 }
 
 /**
+ * Why an entry's list stopped following the server, if it has.
+ *
+ * Only ever set on a list that had already loaded: a failure before the first
+ * snapshot is thrown from the read itself, since there is nothing to go stale.
+ */
+function selectEntryError(
+  {state}: SelectorContext<CommentsStoreState>,
+  key: string,
+): unknown | undefined {
+  const entry = state.entries[key]
+  return entry?.comments ? entry.error : undefined
+}
+
+/**
  * Holds a subscriber for as long as something is reading the entry, and a
  * little longer, so a reader that comes straight back reuses the loaded list.
  */
@@ -513,6 +532,18 @@ const commentsQueryState = createStateSourceAction({
   onSubscribe: ({state, instance}, options: WithResource<CommentsQueryOptions>) =>
     subscribeToEntry(state, toCommentsQueryKey(instance, options)),
 })
+
+// No `onSubscribe`: whoever is watching for an error is reading the list beside
+// it, and that read is what holds the entry open.
+const documentCommentsErrorState = createStateSourceAction(
+  (context: SelectorContext<CommentsStoreState>, options: WithResource<CommentsOptions>) =>
+    selectEntryError(context, toDocumentCommentsKey(context.instance, options)),
+)
+
+const commentsQueryErrorState = createStateSourceAction(
+  (context: SelectorContext<CommentsStoreState>, options: WithResource<CommentsQueryOptions>) =>
+    selectEntryError(context, toCommentsQueryKey(context.instance, options)),
+)
 
 /**
  * Threads on a document, newest thread first, each with its replies oldest
@@ -547,6 +578,43 @@ export const getCommentsQueryState: (
   commentsStore,
   (context: StoreContext<CommentsStoreState, BoundResourceKey>, options: CommentsQueryOptions) =>
     commentsQueryState(context, {...options, resource: context.key.resource}),
+)
+
+/**
+ * Why a document's threads stopped following the server, if they have.
+ *
+ * A list that has loaded survives its listener failing: it keeps being served
+ * as it last stood rather than replacing what someone is reading with an error.
+ * This is how that is noticed. It clears when a listener comes back, which
+ * happens on the next client change — a token refresh, typically.
+ *
+ * `undefined` while the list is live, and while it has yet to load at all: a
+ * failure before the first snapshot is thrown from the read instead.
+ *
+ * @beta
+ */
+export const getDocumentCommentsErrorState: (
+  instance: SanityInstance,
+  options: CommentsOptions,
+) => StateSource<unknown> = bindActionByResource(
+  commentsStore,
+  (context: StoreContext<CommentsStoreState, BoundResourceKey>, options: CommentsOptions) =>
+    documentCommentsErrorState(context, {...options, resource: context.key.resource}),
+)
+
+/**
+ * The same, for a GROQ comment query. See
+ * {@link getDocumentCommentsErrorState}.
+ *
+ * @beta
+ */
+export const getCommentsQueryErrorState: (
+  instance: SanityInstance,
+  options: CommentsQueryOptions,
+) => StateSource<unknown> = bindActionByResource(
+  commentsStore,
+  (context: StoreContext<CommentsStoreState, BoundResourceKey>, options: CommentsQueryOptions) =>
+    commentsQueryErrorState(context, {...options, resource: context.key.resource}),
 )
 
 /**

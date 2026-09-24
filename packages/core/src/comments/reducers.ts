@@ -33,6 +33,16 @@ export interface CommentsStoreState {
    * can land on the server's state instead.
    */
   droppedEchoes: {[commentId: string]: StoredComment | undefined}
+  /**
+   * Comments dropped from the lists optimistically, while the delete that
+   * dropped them is still in flight.
+   *
+   * A snapshot is the whole list as the server last saw it, so one that lands
+   * mid-delete still carries the comment and would put it back on screen. Kept
+   * until the delete settles: it either succeeds, and the comment is gone for
+   * good, or it fails, and `restoreComments` is what brings the comment back.
+   */
+  pendingRemovals: {[commentId: string]: true | undefined}
   error?: unknown
 }
 
@@ -107,31 +117,86 @@ export const removeSubscriber =
     return {...prev, entries: {...prev.entries, [key]: {...entry, subscribers}}}
   }
 
-/** Replaces an entry's contents with a freshly fetched snapshot. */
+/**
+ * Replaces an entry's contents with a freshly fetched snapshot.
+ *
+ * A snapshot is the list as the server held it when the fetch was answered, so
+ * it knows nothing about the writes this client has in flight. Reconnects
+ * refetch, which means a snapshot can land at any moment, and left to itself it
+ * would undo every optimistic change until the echo of each write arrived. So
+ * the writes still in flight are reapplied over it: a comment with a pending
+ * transaction keeps the local version, a comment being deleted stays deleted,
+ * and a create that has not come back yet is kept rather than dropped.
+ */
 export const setComments =
   (key: string, comments: StoredComment[]) =>
   (prev: CommentsStoreState): CommentsStoreState => {
     const entry = prev.entries[key]
     if (!entry) return prev
-    const byId = Object.fromEntries(comments.map((comment) => [comment._id, comment]))
-    const pendingCreates = {...prev.pendingCreates}
 
-    for (const [commentId, localComment] of Object.entries(entry.comments ?? {})) {
-      if (Object.hasOwn(byId, commentId)) {
-        delete pendingCreates[commentId]
-      } else if (Object.hasOwn(pendingCreates, commentId) || localComment._state) {
-        // A snapshot can race an in-flight create. Failed creates are also local
-        // drafts and must remain available for retry.
-        byId[commentId] = localComment
-      }
-    }
+    const byId = toSnapshotMap(prev, comments)
+    const pendingCreates = reapplyLocalWrites(prev, entry.comments, byId)
 
     return {
       ...prev,
-      entries: {...prev.entries, [key]: {...entry, comments: byId, error: undefined}},
+      entries: {
+        ...prev.entries,
+        [key]: {...entry, comments: Object.fromEntries(byId), error: undefined},
+      },
       pendingCreates,
     }
   }
+
+/**
+ * The snapshot, minus the comments this client has already taken out of it.
+ *
+ * A Map rather than an object, because a comment id is server data and
+ * `__proto__` assigned through brackets would be swallowed by the setter rather
+ * than stored. `Object.fromEntries` defines it properly.
+ */
+function toSnapshotMap(
+  prev: CommentsStoreState,
+  comments: StoredComment[],
+): Map<string, StoredComment> {
+  const byId = new Map<string, StoredComment>()
+  for (const comment of comments) {
+    if (Object.hasOwn(prev.pendingRemovals, comment._id)) continue
+    byId.set(comment._id, comment)
+  }
+  return byId
+}
+
+/**
+ * Puts the writes still in flight back over the snapshot, in place, and returns
+ * the creates that remain outstanding.
+ */
+function reapplyLocalWrites(
+  prev: CommentsStoreState,
+  held: Record<string, StoredComment> | undefined,
+  byId: Map<string, StoredComment>,
+): Record<string, true | undefined> {
+  const pendingCreates = {...prev.pendingCreates}
+
+  for (const [commentId, localComment] of Object.entries(held ?? {})) {
+    if (!byId.has(commentId)) {
+      // A snapshot can race an in-flight create. Failed creates are also local
+      // drafts and must remain available for retry.
+      if (Object.hasOwn(pendingCreates, commentId) || localComment._state) {
+        byId.set(commentId, localComment)
+      }
+      continue
+    }
+
+    delete pendingCreates[commentId]
+    // Our own edit is already on screen and the write carrying it has not been
+    // answered. The snapshot predates it, so it is the stale one.
+    if (Object.hasOwn(prev.pendingTransactions, commentId)) {
+      byId.set(commentId, localComment)
+    }
+  }
+
+  return pendingCreates
+}
 
 export const setCommentsError =
   (key: string, error: unknown) =>
@@ -149,7 +214,10 @@ export const receiveComment =
     const pendingCreates = omitProperty(prev.pendingCreates, comment._id)
     // A fresh server document supersedes any older one we were holding back.
     const droppedEchoes = omitProperty(prev.droppedEchoes, comment._id)
-    if (!entry) return {...prev, pendingCreates, droppedEchoes}
+    // A list whose snapshot has not arrived is not a list with one comment in
+    // it: filling it in here would make readers waiting on it resolve with
+    // whatever this write happened to be. See `addComment`.
+    if (!entry?.comments) return {...prev, pendingCreates, droppedEchoes}
     return {
       ...prev,
       pendingCreates,
@@ -192,17 +260,26 @@ function mergeOptimisticComment(
   }
 }
 
-/** A comment we just wrote, shown before the server confirms it. */
+/**
+ * A comment we just wrote, shown before the server confirms it.
+ *
+ * Only in lists that have loaded. A write reaches every entry the comment
+ * belongs in, and an entry still waiting for its first snapshot is one that
+ * suspends its readers — dropping a single comment into it would answer them
+ * with a list of one, which the snapshot then replaces wholesale a moment
+ * later. Nothing is lost by waiting: the snapshot in flight either includes the
+ * comment or is followed by the `appear` event `observeComments` buffered
+ * behind it.
+ */
 export const addComment =
   (key: string, comment: StoredComment) =>
   (prev: CommentsStoreState): CommentsStoreState => {
     const entry = prev.entries[key]
-    if (!entry) return prev
+    if (!entry?.comments) return prev
 
-    const existing =
-      entry.comments && Object.hasOwn(entry.comments, comment._id)
-        ? entry.comments[comment._id]
-        : undefined
+    const existing = Object.hasOwn(entry.comments, comment._id)
+      ? entry.comments[comment._id]
+      : undefined
 
     return {
       ...prev,
@@ -280,7 +357,12 @@ export const removeCommentFromEntry =
     }
   }
 
-/** Removes a comment and, when it is a thread parent, its replies. */
+/**
+ * Removes a comment and, when it is a thread parent, its replies.
+ *
+ * The ids are marked as pending removals for as long as the delete is in
+ * flight, so a snapshot fetched before it lands does not put them back.
+ */
 export const removeCommentById =
   (commentId: string) =>
   (prev: CommentsStoreState): CommentsStoreState => {
@@ -310,13 +392,34 @@ export const removeCommentById =
     const pendingCreates = {...prev.pendingCreates}
     const pendingTransactions = {...prev.pendingTransactions}
     const droppedEchoes = {...prev.droppedEchoes}
+    const pendingRemovals = {...prev.pendingRemovals}
     for (const id of removedIds) {
       delete pendingCreates[id]
       delete pendingTransactions[id]
       delete droppedEchoes[id]
+      pendingRemovals[id] = true
     }
 
-    return {...prev, entries, pendingCreates, pendingTransactions, droppedEchoes}
+    return {...prev, entries, pendingCreates, pendingTransactions, droppedEchoes, pendingRemovals}
+  }
+
+/**
+ * Lets a snapshot show these comments again, once the delete that dropped them
+ * has settled one way or the other.
+ */
+export const clearPendingRemovals =
+  (commentIds: Iterable<string>) =>
+  (prev: CommentsStoreState): CommentsStoreState => {
+    const pendingRemovals = {...prev.pendingRemovals}
+    let changed = false
+
+    for (const commentId of commentIds) {
+      if (!Object.hasOwn(pendingRemovals, commentId)) continue
+      delete pendingRemovals[commentId]
+      changed = true
+    }
+
+    return changed ? {...prev, pendingRemovals} : prev
   }
 
 export const setPendingTransaction =
@@ -387,7 +490,12 @@ export const rollbackCommentUpdate =
     }
   }
 
-/** Restores comments removed optimistically when the server delete fails. */
+/**
+ * Restores comments removed optimistically when the server delete fails.
+ *
+ * Also releases them from {@link CommentsStoreState.pendingRemovals}: the
+ * delete has settled, so a snapshot carrying them is no longer stale.
+ */
 export const restoreComments =
   (removed: Array<{key: string; comments: StoredComment[]}>) =>
   (prev: CommentsStoreState): CommentsStoreState => {
@@ -396,20 +504,25 @@ export const restoreComments =
 
     for (const {key, comments} of removed) {
       const entry = entries[key]
-      if (!entry) continue
-      const missing = comments.filter(
-        (comment) => !Object.hasOwn(entry.comments ?? {}, comment._id),
-      )
+      const held = entry?.comments
+      // A list that has since been dropped and reopened takes these back from
+      // its own snapshot rather than from here.
+      if (!entry || !held) continue
+      const missing = comments.filter((comment) => !Object.hasOwn(held, comment._id))
       if (!missing.length) continue
       changed = true
       entries[key] = {
         ...entry,
         comments: Object.fromEntries([
-          ...Object.entries(entry.comments ?? {}),
+          ...Object.entries(held),
           ...missing.map((comment) => [comment._id, comment] as const),
         ]),
       }
     }
 
-    return changed ? {...prev, entries} : prev
+    const released = clearPendingRemovals(
+      removed.flatMap(({comments}) => comments.map((comment) => comment._id)),
+    )(prev)
+
+    return changed ? {...released, entries} : released
   }

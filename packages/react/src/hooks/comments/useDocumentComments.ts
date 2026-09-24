@@ -1,6 +1,7 @@
 import {
   type CommentsOptions,
   type CommentThread,
+  getDocumentCommentsErrorState,
   getDocumentCommentsState,
   resolveDocumentComments,
 } from '@sanity/sdk'
@@ -19,10 +20,17 @@ export interface UseDocumentCommentsResult {
   threads: CommentThread[]
   /** True while switching to a different document or filter. */
   isPending: boolean
+  /**
+   * Set when the threads have stopped following the server: the listener
+   * failed after they had loaded, so what you are reading is the list as it
+   * last stood rather than as it is. Clears when a listener comes back.
+   */
+  error?: unknown
 }
 
 const SOURCE: CommentListSource<CommentsOptions, CommentThread[]> = {
   getState: getDocumentCommentsState,
+  getErrorState: getDocumentCommentsErrorState,
   resolve: resolveDocumentComments,
   getKey: getDocumentCommentsOptionsKey,
   parseKey: parseDocumentCommentsOptionsKey,
@@ -69,6 +77,6 @@ const SOURCE: CommentListSource<CommentsOptions, CommentThread[]> = {
 export function useDocumentComments(
   options: WithResourceNameSupport<CommentsOptions>,
 ): UseDocumentCommentsResult {
-  const {value, isPending} = useCommentList('useDocumentComments', options, SOURCE)
-  return useMemo(() => ({threads: value, isPending}), [isPending, value])
+  const {value, isPending, error} = useCommentList('useDocumentComments', options, SOURCE)
+  return useMemo(() => ({threads: value, isPending, error}), [error, isPending, value])
 }

@@ -14,12 +14,13 @@ import {type StoreContext} from '../store/defineStore'
 import {randomUuid} from '../utils/ids'
 import {toCommentFieldPath} from './commentFieldPath'
 import {toStoredMessage} from './commentMessage'
-import {getCommentsClient, requireOrganizationId} from './commentsClient'
+import {getCommentsClient, requireOrganizationId, toTargetDocumentRef} from './commentsClient'
 import {commentsStore, toSourceDocumentId, toWrittenCommentKeys} from './commentsStore'
 import {normalizeComment} from './normalizeComment'
 import {
   addComment,
   applyCommentUpdate,
+  clearPendingRemovals,
   clearPendingTransaction,
   type CommentsStoreState,
   receiveComment,
@@ -353,7 +354,7 @@ export const createComment: (
       message: options.message,
       sourceDocumentId,
       status: 'open',
-      targetRef: client.collaboration.comments.getTargetDocumentRef(sourceDocumentId),
+      targetRef: toTargetDocumentRef(key.resource, sourceDocumentId),
       threadId,
     })
 
@@ -646,7 +647,14 @@ export const removeComment: (
     try {
       const client = getWritableClient(instance, key, options)
       await client.collaboration.comments.delete(commentId, {tag: 'comments.remove'})
+      // The comments are gone for good, so a snapshot can no longer carry them
+      // and the marks holding them out of one are spent.
+      state.set(
+        'clearPendingRemovals',
+        clearPendingRemovals(removed.flatMap(({comments}) => comments.map(({_id}) => _id))),
+      )
     } catch (error) {
+      // Clears the same marks, and puts the comments back.
       state.set('restoreComments', restoreComments(removed))
       throw error
     }

@@ -2,7 +2,12 @@ import {describe, expect, it} from 'vitest'
 
 import {createSanityInstance} from '../store/createSanityInstance'
 import {ORGANIZATION_ID} from './commentFixtures'
-import {assertDatasetResource, getCommentsClient, requireOrganizationId} from './commentsClient'
+import {
+  assertDatasetResource,
+  getCommentsClient,
+  requireOrganizationId,
+  toTargetDocumentRef,
+} from './commentsClient'
 
 describe('requireOrganizationId', () => {
   it('takes the organization from the instance config', () => {
@@ -75,6 +80,53 @@ describe('getCommentsClient', () => {
     expect(client.collaboration.comments.getTargetDocumentRef('versions.summer.doc-1')).toBe(
       'dataset:p.d:doc-1',
     )
+
+    instance.dispose()
+  })
+})
+
+describe('toTargetDocumentRef', () => {
+  const RESOURCE = {projectId: 'p', dataset: 'd'}
+
+  it('names the published document, whichever variant it is given', () => {
+    expect(toTargetDocumentRef(RESOURCE, 'doc-1')).toBe('dataset:p.d:doc-1')
+    expect(toTargetDocumentRef(RESOURCE, 'drafts.doc-1')).toBe('dataset:p.d:doc-1')
+    expect(toTargetDocumentRef(RESOURCE, 'versions.summer.doc-1')).toBe('dataset:p.d:doc-1')
+  })
+
+  it('keeps the dots a document id is allowed to carry', () => {
+    expect(toTargetDocumentRef(RESOURCE, 'foo.doc-1')).toBe('dataset:p.d:foo.doc-1')
+    expect(toTargetDocumentRef(RESOURCE, 'drafts.foo.doc-1')).toBe('dataset:p.d:foo.doc-1')
+  })
+
+  it('refuses a resource comments cannot live in', () => {
+    expect(() => toTargetDocumentRef({mediaLibraryId: 'ml-1'}, 'doc-1')).toThrow(
+      /dataset resources/,
+    )
+  })
+
+  it('agrees with the client for every id shape', () => {
+    // This is a local copy of a format the comment API owns, kept so that the
+    // entry keys can be computed without asking the client store for a client.
+    // Drop it, and this test, once `getCommentTargetDocumentRef` ships.
+    const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+    const {comments} = getCommentsClient(instance, {
+      resource: RESOURCE,
+      organizationId: ORGANIZATION_ID,
+    }).collaboration
+
+    for (const documentId of [
+      'doc-1',
+      'drafts.doc-1',
+      'versions.summer.doc-1',
+      'foo.doc-1',
+      'drafts.foo.doc-1',
+      'versions.summer.foo.doc-1',
+    ]) {
+      expect(toTargetDocumentRef(RESOURCE, documentId)).toBe(
+        comments.getTargetDocumentRef(documentId),
+      )
+    }
 
     instance.dispose()
   })

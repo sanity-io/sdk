@@ -95,7 +95,6 @@ let comments: {
   delete: ReturnType<typeof vi.fn>
   addReaction: ReturnType<typeof vi.fn>
   removeReaction: ReturnType<typeof vi.fn>
-  getTargetDocumentRef: ReturnType<typeof vi.fn>
 }
 
 beforeEach(() => {
@@ -107,10 +106,6 @@ beforeEach(() => {
     delete: vi.fn().mockResolvedValue(undefined),
     addReaction: vi.fn().mockResolvedValue(undefined),
     removeReaction: vi.fn().mockResolvedValue(undefined),
-    getTargetDocumentRef: vi.fn(
-      (documentId: string) =>
-        `dataset:p.d:${documentId.replace(/^drafts\.|^versions\.[^.]+\./, '')}`,
-    ),
   }
 
   vi.mocked(getCommentsClient).mockReturnValue({
@@ -391,6 +386,25 @@ describe('the lists a new comment shows up in', () => {
         error: expect.any(Error),
       })
     }
+  })
+
+  it('leaves a reader whose first snapshot is still in flight suspended', async () => {
+    // Subscribed but unseeded: the listener is open and the snapshot has not
+    // landed. Filling that list in with just this comment would resolve whoever
+    // is suspended on it with a list of one, only to replace it a moment later.
+    const loading = getDocumentCommentsState(instance, {...HANDLE, variants: 'all'})
+    loading.subscribe()
+
+    const {promise, settle} = pendingCreate()
+    expect(loading.getCurrent()).toBeUndefined()
+
+    settle()
+    await promise
+    expect(loading.getCurrent()).toBeUndefined()
+
+    // The snapshot is what loads it, carrying the comment the same as any other.
+    seedComments(instance, {variants: 'all', comments: [comment({_id: 'c1'})]})
+    expect(loading.getCurrent()!.map((thread) => thread.parentComment.id)).toEqual(['c1'])
   })
 
   it('keeps a comment written on a release out of the pooled draft list', async () => {
@@ -750,6 +764,87 @@ describe('removeComment', () => {
       .map((c) => c.id)
       .sort()
     expect(restored).toEqual(['c1', 'other', 'r1'])
+  })
+})
+
+describe('a snapshot landing while a write is in flight', () => {
+  /** A reconnect refetches, so a snapshot can arrive at any point. */
+  function snapshot(stored: StoredComment[]) {
+    seedComments(instance, {comments: stored})
+  }
+
+  function reading() {
+    const source = getDocumentCommentsState(instance, HANDLE)
+    source.subscribe()
+    return source
+  }
+
+  it('keeps an edit the snapshot is too old to know about', async () => {
+    const source = reading()
+    snapshot([comment({_id: 'c1', status: 'open'})])
+
+    let settle: () => void = () => {}
+    comments.update.mockReturnValue(new Promise<void>((resolve) => (settle = resolve)))
+    const write = setCommentStatus(instance, {commentId: 'c1', status: 'resolved'})
+
+    snapshot([comment({_id: 'c1', status: 'open'})])
+    expect(source.getCurrent()![0].status).toBe('resolved')
+
+    settle()
+    await write
+  })
+
+  it('takes the snapshot for a comment nobody is writing to', async () => {
+    const source = reading()
+    snapshot([comment({_id: 'c1', status: 'open'}), comment({_id: 'c2', threadId: 'thread-2'})])
+
+    let settle: () => void = () => {}
+    comments.update.mockReturnValue(new Promise<void>((resolve) => (settle = resolve)))
+    const write = setCommentStatus(instance, {commentId: 'c1', status: 'resolved'})
+
+    // Someone else resolved the other thread. Only the comment this client is
+    // writing to is held back from the snapshot.
+    snapshot([
+      comment({_id: 'c1', status: 'open'}),
+      comment({_id: 'c2', threadId: 'thread-2', status: 'resolved'}),
+    ])
+
+    const byId = Object.fromEntries(
+      source.getCurrent()!.map((thread) => [thread.parentComment.id, thread.status]),
+    )
+    expect(byId).toEqual({c1: 'resolved', c2: 'resolved'})
+
+    settle()
+    await write
+  })
+
+  it('keeps a deleted comment out of it until the delete settles', async () => {
+    const source = reading()
+    snapshot([comment({_id: 'c1'}), comment({_id: 'r1', parentCommentId: 'c1'})])
+
+    let settle: () => void = () => {}
+    comments.delete.mockReturnValue(new Promise<void>((resolve) => (settle = resolve)))
+    const write = removeComment(instance, {commentId: 'c1'})
+
+    // The server still holds them, so a snapshot fetched now carries both.
+    snapshot([comment({_id: 'c1'}), comment({_id: 'r1', parentCommentId: 'c1'})])
+    expect(source.getCurrent()).toEqual([])
+
+    settle()
+    await write
+  })
+
+  it('takes a deleted comment back when the delete fails', async () => {
+    const source = reading()
+    snapshot([comment({_id: 'c1'})])
+    comments.delete.mockRejectedValue(new Error('nope'))
+
+    await expect(removeComment(instance, {commentId: 'c1'})).rejects.toThrow('nope')
+
+    // Restored locally, and no longer held out of the snapshots that follow.
+    expect(source.getCurrent()!.map((thread) => thread.parentComment.id)).toEqual(['c1'])
+    snapshot([comment({_id: 'c1'})])
+    expect(source.getCurrent()!.map((thread) => thread.parentComment.id)).toEqual(['c1'])
   })
 })
 

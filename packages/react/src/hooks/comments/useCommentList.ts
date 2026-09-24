@@ -17,6 +17,7 @@ import {trackHookUsage} from '../helpers/useTrackHookUsage'
  */
 export interface CommentListSource<TOptions, TValue> {
   getState: (instance: SanityInstance, options: TOptions) => StateSource<TValue | undefined>
+  getErrorState: (instance: SanityInstance, options: TOptions) => StateSource<unknown>
   resolve: (instance: SanityInstance, options: TOptions & {signal?: AbortSignal}) => Promise<TValue>
   getKey: (options: TOptions) => string
   parseKey: (key: string) => TOptions
@@ -31,13 +32,16 @@ export interface CommentListSource<TOptions, TValue> {
  * previous read is aborted, which drops its listener when nothing else is
  * reading it.
  *
+ * A listener that fails after the list has loaded is reported through `error`
+ * rather than thrown: the list stays on screen, frozen as it last stood.
+ *
  * @internal
  */
 export function useCommentList<TOptions extends {resource?: DocumentResource}, TValue>(
   hookName: string,
   options: WithResourceNameSupport<TOptions>,
-  {getState, resolve, getKey, parseKey}: CommentListSource<TOptions, TValue>,
-): {value: TValue; isPending: boolean} {
+  {getState, getErrorState, resolve, getKey, parseKey}: CommentListSource<TOptions, TValue>,
+): {value: TValue; isPending: boolean; error: unknown} {
   const instance = useSanityInstance()
   trackHookUsage(instance, hookName)
 
@@ -50,6 +54,10 @@ export function useCommentList<TOptions extends {resource?: DocumentResource}, T
     () => getState(instance, deferred),
     [deferred, getState, instance],
   )
+  const errorSource = useMemo(
+    () => getErrorState(instance, deferred),
+    [deferred, getErrorState, instance],
+  )
 
   if (getCurrent() === undefined) {
     throw resolve(instance, {...deferred, signal})
@@ -57,5 +65,9 @@ export function useCommentList<TOptions extends {resource?: DocumentResource}, T
 
   // Not memoised: every caller destructures this immediately and memoises its
   // own result object, so a stable identity here would never be observed.
-  return {value: useSyncExternalStore(subscribe, getCurrent) as TValue, isPending}
+  return {
+    value: useSyncExternalStore(subscribe, getCurrent) as TValue,
+    isPending,
+    error: useSyncExternalStore(errorSource.subscribe, errorSource.getCurrent),
+  }
 }

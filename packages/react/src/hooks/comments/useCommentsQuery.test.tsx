@@ -1,6 +1,7 @@
 import {
   type Comment,
   type CommentsQueryOptions,
+  getCommentsQueryErrorState,
   getCommentsQueryState,
   resolveCommentsQuery,
   type StateSource,
@@ -16,7 +17,12 @@ import {useCommentsQuery} from './useCommentsQuery'
 
 vi.mock('@sanity/sdk', async (importOriginal) => {
   const original = await importOriginal<typeof import('@sanity/sdk')>()
-  return {...original, getCommentsQueryState: vi.fn(), resolveCommentsQuery: vi.fn()}
+  return {
+    ...original,
+    getCommentsQueryState: vi.fn(),
+    getCommentsQueryErrorState: vi.fn(),
+    resolveCommentsQuery: vi.fn(),
+  }
 })
 
 function comment(id: string): Comment {
@@ -52,6 +58,24 @@ function mockSource(
           throw new Error('Not implemented')
         },
       }) as StateSource<Comment[] | undefined>,
+  )
+  mockErrorSource(() => undefined)
+}
+
+/** The companion source, live by default. Call again to override. */
+function mockErrorSource(getCurrent: () => unknown, changed$?: Subject<void>) {
+  vi.mocked(getCommentsQueryErrorState).mockImplementation(
+    () =>
+      ({
+        getCurrent,
+        subscribe: vi.fn((cb?: () => void) => {
+          const subscription = changed$?.subscribe(() => cb?.())
+          return () => subscription?.unsubscribe()
+        }),
+        get observable(): Observable<unknown> {
+          throw new Error('Not implemented')
+        },
+      }) as StateSource<unknown>,
   )
 }
 
@@ -206,5 +230,30 @@ describe('useCommentsQuery', () => {
     })
 
     expect(screen.getByTestId('out').textContent).toBe('2 idle')
+  })
+
+  it('reports a listener that failed after the comments had loaded', async () => {
+    const loaded = [comment('a')]
+    mockSource(() => loaded)
+    const failure: {current: unknown} = {current: undefined}
+    const changed$ = new Subject<void>()
+    mockErrorSource(() => failure.current, changed$)
+
+    function TestComponent() {
+      const {comments, error} = useCommentsQuery({filter: 'status == "open"'})
+      return (
+        <div data-testid="out">{`${comments.length} ${error instanceof Error ? error.message : 'live'}`}</div>
+      )
+    }
+
+    render(<TestComponent />, {wrapper: Wrapper})
+    expect(screen.getByTestId('out').textContent).toBe('1 live')
+
+    await act(async () => {
+      failure.current = new Error('connection failed')
+      changed$.next()
+    })
+
+    expect(screen.getByTestId('out').textContent).toBe('1 connection failed')
   })
 })

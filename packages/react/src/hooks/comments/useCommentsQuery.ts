@@ -1,6 +1,7 @@
 import {
   type Comment,
   type CommentsQueryOptions,
+  getCommentsQueryErrorState,
   getCommentsQueryState,
   resolveCommentsQuery,
 } from '@sanity/sdk'
@@ -19,10 +20,17 @@ export interface UseCommentsQueryResult {
   comments: Comment[]
   /** True while switching to a different filter. */
   isPending: boolean
+  /**
+   * Set when the comments have stopped following the server: the listener
+   * failed after they had loaded, so what you are reading is the list as it
+   * last stood rather than as it is. Clears when a listener comes back.
+   */
+  error?: unknown
 }
 
 const SOURCE: CommentListSource<CommentsQueryOptions, Comment[]> = {
   getState: getCommentsQueryState,
+  getErrorState: getCommentsQueryErrorState,
   resolve: resolveCommentsQuery,
   getKey: getCommentsQueryOptionsKey,
   parseKey: parseCommentsQueryOptionsKey,
@@ -66,6 +74,6 @@ const SOURCE: CommentListSource<CommentsQueryOptions, Comment[]> = {
 export function useCommentsQuery(
   options: WithResourceNameSupport<CommentsQueryOptions>,
 ): UseCommentsQueryResult {
-  const {value, isPending} = useCommentList('useCommentsQuery', options, SOURCE)
-  return useMemo(() => ({comments: value, isPending}), [isPending, value])
+  const {value, isPending, error} = useCommentList('useCommentsQuery', options, SOURCE)
+  return useMemo(() => ({comments: value, isPending, error}), [error, isPending, value])
 }

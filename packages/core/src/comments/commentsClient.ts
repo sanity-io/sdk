@@ -1,4 +1,5 @@
 import {type SanityClient} from '@sanity/client'
+import {DocumentId, getPublishedId} from '@sanity/id-utils'
 import {type Observable} from 'rxjs'
 
 import {type ClientOptions, getClient, getClientState} from '../client/clientStore'
@@ -10,6 +11,7 @@ import {
 } from '../config/sanityConfig'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {COMMENTS_API_VERSION} from './commentsConstants'
+import {type StoredComment} from './types'
 
 /**
  * Comments need a project and a dataset. There is nowhere to put them for a
@@ -50,6 +52,33 @@ export function requireOrganizationId(
   }
 
   return organizationId
+}
+
+/**
+ * The global document reference a comment stores in `target.document._ref`.
+ *
+ * `client.collaboration.comments.getTargetDocumentRef` answers the same
+ * question, but only from a client instance, and asking for one has side
+ * effects: `getClient` writes the client it builds back into the client store.
+ * The entry keys are computed inside a selector, which runs on every store
+ * change and during render, so the ref has to come from the resource alone.
+ *
+ * Draft and version ids reduce to the published one, which is what makes a
+ * single reference span every variant of a document.
+ *
+ * TODO: replace with `getCommentTargetDocumentRef` from `@sanity/client` once
+ * the release carrying sanity-io/client#1343 is in the catalog. Until then the
+ * parity test in `commentsClient.test.ts` is what keeps the two formats from
+ * drifting.
+ *
+ * @internal
+ */
+export function toTargetDocumentRef(
+  resource: DocumentResource,
+  documentId: string,
+): StoredComment['target']['document']['_ref'] {
+  const {projectId, dataset} = assertDatasetResource(resource)
+  return `dataset:${projectId}.${dataset}:${getPublishedId(DocumentId(documentId))}`
 }
 
 /**

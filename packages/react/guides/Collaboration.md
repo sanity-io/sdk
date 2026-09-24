@@ -78,6 +78,21 @@ return <ul data-pending={isPending}>{threads.map(/* … */)}</ul>
 
 Unlike the Studio, the SDK returns every thread it finds. The Studio hides threads whose field has left the schema or is hidden by a conditional, which it can do because it has the schema. Check `fieldPath` yourself if you want the same behaviour.
 
+Comments arrive over a live connection, and that connection can drop — an expired token is the usual reason. A list that has already loaded is not thrown away when that happens: it stays on screen exactly as it last stood, and `error` is set to say that it has stopped following the server. Show whatever suits your app, from nothing at all to a banner, but know that the list under it is no longer live:
+
+```tsx
+const {threads, error} = useDocumentComments({documentId, documentType: 'article'})
+
+return (
+  <>
+    {error && <Banner>Comments are not up to date</Banner>}
+    <ul>{threads.map(/* … */)}</ul>
+  </>
+)
+```
+
+`error` clears on its own once a connection comes back, which follows the next token refresh. A connection that fails before the first comments have loaded is different: there is nothing to keep showing, so it throws to the nearest error boundary instead.
+
 ## Querying comments
 
 `useCommentsQuery` is the escape hatch for anything that is not "comments on this document" — cross-document views, per-user views, organization-wide activity. It takes a GROQ filter, applies `_type == "sanity.comment"` for you, and returns a flat list with replies included.
@@ -95,7 +110,7 @@ function Mentions({userId}: {userId: string}) {
 }
 ```
 
-Suspense and `isPending` work the same as in `useDocumentComments`.
+Suspense, `isPending`, and `error` work the same as in `useDocumentComments`.
 
 ## Writing comments
 
