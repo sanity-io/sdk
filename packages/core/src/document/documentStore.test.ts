@@ -2598,6 +2598,141 @@ describe('variants (read)', () => {
     unsubscribe()
   })
 
+  it('retries a transient group fetch failure', async () => {
+    await seed(base(groupId, 'published'), french('drafts', 'french draft'))
+    const fetchGroup = createFetchDocumentGroup(instance)
+    // the group is fetched on subscribe and again on the listener's welcome, so
+    // failing both first attempts means only a retry can succeed
+    let attempts = 0
+    vi.mocked(createFetchDocumentGroup).mockReturnValue(
+      vi.fn((id: string) =>
+        defer(() =>
+          ++attempts <= 2
+            ? throwError(() => new ServerError({statusCode: 503, headers: {}, body: {}}))
+            : fetchGroup(id),
+        ),
+      ),
+    )
+    // the store was already created with the previous fetcher; use a fresh instance
+    const flaky = createSanityInstance({projectId: 'p', dataset: 'd-flaky'})
+
+    const state = getDocumentState<TestDocument>(flaky, handle)
+    const unsubscribe = state.subscribe()
+    await firstValueFrom(state.observable.pipe(first((document) => document !== undefined)))
+    expect(state.getCurrent()).toMatchObject({title: 'french draft'})
+    expect(attempts).toBe(3)
+
+    unsubscribe()
+    flaky.dispose()
+  })
+
+  it('forgets a failed group once its subscribers leave, so the next one fetches afresh', async () => {
+    await seed(base(groupId, 'published'), french('drafts', 'french draft'))
+    const fetchGroup = createFetchDocumentGroup(instance)
+    let available = false
+    vi.mocked(createFetchDocumentGroup).mockReturnValue(
+      vi.fn((id: string) =>
+        defer(() => (available ? fetchGroup(id) : throwError(() => new Error('unavailable')))),
+      ),
+    )
+    const recovering = createSanityInstance({projectId: 'p', dataset: 'd-recovering'})
+
+    const failed = getDocumentState<TestDocument>(recovering, handle)
+    const unsubscribeFailed = failed.subscribe()
+    await expect(
+      firstValueFrom(failed.observable.pipe(first((document) => document !== undefined))),
+    ).rejects.toThrow('unavailable')
+
+    // the failed subscription has torn itself down; once its cleanup runs
+    // (longer than the mocked DOCUMENT_STATE_CLEAR_DELAY) the failure is gone
+    unsubscribeFailed()
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    available = true
+
+    const retried = getDocumentState<TestDocument>(recovering, handle)
+    expect(() => retried.getCurrent()).not.toThrow()
+    const unsubscribeRetried = retried.subscribe()
+    await firstValueFrom(
+      retried.observable.pipe(
+        first((doc) => (doc as TestDocument | null)?.title === 'french draft'),
+      ),
+    )
+
+    unsubscribeRetried()
+    recovering.dispose()
+  })
+
+  it('refetches the group when an appearing variant cannot be read', async () => {
+    await seed(base(groupId, 'published'))
+    const unreadableId = variantVersionId('french', 'drafts', groupId)
+    const fetchGroup = vi.fn(createFetchDocumentGroup(instance))
+    const fetchDocument = createFetchDocument(instance)
+    vi.mocked(createFetchDocumentGroup).mockReturnValue(fetchGroup)
+    vi.mocked(createFetchDocument).mockReturnValue(
+      vi.fn((id: string) =>
+        id === unreadableId
+          ? throwError(() => new Error('inaccessible due to permissions'))
+          : fetchDocument(id),
+      ),
+    )
+    const isolated = createSanityInstance({projectId: 'p', dataset: 'd-unreadable'})
+
+    const state = getDocumentState<TestDocument>(isolated, handle)
+    const unsubscribe = state.subscribe()
+    await firstValueFrom(state.observable.pipe(first((document) => document !== undefined)))
+    const fetchesBefore = fetchGroup.mock.calls.length
+
+    // without the created document in its mutations, the appearance has to be
+    // read to learn which variant it is
+    const sharedListener = (
+      createSharedListener as () => {
+        dispose: () => void
+        events: Subject<ListenEvent<SanityDocument>>
+      }
+    )()
+    sharedListener.events.next({
+      type: 'mutation',
+      documentId: unreadableId,
+      eventId: `appear#${unreadableId}`,
+      identity: 'another-user',
+      mutations: [],
+      timestamp: new Date().toISOString(),
+      transactionId: 'appear',
+      transactionCurrentEvent: 1,
+      transactionTotalEvents: 1,
+      transition: 'appear',
+      visibility: 'query',
+    })
+
+    await expect.poll(() => fetchGroup.mock.calls.length).toBeGreaterThan(fetchesBefore)
+    expect(state.getCurrent()).toMatchObject({_id: groupId, title: 'published'})
+
+    unsubscribe()
+    isolated.dispose()
+  })
+
+  it('surfaces a failed group fetch to variant readers only', async () => {
+    await seed(base(groupId, 'published'))
+    vi.mocked(createFetchDocumentGroup).mockReturnValue(
+      vi.fn(() => throwError(() => new Error('includeAllVersions is not supported'))),
+    )
+    // the store was already created with the previous fetcher; use a fresh instance
+    const failing = createSanityInstance({projectId: 'p', dataset: 'd-failing'})
+
+    const state = getDocumentState<TestDocument>(failing, handle)
+    const unsubscribe = state.subscribe()
+    await expect(
+      firstValueFrom(state.observable.pipe(first((document) => document !== undefined))),
+    ).rejects.toThrow('includeAllVersions is not supported')
+
+    // the failure belongs to the variant's keys; the rest of the store works
+    const plain = await resolveDocument<TestDocument>(failing, {...handle, variant: undefined})
+    expect(plain).toMatchObject({_id: groupId, title: 'published'})
+
+    unsubscribe()
+    failing.dispose()
+  })
+
   it('reports sync status once every candidate is tracked', async () => {
     await seed(base(groupId, 'published'), french('drafts', 'french draft'))
 

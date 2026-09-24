@@ -2,6 +2,7 @@ import {type MutationEvent} from '@sanity/client'
 import {DocumentId, getPublishedId, isVersionId} from '@sanity/id-utils'
 import {type SanityDocument} from '@sanity/types'
 import {
+  catchError,
   distinctUntilChanged,
   EMPTY,
   filter,
@@ -14,6 +15,7 @@ import {
   of,
   pairwise,
   startWith,
+  Subject,
   Subscription,
   switchMap,
 } from 'rxjs'
@@ -36,6 +38,7 @@ import {
   removeSubscriptionIdFromDocument,
 } from './documentSubscriptions'
 import {type AppliedTransaction} from './reducers'
+import {retryTransientErrors} from './retryTransientErrors'
 
 /**
  * The slice of store state the variant reducers operate on. Widened from
@@ -52,6 +55,7 @@ export type VariantTrackingState = Pick<
   | 'identity'
   | 'variantIndex'
   | 'variantSubscriptions'
+  | 'variantErrors'
 >
 
 type VariantHandleLike = Pick<DocumentHandle, 'documentId' | 'perspective' | 'variant' | 'liveEdit'>
@@ -167,11 +171,38 @@ export function removeVariantSubscription<State extends VariantTrackingState>(
   const released = resolved
     ? removeSubscriptionIdFromDocument(next, resolved, subscriptionId)
     : next
-  if (remaining.length || !(key in released.variantIndex)) return released
+  if (remaining.length) return released
+  // a failure is only meaningful to the subscribers that saw it
+  const cleared = clearVariantErrors(released, [key])
+  if (!(key in cleared.variantIndex)) return cleared
   const isPendingEntryAlive =
-    !!resolved && isUnknownDocumentId(resolved) && !!released.documentStates[resolved]
-  if (isPendingEntryAlive) return released
-  return {...released, variantIndex: omitProperty(released.variantIndex, key)}
+    !!resolved && isUnknownDocumentId(resolved) && !!cleared.documentStates[resolved]
+  if (isPendingEntryAlive) return cleared
+  return {...cleared, variantIndex: omitProperty(cleared.variantIndex, key)}
+}
+
+/** Rethrows the first discovery failure recorded against the given variant keys. */
+export function throwVariantErrors(
+  state: Pick<VariantTrackingState, 'variantErrors'>,
+  keys: string[],
+): void {
+  const {variantErrors} = state
+  if (!variantErrors) return
+  for (const key of keys) {
+    if (key in variantErrors) throw variantErrors[key]
+  }
+}
+
+function clearVariantErrors<State extends VariantTrackingState>(
+  prev: State,
+  keys: string[],
+): State {
+  const {variantErrors} = prev
+  if (!variantErrors || !keys.some((key) => key in variantErrors)) return prev
+  return {
+    ...prev,
+    variantErrors: keys.reduce((acc, key) => omitProperty(acc, key), variantErrors),
+  }
 }
 
 /**
@@ -369,23 +400,28 @@ export const subscribeToVariantSubscriptionsAndDiscover = ({
     switchMap((watching) => (watching ? sharedListener.events : EMPTY)),
   )
 
-  const resolveDiscovered = (prev: DocumentStoreState, documents: SanityDocument[]) => {
-    let next = prev
-    const found = new Set<string>()
-    for (const document of documents) {
-      const key = getDocumentKeyFromSystem(document)
-      if (!key || !(key in prev.variantSubscriptions)) continue
-      found.add(key)
-      next = resolveVariantToDocument(next, key, DocumentId(document._id))
-    }
-    return {next, found}
-  }
-
   // a fresh connection (or one that could not resume) may have missed variants
   // appearing or disappearing, so every watched group is refetched
   const resync$ = listenerWhileWatching$.pipe(
     filter((event) => event.type === 'welcome' || event.type === 'reset'),
   )
+
+  // groups whose appearing document couldn't be read, to be fetched again
+  const appearanceFailures$ = new Subject<string>()
+
+  // a failure is reported for its group rather than ending the stream, so
+  // discovery carries on for every other group, and for this one on its next
+  // trigger
+  const fetchGroup = (groupId: string): Observable<GroupFetchResult> =>
+    fetchDocumentGroup(groupId).pipe(
+      retryTransientErrors(),
+      map((response): GroupFetchResult => ({
+        status: 'fetched',
+        groupId,
+        documents: response.documents,
+      })),
+      catchError((error: unknown) => of<GroupFetchResult>({status: 'failed', groupId, error})),
+    )
 
   const groupFetches = watchedGroups$.pipe(
     startWith(new Set<string>()),
@@ -397,10 +433,11 @@ export const subscribeToVariantSubscriptionsAndDiscover = ({
     mergeMap((group$) =>
       group$.pipe(
         switchMap((groupId) =>
-          merge(of(undefined), resync$).pipe(
-            switchMap(() => fetchDocumentGroup(groupId)),
-            map((response) => ({groupId, documents: response.documents})),
-          ),
+          merge(
+            of(undefined),
+            resync$,
+            appearanceFailures$.pipe(filter((id) => id === groupId)),
+          ).pipe(switchMap(() => fetchGroup(groupId))),
         ),
       ),
     ),
@@ -422,7 +459,16 @@ export const subscribeToVariantSubscriptionsAndDiscover = ({
       const created = findCreatedDocument(event)
       const document$: Observable<SanityDocument | null> = created
         ? of(created)
-        : (fetchDocument(event.documentId) as Observable<SanityDocument | null>)
+        : (fetchDocument(event.documentId) as Observable<SanityDocument | null>).pipe(
+            retryTransientErrors(),
+            // the document may be unreadable, or the read may have failed. the
+            // group fetch settles the group either way, and records a failure
+            // against its keys if it fails too
+            catchError(() => {
+              appearanceFailures$.next(groupId)
+              return EMPTY
+            }),
+          )
       return document$.pipe(
         filter((document): document is SanityDocument => document !== null),
         map((document) => ({groupId, documents: [document]})),
@@ -436,27 +482,36 @@ export const subscribeToVariantSubscriptionsAndDiscover = ({
   )
 
   const subscription = new Subscription()
+  // fetch failures are recorded per variant key (see `failVariantGroup`), so
+  // an error reaching a subscriber here is a bug in discovery itself. it is
+  // surfaced store-wide, as the store's other streams do, rather than leaving
+  // every variant selector loading forever
+  const setError = (error: unknown) => state.set('setError', {error})
 
-  // a full group fetch is authoritative: any watched key in the group that it
-  // did not return is marked absent, unless it is a locally pending variant
-  // that the remote has not been told about yet
   subscription.add(
-    groupFetches.subscribe(({groupId, documents}) => {
-      state.set('discoverVariantGroup', (prev) => {
-        const {next, found} = resolveDiscovered(prev, documents)
-        return Object.keys(prev.variantSubscriptions).reduce((acc, key) => {
-          if (getGroupIdFromStoreKey(key) !== groupId || found.has(key)) return acc
-          if (isUnknownDocumentId(resolveVariantKey(prev, key) ?? '')) return acc
-          return markVariantAbsent(acc, key)
-        }, next)
-      })
+    groupFetches.subscribe({
+      next: (result) => {
+        if (result.status === 'failed') {
+          state.set('failVariantGroup', (prev) =>
+            failVariantGroup(prev, result.groupId, result.error),
+          )
+        } else {
+          state.set('discoverVariantGroup', (prev) =>
+            discoverVariantGroup(prev, result.groupId, result.documents),
+          )
+        }
+      },
+      error: setError,
     }),
   )
 
   // an appearance says nothing about the group's other variants
   subscription.add(
-    appearances.subscribe(({documents}) => {
-      state.set('discoverVariantAppearance', (prev) => resolveDiscovered(prev, documents).next)
+    appearances.subscribe({
+      next: ({documents}) => {
+        state.set('discoverVariantAppearance', (prev) => resolveDiscovered(prev, documents).next)
+      },
+      error: setError,
     }),
   )
 
@@ -470,6 +525,75 @@ export const subscribeToVariantSubscriptionsAndDiscover = ({
   )
 
   return subscription
+}
+
+type GroupFetchResult =
+  | {status: 'fetched'; groupId: string; documents: SanityDocument[]}
+  | {status: 'failed'; groupId: string; error: unknown}
+
+/** The watched keys a document group's discovery settles. */
+function getGroupKeys(state: VariantTrackingState, groupId: string): string[] {
+  return Object.keys(state.variantSubscriptions).filter(
+    (key) => getGroupIdFromStoreKey(key) === groupId,
+  )
+}
+
+/** Points each watched key that one of the documents carries at that document. */
+function resolveDiscovered<State extends VariantTrackingState>(
+  prev: State,
+  documents: SanityDocument[],
+): {next: State; found: Set<string>} {
+  let next = prev
+  const found = new Set<string>()
+  for (const document of documents) {
+    const key = getDocumentKeyFromSystem(document)
+    if (!key || !(key in prev.variantSubscriptions)) continue
+    found.add(key)
+    next = resolveVariantToDocument(next, key, DocumentId(document._id))
+  }
+  return {next, found}
+}
+
+/**
+ * Applies a full group fetch. It is authoritative: any watched key in the group
+ * that it did not return is marked absent, unless it is a locally pending
+ * variant that the remote has not been told about yet. Earlier failures for
+ * the group's keys are cleared.
+ */
+function discoverVariantGroup<State extends VariantTrackingState>(
+  prev: State,
+  groupId: string,
+  documents: SanityDocument[],
+): State {
+  const groupKeys = getGroupKeys(prev, groupId)
+  const {next, found} = resolveDiscovered(clearVariantErrors(prev, groupKeys), documents)
+  return groupKeys.reduce((acc, key) => {
+    if (found.has(key)) return acc
+    if (isUnknownDocumentId(resolveVariantKey(prev, key) ?? '')) return acc
+    return markVariantAbsent(acc, key)
+  }, next)
+}
+
+/**
+ * Records a group fetch that failed after retries against the group's watched
+ * keys that are still unresolved, so selectors reading through them rethrow it.
+ * Keys that already resolved keep showing their document, which stays live
+ * through its own listener.
+ */
+function failVariantGroup<State extends VariantTrackingState>(
+  prev: State,
+  groupId: string,
+  error: unknown,
+): State {
+  const failedKeys = getGroupKeys(prev, groupId).filter((key) => !(key in prev.variantIndex))
+  if (!failedKeys.length) return prev
+  return {
+    ...prev,
+    variantErrors: {
+      ...prev.variantErrors,
+      ...Object.fromEntries(failedKeys.map((key) => [key, error])),
+    },
+  }
 }
 
 function findCreatedDocument(event: MutationEvent): SanityDocument | undefined {

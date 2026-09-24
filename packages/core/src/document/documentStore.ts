@@ -4,7 +4,6 @@ import {
   CorsOriginError,
   type Mutation,
   type SanityClient,
-  ServerError,
 } from '@sanity/client'
 import {DocumentId, getDraftId, getPublishedId, getVersionId} from '@sanity/id-utils'
 import {jsonMatch} from '@sanity/json-match'
@@ -62,9 +61,6 @@ import {
   ACL_RETRY_MAX_DELAY,
   API_VERSION,
   INITIAL_OUTGOING_THROTTLE_TIME,
-  OUT_OF_SYNC_RETRY_BASE_DELAY,
-  OUT_OF_SYNC_RETRY_COUNT,
-  OUT_OF_SYNC_RETRY_MAX_DELAY,
   SUBMISSION_RETRY_BASE_DELAY,
   SUBMISSION_RETRY_MAX_DELAY,
 } from './documentConstants'
@@ -74,7 +70,7 @@ import {
   type DocumentTransactionSubmissionResult,
   getDocumentEvents,
 } from './events'
-import {listen, OutOfSyncError} from './listen'
+import {listen} from './listen'
 import {type JsonMatch} from './patchOperations'
 import {
   calculatePermissions,
@@ -99,6 +95,7 @@ import {
   transitionAppliedTransactionsToOutgoing,
   type UnverifiedDocumentRevision,
 } from './reducers'
+import {retryTransientErrors} from './retryTransientErrors'
 import {
   createFetchDocument,
   createFetchDocumentGroup,
@@ -111,6 +108,7 @@ import {
   getVariantCandidateKeys,
   resolveVariantKey,
   subscribeToVariantSubscriptionsAndDiscover,
+  throwVariantErrors,
 } from './variantTracking'
 
 export interface DocumentStoreState {
@@ -132,6 +130,13 @@ export interface DocumentStoreState {
    * state to attach them to.
    */
   variantSubscriptions: {[VariantKey in string]?: string[]}
+  /**
+   * Why discovery failed for a variant key, after transient failures were
+   * retried. Selectors reading through the key rethrow it; documents that
+   * don't depend on the key are unaffected. Cleared when the key's group is
+   * next fetched successfully, or when the key loses its last subscriber.
+   */
+  variantErrors?: {[VariantKey in string]?: unknown}
   queued: QueuedTransaction[]
   applied: AppliedTransaction[]
   outgoing?: OutgoingTransaction
@@ -197,6 +202,7 @@ export const documentStore = defineStore<DocumentStoreState, BoundResourceKey>({
     documentStates: {},
     variantIndex: {},
     variantSubscriptions: {},
+    variantErrors: {},
     // these can be emptied on refetch
     queued: [],
     applied: [],
@@ -295,7 +301,7 @@ const _getDocumentState = bindActionByResource(
   }),
 )
 
-type CandidateState = Pick<DocumentStoreState, 'documentStates' | 'variantIndex'>
+type CandidateState = Pick<DocumentStoreState, 'documentStates' | 'variantIndex' | 'variantErrors'>
 
 const isStoreKey = (
   key: DocumentId | UnknownDocumentId | null | undefined,
@@ -310,6 +316,19 @@ function throwDocumentError(
     const documentError = documentStates[documentId]?.error
     if (documentError) throw documentError
   }
+}
+
+/**
+ * Rethrows the first failure behind a handle's candidates: a variant key whose
+ * discovery failed, or a document whose read failed.
+ */
+function throwCandidateError(
+  state: CandidateState,
+  handle: DocumentHandle,
+  keys: ReturnType<typeof getDocumentCandidateKeys>,
+): void {
+  throwVariantErrors(state, getVariantCandidateKeys(handle))
+  throwDocumentError(state.documentStates, keys.filter(isStoreKey))
 }
 
 /**
@@ -373,7 +392,7 @@ function resolveDocumentFromCandidates(
   handle: DocumentHandle,
 ): DocumentValue<ResolveDocument> | null | undefined {
   const keys = getDocumentCandidateKeys(state, handle)
-  throwDocumentError(state.documentStates, keys.filter(isStoreKey))
+  throwCandidateError(state, handle, keys)
   const candidates = getDocumentCandidates(state, handle)
   const tail = candidates.slice(-2)
   if (!handle.liveEdit && tail.some((candidate) => candidate === undefined)) return undefined
@@ -455,7 +474,7 @@ export const getDocumentSyncStatus = bindActionByResource(
       // state entry (and every variant key be resolved) before sync status is
       // meaningful
       const keys = getDocumentCandidateKeys(state, doc)
-      throwDocumentError(state.documentStates, keys.filter(isStoreKey))
+      throwCandidateError(state, doc, keys)
       const tracked = keys.every((key) =>
         key === null ? true : key !== undefined && state.documentStates[key] !== undefined,
       )
@@ -719,23 +738,7 @@ const subscribeToSubscriptionsAndListenToDocuments = (
           switchMap((e) => {
             if (!e.add) return EMPTY
             return listen(context, e.id).pipe(
-              retry({
-                count: OUT_OF_SYNC_RETRY_COUNT,
-                resetOnSuccess: true,
-                delay: (error, retryCount) => {
-                  const isTransient =
-                    error instanceof OutOfSyncError ||
-                    error instanceof ServerError ||
-                    (error instanceof ClientError &&
-                      (error.statusCode === 408 || error.statusCode === 429))
-                  if (!isTransient) return throwError(() => error)
-                  const backoff = Math.min(
-                    OUT_OF_SYNC_RETRY_BASE_DELAY * 2 ** (retryCount - 1),
-                    OUT_OF_SYNC_RETRY_MAX_DELAY,
-                  )
-                  return timer(backoff)
-                },
-              }),
+              retryTransientErrors(),
               catchError((error) => {
                 state.set('setDocumentError', (prev) => {
                   const documentState = prev.documentStates[e.id]
