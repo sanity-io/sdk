@@ -26,6 +26,7 @@ export type {
   DocumentActivity,
   EventTopic,
   EventTopicDef,
+  FavoriteDocument,
   LocalApplication,
   NavigationLocation,
   NavigationTarget,

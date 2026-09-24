@@ -13,6 +13,7 @@ import {
   DASHBOARD_TOPIC_MANIFEST,
   type DashboardTopics,
   type EventTopic,
+  type FavoriteDocument,
   type LocalApplication,
   type PayloadOf,
   type ReplyOf,
@@ -52,6 +53,16 @@ describe('dashboard topic types', () => {
     expectTypeOf<'applications.status.update'>().not.toMatchTypeOf<EventTopic>()
     expectTypeOf<PayloadOf<'applications.status.update'>>().toEqualTypeOf<ApplicationStatusUpdate>()
     expectTypeOf<ReplyOf<'applications.status.update'>>().toBeNever()
+  })
+
+  it('types the favorites topics', () => {
+    expectTypeOf<FavoriteDocument>().toEqualTypeOf<ApplicationActivity['document']>()
+    expectTypeOf<ValueOf<'favorites.documents'>>().toEqualTypeOf<FavoriteDocument[]>()
+    expectTypeOf<PayloadOf<'favorites.update'>>().toEqualTypeOf<{
+      document: FavoriteDocument
+      favorited: boolean
+    }>()
+    expectTypeOf<ReplyOf<'favorites.update'>>().toEqualTypeOf<void>()
   })
 
   it('exposes application state values', () => {
