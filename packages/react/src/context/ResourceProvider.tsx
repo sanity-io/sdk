@@ -7,7 +7,7 @@ import {
   type SanityInstance,
 } from '@sanity/sdk'
 import {initTelemetry} from '@sanity/sdk/_internal'
-import {useContext, useEffect, useMemo, useRef, useState} from 'react'
+import {useContext, useEffect, useMemo, useReducer, useRef, useState} from 'react'
 
 import {ResourceContext} from './DefaultResourceContext'
 import {PerspectiveContext} from './PerspectiveContext'
@@ -20,6 +20,45 @@ const DEFAULT_FALLBACK = (
     Warning: No fallback provided. Please supply a fallback prop to ensure proper Suspense handling.
   </>
 )
+
+/**
+ * Reuses the parent's instance, or owns one of its own.
+ *
+ * Effect cleanup can't tell an unmount from a hidden `<Activity>`, so hiding disposes an owned
+ * instance too. It is replaced with a fresh one before the provider is shown again.
+ */
+function useInstance(parentInstance: SanityInstance | null, config: SanityConfig): SanityInstance {
+  const [instance, setInstance] = useState<SanityInstance>(
+    () => parentInstance ?? createSanityInstance(config),
+  )
+  const [, forceRerender] = useReducer((n: number) => n + 1, 0)
+  const disposalTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
+
+  // Replace during render, not in an effect: children's effects run before ours, so they would
+  // see the disposed instance first.
+  if (instance.isDisposed() && instance !== parentInstance) {
+    setInstance(parentInstance ?? createSanityInstance(config))
+  }
+
+  useEffect(() => {
+    clearTimeout(disposalTimer.current)
+
+    return () => {
+      // Deferred so Strict Mode's instant unmount/remount cancels it above.
+      disposalTimer.current = setTimeout(() => {
+        // The parent provider owns its instance and disposes it itself.
+        if (!instance.isDisposed() && instance !== parentInstance) {
+          instance.dispose()
+          // Showing a hidden <Activity> doesn't re-render it, so queue the swap while hidden.
+          // A no-op after a real unmount, so no replacement instance is leaked.
+          forceRerender()
+        }
+      }, 0)
+    }
+  }, [instance, parentInstance])
+
+  return instance
+}
 
 /**
  * Props for the ResourceProvider component
@@ -68,7 +107,7 @@ export function ResourceProvider({
 
   const {projectId, dataset, perspective} = config
 
-  const [instance] = useState<SanityInstance>(() => parentInstance ?? createSanityInstance(config))
+  const instance = useInstance(parentInstance, config)
 
   const configResource: DatasetResource | undefined = useMemo(() => {
     // Historically, we allowed asymmetric merging: If you provided JUST a dataset, we'd merge it with the parent projectId.
@@ -102,32 +141,6 @@ export function ResourceProvider({
     if (effectiveResource && isDatasetResource(effectiveResource))
       initTelemetry(instance, effectiveResource.projectId)
   }, [instance, effectiveResource])
-
-  // Ref to hold the scheduled disposal timer.
-  const disposal = useRef<{
-    instance: SanityInstance
-    timeoutId: ReturnType<typeof setTimeout>
-  } | null>(null)
-
-  useEffect(() => {
-    // If the component remounts quickly (as in Strict Mode), cancel any pending disposal.
-    if (disposal.current !== null && instance === disposal.current.instance) {
-      clearTimeout(disposal.current.timeoutId)
-      disposal.current = null
-    }
-
-    return () => {
-      disposal.current = {
-        instance,
-        timeoutId: setTimeout(() => {
-          // don't dispose the parent instance when this unmounts
-          if (!instance.isDisposed() && instance !== parentInstance) {
-            instance.dispose()
-          }
-        }, 0),
-      }
-    }
-  }, [instance, parentInstance])
 
   return (
     <SanityInstanceProvider

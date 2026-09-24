@@ -1,6 +1,6 @@
 import {type DocumentResource, type SanityConfig, type SanityInstance} from '@sanity/sdk'
 import {act, render, screen} from '@testing-library/react'
-import {StrictMode, use, useEffect} from 'react'
+import {Activity, StrictMode, use, useEffect} from 'react'
 import {describe, expect, it, vi} from 'vitest'
 
 import {ResourceContext} from './DefaultResourceContext'
@@ -162,8 +162,73 @@ describe('ResourceProvider', () => {
     )
 
     const instance = await promise
+    // Let the deferred disposal from Strict Mode's simulated unmount fire, had it not been cancelled.
+    await new Promise((r) => setTimeout(r, 0))
 
     expect(instance?.isDisposed()).toBe(false)
+  })
+
+  describe('inside <Activity>', () => {
+    // Stable element, like a render harness passes: showing it again does not re-render it.
+    async function hideThenShow(app: React.ReactElement) {
+      const {rerender} = render(<Activity mode="visible">{app}</Activity>)
+      rerender(<Activity mode="hidden">{app}</Activity>)
+      // Hidden for longer than the Strict Mode disposal grace period.
+      await act(() => new Promise((r) => setTimeout(r, 10)))
+      rerender(<Activity mode="visible">{app}</Activity>)
+    }
+
+    it('provides a live instance after being hidden and shown again', async () => {
+      const seen: SanityInstance[] = []
+      const CaptureInstance = () => {
+        const instance = use(SanityInstanceContext)
+        useEffect(() => {
+          if (instance) seen.push(instance)
+        }, [instance])
+        return null
+      }
+
+      await hideThenShow(
+        <ResourceProvider {...testConfig} fallback={null}>
+          <CaptureInstance />
+        </ResourceProvider>,
+      )
+
+      expect(seen).toHaveLength(2)
+      expect(seen[0].isDisposed()).toBe(true)
+      expect(seen[1].isDisposed()).toBe(false)
+    })
+
+    it('keeps nested providers on the parent instance after being hidden and shown again', async () => {
+      // Widened with `as`: assigned only inside components, which TS doesn't track.
+      let firstOuter = null as SanityInstance | null
+      let outer = null as SanityInstance | null
+      let inner = null as SanityInstance | null
+      const CaptureOuter = ({children}: {children: React.ReactNode}) => {
+        outer = use(SanityInstanceContext)
+        firstOuter ??= outer
+        return children
+      }
+      const CaptureInner = () => {
+        inner = use(SanityInstanceContext)
+        return null
+      }
+
+      await hideThenShow(
+        <ResourceProvider {...testConfig} fallback={null}>
+          <CaptureOuter>
+            <ResourceProvider dataset="child-dataset" fallback={null}>
+              <CaptureInner />
+            </ResourceProvider>
+          </CaptureOuter>
+        </ResourceProvider>,
+      )
+
+      expect(firstOuter?.isDisposed()).toBe(true)
+      expect(inner).not.toBeNull()
+      expect(inner?.isDisposed()).toBe(false)
+      expect(inner).toBe(outer)
+    })
   })
 
   it('uses default fallback when none provided', async () => {
