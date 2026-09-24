@@ -57,7 +57,7 @@ describe('dashboard topic types', () => {
 
   it('types the favorites topics', () => {
     expectTypeOf<FavoriteDocument>().toEqualTypeOf<ApplicationActivity['document']>()
-    expectTypeOf<ValueOf<'favorites.documents'>>().toEqualTypeOf<FavoriteDocument[] | null>()
+    expectTypeOf<ValueOf<'favorites.documents'>>().toEqualTypeOf<FavoriteDocument[]>()
     expectTypeOf<PayloadOf<'favorites.update'>>().toEqualTypeOf<{
       document: FavoriteDocument
       favorited: boolean

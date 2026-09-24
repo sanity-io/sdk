@@ -193,7 +193,7 @@ describe('useUpdateFavorite (message bus)', () => {
         document: {
           id: 'doc',
           type: 'movie',
-          resource: {id: 'test.test', type: 'dataset', schemaName: undefined},
+          resource: {id: 'test.test', type: 'dataset'},
         },
         favorited: false,
       },
@@ -215,11 +215,7 @@ describe('useUpdateFavorite (message bus)', () => {
 
     act(() => void result.current.favorite())
 
-    expect(updates[0].payload.document.resource).toEqual({
-      id: 'library',
-      type: 'media-library',
-      schemaName: undefined,
-    })
+    expect(updates[0].payload.document.resource).toEqual({id: 'library', type: 'media-library'})
     await act(async () => updates[0].reply())
   })
 

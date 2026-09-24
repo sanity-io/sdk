@@ -109,18 +109,23 @@ describe('useFavorite (message bus)', () => {
   const favorite: FavoriteDocument = {
     id: 'doc',
     type: 'movie',
-    resource: {id: 'test.test', type: 'dataset', schemaName: undefined},
+    resource: {id: 'test.test', type: 'dataset'},
   }
 
   let host: MessageBusHost
 
-  // Reaches open connections and every connection that opens later.
-  const publish = (documents: FavoriteDocument[] | null) =>
+  // Both reach open connections and every connection that opens later.
+  const provideFavorites = (provided: boolean) =>
+    host.connections.subscribe((client) =>
+      client.emit('applications.capabilities', provided ? {favorites: true} : {}),
+    )
+  const publish = (documents: FavoriteDocument[]) =>
     host.connections.subscribe((client) => client.emit('favorites.documents', documents))
 
   beforeEach(() => {
     vi.stubGlobal('__SANITY_APP_ID__', 'app')
     host = installMessageBus({appId: 'dashboard'})
+    provideFavorites(true)
   })
 
   afterEach(() => {
@@ -145,6 +150,7 @@ describe('useFavorite (message bus)', () => {
 
   it.each([
     {documentId: 'other'},
+    {documentType: 'author'},
     {resourceId: 'other.dataset'},
     {resourceType: 'media-library' as const, resourceId: 'test.test'},
     {schemaName: 'other'},
@@ -165,8 +171,8 @@ describe('useFavorite (message bus)', () => {
     expect(result.current).toBe(true)
   })
 
-  it('is not favorited when the host does not provide favorites', () => {
-    publish(null)
+  it('is not favorited without waiting when the host does not provide favorites', () => {
+    provideFavorites(false)
     const {result} = renderHook(() => useFavorite(handle))
 
     expect(result.current).toBe(false)

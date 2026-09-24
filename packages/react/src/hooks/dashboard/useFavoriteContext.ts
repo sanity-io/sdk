@@ -73,7 +73,7 @@ export function toFavoriteDocument(context: FavoriteDocumentContext): FavoriteDo
     resource: {
       id: context.resourceId,
       type: context.resourceType === 'studio' ? 'dataset' : context.resourceType,
-      schemaName: context.schemaName,
+      ...(context.schemaName ? {schemaName: context.schemaName} : {}),
     },
   }
 }
