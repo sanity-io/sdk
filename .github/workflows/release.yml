@@ -104,16 +104,12 @@ jobs:
         if: steps.changesets.outputs['has-changesets'] == 'false' && steps.version.outputs.already-published == 'false'
         run: pnpm test:pack
 
-      - name: Set publishing config
-        if: steps.changesets.outputs['has-changesets'] == 'false' && steps.version.outputs.already-published == 'false'
-        run: pnpm config set '//registry.npmjs.org/:_authToken' "${NODE_AUTH_TOKEN}"
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
-
       # `changeset publish` detects pnpm and shells out to `pnpm publish`, which
       # rewrites the react `workspace:*` dep to the exact version and runs
       # prepublishOnly. `--no-git-tag` stops the per-package tags; we cut a single
       # tag + release below instead.
+      # No npm token on purpose: pnpm silently falls back to it and skips provenance
+      # when trusted publishing (OIDC) fails.
       - name: Publish to npm
         id: publish
         if: steps.changesets.outputs['has-changesets'] == 'false' && steps.version.outputs.already-published == 'false'
@@ -154,12 +150,15 @@ jobs:
       # Point `next` at this stable release so it never trails `latest`. The
       # snapshot job below only ever moves `next` forward from here. One VERSION
       # for both packages relies on the `fixed` group in .changeset/config.json.
+      # Trusted publishing only authorizes publish, so dist-tag still needs the token.
       - name: Move the next dist-tag to the stable release
         if: steps.publish.outputs.published == 'true'
         continue-on-error: true
         env:
           VERSION: ${{ steps.version.outputs.version }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
         run: |
+          pnpm config set '//registry.npmjs.org/:_authToken' "${NODE_AUTH_TOKEN}"
           pnpm dist-tag add "@sanity/sdk@$VERSION" next
           pnpm dist-tag add "@sanity/sdk-react@$VERSION" next
 
@@ -215,11 +214,6 @@ jobs:
 
       - name: Smoke test packed tarballs
         run: pnpm test:pack
-
-      - name: Set publishing config
-        run: pnpm config set '//registry.npmjs.org/:_authToken' "${NODE_AUTH_TOKEN}"
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
 
       # --tag next keeps the snapshot off `latest`; --no-git-tag because nothing
       # is committed or pushed from this job.
