@@ -123,8 +123,6 @@ jobs:
           else
             echo "published=true" >> "$GITHUB_OUTPUT"
           fi
-        env:
-          NPM_CONFIG_PROVENANCE: true
 
       # Single tag + release the rest of the pipeline keys off (release-notes,
       # upload-docs, Linear, CircleCI). release-notes.yml posts the release body
@@ -219,8 +217,6 @@ jobs:
       # is committed or pushed from this job.
       - name: Publish snapshot to npm
         run: pnpm changeset publish --tag next --no-git-tag
-        env:
-          NPM_CONFIG_PROVENANCE: true
 
   post-release-steps:
     runs-on: ubuntu-latest
