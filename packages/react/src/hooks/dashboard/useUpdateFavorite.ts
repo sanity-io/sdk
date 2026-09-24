@@ -48,7 +48,15 @@ export interface UpdateFavorite {
  * Adds or removes a document from favorites. The read-side counterpart is
  * {@link useFavorite}, which reflects the change once the mutation settles.
  *
- * Unlike {@link useFavorite}, this hook does not suspend.
+ * Unlike {@link useFavorite}, this hook does not suspend. It picks the transport for the current
+ * Dashboard runtime:
+ *
+ * | Runtime | Transport | `favorite`/`unfavorite` resolve | They reject when |
+ * | --- | --- | --- | --- |
+ * | iframe | Comlink | once Dashboard confirms the write | Dashboard reports a failure |
+ * | federated | message bus | once `favorites.documents` reflects the change | no host answers or the host refuses, eg without the `favorites` capability |
+ *
+ * A rejection also lands in `error`, so catch the returned promise or render `error`.
  *
  * @param props - The document handle plus the resource it lives in.
  * @returns `favorite`/`unfavorite` actions and the `{isPending, error, reset}`

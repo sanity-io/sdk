@@ -3,7 +3,7 @@ import {type FetcherSnapshot, installMessageBus, resetMessageBus} from '@sanity/
 import {type FavoriteDocument, type MessageBusHost} from '@sanity/sdk/dashboard'
 import {act} from '@testing-library/react'
 import {type ReactNode} from 'react'
-import {BehaviorSubject} from 'rxjs'
+import {BehaviorSubject, type Subscription} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {renderHook} from '../../../test/test-utils'
@@ -113,14 +113,22 @@ describe('useFavorite (message bus)', () => {
   }
 
   let host: MessageBusHost
+  let capabilities: Subscription | undefined
+  let published: Subscription | undefined
 
-  // Both reach open connections and every connection that opens later.
-  const provideFavorites = (provided: boolean) =>
-    host.connections.subscribe((client) =>
+  // Both replace their previous value on open connections and every connection that opens later.
+  const provideFavorites = (provided: boolean) => {
+    capabilities?.unsubscribe()
+    capabilities = host.connections.subscribe((client) =>
       client.emit('applications.capabilities', provided ? {favorites: true} : {}),
     )
-  const publish = (documents: FavoriteDocument[]) =>
-    host.connections.subscribe((client) => client.emit('favorites.documents', documents))
+  }
+  const publish = (documents: FavoriteDocument[]) => {
+    published?.unsubscribe()
+    published = host.connections.subscribe((client) =>
+      client.emit('favorites.documents', documents),
+    )
+  }
 
   beforeEach(() => {
     vi.stubGlobal('__SANITY_APP_ID__', 'app')
@@ -155,12 +163,18 @@ describe('useFavorite (message bus)', () => {
     {documentType: 'author'},
     {resourceId: 'other.dataset'},
     {resourceType: 'media-library' as const, resourceId: 'test.test'},
-    {schemaName: 'other'},
   ])('does not match a favorite that differs in %o', (difference) => {
     publish([favorite])
     const {result} = renderHook(() => useFavorite({...handle, ...difference}))
 
     expect(result.current).toBe(false)
+  })
+
+  it.each([undefined, 'other'])('matches a favorite regardless of schemaName %s', (schemaName) => {
+    publish([{...favorite, resource: {...favorite.resource, schemaName: 'default'}}])
+    const {result} = renderHook(() => useFavorite({...handle, schemaName}))
+
+    expect(result.current).toBe(true)
   })
 
   it('follows the host when it republishes', () => {

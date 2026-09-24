@@ -25,8 +25,15 @@ const useFavoriteDocuments = createStateSourceHook({
  * Reads whether a document is currently favorited. The write-side counterpart is
  * {@link useUpdateFavorite}.
  *
- * The hook suspends until the first favorite status resolves, so wrap the
- * component in a `<Suspense>` boundary.
+ * It works in both Dashboard runtimes and picks the transport for the current one:
+ *
+ * | Runtime | Transport | Suspends until | Without a favorites host |
+ * | --- | --- | --- | --- |
+ * | iframe | Comlink | the first status resolves | `false` |
+ * | federated | message bus | capabilities publish, then `favorites.documents` while the host provides `favorites` | `false` |
+ *
+ * Wrap the component in a `<Suspense>` boundary. A favorite matches on document ID and type
+ * and resource ID and type; `schemaName` does not take part, like in Dashboard.
  *
  * @param props - The document handle plus the resource it lives in.
  * @returns `true` when the document is favorited, otherwise `false`.
@@ -56,12 +63,12 @@ function useComlinkFavorite(props: UseFavoriteProps): boolean {
   return data.isFavorited
 }
 
+// `schemaName` only records which workspace opens the document; Dashboard doesn't match on it.
 const isSameFavorite = (a: FavoriteDocument, b: FavoriteDocument): boolean =>
   a.id === b.id &&
   a.type === b.type &&
   a.resource.id === b.resource.id &&
-  a.resource.type === b.resource.type &&
-  a.resource.schemaName === b.resource.schemaName
+  a.resource.type === b.resource.type
 
 function useBusFavorite(props: UseFavoriteProps): boolean {
   const target = toFavoriteDocument(useFavoriteContext(props))

@@ -181,7 +181,7 @@ describe('useUpdateFavorite (message bus)', () => {
 
   it('emits favorites.update and stays pending until the host replies', async () => {
     const updates = captureUpdates()
-    const {result} = renderHook(() => useUpdateFavorite(handle))
+    const {result} = renderHook(() => useUpdateFavorite({...handle, schemaName: 'production'}))
 
     let pending!: Promise<FavoriteStatusResponse>
     act(() => {
@@ -193,7 +193,7 @@ describe('useUpdateFavorite (message bus)', () => {
         document: {
           id: 'doc',
           type: 'movie',
-          resource: {id: 'test.test', type: 'dataset'},
+          resource: {id: 'test.test', type: 'dataset', schemaName: 'production'},
         },
         favorited: false,
       },
@@ -215,10 +215,12 @@ describe('useUpdateFavorite (message bus)', () => {
 
     act(() => void result.current.favorite())
 
-    expect(updates[0].payload.document.resource).toStrictEqual({
-      id: 'library',
-      type: 'media-library',
-    })
+    expect(updates.map((message) => message.payload)).toStrictEqual([
+      {
+        document: {id: 'doc', type: 'movie', resource: {id: 'library', type: 'media-library'}},
+        favorited: true,
+      },
+    ])
     await act(async () => updates[0].reply())
   })
 
