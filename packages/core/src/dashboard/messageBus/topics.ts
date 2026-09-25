@@ -79,6 +79,12 @@ export interface DocumentActivity {
 export type ApplicationActivity = DocumentActivity
 
 /**
+ * A document a user favorited, addressed like {@link DocumentActivity}'s document.
+ * @public
+ */
+export type FavoriteDocument = DocumentActivity['document']
+
+/**
  * A label rendered for an application interface; `null` clears it.
  * @internal
  */
@@ -208,6 +214,14 @@ export interface DashboardTopics {
   'auth.token': StateTopicDef<string | null>
   /** Requests a dashboard session token. */
   'auth.token.refresh': EventTopicDef<void, string>
+  /** The signed-in user's favorited documents, published while the host provides `favorites`. */
+  'favorites.documents': StateTopicDef<FavoriteDocument[]>
+  /**
+   * Favorites or unfavorites a document. The host replies once `favorites.documents` reflects
+   * the change, so a read after the reply sees it. A favorite is identified by its published
+   * document ID, type, resource and `schemaName` (workspace).
+   */
+  'favorites.update': EventTopicDef<{document: FavoriteDocument; favorited: boolean}, void>
   /** The current dashboard location and active navigation. */
   'navigation.location': StateTopicDef<NavigationLocation | null>
   /**
@@ -307,6 +321,8 @@ export const DASHBOARD_TOPIC_MANIFEST: DashboardTopicManifest = {
   'applications.status.update': dashboardEvent,
   'auth.token': stateTopic(undefined),
   'auth.token.refresh': dashboardEvent,
+  'favorites.documents': stateTopic(undefined),
+  'favorites.update': dashboardEvent,
   'navigation.location': stateTopic(undefined),
   'navigation.location.update': dashboardEvent,
   'organizations.current': stateTopic(undefined),

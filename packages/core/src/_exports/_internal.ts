@@ -20,6 +20,7 @@ export {
 } from '../dashboard/messageBus/store'
 export type {ApplicationStatus, ApplicationStatusUpdate} from '../dashboard/messageBus/topics'
 export {getTopicState, resolveTopic} from '../dashboard/messageBus/topicStore'
+export {getBusFavoriteState, resolveBusFavorite, setBusFavorite} from '../favorites/busFavorites'
 export {PREVIEW_PROJECTION} from '../preview/previewConstants'
 export {transformProjectionToPreview} from '../preview/previewProjectionUtils'
 export {getQueryKey, parseQueryKey} from '../query/queryStore' // only used for memoizing in React, not needed for actual functionality

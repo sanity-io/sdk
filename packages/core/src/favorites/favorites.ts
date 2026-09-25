@@ -28,6 +28,27 @@ export interface FavoriteDocumentContext extends DocumentHandle {
   schemaName?: string
 }
 
+/**
+ * The `document` a favorite write addresses over Comlink.
+ *
+ * @internal
+ */
+export function toFavoriteDocument(context: FavoriteDocumentContext): {
+  id: string
+  type: string
+  resource: {id: string; type: FavoriteDocumentContext['resourceType']; schemaName?: string}
+} {
+  return {
+    id: context.documentId,
+    type: context.documentType,
+    resource: {
+      id: context.resourceId,
+      type: context.resourceType,
+      ...(context.schemaName ? {schemaName: context.schemaName} : {}),
+    },
+  }
+}
+
 // Helper to create a stable key for the store
 function createFavoriteKey(context: FavoriteDocumentContext): string {
   return `${context.documentId}:${context.documentType}:${context.resourceId}:${context.resourceType}${
@@ -53,17 +74,7 @@ export const favorites = defineFetcher<[context: FavoriteDocumentContext], Favor
         name: SDK_NODE_NAME,
         connectTo: SDK_CHANNEL_NAME,
       })
-      const payload = {
-        document: {
-          id: context.documentId,
-          type: context.documentType,
-          resource: {
-            id: context.resourceId,
-            type: context.resourceType,
-            schemaName: context.schemaName,
-          },
-        },
-      }
+      const payload = {document: toFavoriteDocument(context)}
 
       return nodeStateSource.observable.pipe(
         // Wait until connected, then complete after the single fetch settles.
@@ -117,15 +128,7 @@ export const setFavorite = defineMutation<SetFavoriteInput, FavoriteStatusRespon
       })
       const payload = {
         eventType: isFavorited ? 'added' : 'removed',
-        document: {
-          id: context.documentId,
-          type: context.documentType,
-          resource: {
-            id: context.resourceId,
-            type: context.resourceType,
-            ...(context.schemaName ? {schemaName: context.schemaName} : {}),
-          },
-        },
+        document: toFavoriteDocument(context),
       }
 
       return nodeStateSource.observable.pipe(
