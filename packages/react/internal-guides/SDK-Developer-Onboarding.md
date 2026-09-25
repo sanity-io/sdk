@@ -328,7 +328,7 @@ Root behavior:
 - provides `ResourceContext`
 - provides `PerspectiveContext`
 - wraps children in `Suspense`
-- disposes the instance on unmount, with special handling for quick remounts in Strict Mode
+- never disposes the instance, so a tree hidden by `<Activity>` comes back with a live instance
 
 Nested behavior:
 

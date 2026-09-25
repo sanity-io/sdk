@@ -28,7 +28,7 @@ export interface SanityInstanceProviderProps {
  * @internal
  *
  * @remarks
- * Unlike {@link ResourceProvider}, this component does not create or dispose a SanityInstance.
+ * Unlike {@link ResourceProvider}, this component does not create a SanityInstance.
  * The caller is responsible for creating the instance via `createSanityInstance` and disposing
  * it when appropriate. This is useful when a non-React system layer (e.g. a state machine)
  * owns the instance and the React tree should consume it without managing its lifecycle.
