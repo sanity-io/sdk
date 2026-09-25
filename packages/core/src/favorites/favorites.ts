@@ -112,9 +112,10 @@ export type SetFavoriteInput = FavoriteDocumentContext & {
 }
 
 /**
- * Sets a document's favorite state over comlink, then invalidates the cached
- * {@link favorites} status for that document so active readers reconverge on
- * server truth. The write-side counterpart to {@link favorites}.
+ * Sets a document's favorite state over comlink. Writes the new state into the
+ * cached {@link favorites} status before the request (rolled back on failure),
+ * then invalidates it so active readers reconverge on server truth. The
+ * write-side counterpart to {@link favorites}.
  *
  * @internal
  */
@@ -152,5 +153,6 @@ export const setFavorite = defineMutation<SetFavoriteInput, FavoriteStatusRespon
       )
     }
   },
+  onMutate: (write, {isFavorited, ...context}) => write(favorites, [context], {isFavorited}),
   invalidates: (_result, input) => [{type: 'favorite', id: createFavoriteKey(input)}],
 })
