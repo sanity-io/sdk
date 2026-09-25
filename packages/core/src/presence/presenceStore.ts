@@ -184,17 +184,23 @@ export const presenceStore = defineStore<PresenceStoreState, BoundResourceKey>({
   name: 'presence',
   getInitialState,
   initialize: (context: StoreContext<PresenceStoreState, BoundResourceKey>) => {
+    if (isMediaLibraryResource(context.key.resource)) {
+      throw new Error('Presence is not supported for media library resources.')
+    }
+    const subscription = resolvePresenceUsers(context)
+    return () => subscription.unsubscribe()
+  },
+  // Upstream, so a hidden app's session ends rather than staying visible to peers. The
+  // disconnect on close stops peers keeping a ghost session for up to 90 seconds.
+  upstream: (context: StoreContext<PresenceStoreState, BoundResourceKey>) => {
     const {
       instance,
       state,
       key: {resource},
     } = context
 
-    if (isMediaLibraryResource(resource)) {
-      throw new Error('Presence is not supported for media library resources.')
-    }
-
-    // A fresh id per store, deliberately not persisted. Reusing an id across
+    // A fresh id per connection, since peers were told the previous one disconnected,
+    // and deliberately not persisted. Reusing an id across
     // page loads would collide whenever a tab inherits another's session
     // storage (`window.open`, or a same-origin iframe), making two live clients
     // filter each other out as self. Stale sessions are handled by the
@@ -340,98 +346,113 @@ export const presenceStore = defineStore<PresenceStoreState, BoundResourceKey>({
         .subscribe(),
     )
 
-    // Resolve display names for everyone we can see.
-    //
-    // This belongs to the store rather than to one state source: it is driven by
-    // which user ids are in state, and every selector needs it. It used to hang off
-    // `getPresence`'s `onSubscribe`, which meant anything reading presence another
-    // way saw only "Unknown user".
-    const userIds$ = state.observable.pipe(
-      map((s) =>
-        Array.from(s.locations.values())
-          .map((l) => l.userId)
-          .filter((id): id is string => !!id),
-      ),
-      distinctUntilChanged((a, b) => a.length === b.length && a.every((v, i) => v === b[i])),
-    )
-
-    // For canvas resources, wait for the organizationId to arrive. A failed lookup
-    // resolves to `undefined` rather than never emitting, so one failed request
-    // does not leave every user permanently unresolved. Dataset resources emit
-    // immediately so the stream is never blocked.
-    const organizationId$: Observable<string | undefined> = isCanvasResource(resource)
-      ? state.observable.pipe(
-          filter((s) => s.organizationId !== undefined || s.organizationIdError !== undefined),
-          first(),
-          map((s) => s.organizationId),
-        )
-      : of(undefined)
-
-    subscription.add(
-      combineLatest([userIds$, organizationId$])
-        .pipe(
-          switchMap(([userIds, organizationId]) => {
-            if (userIds.length === 0) {
-              return of([])
-            }
-            // Without an organization there is nothing to scope the lookup to, so
-            // skip the request rather than making one that cannot succeed.
-            if (!isDatasetResource(resource) && !organizationId) {
-              return of([])
-            }
-            const userObservables = userIds.map((userId) =>
-              getUserState(instance, {
-                userId,
-                ...(isDatasetResource(resource)
-                  ? {resourceType: 'project', projectId: resource.projectId}
-                  : {resourceType: 'organization', organizationId}),
-              }).pipe(filter((v): v is NonNullable<typeof v> => !!v)),
-            )
-            return combineLatest(userObservables)
-          }),
-        )
-        .subscribe((users) => {
-          state.set('presence/users', (prevState) => ({
-            ...prevState,
-            users: {
-              ...prevState.users,
-              ...users.reduce<Record<string, SanityUser>>((acc, user) => {
-                if (user) {
-                  acc[user.profile.id] = user
-                }
-                return acc
-              }, {}),
-            },
-          }))
-        }),
-    )
-
-    // Canvas resources need the organizationId to resolve users — fetch it once from the canvas endpoint
-    if (isCanvasResource(resource)) {
-      const globalClient = getClient(instance, {apiVersion: PRESENCE_API_VERSION})
-      subscription.add(
-        globalClient.observable
-          .request<{organizationId: string}>({
-            url: `/canvases/${resource.canvasId}`,
-            tag: 'canvases.get',
-          })
-          .subscribe({
-            next: ({organizationId}) => {
-              state.set('presence/organizationId', (prev) => ({...prev, organizationId}))
-            },
-            error: (organizationIdError: unknown) => {
-              state.set('presence/organizationIdError', (prev) => ({...prev, organizationIdError}))
-            },
-          }),
-      )
-    }
-
-    return () => {
+    return new Subscription(() => {
       sendSafely(dispatch, {type: 'disconnect'}).subscribe()
       subscription.unsubscribe()
-    }
+      // Nothing expires these while the socket is closed, and the next connection starts over
+      state.set('presence/reset', (prevState) => ({
+        ...prevState,
+        locations: new Map<string, PresenceSession>(),
+      }))
+    })
   },
 })
+
+function resolvePresenceUsers({
+  instance,
+  state,
+  key: {resource},
+}: StoreContext<PresenceStoreState, BoundResourceKey>): Subscription {
+  const subscription = new Subscription()
+
+  // Resolve display names for everyone we can see.
+  //
+  // This belongs to the store rather than to one state source: it is driven by
+  // which user ids are in state, and every selector needs it. It used to hang off
+  // `getPresence`'s `onSubscribe`, which meant anything reading presence another
+  // way saw only "Unknown user".
+  const userIds$ = state.observable.pipe(
+    map((s) =>
+      Array.from(s.locations.values())
+        .map((l) => l.userId)
+        .filter((id): id is string => !!id),
+    ),
+    distinctUntilChanged((a, b) => a.length === b.length && a.every((v, i) => v === b[i])),
+  )
+
+  // For canvas resources, wait for the organizationId to arrive. A failed lookup
+  // resolves to `undefined` rather than never emitting, so one failed request
+  // does not leave every user permanently unresolved. Dataset resources emit
+  // immediately so the stream is never blocked.
+  const organizationId$: Observable<string | undefined> = isCanvasResource(resource)
+    ? state.observable.pipe(
+        filter((s) => s.organizationId !== undefined || s.organizationIdError !== undefined),
+        first(),
+        map((s) => s.organizationId),
+      )
+    : of(undefined)
+
+  subscription.add(
+    combineLatest([userIds$, organizationId$])
+      .pipe(
+        switchMap(([userIds, organizationId]) => {
+          if (userIds.length === 0) {
+            return of([])
+          }
+          // Without an organization there is nothing to scope the lookup to, so
+          // skip the request rather than making one that cannot succeed.
+          if (!isDatasetResource(resource) && !organizationId) {
+            return of([])
+          }
+          const userObservables = userIds.map((userId) =>
+            getUserState(instance, {
+              userId,
+              ...(isDatasetResource(resource)
+                ? {resourceType: 'project', projectId: resource.projectId}
+                : {resourceType: 'organization', organizationId}),
+            }).pipe(filter((v): v is NonNullable<typeof v> => !!v)),
+          )
+          return combineLatest(userObservables)
+        }),
+      )
+      .subscribe((users) => {
+        state.set('presence/users', (prevState) => ({
+          ...prevState,
+          users: {
+            ...prevState.users,
+            ...users.reduce<Record<string, SanityUser>>((acc, user) => {
+              if (user) {
+                acc[user.profile.id] = user
+              }
+              return acc
+            }, {}),
+          },
+        }))
+      }),
+  )
+
+  // Canvas resources need the organizationId to resolve users — fetch it once from the canvas endpoint
+  if (isCanvasResource(resource)) {
+    const globalClient = getClient(instance, {apiVersion: PRESENCE_API_VERSION})
+    subscription.add(
+      globalClient.observable
+        .request<{organizationId: string}>({
+          url: `/canvases/${resource.canvasId}`,
+          tag: 'canvases.get',
+        })
+        .subscribe({
+          next: ({organizationId}) => {
+            state.set('presence/organizationId', (prev) => ({...prev, organizationId}))
+          },
+          error: (organizationIdError: unknown) => {
+            state.set('presence/organizationIdError', (prev) => ({...prev, organizationIdError}))
+          },
+        }),
+    )
+  }
+
+  return subscription
+}
 
 const selectLocations = (state: PresenceStoreState) => state.locations
 const selectUsers = (state: PresenceStoreState) => state.users
@@ -636,6 +657,10 @@ const _reportPresence = bindActionByResource(
  * Call it again whenever the user moves. Announcements are collapsed over a short
  * window and then repeated every 30 seconds while idle, which is what tells peers
  * the session is still alive.
+ *
+ * Announcements only go out while the presence connection is open, which is
+ * while something subscribes to `getPresence` or `getDocumentPresence`. Keep a
+ * subscription for as long as the user should appear present.
  *
  * Which specific document each location resolves to depends on its perspective, and
  * that matters for interoperability: other clients, the Studio included, compare

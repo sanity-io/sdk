@@ -112,17 +112,10 @@ const queryStore = defineStore<QueryStoreState, BoundResourceKey>({
   name: 'QueryStore',
   getInitialState: () => ({queries: {}}),
   initialize(context) {
-    const subscriptions = [
-      listenForNewSubscribersAndFetch(context),
-      listenToLiveClientAndSetLastLiveEventIds(context),
-    ]
-
-    return () => {
-      for (const subscription of subscriptions) {
-        subscription.unsubscribe()
-      }
-    }
+    const subscription = listenForNewSubscribersAndFetch(context)
+    return () => subscription.unsubscribe()
   },
+  upstream: (context) => listenToLiveClientAndSetLastLiveEventIds(context),
 })
 
 const errorHandler = (state: StoreState<{error?: unknown}>) => {

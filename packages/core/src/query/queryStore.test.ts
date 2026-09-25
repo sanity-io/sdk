@@ -14,6 +14,7 @@ import {LIVE_EVENTS_RETRY_DELAY} from '../client/liveEvents'
 import {isCanvasResource} from '../config/sanityConfig'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {type StateSource} from '../store/createStateSourceAction'
+import {UPSTREAM_CLOSE_DELAY_MS} from '../store/createStoreInstance'
 import {getQueryState, resolveQuery} from './queryStore'
 import {QUERY_STATE_CLEAR_DELAY} from './queryStoreConstants'
 
@@ -554,6 +555,23 @@ describe('queryStore', () => {
       {_id: 'movie2', _type: 'movie', title: 'Movie 2'},
     ])
     unsubscribe2()
+  })
+
+  it('closes the live connection after the last subscriber leaves and reopens it on resubscribe', async () => {
+    const state = getQueryState(instance, {query: '*[_type == "movie"]'})
+    const unsubscribe = state.subscribe()
+    await advanceAndAwait(firstValueFrom(state.observable.pipe(filter((i) => i !== undefined))))
+    expect(liveEvents.observed).toBe(true)
+
+    unsubscribe()
+    await vi.advanceTimersByTimeAsync(UPSTREAM_CLOSE_DELAY_MS - 1)
+    expect(liveEvents.observed).toBe(true)
+    await vi.advanceTimersByTimeAsync(1)
+    expect(liveEvents.observed).toBe(false)
+
+    const unsubscribeAgain = state.subscribe()
+    expect(liveEvents.observed).toBe(true)
+    unsubscribeAgain()
   })
 
   it('separates cache entries by implicit perspective (instance.config)', async () => {

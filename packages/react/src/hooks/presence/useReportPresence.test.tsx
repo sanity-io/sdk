@@ -1,5 +1,6 @@
 import {reportPresence} from '@sanity/sdk'
-import {act, renderHook} from '@testing-library/react'
+import {act, render, renderHook} from '@testing-library/react'
+import {Activity} from 'react'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {ResourceProvider} from '../../context/ResourceProvider'
@@ -199,4 +200,96 @@ describe('useReportPresence', () => {
 
     expect(reported().every((locations) => locations.length === 1)).toBe(true)
   })
+
+  it('closes the presence connection while hidden by <Activity> and reopens it when shown', async () => {
+    // The real store and bifur client run against a fake socket, so this covers the wiring
+    // from the hook's effects down to the connection.
+    vi.useRealTimers()
+    vi.useFakeTimers({toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval']})
+    vi.stubGlobal('WebSocket', FakeWebSocket)
+    FakeWebSocket.instances = []
+    const {reportPresence: realReportPresence} =
+      await vi.importActual<typeof import('@sanity/sdk')>('@sanity/sdk')
+    vi.mocked(reportPresence).mockImplementation(realReportPresence)
+    const flush = () => act(async () => {})
+    // Well past the store's upstream close delay, which core does not export to this package
+    const waitPastUpstreamCloseDelay = () => act(() => vi.advanceTimersByTime(10_000))
+
+    try {
+      const Reporter = () => {
+        useReportPresence({documentId: 'doc-1', documentType: 'movie'})
+        return null
+      }
+      const tree = (
+        <ResourceProvider projectId="p" dataset="d" fallback={null}>
+          <Reporter />
+        </ResourceProvider>
+      )
+      const {rerender} = render(<Activity mode="visible">{tree}</Activity>)
+      await flush()
+      const [first] = FakeWebSocket.instances
+      expect(first.readyState).toBe(FakeWebSocket.OPEN)
+
+      // Reporting subscribes to nothing, so this proves the hook holds the connection itself
+      waitPastUpstreamCloseDelay()
+      expect(first.readyState).toBe(FakeWebSocket.OPEN)
+
+      rerender(<Activity mode="hidden">{tree}</Activity>)
+      waitPastUpstreamCloseDelay()
+      expect(first.sentMethods()).toContain('presence_disconnect')
+      expect(first.readyState).toBe(FakeWebSocket.CLOSED)
+
+      rerender(<Activity mode="visible">{tree}</Activity>)
+      await flush()
+      expect(FakeWebSocket.instances).toHaveLength(2)
+      const [, second] = FakeWebSocket.instances
+      expect(second.readyState).toBe(FakeWebSocket.OPEN)
+
+      // Hiding cleared the location, so this proves showing reports it again on the new socket
+      await act(() => vi.advanceTimersByTimeAsync(1000))
+      expect(second.sentMethods()).toContain('presence_announce')
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
 })
+
+/** Opens on the next microtask and answers every request, like a healthy Bifur socket. */
+class FakeWebSocket extends EventTarget {
+  static readonly OPEN = 1
+  static readonly CLOSED = 3
+  static instances: FakeWebSocket[] = []
+
+  readonly CLOSING = 2
+  readonly CLOSED = FakeWebSocket.CLOSED
+  readyState = 0
+  onopen: (() => void) | null = null
+  onclose: ((event: {code: number}) => void) | null = null
+  onerror: (() => void) | null = null
+  private sent: {id: string; method: string}[] = []
+
+  constructor() {
+    super()
+    FakeWebSocket.instances.push(this)
+    queueMicrotask(() => {
+      this.readyState = FakeWebSocket.OPEN
+      this.onopen?.()
+    })
+  }
+
+  send(data: string) {
+    const request = JSON.parse(data)
+    this.sent.push(request)
+    const response = JSON.stringify({jsonrpc: '2.0', id: request.id, result: 'ok'})
+    this.dispatchEvent(new MessageEvent('message', {data: response}))
+  }
+
+  close() {
+    this.readyState = FakeWebSocket.CLOSED
+    this.onclose?.({code: 1000})
+  }
+
+  sentMethods() {
+    return this.sent.map((request) => request.method)
+  }
+}

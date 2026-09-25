@@ -6,8 +6,8 @@ import {
   merge,
   Observable,
   partition,
+  ReplaySubject,
   share,
-  shareReplay,
   Subject,
   switchMap,
   takeUntil,
@@ -16,6 +16,8 @@ import {
 import {getClientState} from '../client/clientStore'
 import {type DocumentResource} from '../config/sanityConfig'
 import {type SanityInstance} from '../store/createSanityInstance'
+import {UPSTREAM_CLOSE_DELAY_MS} from '../store/createStoreInstance'
+import {cleanupTimer} from '../utils/setCleanupTimeout'
 import {dedupeListenerEvents, groupTransactionEvents} from './listenerEventOperators'
 
 const API_VERSION = 'v2025-05-06'
@@ -72,8 +74,16 @@ export function createSharedListener(
 
   return {
     events: merge(
-      // we replay the welcome event because that event kicks off fetching the document
-      welcome$.pipe(shareReplay(1)),
+      // we replay the welcome event because that event kicks off fetching the document.
+      // Resets once no document listens, so the connection can close instead of staying open
+      // for the page. The delay stops a quick resubscribe from reconnecting.
+      welcome$.pipe(
+        share({
+          connector: () => new ReplaySubject(1),
+          resetOnComplete: false,
+          resetOnRefCountZero: () => cleanupTimer(UPSTREAM_CLOSE_DELAY_MS),
+        }),
+      ),
       mutation$,
     ),
     dispose: () => dispose$.next(),
