@@ -1,5 +1,17 @@
 # Changelog
 
+## 3.6.0
+
+### Minor Changes
+
+- [#1319](https://github.com/sanity-io/sdk/pull/1319) [`c307818`](https://github.com/sanity-io/sdk/commit/c3078180d24b5001c49c8e1108d421b6bb166435) Thanks [@gu-stav](https://github.com/gu-stav)! - `useFavorite` and `useUpdateFavorite` work under the message bus through the new `favorites.documents` and `favorites.update` topics.
+
+### Patch Changes
+
+- [#1316](https://github.com/sanity-io/sdk/pull/1316) [`8feb564`](https://github.com/sanity-io/sdk/commit/8feb564f9382d7406e4396d2897062f0ba84b125) Thanks [@gu-stav](https://github.com/gu-stav)! - Preload only the chunks a federated expose needs to render. Warming async chunks downloaded every lazily imported chunk of a remote, such as syntax highlighting grammars, before anything asked for them.
+- Updated dependencies [[`c307818`](https://github.com/sanity-io/sdk/commit/c3078180d24b5001c49c8e1108d421b6bb166435), [`ee458fc`](https://github.com/sanity-io/sdk/commit/ee458fc064de7e38692fea15a074946a245f41b3)]:
+  - @sanity/sdk@3.6.0
+
 ## 3.5.0
 
 ### Minor Changes
