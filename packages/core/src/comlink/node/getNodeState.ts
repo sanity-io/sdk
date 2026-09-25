@@ -2,7 +2,12 @@ import {type Node, type NodeInput, type Status} from '@sanity/comlink'
 import {createSelector} from 'reselect'
 
 import {bindActionGlobally} from '../../store/createActionBinder'
-import {createStateSourceAction, type SelectorContext} from '../../store/createStateSourceAction'
+import {type SanityInstance} from '../../store/createSanityInstance'
+import {
+  createStateSourceAction,
+  type SelectorContext,
+  type StateSource,
+} from '../../store/createStateSourceAction'
 import {setCleanupTimeout} from '../../utils/setCleanupTimeout'
 import {type FrameMessage, type WindowMessage} from '../types'
 import {
@@ -18,8 +23,11 @@ const NODE_RELEASE_TIME = 5000
 /**
  * @public
  */
-export interface NodeState {
-  node: Node<WindowMessage, FrameMessage>
+export interface NodeState<
+  TWindowMessage extends WindowMessage = WindowMessage,
+  TFrameMessage extends FrameMessage = FrameMessage,
+> {
+  node: Node<TWindowMessage, TFrameMessage>
   status: Status | undefined
 }
 const selectNode = (context: SelectorContext<ComlinkNodeState>, nodeInput: NodeInput) =>
@@ -33,7 +41,20 @@ const selectNode = (context: SelectorContext<ComlinkNodeState>, nodeInput: NodeI
  * @returns A subscribable state source for the node
  * @public
  */
-export const getNodeState = bindActionGlobally(
+export function getNodeState<
+  TWindowMessage extends WindowMessage = WindowMessage,
+  TFrameMessage extends FrameMessage = FrameMessage,
+>(
+  instance: SanityInstance,
+  nodeInput: NodeInput,
+): StateSource<NodeState<TWindowMessage, TFrameMessage> | undefined> {
+  // Same caller-asserted message types as `getOrCreateNode`.
+  return _getNodeState(instance, nodeInput) as StateSource<
+    NodeState<TWindowMessage, TFrameMessage> | undefined
+  >
+}
+
+const _getNodeState = bindActionGlobally(
   comlinkNodeStore,
   createStateSourceAction<ComlinkNodeState, [NodeInput], NodeState | undefined>({
     selector: createSelector([selectNode], (nodeEntry) => {
