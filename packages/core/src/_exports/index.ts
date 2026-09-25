@@ -202,6 +202,10 @@ export type {
   SetFavoriteInput,
 } from '../favorites/favorites'
 export {favorites, setFavorite} from '../favorites/favorites'
+export {
+  recordDocumentHistoryEvent,
+  type RecordDocumentHistoryEventInput,
+} from '../history/recordDocumentHistoryEvent'
 export {installation, installations} from '../installations/installations'
 export {
   type Installation,
