@@ -56,6 +56,31 @@ describe('Users Reducers', () => {
         batchSize: DEFAULT_USERS_BATCH_SIZE,
       })
     })
+
+    it('should include the search and sort options', () => {
+      const key = getUsersKey(mockInstance, {
+        ...sampleOptions,
+        displayName: 'ada',
+        email: 'ada@example.com',
+        sortBy: 'displayName',
+        orderBy: 'desc',
+      })
+      expect(JSON.parse(key)).toEqual({
+        resourceType: 'project',
+        projectId: 'proj123',
+        batchSize: 50,
+        displayName: 'ada',
+        email: 'ada@example.com',
+        sortBy: 'displayName',
+        orderBy: 'desc',
+      })
+    })
+
+    it('should give different searches different keys', () => {
+      expect(getUsersKey(mockInstance, {...sampleOptions, displayName: 'ada'})).not.toEqual(
+        getUsersKey(mockInstance, {...sampleOptions, displayName: 'grace'}),
+      )
+    })
   })
 
   describe('parseUsersKey', () => {
@@ -70,6 +95,22 @@ describe('Users Reducers', () => {
         resourceType: 'organization',
         resourceId: 'org456',
         batchSize: 25,
+      })
+    })
+
+    it('should round-trip the search and sort options', () => {
+      const options: GetUsersOptions = {
+        ...sampleOptions,
+        displayName: 'ada',
+        email: 'ada@example.com',
+        sortBy: 'displayName',
+        orderBy: 'asc',
+      }
+      expect(parseUsersKey(getUsersKey(mockInstance, options))).toMatchObject({
+        displayName: 'ada',
+        email: 'ada@example.com',
+        sortBy: 'displayName',
+        orderBy: 'asc',
       })
     })
   })

@@ -9,7 +9,7 @@ import {Suspense} from 'react'
 import {type Observable} from 'rxjs'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
-import {ResourceProvider} from '../../context/ResourceProvider'
+import {ResourceProvider} from '../../../context/ResourceProvider'
 import {useCommentThreads} from './useCommentThreads'
 
 vi.mock('@sanity/sdk', async (importOriginal) => {

@@ -2,6 +2,24 @@
 title: Migration guide
 ---
 
+## Deprecated in 3.x
+
+Nothing here is breaking yet. These APIs still work as they always have, and will be removed in the next major.
+
+### The comment hooks on `@sanity/sdk-react`
+
+`useComments`, `useCommentThreads`, and the `useCommentActions` exported from the package root read and write comments in a per-dataset add-on dataset. Comments are moving to an organization-level store reached through the Comments API, which is where the Studio is heading too.
+
+The replacement ships alongside them, under a subpath:
+
+```typescript
+import {useCommentActions, useDocumentComments} from '@sanity/sdk-react/collaboration'
+```
+
+Do not switch until the Studio serving your project reads the Comments API and your existing comments have been migrated into the organization store, or your app and your Studio will be looking at different sets of comments. Upgrading the SDK itself is safe at any time.
+
+The [Collaboration guide](./Collaboration.md#moving-from-the-add-on-dataset-hooks) has the hook-by-hook mapping, the `collaboration.organizationId` config, and the change from `selection` to `range` plus `fieldValue` when writing an inline comment.
+
 ## Migrating to @sanity/sdk-react@3.0.0
 
 ### Breaking Changes

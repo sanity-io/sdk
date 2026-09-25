@@ -10,8 +10,8 @@ import {Suspense} from 'react'
 import {type Observable, Subject} from 'rxjs'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
-import {ResourceProvider} from '../../context/ResourceProvider'
-import {ResourcesContext} from '../../context/ResourcesContext'
+import {ResourceProvider} from '../../../context/ResourceProvider'
+import {ResourcesContext} from '../../../context/ResourcesContext'
 import {useComments} from './useComments'
 
 vi.mock('@sanity/sdk', async (importOriginal) => {

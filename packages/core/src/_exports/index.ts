@@ -70,7 +70,7 @@ export {
   type SetCommentStatusOptions,
   updateComment,
   type UpdateCommentOptions,
-} from '../comments/commentActions'
+} from '../comments/legacy/commentActions'
 export {
   type CommentsOptions,
   getCommentsState,
@@ -78,7 +78,7 @@ export {
   resolveComments,
   type ResolveCommentsOptions,
   resolveCommentThreads,
-} from '../comments/commentsStore'
+} from '../comments/legacy/commentsStore'
 export {
   type Comment,
   type CommentLocalState,
@@ -88,7 +88,7 @@ export {
   type CommentTextSelection,
   type CommentTextSelectionItem,
   type CommentThread,
-} from '../comments/types'
+} from '../comments/legacy/types'
 export {type AuthConfig, type AuthProvider} from '../config/authConfig'
 export {
   createDatasetHandle,
@@ -279,6 +279,15 @@ export {
   resolveUser,
   resolveUsers,
 } from '../users/usersStore'
+export {
+  getUsersWithGrantsState,
+  loadMoreUsersWithGrants,
+  resolveUsersWithGrants,
+  type ResolveUsersWithGrantsOptions,
+  type UsersWithGrantsOptions,
+  type UsersWithGrantsResult,
+  type UserWithGrants,
+} from '../users/usersWithGrants'
 export {getCorsErrorProjectId} from '../utils/getCorsErrorProjectId'
 export {isImportError} from '../utils/isImportError'
 export {CORE_SDK_VERSION} from '../version'

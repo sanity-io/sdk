@@ -4,14 +4,18 @@ import {
   getCommentThreadsState,
   resolveCommentThreads,
 } from '@sanity/sdk'
+import {getCommentsOptionsKey, parseCommentsOptionsKey} from '@sanity/sdk/_internal'
 import {useMemo} from 'react'
 
-import {type WithResourceNameSupport} from '../helpers/useNormalizedResourceOptions'
-import {type CommentListSource, useCommentList} from './useCommentList'
+import {type WithResourceNameSupport} from '../../helpers/useNormalizedResourceOptions'
+import {type CommentListSource, useCommentList} from '../useCommentList'
+import {getNoCommentsErrorState} from './noCommentsError'
 
 /**
  * @public
  * @category Types
+ * @deprecated Renamed alongside {@link useCommentThreads}; see `UseDocumentCommentsResult` in
+ * `@sanity/sdk-react/collaboration`.
  */
 export interface UseCommentThreadsResult {
   /** Newest thread first, each with its replies oldest first. */
@@ -20,9 +24,12 @@ export interface UseCommentThreadsResult {
   isPending: boolean
 }
 
-const SOURCE: CommentListSource<CommentThread[]> = {
+const SOURCE: CommentListSource<CommentsOptions, CommentThread[]> = {
   getState: getCommentThreadsState,
+  getErrorState: getNoCommentsErrorState,
   resolve: resolveCommentThreads,
+  getKey: getCommentsOptionsKey,
+  parseKey: parseCommentsOptionsKey,
 }
 
 /**
@@ -64,6 +71,9 @@ const SOURCE: CommentListSource<CommentThread[]> = {
  * ```
  *
  * @public
+ * @deprecated Comments have moved to the organization collaboration API. Use
+ * `useDocumentComments` from `@sanity/sdk-react/collaboration`, which returns the same thread
+ * shape. This add-on dataset hook is removed in the next major.
  */
 export function useCommentThreads(
   options: WithResourceNameSupport<CommentsOptions>,

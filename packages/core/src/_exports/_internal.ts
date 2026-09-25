@@ -7,7 +7,15 @@ export {
   getClientErrorApiType,
   isProjectUserNotFoundClientError,
 } from '../auth/utils'
-export {getCommentsOptionsKey, parseCommentsOptionsKey} from '../comments/commentsStore' // only used for memoizing in React, not needed for actual functionality
+// only used for memoizing in React, not needed for actual functionality
+export {
+  getCommentsQueryOptionsKey,
+  getDocumentCommentsOptionsKey,
+  parseCommentsQueryOptionsKey,
+  parseDocumentCommentsOptionsKey,
+} from '../comments/commentsStore'
+// only used for memoizing in React, not needed for actual functionality
+export {getCommentsOptionsKey, parseCommentsOptionsKey} from '../comments/legacy/commentsStore'
 export {
   installMessageBus,
   type InstallMessageBusOptions,
@@ -36,6 +44,8 @@ export {
 } from '../store/fetcherStore'
 export {getTelemetryManager, initTelemetry, trackHookMounted} from '../telemetry/initTelemetry'
 export {getUsersKey, parseUsersKey} from '../users/reducers' // only used for memoizing in React, not needed for actual functionality
+// only used for memoizing in React, not needed for actual functionality
+export {getUsersWithGrantsKey, parseUsersWithGrantsKey} from '../users/usersWithGrants'
 export {createGroqSearchFilter} from '../utils/createGroqSearchFilter'
 export {randomId, randomUuid} from '../utils/ids'
 export {createLogger} from '../utils/logger'

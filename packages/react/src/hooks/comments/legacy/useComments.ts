@@ -1,12 +1,16 @@
 import {type Comment, type CommentsOptions, getCommentsState, resolveComments} from '@sanity/sdk'
+import {getCommentsOptionsKey, parseCommentsOptionsKey} from '@sanity/sdk/_internal'
 import {useMemo} from 'react'
 
-import {type WithResourceNameSupport} from '../helpers/useNormalizedResourceOptions'
-import {type CommentListSource, useCommentList} from './useCommentList'
+import {type WithResourceNameSupport} from '../../helpers/useNormalizedResourceOptions'
+import {type CommentListSource, useCommentList} from '../useCommentList'
+import {getNoCommentsErrorState} from './noCommentsError'
 
 /**
  * @public
  * @category Types
+ * @deprecated Renamed alongside {@link useComments}; see `useDocumentComments` in
+ * `@sanity/sdk-react/collaboration`.
  */
 export interface UseCommentsResult {
   /** Every matching comment, newest first, replies included. */
@@ -15,9 +19,12 @@ export interface UseCommentsResult {
   isPending: boolean
 }
 
-const SOURCE: CommentListSource<Comment[]> = {
+const SOURCE: CommentListSource<CommentsOptions, Comment[]> = {
   getState: getCommentsState,
+  getErrorState: getNoCommentsErrorState,
   resolve: resolveComments,
+  getKey: getCommentsOptionsKey,
+  parseKey: parseCommentsOptionsKey,
 }
 
 /**
@@ -52,6 +59,10 @@ const SOURCE: CommentListSource<Comment[]> = {
  * ```
  *
  * @public
+ * @deprecated Comments have moved to the organization collaboration API. Read threads with
+ * `useDocumentComments` from `@sanity/sdk-react/collaboration`, or pass a GROQ filter to
+ * `useCommentsQuery` for anything that is not one document's comments. This add-on dataset
+ * hook is removed in the next major.
  */
 export function useComments(options: WithResourceNameSupport<CommentsOptions>): UseCommentsResult {
   const {value, isPending} = useCommentList('useComments', options, SOURCE)

@@ -18,6 +18,12 @@ export interface Membership {
   resourceId: string
   roleNames: Array<string>
   lastSeenAt?: string | null
+  /**
+   * The user's id within this resource, distinct from the account-wide
+   * `sanityUserId`. Only projects have one, and it is what a dataset's access
+   * groups list as their members.
+   */
+  resourceUserId?: string
 }
 
 /**
@@ -47,6 +53,17 @@ export interface GetUsersOptions extends ProjectHandle {
   batchSize?: number
   organizationId?: string
   userId?: string
+  /** Narrows to users whose display name contains this, ignoring case. */
+  displayName?: string
+  /**
+   * Narrows to users whose email contains this, ignoring case. Combined with
+   * `displayName` it narrows to users matching both, not either.
+   */
+  email?: string
+  /** The only field the API can sort on. */
+  sortBy?: 'displayName'
+  /** @defaultValue 'asc', when `sortBy` is set */
+  orderBy?: 'asc' | 'desc'
 }
 
 /**
