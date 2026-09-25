@@ -1,5 +1,15 @@
 # Changelog
 
+## 3.6.0
+
+### Minor Changes
+
+- [#1319](https://github.com/sanity-io/sdk/pull/1319) [`c307818`](https://github.com/sanity-io/sdk/commit/c3078180d24b5001c49c8e1108d421b6bb166435) Thanks [@gu-stav](https://github.com/gu-stav)! - `useFavorite` and `useUpdateFavorite` work under the message bus through the new `favorites.documents` and `favorites.update` topics.
+
+### Patch Changes
+
+- [#1289](https://github.com/sanity-io/sdk/pull/1289) [`ee458fc`](https://github.com/sanity-io/sdk/commit/ee458fc064de7e38692fea15a074946a245f41b3) Thanks [@ryanbonial](https://github.com/ryanbonial)! - Include runtime context in session and hook telemetry, and include the session auth method in hook-mounted and session-ended events. This lets analytics segment Studio and app usage independently of credential source while retaining both populations.
+
 ## 3.5.0
 
 ### Minor Changes
