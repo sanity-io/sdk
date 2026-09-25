@@ -674,6 +674,51 @@ it('fetches documents if there are no active subscriptions for the actions appli
   expect(getCurrent()?.title).toBe('new new title')
 })
 
+it('submits on the next timer turn and waits for an in-flight write before sending the next', async () => {
+  const doc = createDocumentHandle({documentId: 'existing-doc', documentType: 'article'})
+  const unsubscribe = getDocumentState(instance, doc).subscribe()
+  await resolveDocument(instance, doc)
+
+  const firstResponse = new Subject<MultipleActionResult>()
+  const secondResponse = new Subject<MultipleActionResult>()
+  const action = vi
+    .spyOn(client.observable, 'action')
+    .mockReturnValueOnce(firstResponse)
+    .mockReturnValueOnce(secondResponse)
+
+  vi.useFakeTimers()
+  try {
+    const firstEdit = await applyDocumentActions(instance, {
+      actions: [editDocument(doc, {set: {title: 'first'}})],
+      resource,
+    })
+    await vi.advanceTimersByTimeAsync(1)
+    expect(action).toHaveBeenCalledTimes(1)
+
+    const secondEdit = await applyDocumentActions(instance, {
+      actions: [editDocument(doc, {set: {title: 'second'}})],
+      resource,
+    })
+    await vi.advanceTimersByTimeAsync(10)
+    expect(action).toHaveBeenCalledTimes(1)
+
+    firstResponse.next({transactionId: firstEdit.transactionId})
+    firstResponse.complete()
+    await firstEdit.submitted()
+    await vi.advanceTimersByTimeAsync(1)
+    expect(action).toHaveBeenCalledTimes(2)
+
+    secondResponse.next({transactionId: secondEdit.transactionId})
+    secondResponse.complete()
+    await secondEdit.submitted()
+  } finally {
+    unsubscribe()
+    instance.dispose()
+    action.mockRestore()
+    vi.useRealTimers()
+  }
+})
+
 it('batches edit transaction into one outgoing transaction', async () => {
   const doc = createDocumentHandle({documentId: randomUuid(), documentType: 'article'})
 
@@ -1402,7 +1447,6 @@ vi.mock('./documentConstants.ts', async (importOriginal) => {
   const original = await importOriginal<typeof import('./documentConstants')>()
   return {
     ...original,
-    INITIAL_OUTGOING_THROTTLE_TIME: 0,
     DOCUMENT_STATE_CLEAR_DELAY: 25,
     OUT_OF_SYNC_RETRY_BASE_DELAY: 0,
     OUT_OF_SYNC_RETRY_MAX_DELAY: 0,

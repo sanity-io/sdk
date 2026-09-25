@@ -1,16 +1,17 @@
+import {CorsOriginError, type ListenEvent, type SanityClient} from '@sanity/client'
 import {
-  ConnectionFailedError,
-  CorsOriginError,
-  DisconnectError,
-  type LiveEvent,
-  type SanityClient,
-  type SyncTag,
-} from '@sanity/client'
-import {delay, filter, firstValueFrom, Observable, of, Subject} from 'rxjs'
-import {beforeEach, describe, expect, it, vi} from 'vitest'
+  BehaviorSubject,
+  delay,
+  filter,
+  finalize,
+  firstValueFrom,
+  Observable,
+  of,
+  Subject,
+} from 'rxjs'
+import {beforeEach, describe, expect, it, type Mock, vi} from 'vitest'
 
 import {getClientState} from '../client/clientStore'
-import {LIVE_EVENTS_RETRY_DELAY} from '../client/liveEvents'
 import {isCanvasResource} from '../config/sanityConfig'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {type StateSource} from '../store/createStateSourceAction'
@@ -41,16 +42,18 @@ vi.mock('../releases/getPerspectiveState', async () => {
 // With fake timers, an emission gated on a pending rxjs delay or cleanup
 // timeout never arrives on its own: create the promise first, advance the
 // clock, then await it.
-async function advanceAndAwait<T>(promise: Promise<T>, ms = 0): Promise<T> {
+async function advanceAndAwait<T>(promise: Promise<T>, ms = 5): Promise<T> {
   await vi.advanceTimersByTimeAsync(ms)
   return promise
 }
 
 describe('queryStore', () => {
   let instance: SanityInstance
-  let liveEvents: Subject<LiveEvent>
+  let listenerEvents: Subject<ListenEvent>
   let fetch: SanityClient['observable']['fetch']
-  let listen: SanityClient['observable']['listen']
+  let listen: SanityClient['listen']
+  let liveEvents: Mock<SanityClient['live']['events']>
+  let stopListening: Mock<() => void>
   // Mock data for testing
   const mockData = {
     movies: [
@@ -69,20 +72,28 @@ describe('queryStore', () => {
         of({result: mockData.movies, syncTags: []}).pipe(delay(0)),
       ) as SanityClient['observable']['fetch']
 
-    listen = vi.fn().mockReturnValue(of(mockData.movies))
-
-    liveEvents = new Subject<LiveEvent>()
-
-    const events = vi.fn().mockReturnValue(liveEvents) as SanityClient['live']['events']
+    listenerEvents = new Subject<ListenEvent>()
+    stopListening = vi.fn()
+    listen = vi.fn().mockReturnValue(
+      new Observable((observer) => {
+        const subscription = listenerEvents.subscribe(observer)
+        return () => {
+          subscription.unsubscribe()
+          stopListening()
+        }
+      }),
+    )
+    liveEvents = vi.fn()
 
     const config = vi.fn().mockReturnValue({token: 'token'}) as SanityClient['config']
 
     vi.mocked(getClientState).mockReturnValue({
       observable: of({
         config,
-        live: {events},
-        observable: {fetch, listen},
-      } as SanityClient),
+        live: {events: liveEvents},
+        listen,
+        observable: {fetch},
+      } as unknown as SanityClient),
     } as StateSource<SanityClient>)
   })
 
@@ -212,112 +223,203 @@ describe('queryStore', () => {
     expect(vi.mocked(fetch).mock.calls.length).toBe(callsBefore + 1)
   })
 
-  it('refetches query when receiving live event with matching sync tag', async () => {
-    const mockSyncTags: SyncTag[] = ['s1:movies']
-    const updatedMovie = {_id: 'movie3', _type: 'movie', title: 'Movie 3'}
+  it('uses a broad listener and bypasses the CDN while preserving query options', async () => {
+    const options = {
+      query: '*[_type == $type]{title, "author": author->name}',
+      params: {type: 'movie'},
+      perspective: 'published' as const,
+      useCdn: true,
+      tag: 'custom.query',
+    }
+    await advanceAndAwait(resolveQuery(instance, options))
 
-    // First fetch returns initial data with sync tags
-    vi.mocked(fetch).mockReturnValueOnce(
-      of({result: mockData.movies, syncTags: mockSyncTags, ms: 0}).pipe(delay(0)),
+    expect(liveEvents).not.toHaveBeenCalled()
+    expect(listen).toHaveBeenCalledWith(
+      '*',
+      {},
+      {
+        events: ['welcome', 'mutation', 'reconnect'],
+        includeResult: false,
+        includeMutations: false,
+        includeAllVersions: true,
+        visibility: 'query',
+        tag: 'query.listen',
+      },
     )
-    // Second fetch returns updated data
-    vi.mocked(fetch).mockReturnValueOnce(
-      of({result: [...mockData.movies, updatedMovie], syncTags: mockSyncTags, ms: 0}).pipe(
-        delay(0),
-      ),
-    )
+    expect(fetch).toHaveBeenCalledWith(options.query, options.params, {
+      perspective: 'published',
+      useCdn: false,
+      tag: 'custom.query',
+      filterResponse: false,
+      returnQuery: false,
+    })
+  })
 
-    const query = '*[_type == "movie"]'
-    const state = getQueryState<{_id: string; _type: string; title: string}[]>(instance, {query})
+  it.each(['author1', 'drafts.movie1', 'versions.release1.movie1'])(
+    'refetches queries when %s changes, including referenced documents and versions',
+    async (documentId) => {
+      const query = '*[_type == "movie"]{title, "author": author->name}'
+      const state = getQueryState(instance, {query})
+      const unsubscribe = state.subscribe()
+      await vi.advanceTimersByTimeAsync(5)
 
-    const unsubscribe = state.subscribe()
-    await advanceAndAwait(firstValueFrom(state.observable.pipe(filter((i) => i !== undefined))))
+      const updated = [{_id: 'movie1', title: 'Updated', author: 'New author'}]
+      vi.mocked(fetch).mockReturnValueOnce(of({result: updated, ms: 0}).pipe(delay(0)))
+      listenerEvents.next({type: 'mutation', visibility: 'query', documentId} as ListenEvent)
+      await vi.advanceTimersByTimeAsync(55)
 
-    // Emit live event with matching sync tag
-    liveEvents.next({
-      type: 'message',
-      id: 'event1',
-      tags: mockSyncTags,
-      documentId: 'movie3',
-      event: 'created',
-    } as LiveEvent)
+      expect(fetch).toHaveBeenCalledTimes(2)
+      expect(state.getCurrent()).toEqual(updated)
+      expect(vi.mocked(fetch).mock.calls[1][2]).not.toHaveProperty('lastLiveEventId')
+      unsubscribe()
+    },
+  )
 
-    // Wait for updated data
-    const result = await advanceAndAwait(
-      firstValueFrom(state.observable.pipe(filter((data) => data?.length === 3))),
-    )
-
+  it.each(['welcome', 'reconnect'] as const)('refetches on %s', async (type) => {
+    const unsubscribe = getQueryState(instance, {query: '*'}).subscribe()
+    await vi.advanceTimersByTimeAsync(5)
+    listenerEvents.next({type, listenerName: 'test'})
+    await vi.advanceTimersByTimeAsync(55)
     expect(fetch).toHaveBeenCalledTimes(2)
-    expect(vi.mocked(fetch).mock.calls[1][2]?.lastLiveEventId).toBe('event1')
-    expect(result).toContainEqual(updatedMovie)
-
     unsubscribe()
   })
 
-  it('does not refetch for non-matching sync tags', async () => {
-    const mockSyncTags: SyncTag[] = ['s1:movies']
-    vi.mocked(fetch).mockReturnValueOnce(
-      of({result: mockData.movies, syncTags: mockSyncTags, ms: 0}).pipe(delay(0)),
-    )
+  it('coalesces bursts of mutations into a single refetch', async () => {
+    const unsubscribe = getQueryState(instance, {query: '*'}).subscribe()
+    await vi.advanceTimersByTimeAsync(5)
+    for (let i = 0; i < 10; i++) {
+      listenerEvents.next({type: 'mutation', visibility: 'query'} as ListenEvent)
+    }
+    await vi.advanceTimersByTimeAsync(55)
+    expect(fetch).toHaveBeenCalledTimes(2)
+    unsubscribe()
+  })
 
-    const query = '*[_type == "movie"]'
-    const state = getQueryState(instance, {query})
+  it.each(['transaction', undefined])(
+    'waits for indexing when mutation visibility is %s',
+    async (visibility) => {
+      const unsubscribe = getQueryState(instance, {query: '*'}).subscribe()
+      await vi.advanceTimersByTimeAsync(5)
+      listenerEvents.next({type: 'mutation', visibility} as ListenEvent)
 
+      // The 50 ms event batch is followed by Studio's 1,200 ms fallback.
+      await vi.advanceTimersByTimeAsync(1249)
+      expect(fetch).toHaveBeenCalledTimes(1)
+      await vi.advanceTimersByTimeAsync(6)
+      expect(fetch).toHaveBeenCalledTimes(2)
+      unsubscribe()
+    },
+  )
+
+  it('finishes a slow fetch and coalesces mutations into one trailing refetch', async () => {
+    const firstResponse = new Subject<{result: unknown; ms: number}>()
+    const secondResponse = new Subject<{result: unknown; ms: number}>()
+    const stopFetching = vi.fn()
+    vi.mocked(fetch)
+      .mockReturnValueOnce(firstResponse.pipe(finalize(stopFetching)))
+      .mockReturnValueOnce(secondResponse)
+    const state = getQueryState(instance, {query: '*'})
     const unsubscribe = state.subscribe()
-    await advanceAndAwait(firstValueFrom(state.observable.pipe(filter((i) => i !== undefined))))
+    await vi.advanceTimersByTimeAsync(5)
 
-    // Emit event with different tag
-    liveEvents.next({
-      type: 'message',
-      id: 'event1',
-      tags: ['s1:other'],
-      documentId: 'movie3',
-      event: 'created',
-    } as LiveEvent)
-
-    await vi.advanceTimersByTimeAsync(50) // Allow time for potential refetch
+    for (let i = 0; i < 3; i++) {
+      listenerEvents.next({type: 'mutation', visibility: 'query'} as ListenEvent)
+      await vi.advanceTimersByTimeAsync(55)
+    }
     expect(fetch).toHaveBeenCalledTimes(1)
+    expect(stopFetching).not.toHaveBeenCalled()
 
+    firstResponse.next({result: ['first'], ms: 0})
+    firstResponse.complete()
+    await vi.advanceTimersByTimeAsync(5)
+    expect(state.getCurrent()).toEqual(['first'])
+    expect(fetch).toHaveBeenCalledTimes(2)
+
+    secondResponse.next({result: ['latest'], ms: 0})
+    secondResponse.complete()
+    await vi.advanceTimersByTimeAsync(5)
+    expect(state.getCurrent()).toEqual(['latest'])
+    expect(fetch).toHaveBeenCalledTimes(2)
     unsubscribe()
   })
 
-  it('handles multiple live events with same sync tag', async () => {
-    const mockSyncTags: SyncTag[] = ['s1:movies']
-    vi.mocked(fetch).mockReturnValueOnce(
-      of({result: mockData.movies, syncTags: mockSyncTags, ms: 0}).pipe(delay(0)),
-    )
-    vi.mocked(fetch).mockReturnValueOnce(
-      of({result: mockData.movies, syncTags: mockSyncTags, ms: 0}).pipe(delay(0)),
-    )
-    vi.mocked(fetch).mockReturnValueOnce(
-      of({result: mockData.movies, syncTags: mockSyncTags, ms: 0}).pipe(delay(0)),
-    )
-
-    const query = '*[_type == "movie"]'
-    const state = getQueryState(instance, {query})
-
-    const unsubscribe = state.subscribe()
-    await advanceAndAwait(firstValueFrom(state.observable.pipe(filter((i) => i !== undefined))))
-
-    // Emit two events with same tag
-    liveEvents.next({
-      type: 'message',
-      id: 'event1',
-      tags: mockSyncTags,
-    })
-
-    liveEvents.next({
-      type: 'message',
-      id: 'event2',
-      tags: mockSyncTags,
-    })
-
-    await vi.advanceTimersByTimeAsync(0)
-    expect(fetch).toHaveBeenCalledTimes(3)
-    expect(vi.mocked(fetch).mock.calls[1][2]?.lastLiveEventId).toBe('event1')
-    expect(vi.mocked(fetch).mock.calls[2][2]?.lastLiveEventId).toBe('event2')
-
+  it('cancels an indexing delay when the last query is removed', async () => {
+    const unsubscribe = getQueryState(instance, {query: '*'}).subscribe()
+    await vi.advanceTimersByTimeAsync(5)
+    listenerEvents.next({type: 'mutation', visibility: 'transaction'} as ListenEvent)
+    await vi.advanceTimersByTimeAsync(55)
     unsubscribe()
+    await vi.advanceTimersByTimeAsync(QUERY_STATE_CLEAR_DELAY + 1200)
+    expect(fetch).toHaveBeenCalledTimes(1)
+    expect(stopListening).toHaveBeenCalledTimes(1)
+  })
+
+  it('cancels the active fetch and drops the trailing refetch on disposal', async () => {
+    const stopFetching = vi.fn()
+    vi.mocked(fetch).mockReturnValueOnce(
+      new Subject<{result: unknown; ms: number}>().pipe(finalize(stopFetching)),
+    )
+    getQueryState(instance, {query: '*'}).subscribe()
+    await vi.advanceTimersByTimeAsync(5)
+    listenerEvents.next({type: 'mutation', visibility: 'query'} as ListenEvent)
+    await vi.advanceTimersByTimeAsync(55)
+
+    instance.dispose()
+    await vi.advanceTimersByTimeAsync(2000)
+    expect(stopFetching).toHaveBeenCalledTimes(1)
+    expect(fetch).toHaveBeenCalledTimes(1)
+  })
+
+  it('shares the listener across queries and releases it after the last query is removed', async () => {
+    const unsubscribe1 = getQueryState(instance, {query: '*[_type == "movie"]'}).subscribe()
+    await vi.advanceTimersByTimeAsync(5)
+    const unsubscribe2 = getQueryState(instance, {query: 'count(*)'}).subscribe()
+    await vi.advanceTimersByTimeAsync(5)
+    expect(listen).toHaveBeenCalledTimes(1)
+    expect(fetch).toHaveBeenCalledTimes(2)
+
+    listenerEvents.next({type: 'mutation', visibility: 'query'} as ListenEvent)
+    await vi.advanceTimersByTimeAsync(55)
+    expect(fetch).toHaveBeenCalledTimes(4)
+
+    unsubscribe1()
+    await vi.advanceTimersByTimeAsync(QUERY_STATE_CLEAR_DELAY)
+    expect(stopListening).not.toHaveBeenCalled()
+    unsubscribe2()
+    await vi.advanceTimersByTimeAsync(QUERY_STATE_CLEAR_DELAY)
+    expect(stopListening).toHaveBeenCalledTimes(1)
+
+    listenerEvents.next({type: 'mutation', visibility: 'query'} as ListenEvent)
+    await vi.advanceTimersByTimeAsync(55)
+    expect(fetch).toHaveBeenCalledTimes(4)
+  })
+
+  it('replaces the listener and refetches when the client changes', async () => {
+    const stopFetching = vi.fn()
+    vi.mocked(fetch).mockReturnValueOnce(
+      new Subject<{result: unknown; ms: number}>().pipe(finalize(stopFetching)),
+    )
+    const clients = new BehaviorSubject({listen, observable: {fetch}} as SanityClient)
+    vi.mocked(getClientState).mockReturnValue({
+      observable: clients.asObservable(),
+    } as StateSource<SanityClient>)
+    const unsubscribe = getQueryState(instance, {query: '*'}).subscribe()
+    await vi.advanceTimersByTimeAsync(5)
+
+    const replacementListen = vi.fn().mockReturnValue(new Subject<ListenEvent>())
+    clients.next({listen: replacementListen, observable: {fetch}} as unknown as SanityClient)
+    await vi.advanceTimersByTimeAsync(5)
+    expect(stopListening).toHaveBeenCalledTimes(1)
+    expect(replacementListen).toHaveBeenCalledTimes(1)
+    expect(stopFetching).toHaveBeenCalledTimes(1)
+    expect(fetch).toHaveBeenCalledTimes(2)
+    unsubscribe()
+  })
+
+  it('releases the listener when the instance is disposed', () => {
+    getQueryState(instance, {query: '*'}).subscribe()
+    instance.dispose()
+    expect(stopListening).toHaveBeenCalledTimes(1)
   })
 
   it('handles errors in query fetching', async () => {
@@ -333,6 +435,8 @@ describe('queryStore', () => {
     const query = '*[_type == "movie"]'
     const state = getQueryState(instance, {query})
     const unsubscribe = state.subscribe()
+
+    await vi.advanceTimersByTimeAsync(5)
 
     // Verify error is thrown when accessing state
     expect(() => state.getCurrent()).toThrow(errorMessage)
@@ -351,6 +455,7 @@ describe('queryStore', () => {
     const query = '*[_type == "movie"]'
     const state1 = getQueryState(instance, {query})
     const unsub1 = state1.subscribe()
+    await vi.advanceTimersByTimeAsync(5)
     expect(() => state1.getCurrent()).toThrow('transient network failure')
     unsub1()
 
@@ -361,7 +466,7 @@ describe('queryStore', () => {
     const state2 = getQueryState(instance, {query})
     const unsub2 = state2.subscribe()
 
-    await vi.advanceTimersByTimeAsync(0)
+    await vi.advanceTimersByTimeAsync(5)
     expect(vi.mocked(fetch)).toHaveBeenCalledTimes(2)
 
     const result = await advanceAndAwait(
@@ -381,7 +486,7 @@ describe('queryStore', () => {
     const query = '*[_type == "movie"]'
     // This is how React drives a suspended query: resolveQuery creates the
     // key without any subscriber (the component never commits when it throws)
-    await expect(resolveQuery(instance, {query})).rejects.toThrow('network down')
+    await advanceAndAwait(expect(resolveQuery(instance, {query})).rejects.toThrow('network down'))
 
     // While the errored key exists, the error surfaces to error boundaries
     const state = getQueryState(instance, {query})
@@ -397,119 +502,19 @@ describe('queryStore', () => {
     await expect(advanceAndAwait(resolveQuery(instance, {query}))).resolves.toEqual(mockData.movies)
   })
 
-  it('stops live updates without retrying or erroring on a 4xx connection rejection', async () => {
-    const query = '*[_type == "movie"]'
-    const state = getQueryState(instance, {query})
-    const unsub = state.subscribe()
-    await advanceAndAwait(firstValueFrom(state.observable.pipe(filter((i) => i !== undefined))))
-
-    const clientState = vi.mocked(getClientState).mock.results[0]
-      ?.value as StateSource<SanityClient>
-    const client = await firstValueFrom(clientState.observable)
-    const eventsMock = vi.mocked(client.live.events)
-    const callsBefore = eventsMock.mock.calls.length
-
-    // The server rejected the connection with a 401 (e.g. expired token). The
-    // client surfaces this as a fatal ConnectionFailedError with the status —
-    // retrying would reconnect once per second forever against a server that
-    // keeps rejecting
-    liveEvents.error(new ConnectionFailedError('EventSource connection failed', {status: 401}))
-    await vi.advanceTimersByTimeAsync(LIVE_EVENTS_RETRY_DELAY * 5)
-
-    expect(() => state.getCurrent()).not.toThrow()
-    expect(eventsMock.mock.calls.length).toBe(callsBefore)
-    unsub()
-  })
-
-  it('retries a connection failure without a status (transient network failure)', async () => {
-    const query = '*[_type == "movie"]'
-    const state = getQueryState(instance, {query})
-    const unsub = state.subscribe()
-    await advanceAndAwait(firstValueFrom(state.observable.pipe(filter((i) => i !== undefined))))
-
-    const clientState = vi.mocked(getClientState).mock.results[0]
-      ?.value as StateSource<SanityClient>
-    const client = await firstValueFrom(clientState.observable)
-    const eventsMock = vi.mocked(client.live.events)
-    const callsBefore = eventsMock.mock.calls.length
-
-    // No status means the failure could be transient (native EventSource
-    // exposes no status) — reconnecting is correct here
-    liveEvents.error(new ConnectionFailedError('EventSource connection failed'))
-    await vi.advanceTimersByTimeAsync(LIVE_EVENTS_RETRY_DELAY * 2)
-
-    expect(() => state.getCurrent()).not.toThrow()
-    expect(eventsMock.mock.calls.length).toBeGreaterThan(callsBefore)
-    unsub()
-  })
-
-  it('surfaces CORS errors on the live connection as a store-wide error', async () => {
-    const query = '*[_type == "movie"]'
-    const state = getQueryState(instance, {query})
-    const unsub = state.subscribe()
-    await advanceAndAwait(firstValueFrom(state.observable.pipe(filter((i) => i !== undefined))))
-
-    liveEvents.error(new CorsOriginError({projectId: 'test'}))
-    await vi.advanceTimersByTimeAsync(0)
-
-    // the swallowed CORS error is recorded as store state so the query
-    // selector rethrows it (handled by the Cors Error component)
-    expect(() => state.getCurrent()).toThrow(CorsOriginError)
-    unsub()
-  })
-
-  it('stops live updates without retrying or erroring on DisconnectError', async () => {
-    const query = '*[_type == "movie"]'
-    const state = getQueryState(instance, {query})
-    const unsub = state.subscribe()
-    await advanceAndAwait(firstValueFrom(state.observable.pipe(filter((i) => i !== undefined))))
-
-    // Grab the live events factory from the client the store is subscribed to
-    const clientState = vi.mocked(getClientState).mock.results[0]
-      ?.value as StateSource<SanityClient>
-    const client = await firstValueFrom(clientState.observable)
-    const eventsMock = vi.mocked(client.live.events)
-    const callsBefore = eventsMock.mock.calls.length
-
-    // The server instructed the client to stop reconnecting
-    liveEvents.error(new DisconnectError('Server disconnected client'))
-    // Advance past several retry delays
-    await vi.advanceTimersByTimeAsync(LIVE_EVENTS_RETRY_DELAY * 5)
-
-    // No store-wide error, and no reconnect attempts (a retry would call
-    // live.events again)
-    expect(() => state.getCurrent()).not.toThrow()
-    expect(eventsMock.mock.calls.length).toBe(callsBefore)
-    unsub()
-  })
-
-  it('keeps queries working after the live events connection errors', async () => {
-    const query = '*[_type == "movie"]'
-    const state = getQueryState(instance, {query})
-    const unsub = state.subscribe()
-    await advanceAndAwait(firstValueFrom(state.observable.pipe(filter((i) => i !== undefined))))
-
-    // The live connection drops (e.g. network goes offline)
-    liveEvents.error(new Error('live connection lost'))
-    await vi.advanceTimersByTimeAsync(0)
-
-    // Existing query state must remain readable — a lost live connection must
-    // not poison the whole store
-    expect(() => state.getCurrent()).not.toThrow()
-    expect(state.getCurrent()).toEqual(mockData.movies)
-    unsub()
-
-    // Wait for the clear delay so the key is fully removed, then re-add it —
-    // fetching must still work
-    await vi.advanceTimersByTimeAsync(QUERY_STATE_CLEAR_DELAY)
-    const state2 = getQueryState(instance, {query})
-    const unsub2 = state2.subscribe()
-    const result = await advanceAndAwait(
-      firstValueFrom(state2.observable.pipe(filter((i) => i !== undefined))),
-    )
-    expect(result).toEqual(mockData.movies)
-    unsub2()
-  })
+  it.each([new CorsOriginError({projectId: 'test'}), new Error('Unauthorized')])(
+    'surfaces terminal listener errors: %s',
+    async (error) => {
+      const state = getQueryState(instance, {query: '*'})
+      const unsubscribe = state.subscribe()
+      await vi.advanceTimersByTimeAsync(5)
+      listenerEvents.error(error)
+      await vi.advanceTimersByTimeAsync(5000)
+      expect(() => state.getCurrent()).toThrow(error)
+      expect(listen).toHaveBeenCalledTimes(1)
+      unsubscribe()
+    },
+  )
 
   it('delays query state removal after unsubscribe', async () => {
     const query = '*[_type == "movie"]'
@@ -665,7 +670,7 @@ describe('queryStore', () => {
     unsubscribe()
   })
 
-  it('uses resource from store context key when not a dataset resource (listenToLiveClientAndSetLastLiveEventIds)', async () => {
+  it('scopes the shared listener to the resource from the store context', async () => {
     const query = '*[_type == "movie"]'
     const canvasSource = {canvasId: 'canvas456'}
 
@@ -674,15 +679,15 @@ describe('queryStore', () => {
 
     await advanceAndAwait(firstValueFrom(state.observable.pipe(filter((i) => i !== undefined))))
 
-    // Verify getClientState was called with the canvas resource for live events
+    // Verify getClientState was called with the canvas resource for the listener
     // The resource is extracted from the store key and passed when it's not a dataset resource
     // This call only has apiVersion and resource (no projectId/dataset)
     const calls = vi.mocked(getClientState).mock.calls
-    const liveClientCall = calls.find(
+    const listenerClientCall = calls.find(
       ([_instance, options]) =>
         isCanvasResource(options.resource!) && options.resource.canvasId === 'canvas456',
     )
-    expect(liveClientCall).toBeDefined()
+    expect(listenerClientCall).toBeDefined()
 
     unsubscribe()
   })
