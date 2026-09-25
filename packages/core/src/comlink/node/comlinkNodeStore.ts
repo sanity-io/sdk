@@ -1,6 +1,7 @@
 import {type Node, type NodeInput, type Status} from '@sanity/comlink'
 
 import {bindActionGlobally} from '../../store/createActionBinder'
+import {type SanityInstance} from '../../store/createSanityInstance'
 import {defineStore} from '../../store/defineStore'
 import {type FrameMessage, type WindowMessage} from '../types'
 import {getOrCreateNode as unboundGetOrCreateNode} from './actions/getOrCreateNode'
@@ -51,10 +52,20 @@ export const comlinkNodeStore = defineStore<ComlinkNodeState>({
  */
 export const releaseNode = bindActionGlobally(comlinkNodeStore, unboundReleaseNode)
 
+const _getOrCreateNode = bindActionGlobally(comlinkNodeStore, unboundGetOrCreateNode)
+
 /**
  * Retrieve or create a node to be used for communication between
  * an application and the controller -- specifically, a node should
  * be created within a frame / window to communicate with the controller.
+ *
+ * Nodes are shared by name, so the message types must match the protocol spoken on that name.
  * @public
  */
-export const getOrCreateNode = bindActionGlobally(comlinkNodeStore, unboundGetOrCreateNode)
+export function getOrCreateNode<
+  TWindowMessage extends WindowMessage = WindowMessage,
+  TFrameMessage extends FrameMessage = FrameMessage,
+>(instance: SanityInstance, options: NodeInput): Node<TWindowMessage, TFrameMessage> {
+  // The store keeps nodes of any protocol, so the message types are the caller's to assert.
+  return _getOrCreateNode(instance, options) as Node<TWindowMessage, TFrameMessage>
+}
