@@ -54,7 +54,7 @@ catalog:
   groq-js: '^2.0.0'
   jsdom: '^30.1.1'
   lodash-es: '^4.18.1'
-  oxfmt: '^0.68.0'
+  oxfmt: '^0.70.0'
   react: '^19.3.0'
   react-compiler-runtime: '^1.0.0'
   react-dom: '^19.3.0'
