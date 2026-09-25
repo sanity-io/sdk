@@ -256,6 +256,8 @@ export {getQueryState, type QueryOptions, resolveQuery} from '../query/queryStor
 export {getPerspectiveState} from '../releases/getPerspectiveState'
 export type {ReleaseState} from '../releases/releasesStore'
 export {getActiveReleasesState, getAllReleasesState} from '../releases/releasesStore'
+export {schema} from '../schema/schema'
+export {type SchemaDefinition, type SchemaMeta, type SchemaOptions} from '../schema/schema'
 export {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 export {type Selector, type StateSource} from '../store/createStateSourceAction'
 export {defineProjection} from '../typegen/defineProjection'

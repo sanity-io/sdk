@@ -105,6 +105,7 @@ export const navGroups: NavGroup[] = [
     title: 'Demos',
     items: [
       {path: 'todo', title: 'Todo', icon: ListIcon},
+      {path: 'schema-form', title: 'Schema form', icon: SchemaIcon},
       {path: 'studio-demo', title: 'Studio', icon: DocumentIcon},
       {path: 'comlink-demo', title: 'Comlink', icon: LinkIcon},
     ],
