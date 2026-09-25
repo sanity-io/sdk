@@ -1,4 +1,4 @@
-import {filter, firstValueFrom, timeout} from 'rxjs'
+import {filter, firstValueFrom, Observable, share, timeout} from 'rxjs'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {createSanityInstance, type SanityInstance} from './createSanityInstance'
@@ -255,5 +255,26 @@ describe('createStateSourceAction', () => {
 
     sub.unsubscribe()
     sub2()
+  })
+
+  it('keeps the store upstream open for as long as it has subscribers', () => {
+    const open = vi.fn()
+    const close = vi.fn()
+    const upstream$ = new Observable<never>(() => {
+      open()
+      return close
+    }).pipe(share())
+    const source = createStateSourceAction(
+      ({state: s}: SelectorContext<CountStoreState>) => s.count,
+    )({state, instance, key: null, upstream$})
+
+    const unsubscribeA = source.subscribe()
+    const subscriptionB = source.observable.subscribe()
+    expect(open).toHaveBeenCalledTimes(1)
+
+    unsubscribeA()
+    expect(close).not.toHaveBeenCalled()
+    subscriptionB.unsubscribe()
+    expect(close).toHaveBeenCalledTimes(1)
   })
 })

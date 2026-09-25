@@ -1,3 +1,5 @@
+import {type Observable, type Subscription} from 'rxjs'
+
 import {type SanityInstance} from './createSanityInstance'
 import {type StoreState} from './createStoreState'
 
@@ -25,6 +27,12 @@ export interface StoreContext<TState, TKey = unknown> {
    * The key used to instantiate the store.
    */
   key: TKey
+
+  /**
+   * The store's upstream subscription. Subscribing keeps it open. Provided to
+   * actions bound through an action binder.
+   */
+  upstream$?: Observable<never>
 }
 
 /**
@@ -71,6 +79,19 @@ export interface StoreDefinition<TState, TKey = unknown> {
    * - Dispose external connections
    */
   initialize?: (context: StoreContext<TState, TKey>) => (() => void) | undefined
+
+  /**
+   * Optional function that opens the store's upstream subscription, such as a
+   * live event stream from Content Lake.
+   *
+   * @remarks
+   * The store layer opens it when the store gets its first subscriber and closes
+   * it shortly after the last one leaves, so the connection is only open while
+   * something shows the store's data. This includes apps hidden by React
+   * `<Activity>`, whose components unsubscribe while hidden. State is kept while
+   * upstream is closed. `initialize` runs once for the store's whole life.
+   */
+  upstream?: (context: StoreContext<TState, TKey>) => Subscription
 }
 
 /**

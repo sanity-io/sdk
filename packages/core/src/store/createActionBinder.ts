@@ -112,7 +112,15 @@ export function createActionBinder<
       }
 
       // Execute action with store context
-      return action({instance, state: storeInstance.state as StoreState<TState>, key}, ...params)
+      return action(
+        {
+          instance,
+          state: storeInstance.state as StoreState<TState>,
+          key,
+          upstream$: storeInstance.upstream$,
+        },
+        ...params,
+      )
     }
   }
 }

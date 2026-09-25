@@ -1,4 +1,5 @@
 import {
+  getPresence,
   isMediaLibraryResource,
   type PresenceSelection,
   reportPresence,
@@ -53,7 +54,9 @@ export interface UseReportPresenceOptions extends DocumentHandle {
  * every 30 seconds while the user is idle. That repeat is what tells peers the
  * session is still alive, so the intended usage is to mount this hook for as long
  * as the user is in the document. On unmount the location is cleared, leaving the
- * user present in the app but not in any particular document.
+ * user present in the app but not in any particular document. About a second
+ * after nothing reports or reads presence, including while the app is hidden, the
+ * connection closes and peers stop seeing the user.
  *
  * The perspective decides which specific document is reported: the draft under
  * `drafts`, the published document under `published`, a version under a release.
@@ -132,6 +135,12 @@ export function useReportPresence(options: UseReportPresenceOptions): void {
       ...(parsedSelection ? {selection: parsedSelection} : {}),
     }
   }, [locationKey])
+
+  // Reporting subscribes to nothing, so without this the connection would close under us
+  useEffect(
+    () => getPresence(sanityInstance, resource ? {resource} : {}).subscribe(),
+    [sanityInstance, resource],
+  )
 
   const lastSentAt = useRef(0)
   const pending = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
