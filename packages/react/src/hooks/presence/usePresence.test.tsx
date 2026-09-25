@@ -1,7 +1,8 @@
-import {getPresence, type SanityUser, type UserPresence} from '@sanity/sdk'
-import {act, renderHook} from '@testing-library/react'
+import {createSanityInstance, getPresence, type SanityUser, type UserPresence} from '@sanity/sdk'
+import {act, render, renderHook, screen} from '@testing-library/react'
+import {ErrorBoundary} from 'react-error-boundary'
 import {NEVER} from 'rxjs'
-import {describe, expect, it, vi} from 'vitest'
+import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {ResourceProvider} from '../../context/ResourceProvider'
 import {usePresence} from './usePresence'
@@ -126,5 +127,66 @@ describe('usePresence', () => {
 
     expect(result.current.locations).toEqual([])
     unmount()
+  })
+
+  describe('when the presence connection cannot open', () => {
+    // The client rejects this id as the connection opens, which is a real way to reach this
+    const resource = {projectId: 'not_valid!', dataset: 'test-dataset'}
+    // Every attempt to connect throws a new error, so a repeated one means it did not try again
+    let caught: unknown[]
+
+    function Presence() {
+      usePresence({resource})
+      return <p>present</p>
+    }
+
+    const app = (mount: number) => (
+      <ResourceProvider resource={{projectId: 'test', dataset: 'test'}} fallback={null}>
+        <ErrorBoundary
+          key={mount}
+          onError={(error) => caught.push(error)}
+          fallbackRender={({error}) => <p>{String(error)}</p>}
+        >
+          <Presence />
+        </ErrorBoundary>
+      </ResourceProvider>
+    )
+
+    beforeEach(async () => {
+      const actual = await vi.importActual<typeof import('@sanity/sdk')>('@sanity/sdk')
+      vi.mocked(getPresence).mockImplementation(actual.getPresence)
+      vi.mocked(createSanityInstance).mockImplementation(actual.createSanityInstance)
+      caught = []
+      vi.spyOn(console, 'error').mockImplementation(() => {})
+    })
+
+    afterEach(() => {
+      vi.mocked(getPresence).mockReset()
+      vi.mocked(createSanityInstance).mockReset()
+      vi.useRealTimers()
+      vi.restoreAllMocks()
+    })
+
+    it('shows the error in the nearest error boundary', async () => {
+      render(app(1))
+
+      expect(await screen.findByText(/projectId.*can only contain/)).toBeInTheDocument()
+      expect(screen.queryByText('present')).not.toBeInTheDocument()
+    })
+
+    it('tries to connect again when remounted after the error boundary resets', async () => {
+      vi.useFakeTimers({toFake: ['setTimeout', 'clearTimeout']})
+      const {rerender} = render(app(1))
+      await act(async () => {})
+      const [errorOnMount] = caught
+      expect(errorOnMount).toBeInstanceOf(Error)
+
+      await act(async () => vi.advanceTimersByTime(1000))
+      rerender(app(2))
+      await act(async () => {})
+
+      expect(caught.at(-1)).not.toBe(errorOnMount)
+      expect(screen.getByText(/projectId.*can only contain/)).toBeInTheDocument()
+    })
   })
 })

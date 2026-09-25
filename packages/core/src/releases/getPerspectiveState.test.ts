@@ -1,5 +1,5 @@
 import {type ReleaseDocument} from '@sanity/client'
-import {filter, firstValueFrom, of, Subject, take} from 'rxjs'
+import {filter, firstValueFrom, of, ReplaySubject, take} from 'rxjs'
 import {describe, expect, it, vi} from 'vitest'
 
 import {type PerspectiveHandle, type ReleasePerspective} from '../config/sanityConfig'
@@ -19,7 +19,7 @@ vi.mock('../client/clientStore', () => ({
 
 describe('getPerspectiveState', () => {
   let instance: SanityInstance
-  let mockReleasesQuerySubject: Subject<ReleaseDocument[] | undefined>
+  let mockReleasesQuerySubject: ReplaySubject<ReleaseDocument[] | undefined>
 
   const release1 = {
     _id: 'release-1',
@@ -42,7 +42,9 @@ describe('getPerspectiveState', () => {
   beforeEach(() => {
     instance = createSanityInstance({projectId: 'test', dataset: 'test'})
 
-    mockReleasesQuerySubject = new Subject<ReleaseDocument[] | undefined>()
+    // Replays so releases emitted before the store opens its upstream still arrive; upstream
+    // only opens once something subscribes
+    mockReleasesQuerySubject = new ReplaySubject<ReleaseDocument[] | undefined>(1)
     vi.mocked(observeReleases).mockReturnValue(mockReleasesQuerySubject.asObservable())
   })
 

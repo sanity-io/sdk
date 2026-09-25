@@ -1,13 +1,17 @@
-import {type ReleaseDocument} from '@sanity/client'
+import {type ReleaseDocument, type SanityClient} from '@sanity/client'
 import {NEVER, Observable, type Observer, of, Subject} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
+import {getClientState} from '../client/clientStore'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
+import {type StateSource} from '../store/createStateSourceAction'
+import {UPSTREAM_CLOSE_DELAY_MS} from '../store/createStoreInstance'
 import {observeReleases} from './observeReleases'
 import {getActiveReleasesState, getAllReleasesState} from './releasesStore'
 
 // Mock dependencies
 vi.mock('./observeReleases')
+vi.mock('../client/clientStore', () => ({getClientState: vi.fn()}))
 
 describe('releasesStore', () => {
   let instance: SanityInstance
@@ -26,8 +30,8 @@ describe('releasesStore', () => {
 
   it('supports calls without options', () => {
     const state = getActiveReleasesState(instance)
+    state.subscribe()
 
-    expect(state.getCurrent()).toBeUndefined()
     expect(observeReleases).toHaveBeenCalledWith(
       instance,
       expect.objectContaining({
@@ -63,6 +67,8 @@ describe('releasesStore', () => {
 
     const state = getActiveReleasesState(instance, {resource: {projectId: 'test', dataset: 'test'}})
 
+    state.subscribe()
+
     const [observer] = subscriber.mock.lastCall!
 
     observer.next(mockReleases)
@@ -78,8 +84,9 @@ describe('releasesStore', () => {
 
     const state = getActiveReleasesState(instance, {resource: {projectId: 'test', dataset: 'test'}})
 
-    // Initial state should be default
-    expect(state.getCurrent()).toBeUndefined() // Default initial state
+    state.subscribe()
+
+    expect(state.getCurrent()).toEqual([])
 
     // Emit initial data
     const initialReleases: ReleaseDocument[] = [
@@ -121,6 +128,8 @@ describe('releasesStore', () => {
 
     const state = getActiveReleasesState(instance, {resource: {projectId: 'test', dataset: 'test'}})
 
+    state.subscribe()
+
     await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(state.getCurrent()).toEqual([]) // Should be set to empty array
@@ -130,6 +139,7 @@ describe('releasesStore', () => {
     // Test null case
     vi.mocked(observeReleases).mockReturnValue(of(null as unknown as ReleaseDocument[] | undefined))
     const state = getActiveReleasesState(instance, {resource: {projectId: 'test', dataset: 'test'}})
+    state.subscribe()
     await new Promise((resolve) => setTimeout(resolve, 0))
     expect(state.getCurrent()).toEqual([])
 
@@ -146,6 +156,8 @@ describe('releasesStore', () => {
     const active = getActiveReleasesState(instance, {
       resource: {projectId: 'test', dataset: 'test'},
     })
+
+    active.subscribe()
     const all = getAllReleasesState(instance, {resource: {projectId: 'test', dataset: 'test'}})
 
     const releases: ReleaseDocument[] = [
@@ -189,6 +201,8 @@ describe('releasesStore', () => {
 
     const state = getActiveReleasesState(instance, {resource: {projectId: 'test', dataset: 'test'}})
 
+    state.subscribe()
+
     subject.next([
       {
         _id: 'r1',
@@ -218,6 +232,8 @@ describe('releasesStore', () => {
     const active = getActiveReleasesState(instance, {
       resource: {projectId: 'test', dataset: 'test'},
     })
+
+    active.subscribe()
     const all = getAllReleasesState(instance, {resource: {projectId: 'test', dataset: 'test'}})
 
     const error = new Error('Query failed')
@@ -229,5 +245,65 @@ describe('releasesStore', () => {
     // otherwise consumers just see an empty list with no signal.
     expect(() => active.getCurrent()).toThrow(error)
     expect(() => all.getCurrent()).toThrow(error)
+  })
+
+  it('closes the releases listener after the last subscriber leaves and reopens it on resubscribe', () => {
+    vi.useFakeTimers()
+    try {
+      const releases = new Subject<ReleaseDocument[]>()
+      vi.mocked(observeReleases).mockReturnValue(releases)
+      const state = getActiveReleasesState(instance)
+
+      const unsubscribe = state.subscribe()
+      expect(releases.observed).toBe(true)
+
+      unsubscribe()
+      vi.advanceTimersByTime(UPSTREAM_CLOSE_DELAY_MS - 1)
+      expect(releases.observed).toBe(true)
+      vi.advanceTimersByTime(1)
+      expect(releases.observed).toBe(false)
+
+      state.subscribe()
+      expect(releases.observed).toBe(true)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('starts with an empty list before anything subscribes, so hooks do not suspend on first load', () => {
+    expect(getActiveReleasesState(instance).getCurrent()).toEqual([])
+    expect(getAllReleasesState(instance).getCurrent()).toEqual([])
+  })
+
+  it('keeps the known releases when it reconnects, until fresh data arrives', async () => {
+    vi.useFakeTimers()
+    try {
+      const actual = await vi.importActual<typeof import('./observeReleases')>('./observeReleases')
+      vi.mocked(observeReleases).mockImplementation(actual.observeReleases)
+      const release = {_id: 'r1', name: 'r1', state: 'active'} as ReleaseDocument
+      const responses = new Subject<{result: ReleaseDocument[]; syncTags: string[]}>()
+      vi.mocked(getClientState).mockReturnValue({
+        observable: of({
+          config: () => ({}),
+          live: {events: () => NEVER},
+          observable: {fetch: () => responses},
+        } as unknown as SanityClient),
+      } as unknown as StateSource<SanityClient>)
+
+      const state = getActiveReleasesState(instance)
+      const unsubscribe = state.subscribe()
+      responses.next({result: [release], syncTags: []})
+      expect(state.getCurrent()).toEqual([release])
+
+      unsubscribe()
+      vi.advanceTimersByTime(UPSTREAM_CLOSE_DELAY_MS)
+      expect(responses.observed).toBe(false)
+
+      state.subscribe()
+      expect(responses.observed).toBe(true)
+      expect(state.getCurrent()).toEqual([release])
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })

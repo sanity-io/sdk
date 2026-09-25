@@ -35,14 +35,13 @@ export interface ReleasesStoreState {
 
 export const releasesStore = defineStore<ReleasesStoreState, BoundResourceKey>({
   name: 'Releases',
+  // Empty rather than undefined, so the React hooks do not suspend on first load. A
+  // reconnect keeps whatever was last known until the fetch returns.
   getInitialState: (): ReleasesStoreState => ({
-    activeReleases: undefined,
-    allReleases: undefined,
+    activeReleases: STABLE_EMPTY_RELEASES,
+    allReleases: STABLE_EMPTY_RELEASES,
   }),
-  initialize: (context) => {
-    const subscription = subscribeToReleases(context)
-    return () => subscription.unsubscribe()
-  },
+  upstream: (context) => subscribeToReleases(context),
 })
 
 /**

@@ -14,6 +14,7 @@ import {afterEach, beforeEach, describe, expect, it, type Mock, vi} from 'vitest
 import {getClientState} from '../client/clientStore'
 import {createSanityInstance} from '../store/createSanityInstance'
 import {type StateSource} from '../store/createStateSourceAction'
+import {UPSTREAM_CLOSE_DELAY_MS} from '../store/createStoreInstance'
 import {createFetchDocument, createSharedListener} from './sharedListener'
 
 const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
@@ -93,6 +94,30 @@ describe('createSharedListener', () => {
     // New subscriber should immediately receive the replayed welcome event.
     const secondEvents = await lastValueFrom(sharedListener.events.pipe(toArray()))
     expect(secondEvents).toEqual([welcomeEvent])
+  })
+
+  it('closes the listener after the last subscriber leaves and reopens it on resubscribe', () => {
+    vi.useFakeTimers()
+    try {
+      const sharedListener = createSharedListener(instance)
+      const subscription = sharedListener.events.subscribe()
+      fakeListenSubject.next({type: 'welcome', listenerName: 'listener'} as WelcomeEvent)
+      subscription.unsubscribe()
+
+      vi.advanceTimersByTime(UPSTREAM_CLOSE_DELAY_MS - 1)
+      expect(fakeListenSubject.observed).toBe(true)
+      vi.advanceTimersByTime(1)
+      expect(fakeListenSubject.observed).toBe(false)
+
+      const received: ListenEvent<SanityDocument>[] = []
+      sharedListener.events.subscribe((event) => received.push(event))
+      expect(fakeListenSubject.observed).toBe(true)
+      expect(fakeClient.listen).toHaveBeenCalledTimes(2)
+      // The old connection's welcome must not stand in for the new one's
+      expect(received).toEqual([])
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('should propagate non-welcome events (e.g. mutation and reconnect) without replay', async () => {

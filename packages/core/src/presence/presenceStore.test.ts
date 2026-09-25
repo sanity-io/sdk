@@ -13,6 +13,7 @@ import {afterEach, beforeEach, describe, expect, it, type Mock, vi} from 'vitest
 import {getTokenState} from '../auth/authStore'
 import {getClient} from '../client/clientStore'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
+import {UPSTREAM_CLOSE_DELAY_MS} from '../store/createStoreInstance'
 import {type SanityUser} from '../users/types'
 import {getUserState} from '../users/usersStore'
 import {createBifurTransport} from './bifurTransport'
@@ -97,7 +98,7 @@ describe('presenceStore', () => {
 
   describe('getPresence', () => {
     it('creates bifur transport with correct parameters', () => {
-      getPresence(instance)
+      getPresence(instance).subscribe(() => {})
 
       expect(createBifurTransport).toHaveBeenCalledWith({
         client: mockClient,
@@ -107,7 +108,7 @@ describe('presenceStore', () => {
     })
 
     it('sends rollCall message on initialization', () => {
-      getPresence(instance)
+      getPresence(instance).subscribe(() => {})
 
       expect(mockDispatchMessage).toHaveBeenCalledWith({type: 'rollCall'})
     })
@@ -288,7 +289,9 @@ describe('presenceStore', () => {
     })
 
     it('creates a project-hostname client for dataset resources', () => {
-      getPresence(instance, {resource: {projectId: 'my-project', dataset: 'my-dataset'}})
+      getPresence(instance, {resource: {projectId: 'my-project', dataset: 'my-dataset'}}).subscribe(
+        () => {},
+      )
 
       expect(getClient).toHaveBeenCalledWith(instance, {
         apiVersion: '2026-03-30',
@@ -300,7 +303,7 @@ describe('presenceStore', () => {
 
     it('creates a resource client for canvas resources', () => {
       const canvasResource = {canvasId: 'canvas123'}
-      getPresence(instance, {resource: canvasResource})
+      getPresence(instance, {resource: canvasResource}).subscribe(() => {})
 
       expect(getClient).toHaveBeenCalledWith(instance, {
         apiVersion: '2026-03-30',
@@ -821,7 +824,7 @@ describe('presenceStore', () => {
     it('stays silent until the app reports, so reading never broadcasts', async () => {
       vi.useFakeTimers()
       try {
-        getPresence(instance)
+        getPresence(instance).subscribe(() => {})
         await flush()
         await vi.advanceTimersByTimeAsync(60_000)
 
@@ -836,7 +839,7 @@ describe('presenceStore', () => {
     it('resolves the reported id from the perspective', async () => {
       vi.useFakeTimers()
       try {
-        getPresence(instance)
+        getPresence(instance, {}).subscribe()
 
         // Default: the draft, which is what the Studio's form is on and therefore
         // what its field indicators compare against.
@@ -866,7 +869,7 @@ describe('presenceStore', () => {
       vi.useFakeTimers()
       vi.setSystemTime(new Date('2026-07-30T12:00:00.000Z'))
       try {
-        getPresence(instance)
+        getPresence(instance, {}).subscribe()
         reportPresence(instance, {locations: [{documentId: 'doc-1'}]})
         await flush()
 
@@ -892,7 +895,7 @@ describe('presenceStore', () => {
     it('carries keyed path segments and a Portable Text selection', async () => {
       vi.useFakeTimers()
       try {
-        getPresence(instance)
+        getPresence(instance, {}).subscribe()
         // The shape the Studio expects: keyed segments for array items and spans.
         reportPresence(instance, {
           locations: [
@@ -930,7 +933,7 @@ describe('presenceStore', () => {
     it('omits selection entirely when none was reported', async () => {
       vi.useFakeTimers()
       try {
-        getPresence(instance)
+        getPresence(instance, {}).subscribe()
         reportPresence(instance, {locations: [{documentId: 'doc-1', path: ['title']}]})
         await flush()
 
@@ -943,7 +946,7 @@ describe('presenceStore', () => {
     it('announces an empty location list as present but nowhere', async () => {
       vi.useFakeTimers()
       try {
-        getPresence(instance)
+        getPresence(instance, {}).subscribe()
         reportPresence(instance, {locations: []})
         await flush()
 
@@ -956,7 +959,7 @@ describe('presenceStore', () => {
     it('collapses reports spread across the audit window into one announcement', async () => {
       vi.useFakeTimers()
       try {
-        getPresence(instance)
+        getPresence(instance, {}).subscribe()
 
         // Deliberately spaced out. Reports made in the same tick are collapsed by
         // `switchMap` alone, so stepping the clock between them is what actually
@@ -980,7 +983,7 @@ describe('presenceStore', () => {
     it('does not re-announce when only lastActiveAt would differ', async () => {
       vi.useFakeTimers()
       try {
-        getPresence(instance)
+        getPresence(instance, {}).subscribe()
         reportPresence(instance, {locations: [{documentId: 'doc-1', path: ['title']}]})
         await flush()
         expect(stateCalls()).toHaveLength(1)
@@ -1000,7 +1003,7 @@ describe('presenceStore', () => {
     it('re-announces every 30s while idle, so peers do not expire it', async () => {
       vi.useFakeTimers()
       try {
-        getPresence(instance)
+        getPresence(instance, {}).subscribe()
         reportPresence(instance, {locations: [{documentId: 'doc-1'}]})
         await flush()
         expect(stateCalls()).toHaveLength(1)
@@ -1018,7 +1021,7 @@ describe('presenceStore', () => {
     it("answers another client's roll call", async () => {
       vi.useFakeTimers()
       try {
-        getPresence(instance)
+        getPresence(instance, {}).subscribe()
         reportPresence(instance, {locations: [{documentId: 'doc-1'}]})
         await flush()
         expect(stateCalls()).toHaveLength(1)
@@ -1039,7 +1042,7 @@ describe('presenceStore', () => {
     it('ignores the echo of its own roll call', async () => {
       vi.useFakeTimers()
       try {
-        getPresence(instance)
+        getPresence(instance, {}).subscribe()
         reportPresence(instance, {locations: [{documentId: 'doc-1'}]})
         await flush()
         expect(stateCalls()).toHaveLength(1)
@@ -1062,7 +1065,7 @@ describe('presenceStore', () => {
     it('keeps announcing after a failed announcement', async () => {
       vi.useFakeTimers()
       try {
-        getPresence(instance)
+        getPresence(instance, {}).subscribe()
         reportPresence(instance, {locations: [{documentId: 'doc-1'}]})
         await flush()
         expect(stateCalls()).toHaveLength(1)
@@ -1096,7 +1099,7 @@ describe('presenceStore', () => {
     it('keeps announcing when a trigger source fails', async () => {
       vi.useFakeTimers()
       try {
-        getPresence(instance)
+        getPresence(instance, {}).subscribe()
         reportPresence(instance, {locations: [{documentId: 'doc-1'}]})
         await flush()
         expect(stateCalls()).toHaveLength(1)
@@ -1121,7 +1124,7 @@ describe('presenceStore', () => {
     it('re-announces after a reconnect', async () => {
       vi.useFakeTimers()
       try {
-        getPresence(instance)
+        getPresence(instance, {}).subscribe()
         reportPresence(instance, {locations: [{documentId: 'doc-1'}]})
         await flush()
         expect(stateCalls()).toHaveLength(1)
@@ -1134,6 +1137,75 @@ describe('presenceStore', () => {
       } finally {
         vi.useRealTimers()
       }
+    })
+
+    it('announces the last reported location on a connection opened after it closed', async () => {
+      vi.useFakeTimers()
+      try {
+        const release = getPresence(instance, {}).subscribe()
+        reportPresence(instance, {locations: [{documentId: 'doc-1', path: ['title']}]})
+        await flush()
+        release()
+        await vi.advanceTimersByTimeAsync(UPSTREAM_CLOSE_DELAY_MS)
+        expect(mockConnections.observed).toBe(false)
+        mockDispatchMessage.mockClear()
+
+        getPresence(instance, {}).subscribe()
+        await flush()
+
+        expect(stateCalls()).toEqual([
+          {
+            type: 'state',
+            locations: [expect.objectContaining({documentId: 'drafts.doc-1', path: ['title']})],
+          },
+        ])
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
+    it('announces a location reported before the connection opened', async () => {
+      vi.useFakeTimers()
+      try {
+        reportPresence(instance, {locations: [{documentId: 'doc-1'}]})
+        await flush()
+        expect(createBifurTransport).not.toHaveBeenCalled()
+
+        getPresence(instance, {}).subscribe()
+        await flush()
+
+        expect(stateCalls()).toEqual([
+          {type: 'state', locations: [expect.objectContaining({documentId: 'drafts.doc-1'})]},
+        ])
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+  })
+
+  describe('while nothing uses it', () => {
+    beforeEach(() => vi.useFakeTimers())
+    afterEach(() => vi.useRealTimers())
+
+    it('announces a disconnect and closes the transport after the last subscriber leaves', async () => {
+      const connectedWhenDisconnectSent: boolean[] = []
+      mockDispatchMessage.mockImplementation((message) => {
+        if (message.type === 'disconnect')
+          connectedWhenDisconnectSent.push(mockConnections.observed)
+        return of(undefined)
+      })
+      const unsubscribe = getPresence(instance).subscribe(() => {})
+      expect(mockConnections.observed).toBe(true)
+
+      unsubscribe()
+      await vi.advanceTimersByTimeAsync(UPSTREAM_CLOSE_DELAY_MS - 1)
+      expect(mockConnections.observed).toBe(true)
+      await vi.advanceTimersByTimeAsync(1)
+
+      // Sent while the socket is still open, or peers keep a ghost session until it expires
+      expect(connectedWhenDisconnectSent).toEqual([true])
+      expect(mockConnections.observed).toBe(false)
+      expect(mockIncomingEvents.observed).toBe(false)
     })
   })
 
