@@ -1,12 +1,18 @@
-import {type DocumentResource, type SanityConfig, type SanityInstance} from '@sanity/sdk'
+import {
+  createSanityInstance,
+  type DocumentResource,
+  type SanityConfig,
+  type SanityInstance,
+} from '@sanity/sdk'
 import {act, render, screen} from '@testing-library/react'
-import {StrictMode, use, useEffect} from 'react'
+import {Activity, StrictMode, use, useEffect} from 'react'
 import {describe, expect, it, vi} from 'vitest'
 
 import {ResourceContext} from './DefaultResourceContext'
 import {ProjectContext} from './ProjectContext'
 import {ResourceProvider} from './ResourceProvider'
 import {SanityInstanceContext} from './SanityInstanceContext'
+import {SanityInstanceProvider} from './SanityInstanceProvider'
 
 const testConfig: SanityConfig = {
   projectId: 'test-project',
@@ -124,7 +130,7 @@ describe('ResourceProvider', () => {
     expect(childInstance?.isDisposed()).toBe(false)
   })
 
-  it('disposes instance when unmounted', async () => {
+  it('does not dispose the instance when unmounted', async () => {
     const {promise, resolve} = promiseWithResolvers<SanityInstance | null>()
     const CaptureInstance = () => {
       const instance = use(SanityInstanceContext)
@@ -138,11 +144,89 @@ describe('ResourceProvider', () => {
       </ResourceProvider>,
     )
 
+    const instance = await promise
     unmount()
     await new Promise((r) => setTimeout(r, 0))
-    const instance = await promise
 
-    expect(instance?.isDisposed()).toBe(true)
+    expect(instance?.isDisposed()).toBe(false)
+  })
+
+  it('uses an instance its caller owns through SanityInstanceProvider', async () => {
+    const owned = createSanityInstance(testConfig)
+    const {promise, resolve} = promiseWithResolvers<SanityInstance | null>()
+    const CaptureInstance = () => {
+      const instance = use(SanityInstanceContext)
+      useEffect(() => resolve(instance), [instance])
+      return null
+    }
+
+    render(
+      <SanityInstanceProvider instance={owned} fallback={null}>
+        <ResourceProvider {...testConfig} fallback={null}>
+          <CaptureInstance />
+        </ResourceProvider>
+      </SanityInstanceProvider>,
+    )
+
+    expect(await promise).toBe(owned)
+  })
+
+  it('keeps the same live instance when an <Activity> hides and shows it', async () => {
+    const seen: (SanityInstance | null)[] = []
+    const CaptureInstance = () => {
+      const instance = use(SanityInstanceContext)
+      useEffect(() => {
+        seen.push(instance)
+      }, [instance])
+      return null
+    }
+    const tree = (
+      <ResourceProvider {...testConfig} fallback={null}>
+        <CaptureInstance />
+      </ResourceProvider>
+    )
+
+    const {rerender} = render(<Activity mode="visible">{tree}</Activity>)
+    rerender(<Activity mode="hidden">{tree}</Activity>)
+    // Longer than a tick, so a deferred dispose from the hide would have run.
+    await act(() => new Promise((r) => setTimeout(r, 10)))
+    rerender(<Activity mode="visible">{tree}</Activity>)
+
+    const [before] = seen
+    const after = seen.at(-1)
+    expect(seen.length).toBeGreaterThan(1)
+    expect(after).toBe(before)
+    expect(after?.isDisposed()).toBe(false)
+  })
+
+  it('keeps a nested provider on the live parent instance across an <Activity> hide', async () => {
+    const seen: (SanityInstance | null)[] = []
+    const CaptureInstance = () => {
+      const instance = use(SanityInstanceContext)
+      useEffect(() => {
+        seen.push(instance)
+      }, [instance])
+      return null
+    }
+    const tree = (
+      <ResourceProvider {...testConfig} fallback={null}>
+        <ResourceProvider projectId="nested-project" dataset="nested-dataset" fallback={null}>
+          <CaptureInstance />
+        </ResourceProvider>
+      </ResourceProvider>
+    )
+
+    const {rerender} = render(<Activity mode="visible">{tree}</Activity>)
+    rerender(<Activity mode="hidden">{tree}</Activity>)
+    await act(() => new Promise((r) => setTimeout(r, 10)))
+    rerender(<Activity mode="visible">{tree}</Activity>)
+
+    const [before] = seen
+    const after = seen.at(-1)
+    expect(seen.length).toBeGreaterThan(1)
+    expect(after).toBe(before)
+    expect(after?.config).toEqual(testConfig)
+    expect(after?.isDisposed()).toBe(false)
   })
 
   it('does not dispose on quick remount (Strict Mode)', async () => {
@@ -162,6 +246,8 @@ describe('ResourceProvider', () => {
     )
 
     const instance = await promise
+    // Wait a tick so a deferred dispose from Strict Mode's simulated unmount would have run.
+    await new Promise((r) => setTimeout(r, 0))
 
     expect(instance?.isDisposed()).toBe(false)
   })

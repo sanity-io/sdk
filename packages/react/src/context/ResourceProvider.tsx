@@ -7,7 +7,7 @@ import {
   type SanityInstance,
 } from '@sanity/sdk'
 import {initTelemetry} from '@sanity/sdk/_internal'
-import {useContext, useEffect, useMemo, useRef, useState} from 'react'
+import {useContext, useEffect, useMemo, useState} from 'react'
 
 import {ResourceContext} from './DefaultResourceContext'
 import {PerspectiveContext} from './PerspectiveContext'
@@ -42,6 +42,9 @@ export interface ResourceProviderProps extends SanityConfig {
 
 /**
  * Provides Sanity configuration to child components through React Context.
+ *
+ * The instance it creates lives as long as the page and is never disposed, because React also runs
+ * effect cleanups when `<Activity>` hides a tree, and a hidden app must come back with a live instance.
  *
  * @internal
  *
@@ -102,32 +105,6 @@ export function ResourceProvider({
     if (effectiveResource && isDatasetResource(effectiveResource))
       initTelemetry(instance, effectiveResource.projectId)
   }, [instance, effectiveResource])
-
-  // Ref to hold the scheduled disposal timer.
-  const disposal = useRef<{
-    instance: SanityInstance
-    timeoutId: ReturnType<typeof setTimeout>
-  } | null>(null)
-
-  useEffect(() => {
-    // If the component remounts quickly (as in Strict Mode), cancel any pending disposal.
-    if (disposal.current !== null && instance === disposal.current.instance) {
-      clearTimeout(disposal.current.timeoutId)
-      disposal.current = null
-    }
-
-    return () => {
-      disposal.current = {
-        instance,
-        timeoutId: setTimeout(() => {
-          // don't dispose the parent instance when this unmounts
-          if (!instance.isDisposed() && instance !== parentInstance) {
-            instance.dispose()
-          }
-        }, 0),
-      }
-    }
-  }, [instance, parentInstance])
 
   return (
     <SanityInstanceProvider
