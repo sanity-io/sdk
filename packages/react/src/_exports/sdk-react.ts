@@ -106,6 +106,11 @@ export {useApplyReleaseActions} from '../hooks/releases/useApplyReleaseActions'
 export {usePerspective} from '../hooks/releases/usePerspective'
 export {type UserResult, useUser} from '../hooks/users/useUser'
 export {type UsersResult, useUsers} from '../hooks/users/useUsers'
+export {
+  type UsersWithGrantsHookResult,
+  useUsersWithGrants,
+  type UseUsersWithGrantsOptions,
+} from '../hooks/users/useUsersWithGrants'
 export {REACT_SDK_VERSION} from '../version'
 export {type DatasetsResponse, type SanityProjectMember} from '@sanity/client'
 export type {Status as ComlinkStatus} from '@sanity/comlink'

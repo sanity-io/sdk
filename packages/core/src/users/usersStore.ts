@@ -30,6 +30,7 @@ import {bindActionGlobally} from '../store/createActionBinder'
 import {createStateSourceAction, type SelectorContext} from '../store/createStateSourceAction'
 import {type StoreState} from '../store/createStoreState'
 import {defineStore, type StoreContext} from '../store/defineStore'
+import {buildQuery} from '../utils/buildQuery'
 import {randomId} from '../utils/ids'
 import {setCleanupTimeout} from '../utils/setCleanupTimeout'
 import {
@@ -255,9 +256,14 @@ const listenForLoadMoreAndFetch = ({state, instance}: StoreContext<UsersStoreSta
                   method: 'GET',
                   url: `access/${resource.type}/${resource.id}/users`,
                   tag: 'users.list',
-                  query: cursor
-                    ? {nextCursor: cursor, limit: batchSize.toString()}
-                    : {limit: batchSize.toString()},
+                  query: buildQuery({
+                    limit: batchSize,
+                    nextCursor: cursor ?? undefined,
+                    displayName: options.displayName,
+                    email: options.email,
+                    sortBy: options.sortBy,
+                    orderBy: options.orderBy,
+                  }),
                 }),
               ),
               catchError((error) => {
