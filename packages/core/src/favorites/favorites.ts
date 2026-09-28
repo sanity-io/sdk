@@ -1,9 +1,12 @@
 import {
   type CanvasResource,
+  type Events,
+  type FrameMessages,
   type MediaResource,
   SDK_CHANNEL_NAME,
   SDK_NODE_NAME,
   type StudioResource,
+  type WindowMessages,
 } from '@sanity/message-protocol'
 import {catchError, first, from, map, type Observable, of, switchMap} from 'rxjs'
 
@@ -70,7 +73,7 @@ export const favorites = defineFetcher<[context: FavoriteDocumentContext], Favor
   tags: (_data, context) => [{type: 'favorite', id: createFavoriteKey(context)}],
   fetch: (instance) => {
     return (context: FavoriteDocumentContext): Observable<FavoriteStatusResponse> => {
-      const nodeStateSource = getNodeState(instance, {
+      const nodeStateSource = getNodeState<FrameMessages, WindowMessages>(instance, {
         name: SDK_NODE_NAME,
         connectTo: SDK_CHANNEL_NAME,
       })
@@ -81,13 +84,7 @@ export const favorites = defineFetcher<[context: FavoriteDocumentContext], Favor
         first((nodeState) => !!nodeState),
         switchMap((nodeState) => {
           const node = nodeState!.node
-          return from(
-            node.fetch(
-              // @ts-expect-error -- getOrCreateNode should be refactored to take type arguments
-              'dashboard/v1/events/favorite/query',
-              payload,
-            ) as Promise<FavoriteStatusResponse>,
-          ).pipe(
+          return from(node.fetch('dashboard/v1/events/favorite/query', payload)).pipe(
             map((response) => ({isFavorited: response.isFavorited})),
             catchError((err) => {
               // eslint-disable-next-line no-console
@@ -122,11 +119,11 @@ export const setFavorite = defineMutation<SetFavoriteInput, FavoriteStatusRespon
   name: 'setFavorite',
   mutationFn: (instance) => {
     return ({isFavorited, ...context}: SetFavoriteInput): Observable<FavoriteStatusResponse> => {
-      const nodeStateSource = getNodeState(instance, {
+      const nodeStateSource = getNodeState<FrameMessages, WindowMessages>(instance, {
         name: SDK_NODE_NAME,
         connectTo: SDK_CHANNEL_NAME,
       })
-      const payload = {
+      const payload: Events.FavoriteMutateMessage['data'] = {
         eventType: isFavorited ? 'added' : 'removed',
         document: toFavoriteDocument(context),
       }
@@ -136,13 +133,7 @@ export const setFavorite = defineMutation<SetFavoriteInput, FavoriteStatusRespon
         first((nodeState) => !!nodeState),
         switchMap((nodeState) => {
           const node = nodeState!.node
-          return from(
-            node.fetch(
-              // @ts-expect-error -- getOrCreateNode should be refactored to take type arguments
-              'dashboard/v1/events/favorite/mutate',
-              payload,
-            ) as Promise<{success: boolean}>,
-          ).pipe(
+          return from(node.fetch('dashboard/v1/events/favorite/mutate', payload)).pipe(
             map((response) => {
               if (!response.success) throw new Error('Failed to update favorite status')
               return {isFavorited}
