@@ -1,5 +1,6 @@
 import {type CurrentUser} from '@sanity/types'
 
+import {type AccessResourceType} from '../../access/checkPermissions'
 import {type Application, type ApplicationInclude} from '../../applications/applications'
 import {type Installation, type InstallationInclude} from '../../installations/installations'
 import {type OrganizationBase} from '../../organization/organization'
@@ -176,6 +177,19 @@ export type NavigationLocation = NavigationTarget & {
  * @public
  */
 export interface DashboardTopics {
+  /**
+   * Asks the dashboard to show its access request for a resource the user can't access, scoped
+   * like the Access API's `/access/{resourceType}/{resourceId}/requests`.
+   *
+   * `ok: false` reasons:
+   * - `unsupported-application`: the sending application can't summon access requests (media
+   *   libraries and Canvas)
+   * - `failed`: the request could not be shown
+   */
+  'access.request': EventTopicDef<
+    {resourceType: Extract<AccessResourceType, 'organization' | 'project'>; resourceId: string},
+    {ok: true} | {ok: false; reason: 'unsupported-application' | 'failed'}
+  >
   /** Reports user activity in an application, e.g. for the recents feed. Fire-and-forget. */
   'applications.activity': EventTopicDef<ApplicationActivity>
   /**
@@ -310,6 +324,7 @@ type DashboardTopicManifest = {
  * @internal
  */
 export const DASHBOARD_TOPIC_MANIFEST: DashboardTopicManifest = {
+  'access.request': dashboardEvent,
   'applications.activity': dashboardEvent,
   'applications.base-path': stateTopic(undefined),
   'applications.capabilities': stateTopic(undefined),
