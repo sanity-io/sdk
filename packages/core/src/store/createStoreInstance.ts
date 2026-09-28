@@ -1,7 +1,17 @@
+import {EMPTY, Observable, share, Subject, takeUntil} from 'rxjs'
+
 import {getEnv} from '../utils/getEnv'
+import {cleanupTimer, setCleanupTimeout} from '../utils/setCleanupTimeout'
 import {type SanityInstance} from './createSanityInstance'
 import {createStoreState, type StoreState} from './createStoreState'
 import {type StoreDefinition} from './defineStore'
+
+/**
+ * How long a store keeps its upstream open after its last subscriber leaves.
+ * Matches the query and document entry clear delays, and covers Strict Mode
+ * double effects and Suspense flicker without reconnecting.
+ */
+export const UPSTREAM_CLOSE_DELAY_MS = 1000
 
 /**
  * Represents a running instance of a store with its own state and lifecycle
@@ -27,6 +37,18 @@ export interface StoreInstance<TState> {
    * @remarks Triggers the cleanup function returned from the initialize method
    */
   dispose: () => void
+
+  /**
+   * The store's upstream subscription, shared by everything subscribed to it.
+   * Emits nothing; subscribing keeps it open. Completes when the store is disposed.
+   */
+  upstream$: Observable<never>
+
+  /**
+   * Why the upstream last failed to open, boxed so a thrown `undefined` still counts.
+   * State sources throw it from `getCurrent` so it reaches an error boundary.
+   */
+  upstreamError: () => {error: unknown} | undefined
 }
 
 /**
@@ -60,7 +82,7 @@ export interface StoreInstance<TState> {
 export function createStoreInstance<TState, TKey extends {name: string}>(
   instance: SanityInstance,
   key: TKey,
-  {name, getInitialState, initialize}: StoreDefinition<TState, TKey>,
+  {name, getInitialState, initialize, upstream}: StoreDefinition<TState, TKey>,
 ): StoreInstance<TState> {
   const state = createStoreState(getInitialState(instance, key), {
     enabled: !!getEnv('DEV'),
@@ -69,11 +91,46 @@ export function createStoreInstance<TState, TKey extends {name: string}>(
   const dispose = initialize?.({state, instance, key})
   const disposed = {current: false}
 
+  const disposed$ = new Subject<void>()
+  let upstreamError: {error: unknown} | undefined
+  let upstreamErrorTimer: ReturnType<typeof setTimeout> | undefined
+
+  const upstream$ = upstream
+    ? new Observable<never>((subscriber) => {
+        if (disposed.current) return subscriber.complete()
+        clearTimeout(upstreamErrorTimer)
+        try {
+          const subscription = upstream({state, instance, key})
+          upstreamError = undefined
+          return subscription
+        } catch (error) {
+          upstreamError = {error}
+          // Kept for as long as a connection would stay open: long enough for a reader that
+          // never subscribes (Suspense) to reach its error boundary, short enough that the
+          // next mount opens again, as it did when a failed store was never kept
+          upstreamErrorTimer = setCleanupTimeout(() => {
+            upstreamError = undefined
+          }, UPSTREAM_CLOSE_DELAY_MS)
+          throw error
+        }
+      }).pipe(
+        takeUntil(disposed$),
+        share({
+          resetOnComplete: false,
+          resetOnRefCountZero: () => cleanupTimer(UPSTREAM_CLOSE_DELAY_MS),
+        }),
+      )
+    : EMPTY
+
   return {
     state,
+    upstream$,
+    upstreamError: () => upstreamError,
     dispose: () => {
       if (disposed.current) return
       disposed.current = true
+      // Before initialize's cleanup, which may own what upstream depends on
+      disposed$.next()
       dispose?.()
     },
     isDisposed: () => disposed.current,

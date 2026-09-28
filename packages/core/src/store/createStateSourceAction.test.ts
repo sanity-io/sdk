@@ -1,9 +1,12 @@
-import {filter, firstValueFrom, timeout} from 'rxjs'
-import {beforeEach, describe, expect, it, vi} from 'vitest'
+import {filter, firstValueFrom, Observable, share, Subscription, timeout} from 'rxjs'
+import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
+import {bindActionGlobally} from './createActionBinder'
 import {createSanityInstance, type SanityInstance} from './createSanityInstance'
 import {createStateSourceAction, type SelectorContext} from './createStateSourceAction'
+import {UPSTREAM_CLOSE_DELAY_MS} from './createStoreInstance'
 import {createStoreState, type StoreState} from './createStoreState'
+import {defineStore} from './defineStore'
 
 interface CountStoreState {
   count: number
@@ -255,5 +258,120 @@ describe('createStateSourceAction', () => {
 
     sub.unsubscribe()
     sub2()
+  })
+
+  it('keeps the store upstream open for as long as it has subscribers', () => {
+    const open = vi.fn()
+    const close = vi.fn()
+    const upstream$ = new Observable<never>(() => {
+      open()
+      return close
+    }).pipe(share())
+    const source = createStateSourceAction(
+      ({state: s}: SelectorContext<CountStoreState>) => s.count,
+    )({state, instance, key: null, upstream$})
+
+    const unsubscribeA = source.subscribe()
+    const subscriptionB = source.observable.subscribe()
+    expect(open).toHaveBeenCalledTimes(1)
+
+    unsubscribeA()
+    expect(close).not.toHaveBeenCalled()
+    subscriptionB.unsubscribe()
+    expect(close).toHaveBeenCalledTimes(1)
+  })
+
+  describe('when the store upstream fails to open', () => {
+    const upstream = vi.fn<() => Subscription>()
+    const failingStore = defineStore<CountStoreState>({
+      name: 'failing-upstream',
+      getInitialState: () => ({count: 0, items: []}),
+      upstream,
+    })
+    const getCount = bindActionGlobally(
+      failingStore,
+      createStateSourceAction(({state: s}: SelectorContext<CountStoreState>) => s.count),
+    )
+
+    beforeEach(() => {
+      upstream.mockReset().mockImplementation(() => {
+        throw new Error('open failed')
+      })
+    })
+    afterEach(() => {
+      instance.dispose()
+      vi.useRealTimers()
+    })
+
+    it('throws the error from getCurrent after notifying subscribers, so it reaches an error boundary', () => {
+      const source = getCount(instance)
+      const onStoreChanged = vi.fn()
+      source.subscribe(onStoreChanged)
+
+      expect(onStoreChanged).toHaveBeenCalledTimes(1)
+      expect(() => source.getCurrent()).toThrow('open failed')
+    })
+
+    it('throws it from every source on the store, including ones created after the failure', () => {
+      getCount(instance).subscribe()
+
+      expect(() => getCount(instance).getCurrent()).toThrow('open failed')
+    })
+
+    it('opens again on the next mount after an error boundary unmounted the subscriber', () => {
+      vi.useFakeTimers({toFake: ['setTimeout', 'clearTimeout']})
+      const unsubscribe = getCount(instance).subscribe(vi.fn())
+      unsubscribe()
+      upstream.mockImplementation(() => new Subscription())
+      vi.advanceTimersByTime(UPSTREAM_CLOSE_DELAY_MS)
+
+      const remounted = getCount(instance)
+      // React reads the snapshot during render, before it subscribes
+      expect(remounted.getCurrent()).toBe(0)
+      remounted.subscribe()
+      expect(upstream).toHaveBeenCalledTimes(2)
+    })
+
+    it('opens again on the next mount when the error reached a reader through the observable', () => {
+      vi.useFakeTimers({toFake: ['setTimeout', 'clearTimeout']})
+      // How a suspending hook reads: `firstValueFrom(source.observable)`, never `subscribe()`
+      getCount(instance).observable.subscribe({error: () => {}})
+      upstream.mockImplementation(() => new Subscription())
+      vi.advanceTimersByTime(UPSTREAM_CLOSE_DELAY_MS)
+
+      const remounted = getCount(instance)
+      expect(remounted.getCurrent()).toBe(0)
+      remounted.subscribe()
+      expect(upstream).toHaveBeenCalledTimes(2)
+    })
+
+    it('keeps throwing for a subscriber still attached when another one leaves', () => {
+      const unsubscribeA = getCount(instance).subscribe(vi.fn())
+      const b = getCount(instance)
+      b.subscribe(vi.fn())
+
+      unsubscribeA()
+      expect(() => b.getCurrent()).toThrow('open failed')
+    })
+
+    it('throws even when the upstream throws undefined', () => {
+      upstream.mockImplementation(() => {
+        throw undefined
+      })
+      const source = getCount(instance)
+      source.subscribe(vi.fn())
+
+      expect(() => source.getCurrent()).toThrow()
+    })
+
+    it('stops throwing once a later subscriber opens it successfully', () => {
+      getCount(instance).subscribe()
+      expect(() => getCount(instance).getCurrent()).toThrow('open failed')
+      upstream.mockImplementation(() => new Subscription())
+
+      const source = getCount(instance)
+      source.observable.subscribe()
+      expect(source.getCurrent()).toBe(0)
+    })
   })
 })

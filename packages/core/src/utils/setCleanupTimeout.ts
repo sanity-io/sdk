@@ -1,3 +1,5 @@
+import {Observable} from 'rxjs'
+
 // Calls `.unref()` on a timer when running in Node.js. In Node.js, timers are
 // objects with an `unref()` method; in browsers they are numbers. Narrow at
 // runtime so this works in both environments without type assertions.
@@ -34,4 +36,16 @@ export function setCleanupInterval(fn: () => void, delay: number): ReturnType<ty
   const timer = setInterval(fn, delay)
   unref(timer)
   return timer
+}
+
+/**
+ * Emits once after `delay` on a cleanup timer. For rxjs reset notifiers such as
+ * `share({resetOnRefCountZero})`, which would otherwise use a timer that keeps
+ * Node.js alive. See {@link setCleanupTimeout}.
+ */
+export function cleanupTimer(delay: number): Observable<void> {
+  return new Observable<void>((subscriber) => {
+    const timer = setCleanupTimeout(() => subscriber.next(), delay)
+    return () => clearTimeout(timer)
+  })
 }

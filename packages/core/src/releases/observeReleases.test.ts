@@ -39,15 +39,12 @@ describe('observeReleases', () => {
     instance.dispose()
   })
 
-  it('emits undefined synchronously, then fetches releases through the raw perspective', () => {
+  it('fetches releases through the raw perspective', () => {
     const releases$ = observeReleases(instance, {onCorsError: vi.fn()})
     const emissions: (ReleaseDocument[] | undefined)[] = []
     const subscription = releases$.subscribe((releases) => emissions.push(releases))
 
-    // the synchronous undefined lets the releases store immediately record an
-    // empty list, so consumers (e.g. suspending React hooks) never hang on a
-    // fetch that has not resolved yet
-    expect(emissions).toEqual([undefined, [release]])
+    expect(emissions).toEqual([[release]])
     expect(fetch).toHaveBeenCalledWith(
       'releases::all()',
       {},
@@ -73,7 +70,7 @@ describe('observeReleases', () => {
       {},
       expect.objectContaining({lastLiveEventId: 'event-1'}),
     )
-    expect(emissions).toHaveLength(3) // initial undefined + two fetch results
+    expect(emissions).toHaveLength(2)
     subscription.unsubscribe()
   })
 
@@ -120,7 +117,7 @@ describe('observeReleases', () => {
 
     fetchResponses[1].next({result: [release], syncTags: ['s1:tag']})
     fetchResponses[1].complete()
-    expect(emissions).toHaveLength(3) // initial undefined + two fetch results
+    expect(emissions).toHaveLength(2)
 
     subscription.unsubscribe()
   })
