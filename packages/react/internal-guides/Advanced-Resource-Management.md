@@ -194,20 +194,9 @@ function ResourceProvider({children, fallback, ...config}) {
   // Check if we have a parent instance
   const parent = use(SanityInstanceContext)
 
-  // Create our instance, either brand new or as a child of the parent
-  const instance = useMemo(
-    () => (parent ? parent.createChild(config) : createSanityInstance(config)),
-    [config, parent],
-  )
-
-  // Clean up when component unmounts
-  useEffect(() => {
-    return () => {
-      if (!instance.isDisposed()) {
-        instance.dispose()
-      }
-    }
-  }, [instance])
+  // Reuse the parent's instance, or create one once. It is never disposed: React also runs effect
+  // cleanups when `<Activity>` hides a tree, and a hidden app must come back with a live instance.
+  const [instance] = useState(() => parent ?? createSanityInstance(config))
 
   // Make this instance available to children
   return (
