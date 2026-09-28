@@ -178,13 +178,15 @@ export type NavigationLocation = NavigationTarget & {
  */
 export interface DashboardTopics {
   /**
-   * Asks the dashboard to show its access request for a resource the user can't access, scoped
-   * like the Access API's `/access/{resourceType}/{resourceId}/requests`.
+   * Asks the dashboard to show its access request prompt for a resource the user can't access,
+   * scoped like the Access API's `/access/{resourceType}/{resourceId}/requests`. Replies once the
+   * prompt is shown. The prompt handles the Access API outcome (SSO enforcement, pending or
+   * declined requests, request limits), so the reply doesn't report it.
    *
    * `ok: false` reasons:
-   * - `unsupported-application`: the sending application can't summon access requests (media
-   *   libraries and Canvas)
-   * - `failed`: the request could not be shown
+   * - `unsupported-application`: the dashboard doesn't show access requests for the sending
+   *   application
+   * - `failed`: the prompt could not be shown
    */
   'access.request': EventTopicDef<
     {resourceType: Extract<AccessResourceType, 'organization' | 'project'>; resourceId: string},
