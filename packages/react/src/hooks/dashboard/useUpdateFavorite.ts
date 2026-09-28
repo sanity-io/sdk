@@ -30,8 +30,9 @@ export interface UpdateFavorite {
 /**
  * @internal
  *
- * Adds or removes a document from favorites. The read-side counterpart is
- * {@link useFavorite}, which reflects the change once the mutation settles.
+ * Adds or removes a document from favorites. The read-side counterpart is {@link useFavorite}.
+ * Under Comlink it shows the new state as soon as the write is sent and rolls back if the write
+ * fails. Under the message bus it follows the host's `favorites.documents`.
  *
  * Unlike {@link useFavorite}, this hook does not suspend. It picks the transport for the current
  * Dashboard runtime:

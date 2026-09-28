@@ -238,7 +238,9 @@ describe('favoritesStore', () => {
       ]
       setupMockStateSource({
         fetchImpl: vi.fn((endpoint: string) =>
-          endpoint.endsWith('/query') ? queries.shift() : write,
+          endpoint.endsWith('/query')
+            ? (queries.shift() ?? Promise.reject(new Error('unexpected query')))
+            : write,
         ),
       })
       const status = favorites.getState(instance!, mockContext)
@@ -259,24 +261,22 @@ describe('favoritesStore', () => {
     })
 
     it('rolls the cached status back when the write fails', async () => {
+      let settleWrite!: (response: {success: boolean}) => void
+      const write = new Promise((resolve) => (settleWrite = resolve))
       setupMockStateSource({
         fetchImpl: vi.fn((endpoint: string) =>
-          Promise.resolve(endpoint.endsWith('/query') ? {isFavorited: false} : {success: false}),
+          endpoint.endsWith('/query') ? Promise.resolve({isFavorited: true}) : write,
         ),
       })
       await favorites.resolveState(instance!, mockContext)
+      const status = favorites.getState(instance!, mockContext)
 
-      await expect(setFavorite(instance!, {...mockContext, isFavorited: true})).rejects.toThrow()
-      expect(favorites.getState(instance!, mockContext).getCurrent().data).toEqual({
-        isFavorited: false,
-      })
-    })
+      const pending = setFavorite(instance!, {...mockContext, isFavorited: false})
+      expect(status.getCurrent().data).toEqual({isFavorited: false})
 
-    it('rejects when the server reports failure', async () => {
-      setupMockStateSource({fetchImpl: vi.fn().mockResolvedValue({success: false})})
-      await expect(setFavorite(instance!, {...mockContext, isFavorited: true})).rejects.toThrow(
-        'Failed to update favorite status',
-      )
+      settleWrite({success: false})
+      await expect(pending).rejects.toThrow('Failed to update favorite status')
+      expect(status.getCurrent().data).toEqual({isFavorited: true})
     })
   })
 })
