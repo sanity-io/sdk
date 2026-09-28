@@ -6,7 +6,7 @@ import {getNodeState, type NodeState} from '../comlink/node/getNodeState'
 import {type FrameMessage, type WindowMessage} from '../comlink/types'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {type StateSource} from '../store/createStateSourceAction'
-import {favorites, setFavorite} from './favorites'
+import {favorites, type FavoriteStatusResponse, setFavorite} from './favorites'
 
 vi.mock('../comlink/node/getNodeState', () => ({
   getNodeState: vi.fn(),
@@ -228,11 +228,55 @@ describe('favoritesStore', () => {
       expect(payload.document.resource).not.toHaveProperty('schemaName')
     })
 
-    it('rejects when the server reports failure', async () => {
-      setupMockStateSource({fetchImpl: vi.fn().mockResolvedValue({success: false})})
-      await expect(setFavorite(instance!, {...mockContext, isFavorited: true})).rejects.toThrow(
-        'Failed to update favorite status',
-      )
+    it('shows active readers the new state until the reconciling refetch lands', async () => {
+      let settleWrite!: (response: {success: boolean}) => void
+      const write = new Promise((resolve) => (settleWrite = resolve))
+      let settleRefetch!: (response: FavoriteStatusResponse) => void
+      const queries = [
+        Promise.resolve({isFavorited: false}),
+        new Promise((resolve) => (settleRefetch = resolve)),
+      ]
+      setupMockStateSource({
+        fetchImpl: vi.fn((endpoint: string) =>
+          endpoint.endsWith('/query')
+            ? (queries.shift() ?? Promise.reject(new Error('unexpected query')))
+            : write,
+        ),
+      })
+      const status = favorites.getState(instance!, mockContext)
+      const unsubscribe = status.subscribe()
+      await vi.waitFor(() => expect(status.getCurrent().data).toEqual({isFavorited: false}))
+
+      const pending = setFavorite(instance!, {...mockContext, isFavorited: true})
+      expect(status.getCurrent().data).toEqual({isFavorited: true})
+
+      settleWrite({success: true})
+      const {invalidated} = await pending
+      expect(status.getCurrent()).toMatchObject({data: {isFavorited: true}, isFetching: true})
+
+      settleRefetch({isFavorited: true})
+      await invalidated
+      expect(status.getCurrent()).toMatchObject({data: {isFavorited: true}, isFetching: false})
+      unsubscribe()
+    })
+
+    it('rolls the cached status back when the write fails', async () => {
+      let settleWrite!: (response: {success: boolean}) => void
+      const write = new Promise((resolve) => (settleWrite = resolve))
+      setupMockStateSource({
+        fetchImpl: vi.fn((endpoint: string) =>
+          endpoint.endsWith('/query') ? Promise.resolve({isFavorited: true}) : write,
+        ),
+      })
+      await favorites.resolveState(instance!, mockContext)
+      const status = favorites.getState(instance!, mockContext)
+
+      const pending = setFavorite(instance!, {...mockContext, isFavorited: false})
+      expect(status.getCurrent().data).toEqual({isFavorited: false})
+
+      settleWrite({success: false})
+      await expect(pending).rejects.toThrow('Failed to update favorite status')
+      expect(status.getCurrent().data).toEqual({isFavorited: true})
     })
   })
 })
