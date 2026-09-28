@@ -60,7 +60,7 @@ catalog:
   react-dom: '^19.3.0'
   react-error-boundary: '^6.1.6'
   rimraf: '^6.0.1'
-  rolldown: '^1.2.10'
+  rolldown: '^1.2.11'
   rxjs: '^7.8.2'
   tsx: '^4.23.15'
   typescript: '^6.0.3'
