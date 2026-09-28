@@ -184,13 +184,11 @@ export interface DashboardTopics {
    * declined requests, request limits), so the reply doesn't report it.
    *
    * `ok: false` reasons:
-   * - `unsupported-application`: the dashboard doesn't show access requests for the sending
-   *   application
-   * - `failed`: the prompt could not be shown
+   * - `unsupported`: the dashboard doesn't show access requests for the sending application
    */
   'access.request': EventTopicDef<
     {resourceType: Extract<AccessResourceType, 'organization' | 'project'>; resourceId: string},
-    {ok: true} | {ok: false; reason: 'unsupported-application' | 'failed'}
+    {ok: true} | {ok: false; reason: 'unsupported'}
   >
   /** Reports user activity in an application, e.g. for the recents feed. Fire-and-forget. */
   'applications.activity': EventTopicDef<ApplicationActivity>

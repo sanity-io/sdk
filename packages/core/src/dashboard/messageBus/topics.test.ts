@@ -112,7 +112,7 @@ describe('dashboard topic types', () => {
       resourceId: string
     }>()
     expectTypeOf<ReplyOf<'access.request'>>().toEqualTypeOf<
-      {ok: true} | {ok: false; reason: 'unsupported-application' | 'failed'}
+      {ok: true} | {ok: false; reason: 'unsupported'}
     >()
   })
 
