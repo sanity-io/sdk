@@ -15,6 +15,7 @@ import {
   type UnfilteredResponseQueryOptions,
   type WelcomeEvent,
 } from '@sanity/client'
+import {makePatches, stringifyPatches} from '@sanity/diff-match-patch'
 import {diffValue} from '@sanity/diff-patch'
 import {DocumentId, getDraftId, getPublishedId} from '@sanity/id-utils'
 import {type Mutation, type SanityDocument} from '@sanity/types'
@@ -1414,6 +1415,9 @@ vi.mock('./sharedListener.ts', () => {
   }
 })
 
+// read through getters so a test can lengthen the submission backoff
+const submissionRetryDelay = vi.hoisted(() => ({ms: 5}))
+
 vi.mock('./documentConstants.ts', async (importOriginal) => {
   const original = await importOriginal<typeof import('./documentConstants')>()
   return {
@@ -1424,8 +1428,12 @@ vi.mock('./documentConstants.ts', async (importOriginal) => {
     OUT_OF_SYNC_RETRY_MAX_DELAY: 0,
     ACL_RETRY_BASE_DELAY: 0,
     ACL_RETRY_MAX_DELAY: 0,
-    SUBMISSION_RETRY_BASE_DELAY: 5,
-    SUBMISSION_RETRY_MAX_DELAY: 5,
+    get SUBMISSION_RETRY_BASE_DELAY() {
+      return submissionRetryDelay.ms
+    },
+    get SUBMISSION_RETRY_MAX_DELAY() {
+      return submissionRetryDelay.ms
+    },
   }
 })
 
@@ -1995,4 +2003,112 @@ it('treats transactionAlreadyExistsError on a retry as an ack of the earlier att
   unsubscribe()
   unsubscribeEvents()
   vi.mocked(client.action).mockImplementation(actualAction)
+})
+
+it('resubmits held text edits as soon as the credentials change, in order and once each', async () => {
+  // The sequence from a writer whose session expired mid-edit: a text field
+  // written with operation-preserving diffMatchPatch edits (what
+  // @portabletext/plugin-sdk-value sends), every write on the old token
+  // rejected with a 401, then a new token from logging in again in another tab
+  const client$ = (getClientState as () => StateSource<SanityClient>)()
+    .observable as ReplaySubject<SanityClient>
+  const actualAction = vi.mocked(client.action).getMockImplementation()!
+  let sessionValid = true
+  let rejectedAttempts = 0
+  vi.mocked(client.action).mockImplementation(async (...args) => {
+    if (sessionValid) return await actualAction(...args)
+    rejectedAttempts++
+    throw new ClientError({
+      statusCode: 401,
+      headers: {},
+      body: {statusCode: 401, error: 'Unauthorized', message: 'Session not found'},
+    })
+  })
+  // the client store builds a new client when the token changes; it carries
+  // the renewed token, so the server accepts its writes
+  const renewedClient = {
+    ...client,
+    observable: {
+      ...client.observable,
+      action: (...args: Parameters<typeof actualAction>) => from(actualAction(...args)),
+    },
+  } as SanityClient
+
+  const reverted: TransactionRevertedEvent[] = []
+  const unsubscribeEvents = subscribeDocumentEvents(instance, {
+    resource,
+    eventHandler: (e) => {
+      if (e.type === 'reverted') reverted.push(e)
+    },
+  })
+
+  const doc = createDocumentHandle({
+    documentId: DocumentId('renewed-session'),
+    documentType: 'article',
+  })
+  const state = getDocumentState<TestDocument>(instance, doc)
+  const unsubscribe = state.subscribe()
+
+  const typeText = (before: string, after: string) =>
+    applyDocumentActions(instance, {
+      actions: [
+        {
+          ...editDocument(doc, {
+            diffMatchPatch: {title: stringifyPatches(makePatches(before, after))},
+          }),
+          preserveOperations: true,
+        },
+      ],
+      resource,
+      disableBatching: true,
+    })
+
+  submissionRetryDelay.ms = 60_000
+  try {
+    await applyDocumentActions(instance, {
+      actions: [createDocument(doc), editDocument(doc, {set: {title: 'Start:'}})],
+      resource,
+    }).then((r) => r.submitted())
+
+    sessionValid = false
+    const results = [
+      typeText('Start:', 'Start: the'),
+      typeText('Start: the', 'Start: the mayor'),
+      typeText('Start: the mayor', 'Start: the mayor said'),
+    ]
+
+    // the first write is rejected and the 60s backoff holds its retry, while
+    // every edit stays applied locally
+    await expect.poll(() => rejectedAttempts).toBe(1)
+    await new Promise((resolve) => setTimeout(resolve, 100))
+    expect(rejectedAttempts).toBe(1)
+    expect(state.getCurrent()?.title).toBe('Start: the mayor said')
+
+    // logging in again: the held write and the queued ones land long before
+    // the backoff would have elapsed
+    client$.next(renewedClient)
+    await Promise.race([
+      Promise.all(results.map((r) => r.then((x) => x.submitted()))),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('edits were not resubmitted on the new client')), 2000),
+      ),
+    ])
+
+    expect(rejectedAttempts).toBe(1)
+    expect(reverted).toEqual([])
+    expect(state.getCurrent()?.title).toBe('Start: the mayor said')
+    // the server copy has each edit applied exactly once
+    await expect(
+      client.fetch<string>(
+        '*[_id == $id][0].title',
+        {id: getDraftId(DocumentId('renewed-session'))},
+        {filterResponse: true},
+      ),
+    ).resolves.toBe('Start: the mayor said')
+  } finally {
+    submissionRetryDelay.ms = 5
+    unsubscribe()
+    unsubscribeEvents()
+    vi.mocked(client.action).mockImplementation(actualAction)
+  }
 })
