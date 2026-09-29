@@ -1,5 +1,23 @@
 # Changelog
 
+## 3.6.0
+
+### Minor Changes
+
+- [#1331](https://github.com/sanity-io/sdk/pull/1331) [`59a24ed`](https://github.com/sanity-io/sdk/commit/59a24ed138868846d551311ced6eddb71c14995a) Thanks [@gu-stav](https://github.com/gu-stav)! - Add the `access.request` dashboard topic, so an application can ask the dashboard to show its access request for an organization or project.
+
+- [#1323](https://github.com/sanity-io/sdk/pull/1323) [`d7dbd5e`](https://github.com/sanity-io/sdk/commit/d7dbd5efef057b301935497236bbc6a323840586) Thanks [@gu-stav](https://github.com/gu-stav)! - `getOrCreateNode`, `getNodeState` and `NodeState` accept message type arguments, so apps sharing the SDK's comlink node can type it without a cast.
+
+- [#1319](https://github.com/sanity-io/sdk/pull/1319) [`c307818`](https://github.com/sanity-io/sdk/commit/c3078180d24b5001c49c8e1108d421b6bb166435) Thanks [@gu-stav](https://github.com/gu-stav)! - `useFavorite` and `useUpdateFavorite` work under the message bus through the new `favorites.documents` and `favorites.update` topics.
+
+- [#1326](https://github.com/sanity-io/sdk/pull/1326) [`e83f11c`](https://github.com/sanity-io/sdk/commit/e83f11c0ffdf287eef092094ce558341eaceb04d) Thanks [@joshuaellis](https://github.com/joshuaellis)! - Hidden or unmounted SDK apps close their live connections and presence session about a second after nothing uses them, and reopen them when shown again. `reportPresence` from `@sanity/sdk` now only announces while something subscribes to `getPresence` or `getDocumentPresence`. `useReportPresence` does this for you.
+
+### Patch Changes
+
+- [#1324](https://github.com/sanity-io/sdk/pull/1324) [`83ecb66`](https://github.com/sanity-io/sdk/commit/83ecb66fcba81e1dd271e2db52a3494b817b6f59) Thanks [@gu-stav](https://github.com/gu-stav)! - `useFavorite` reflects a Comlink `useUpdateFavorite` write immediately instead of after the refetch.
+
+- [#1289](https://github.com/sanity-io/sdk/pull/1289) [`ee458fc`](https://github.com/sanity-io/sdk/commit/ee458fc064de7e38692fea15a074946a245f41b3) Thanks [@ryanbonial](https://github.com/ryanbonial)! - Include runtime context in session and hook telemetry, and include the session auth method in hook-mounted and session-ended events. This lets analytics segment Studio and app usage independently of credential source while retaining both populations.
+
 ## 3.5.0
 
 ### Minor Changes
