@@ -2,7 +2,7 @@ import {type ListenEvent, type SanityClient} from '@sanity/client'
 import {Subject} from 'rxjs'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
-import {storedComment, TARGET_REF} from './commentFixtures'
+import {storedComment, TARGET_REF} from './__fixtures__/comments'
 import {type CommentsEvent, observeComments} from './observeComments'
 import {type StoredComment} from './types'
 

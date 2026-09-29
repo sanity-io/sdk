@@ -5,8 +5,8 @@ import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 import {type DocumentResource} from '../config/sanityConfig'
 import {bindActionByResource} from '../store/createActionBinder'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
+import {commentTarget, storedComment} from './__fixtures__/comments'
 import {updateComment} from './commentActions'
-import {commentTarget, storedComment} from './commentFixtures'
 import {observeCommentsClientForResource} from './commentsClient'
 import {
   getCommentsQueryOptionsKey,

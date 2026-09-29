@@ -4,7 +4,7 @@ import {beforeEach, describe, expect, it, vi} from 'vitest'
 import {observeAppOrganizationId} from '../organization/appOrganization'
 import {project} from '../project/project'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
-import {ORGANIZATION_ID} from './commentFixtures'
+import {ORGANIZATION_ID} from './__fixtures__/comments'
 import {
   assertDatasetResource,
   getCommentsClient,

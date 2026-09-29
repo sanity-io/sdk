@@ -8,6 +8,7 @@ import {type DocumentResource, type PerspectiveHandle} from '../config/sanityCon
 import {bindActionByResource} from '../store/createActionBinder'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {type StateSource} from '../store/createStateSourceAction'
+import {commentTarget, storedComment} from './__fixtures__/comments'
 import {
   addReaction,
   createComment,
@@ -18,7 +19,6 @@ import {
   updateComment,
   updateCommentAnchor,
 } from './commentActions'
-import {commentTarget, storedComment} from './commentFixtures'
 import {observeCommentsClientForResource} from './commentsClient'
 import {type CommentVariants} from './commentsOptions'
 import {commentsStore, getCommentThreadsState, toDocumentCommentsKey} from './commentsStore'

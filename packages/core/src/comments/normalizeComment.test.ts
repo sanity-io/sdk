@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest'
 
-import {commentTarget, storedComment, TARGET_REF} from './commentFixtures'
+import {commentTarget, storedComment, TARGET_REF} from './__fixtures__/comments'
 import {normalizeComment} from './normalizeComment'
 
 const MESSAGE = [{_type: 'block', children: [{_type: 'span', text: 'hello'}]}]

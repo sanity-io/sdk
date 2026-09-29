@@ -1,13 +1,10 @@
-import {type StoredComment} from './types'
+// Comment documents as the API returns them, for the tests around this module.
+//
+// Shared rather than rebuilt per file so that a change to the stored shape —
+// which is the API's to make, not ours — lands in one place.
 
-/**
- * Comment documents as the API returns them, for the tests around this module.
- *
- * Shared rather than rebuilt per file so that a change to the stored shape —
- * which is the API's to make, not ours — lands in one place.
- *
- * @internal
- */
+import {type StoredComment} from '../types'
+
 export const ORGANIZATION_ID = 'org-1'
 
 /** The global document reference for `doc-1` in the `p.d` dataset resource. */
@@ -17,8 +14,6 @@ export const TARGET_REF = 'dataset:p.d:doc-1'
  * A field path is part of the default because every comment the API stores has
  * one — a pathless comment is refused on the way in. Pass `path: undefined` for
  * the tests that are about what happens without one.
- *
- * @internal
  */
 export function commentTarget(
   overrides: Partial<StoredComment['target']> = {},
@@ -32,7 +27,6 @@ export function commentTarget(
   }
 }
 
-/** @internal */
 export function storedComment(
   overrides: Partial<StoredComment> & Pick<StoredComment, '_id'>,
 ): StoredComment {

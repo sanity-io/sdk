@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest'
 
-import {TARGET_REF} from './commentFixtures'
+import {TARGET_REF} from './__fixtures__/comments'
 import {
   buildCommentsQueryFilter,
   buildDocumentCommentsQuery,

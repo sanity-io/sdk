@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest'
 
-import {ORGANIZATION_ID, storedComment, TARGET_REF} from './commentFixtures'
+import {ORGANIZATION_ID, storedComment, TARGET_REF} from './__fixtures__/comments'
 import {
   addComment,
   addSubscriber,
