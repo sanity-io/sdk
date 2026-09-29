@@ -1,0 +1,155 @@
+name: Release
+
+# Releases the 2.x maintenance line from the `v2` branch. Same Changesets flow
+# as `main`, with three differences: it publishes under the `v2-maintenance`
+# dist-tag so `latest` stays on the current major, it only publishes 2.x
+# versions, and it pushes a tag without creating a GitHub release.
+#
+# The file is named release.yml on purpose: npm trusted publishing for both
+# packages is bound to that workflow filename, and publishing is OIDC only.
+
+on:
+  push:
+    branches:
+      - v2
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read # for checkout
+
+jobs:
+  release:
+    permissions:
+      contents: read # for checkout
+      id-token: write # to enable use of OIDC for npm trusted publishing and provenance
+    runs-on: ubuntu-latest
+    env:
+      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+      TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+    steps:
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
+        id: generate-token
+        with:
+          client-id: ${{ secrets.ECOSPARK_APP_ID }}
+          private-key: ${{ secrets.ECOSPARK_APP_PRIVATE_KEY }}
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          # fetch-depth: 0 so @changesets/changelog-github can look up the commit
+          # that added each changeset file.
+          fetch-depth: 0
+          # Use the app token so pushes to the Version PR branch trigger CI.
+          token: ${{ steps.generate-token.outputs.token }}
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          cache: pnpm
+          node-version: lts/*
+      - run: pnpm install --ignore-scripts
+
+      # Maintains a "chore: release" Version PR against v2. When that PR merges
+      # the pending changesets are consumed and the versions are bumped; the
+      # publish steps below then run because no changesets remain.
+      - name: Changesets version PR
+        id: changesets
+        uses: changesets/action@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
+        with:
+          github-token: ${{ steps.generate-token.outputs.token }}
+          pr-title: 'chore: release'
+          commit-message: 'chore: release'
+          create-github-releases: false
+          push-git-tags: false
+        env:
+          # changelog-github reads GITHUB_TOKEN when the action runs changeset version.
+          GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
+
+      - name: Assert changesets action output
+        env:
+          HAS_CHANGESETS: ${{ steps.changesets.outputs['has-changesets'] }}
+        run: |
+          if [ -z "$HAS_CHANGESETS" ]; then
+            echo "::error::changesets/action did not set the has-changesets output; check the pinned action version's output names."
+            exit 1
+          fi
+
+      # Publish once no changesets remain (i.e. the Version PR just merged). A
+      # rerun, or a push whose version is already on the registry, sets
+      # already-published=true and skips the rest.
+      - name: Check registry for current version
+        id: version
+        if: steps.changesets.outputs['has-changesets'] == 'false'
+        run: |
+          VERSION=$(node -p "require('./packages/core/package.json').version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          # Only E404 means "not published"; any other npm error must fail the job
+          # rather than be read as a missing version.
+          published=true
+          for pkg in @sanity/sdk @sanity/sdk-react; do
+            if ! out=$(npm view "$pkg@$VERSION" version 2>&1); then
+              case "$out" in
+                *E404*) published=false ;;
+                *) echo "$out"; echo "::error::npm view $pkg@$VERSION failed"; exit 1 ;;
+              esac
+            fi
+          done
+          echo "already-published=$published" >> "$GITHUB_OUTPUT"
+
+      # A version outside 2.x on this branch means something was merged into
+      # v2 that belongs on main. Stop before anything reaches the registry.
+      # pnpm 10 hands the upload to the npm CLI, which needs 11.5.1 or later
+      # for trusted publishing.
+      - name: Check the version and npm CLI
+        if: steps.changesets.outputs['has-changesets'] == 'false' && steps.version.outputs.already-published == 'false'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          case "$VERSION" in
+            2.*) ;;
+            *) echo "::error::v2 only publishes 2.x versions, got $VERSION"; exit 1 ;;
+          esac
+          NPM_VERSION=$(npm --version)
+          if ! node -e 'const [a, b, c] = process.argv[1].split(".").map(Number); process.exit(a > 11 || (a === 11 && (b > 5 || (b === 5 && c >= 1))) ? 0 : 1)' "$NPM_VERSION"; then
+            echo "::error::npm $NPM_VERSION does not support trusted publishing (needs 11.5.1 or later)"
+            exit 1
+          fi
+
+      - name: Build packages
+        if: steps.changesets.outputs['has-changesets'] == 'false' && steps.version.outputs.already-published == 'false'
+        run: pnpm build:packages
+
+      - name: Smoke test packed tarballs
+        if: steps.changesets.outputs['has-changesets'] == 'false' && steps.version.outputs.already-published == 'false'
+        run: pnpm test:pack
+
+      # --tag keeps 2.x off `latest`. `--no-git-tag` stops the per-package tags;
+      # one tag is pushed below instead. `changeset publish` passes
+      # --no-git-checks to pnpm, so publishing from v2 is allowed. No npm token
+      # on purpose: pnpm falls back to it and skips provenance when trusted
+      # publishing (OIDC) fails.
+      - name: Publish to npm
+        id: publish
+        if: steps.changesets.outputs['has-changesets'] == 'false' && steps.version.outputs.already-published == 'false'
+        env:
+          NPM_CONFIG_PROVENANCE: 'true'
+        run: |
+          set -o pipefail
+          pnpm changeset publish --tag v2-maintenance --no-git-tag | tee publish.log
+          if grep -q 'No unpublished projects to publish' publish.log; then
+            echo "published=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "published=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # A tag only, no GitHub release: a published release runs this branch's
+      # upload-docs.yml and release-notes.yml, which are set up for main.
+      - name: Push tag
+        if: steps.publish.outputs.published == 'true'
+        env:
+          GH_TOKEN: ${{ steps.generate-token.outputs.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/git/refs" \
+            -f ref="refs/tags/sdk-v$VERSION" \
+            -f sha="$GITHUB_SHA"
