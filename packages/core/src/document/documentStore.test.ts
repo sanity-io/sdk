@@ -278,6 +278,9 @@ it('propagates changes between two instances', async () => {
 
   const state1Unsubscribe = state1.subscribe()
   const state2Unsubscribe = state2.subscribe()
+  expect(
+    await Promise.all([resolveDocument(instance1, doc), resolveDocument(instance2, doc)]),
+  ).toEqual([null, null])
 
   // Create the document from instance1.
   await applyDocumentActions(instance1, {actions: [createDocument(doc)], resource: source1}).then(
