@@ -1,5 +1,12 @@
 # Changelog
 
+## 3.7.0
+
+### Patch Changes
+
+- Updated dependencies [[`46ec927`](https://github.com/sanity-io/sdk/commit/46ec9278d44f5a9b75b48401df8c2131b322da88)]:
+  - @sanity/sdk@3.7.0
+
 ## 3.6.0
 
 ### Minor Changes
