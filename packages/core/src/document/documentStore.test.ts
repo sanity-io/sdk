@@ -15,6 +15,7 @@ import {
   type UnfilteredResponseQueryOptions,
   type WelcomeEvent,
 } from '@sanity/client'
+import {makePatches, stringifyPatches} from '@sanity/diff-match-patch'
 import {diffValue} from '@sanity/diff-patch'
 import {DocumentId, getDraftId, getPublishedId} from '@sanity/id-utils'
 import {type Mutation, type SanityDocument} from '@sanity/types'
@@ -60,6 +61,7 @@ import {
 } from './documentStore'
 import {
   type ActionErrorEvent,
+  type DocumentEvent,
   type DocumentRemotePatchesEvent,
   type TransactionRevertedEvent,
 } from './events'
@@ -820,7 +822,13 @@ it('reverts failed outgoing transaction locally', async () => {
   const clientActionMockImplementation = vi.mocked(client.action).getMockImplementation()!
   vi.mocked(client.action).mockImplementation(async (...args) => {
     const [, {transactionId} = {}] = args
-    if (transactionId === 'force-revert') throw new Error('example error')
+    if (transactionId === 'force-revert') {
+      throw new ClientError({
+        statusCode: 400,
+        headers: {},
+        body: {error: 'Bad Request', message: 'example error'},
+      })
+    }
     return await clientActionMockImplementation(...args)
   })
 
@@ -868,7 +876,7 @@ it('reverts failed outgoing transaction locally', async () => {
 
   await expect(revertedEventPromise).resolves.toMatchObject({
     type: 'reverted',
-    message: 'example error',
+    message: 'Bad Request - example error',
     outgoing: {transactionId: 'force-revert'},
   })
 
@@ -1428,6 +1436,9 @@ vi.mock('./sharedListener.ts', () => {
   }
 })
 
+// read through getters so a test can lengthen the submission backoff
+const submissionRetryDelay = vi.hoisted(() => ({ms: 5}))
+
 vi.mock('./documentConstants.ts', async (importOriginal) => {
   const original = await importOriginal<typeof import('./documentConstants')>()
   return {
@@ -1439,6 +1450,12 @@ vi.mock('./documentConstants.ts', async (importOriginal) => {
     OUT_OF_SYNC_RETRY_COUNT: 2,
     ACL_RETRY_BASE_DELAY: 0,
     ACL_RETRY_MAX_DELAY: 0,
+    get SUBMISSION_RETRY_BASE_DELAY() {
+      return submissionRetryDelay.ms
+    },
+    get SUBMISSION_RETRY_MAX_DELAY() {
+      return submissionRetryDelay.ms
+    },
   }
 })
 
@@ -2032,4 +2049,278 @@ it('keeps its retry budget per failure, not per listener', async () => {
 
   expect(() => documentState.getCurrent()).not.toThrow()
   unsubscribe()
+})
+
+it('keeps edits made while the session is expired and submits them after re-authentication', async () => {
+  // Same status and body the actions API returned on an expired SAML session
+  const sessionExpired = new ClientError({
+    statusCode: 401,
+    headers: {},
+    body: {statusCode: 401, error: 'Unauthorized', message: 'Session not found'},
+  })
+  let sessionValid = true
+  let rejectedAttempts = 0
+  const actualAction = vi.mocked(client.action).getMockImplementation()!
+  vi.mocked(client.action).mockImplementation(async (...args) => {
+    if (!sessionValid) {
+      rejectedAttempts++
+      throw sessionExpired
+    }
+    return await actualAction(...args)
+  })
+
+  const events: DocumentEvent[] = []
+  const unsubscribeEvents = subscribeDocumentEvents(instance, {
+    resource,
+    eventHandler: (e) => events.push(e),
+  })
+
+  const doc = createDocumentHandle({
+    documentId: DocumentId('session-expiry'),
+    documentType: 'article',
+  })
+  const state = getDocumentState<TestDocument>(instance, doc)
+  const syncStatus = getDocumentSyncStatus(instance, doc)
+  const unsubscribe = state.subscribe()
+  const unsubscribeSync = syncStatus.subscribe()
+
+  await applyDocumentActions(instance, {
+    actions: [createDocument(doc), editDocument(doc, {set: {title: 'saved'}})],
+    resource,
+  }).then((r) => r.submitted())
+
+  // the session expires while the user keeps typing, one batch per flush
+  sessionValid = false
+  const results = ['saved, one', 'saved, one two', 'saved, one two three'].map((title) =>
+    applyDocumentActions(instance, {
+      actions: [editDocument(doc, {set: {title}})],
+      resource,
+      disableBatching: true,
+    }),
+  )
+  await expect.poll(() => rejectedAttempts).toBeGreaterThanOrEqual(3)
+
+  // nothing is reverted: the edits stay on screen and the document reports
+  // that it is not in sync
+  expect(events.filter((e) => e.type === 'reverted')).toEqual([])
+  expect(events.filter((e) => e.type === 'submission-failed').slice(0, 3)).toMatchObject([
+    {message: 'Unauthorized - Session not found', attempt: 1},
+    {message: 'Unauthorized - Session not found', attempt: 2},
+    {message: 'Unauthorized - Session not found', attempt: 3},
+  ])
+  expect(state.getCurrent()?.title).toBe('saved, one two three')
+  expect(syncStatus.getCurrent()).toBe(false)
+
+  // the user re-authenticates and every edit lands
+  sessionValid = true
+  await Promise.all(results.map((r) => r.then((x) => x.submitted())))
+  expect(state.getCurrent()?.title).toBe('saved, one two three')
+  expect(syncStatus.getCurrent()).toBe(true)
+  expect(events.filter((e) => e.type === 'reverted')).toEqual([])
+
+  unsubscribeSync()
+  unsubscribe()
+  unsubscribeEvents()
+  vi.mocked(client.action).mockImplementation(actualAction)
+})
+
+it('retries a submission that failed with a server error or a dropped connection', async () => {
+  const failures: unknown[] = [
+    new ServerError({statusCode: 503, headers: {}, body: {}}),
+    new Error('Request error while attempting to reach https://p.api.sanity.io'),
+  ]
+  const actualAction = vi.mocked(client.action).getMockImplementation()!
+  vi.mocked(client.action).mockImplementation(async (...args) => {
+    const [, {transactionId} = {}] = args
+    if (transactionId === 'flaky' && failures.length) throw failures.shift()
+    return await actualAction(...args)
+  })
+
+  const doc = createDocumentHandle({
+    documentId: DocumentId('flaky-network'),
+    documentType: 'article',
+  })
+  const state = getDocumentState<TestDocument>(instance, doc)
+  const unsubscribe = state.subscribe()
+
+  await applyDocumentActions(instance, {actions: [createDocument(doc)], resource}).then((r) =>
+    r.submitted(),
+  )
+  await applyDocumentActions(instance, {
+    actions: [editDocument(doc, {set: {title: 'kept'}})],
+    transactionId: 'flaky',
+    resource,
+  }).then((r) => r.submitted())
+
+  expect(failures).toEqual([])
+  expect(state.getCurrent()?.title).toBe('kept')
+
+  unsubscribe()
+  vi.mocked(client.action).mockImplementation(actualAction)
+})
+
+it('treats transactionAlreadyExistsError on a retry as an ack of the earlier attempt', async () => {
+  // the first attempt is committed but its response is lost; the retry then
+  // collides with the transaction ID the server already recorded
+  const actualAction = vi.mocked(client.action).getMockImplementation()!
+  let attempts = 0
+  vi.mocked(client.action).mockImplementation(async (...args) => {
+    const [, {transactionId} = {}] = args
+    if (transactionId !== 'lost-response') return await actualAction(...args)
+    attempts++
+    if (attempts === 1) {
+      await actualAction(...args)
+      throw new Error('Request error while attempting to reach https://p.api.sanity.io')
+    }
+    throw new ClientError({
+      statusCode: 409,
+      headers: {},
+      body: {
+        error: {
+          type: 'transactionAlreadyExistsError',
+          description: 'The transaction ID "lost-response" already exists',
+        },
+      },
+    })
+  })
+
+  const reverted: TransactionRevertedEvent[] = []
+  const unsubscribeEvents = subscribeDocumentEvents(instance, {
+    resource,
+    eventHandler: (e) => {
+      if (e.type === 'reverted') reverted.push(e)
+    },
+  })
+
+  const doc = createDocumentHandle({
+    documentId: DocumentId('lost-response'),
+    documentType: 'article',
+  })
+  const state = getDocumentState<TestDocument>(instance, doc)
+  const unsubscribe = state.subscribe()
+
+  await applyDocumentActions(instance, {actions: [createDocument(doc)], resource}).then((r) =>
+    r.submitted(),
+  )
+  await applyDocumentActions(instance, {
+    actions: [editDocument(doc, {set: {title: 'committed once'}})],
+    transactionId: 'lost-response',
+    resource,
+  }).then((r) => r.submitted())
+
+  expect(attempts).toBe(2)
+  expect(reverted).toEqual([])
+  expect(state.getCurrent()?.title).toBe('committed once')
+
+  unsubscribe()
+  unsubscribeEvents()
+  vi.mocked(client.action).mockImplementation(actualAction)
+})
+
+it('resubmits held text edits as soon as the credentials change, in order and once each', async () => {
+  // The sequence from a writer whose session expired mid-edit: a text field
+  // written with operation-preserving diffMatchPatch edits (what
+  // @portabletext/plugin-sdk-value sends), every write on the old token
+  // rejected with a 401, then a new token from logging in again in another tab
+  const client$ = (getClientState as () => StateSource<SanityClient>)()
+    .observable as ReplaySubject<SanityClient>
+  const actualAction = vi.mocked(client.action).getMockImplementation()!
+  let sessionValid = true
+  let rejectedAttempts = 0
+  vi.mocked(client.action).mockImplementation(async (...args) => {
+    if (sessionValid) return await actualAction(...args)
+    rejectedAttempts++
+    throw new ClientError({
+      statusCode: 401,
+      headers: {},
+      body: {statusCode: 401, error: 'Unauthorized', message: 'Session not found'},
+    })
+  })
+  // the client store builds a new client when the token changes; it carries
+  // the renewed token, so the server accepts its writes
+  const renewedClient = {
+    ...client,
+    observable: {
+      ...client.observable,
+      action: (...args: Parameters<typeof actualAction>) => from(actualAction(...args)),
+    },
+  } as SanityClient
+
+  const reverted: TransactionRevertedEvent[] = []
+  const unsubscribeEvents = subscribeDocumentEvents(instance, {
+    resource,
+    eventHandler: (e) => {
+      if (e.type === 'reverted') reverted.push(e)
+    },
+  })
+
+  const doc = createDocumentHandle({
+    documentId: DocumentId('renewed-session'),
+    documentType: 'article',
+  })
+  const state = getDocumentState<TestDocument>(instance, doc)
+  const unsubscribe = state.subscribe()
+
+  const typeText = (before: string, after: string) =>
+    applyDocumentActions(instance, {
+      actions: [
+        {
+          ...editDocument(doc, {
+            diffMatchPatch: {title: stringifyPatches(makePatches(before, after))},
+          }),
+          preserveOperations: true,
+        },
+      ],
+      resource,
+      disableBatching: true,
+    })
+
+  submissionRetryDelay.ms = 60_000
+  try {
+    await applyDocumentActions(instance, {
+      actions: [createDocument(doc), editDocument(doc, {set: {title: 'Start:'}})],
+      resource,
+    }).then((r) => r.submitted())
+
+    sessionValid = false
+    const results = [
+      typeText('Start:', 'Start: the'),
+      typeText('Start: the', 'Start: the mayor'),
+      typeText('Start: the mayor', 'Start: the mayor said'),
+    ]
+
+    // the first write is rejected and the 60s backoff holds its retry, while
+    // every edit stays applied locally
+    await expect.poll(() => rejectedAttempts).toBe(1)
+    await new Promise((resolve) => setTimeout(resolve, 100))
+    expect(rejectedAttempts).toBe(1)
+    expect(state.getCurrent()?.title).toBe('Start: the mayor said')
+
+    // logging in again: the held write and the queued ones land long before
+    // the backoff would have elapsed
+    client$.next(renewedClient)
+    await Promise.race([
+      Promise.all(results.map((r) => r.then((x) => x.submitted()))),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('edits were not resubmitted on the new client')), 2000),
+      ),
+    ])
+
+    expect(rejectedAttempts).toBe(1)
+    expect(reverted).toEqual([])
+    expect(state.getCurrent()?.title).toBe('Start: the mayor said')
+    // the server copy has each edit applied exactly once
+    await expect(
+      client.fetch<string>(
+        '*[_id == $id][0].title',
+        {id: getDraftId(DocumentId('renewed-session'))},
+        {filterResponse: true},
+      ),
+    ).resolves.toBe('Start: the mayor said')
+  } finally {
+    submissionRetryDelay.ms = 5
+    unsubscribe()
+    unsubscribeEvents()
+    vi.mocked(client.action).mockImplementation(actualAction)
+  }
 })

@@ -542,6 +542,38 @@ describe('authStore', () => {
       expect(checkForCookieAuth).not.toHaveBeenCalled()
     })
 
+    it('switches to the renewed token when the Studio token source emits one', () => {
+      // Studio broadcasts the new token to every open tab when the user logs in
+      // again in any of them, so a tab with an expired session receives it
+      // without reloading
+      let tokenObserver!: {next: (token: string | null) => void}
+      const mockSubscribe = vi.fn((observer: {next: (token: string | null) => void}) => {
+        tokenObserver = observer
+        return {unsubscribe: vi.fn()}
+      })
+      const mockTokenSource = {subscribe: mockSubscribe}
+
+      instance = createSanityInstance({
+        projectId: 'studio-project',
+        dataset: 'production',
+        studio: {
+          auth: {token: mockTokenSource},
+        },
+      })
+
+      getAuthState(instance)
+      tokenObserver.next('expired-session-token')
+      expect(getTokenState(instance).getCurrent()).toBe('expired-session-token')
+
+      tokenObserver.next('renewed-session-token')
+
+      expect(getAuthState(instance).getCurrent()).toMatchObject({
+        type: AuthStateType.LOGGED_IN,
+        token: 'renewed-session-token',
+      })
+      expect(getTokenState(instance).getCurrent()).toBe('renewed-session-token')
+    })
+
     it('falls back to default auth (storage token) when studio mode is disabled', () => {
       const storageToken = 'regular-storage-token'
       vi.mocked(getTokenFromStorage).mockReturnValue(storageToken)
