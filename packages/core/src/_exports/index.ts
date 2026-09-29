@@ -203,6 +203,7 @@ export {
   type DocumentUnpublishedEvent,
   type TransactionAcceptedEvent,
   type TransactionRevertedEvent,
+  type TransactionSubmissionFailedEvent,
 } from '../document/events'
 export {type JsonMatch} from '../document/patchOperations'
 export {type DocumentPermissionsResult, type PermissionDeniedReason} from '../document/permissions'

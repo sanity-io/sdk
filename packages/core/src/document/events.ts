@@ -14,6 +14,7 @@ export type DocumentTransactionSubmissionResult =
 export type DocumentEvent =
   | ActionErrorEvent
   | TransactionRevertedEvent
+  | TransactionSubmissionFailedEvent
   | TransactionAcceptedEvent
   | DocumentRebaseErrorEvent
   | DocumentEditedEvent
@@ -54,6 +55,21 @@ export interface TransactionRevertedEvent {
   message: string
   error: unknown
   outgoing: OutgoingTransaction
+}
+/**
+ * @beta
+ * Event emitted when submitting a transaction fails with an error the store
+ * retries: a network failure, a 5xx, 408 or 429 response, or a 401 (for
+ * example an expired session). The transaction and its local changes are kept
+ * and submitted again, so the document stays out of sync until an attempt
+ * succeeds. Emitted once per failed attempt; `attempt` starts at 1.
+ */
+export interface TransactionSubmissionFailedEvent {
+  type: 'submission-failed'
+  message: string
+  error: unknown
+  outgoing: OutgoingTransaction
+  attempt: number
 }
 /**
  * @beta
