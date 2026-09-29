@@ -36,6 +36,7 @@ import {afterEach, beforeEach, expect, it, vi} from 'vitest'
 
 import {getClientState} from '../client/clientStore'
 import {createDocumentHandle} from '../config/handles'
+import {type DocumentHandle} from '../config/sanityConfig'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {type StateSource} from '../store/createStateSourceAction'
 import {UPSTREAM_CLOSE_DELAY_MS} from '../store/createStoreInstance'
@@ -109,6 +110,13 @@ afterEach(() => {
   instance1?.dispose()
   instance2?.dispose()
 })
+
+// The mock listener doesn't replay, so a late instance would get changes from its initial fetch
+async function expectMissingInBothInstances(doc: DocumentHandle) {
+  expect(
+    await Promise.all([resolveDocument(instance1, doc), resolveDocument(instance2, doc)]),
+  ).toEqual([null, null])
+}
 
 it('creates, edits, and publishes a document', async () => {
   const documentId = DocumentId('doc-single')
@@ -227,8 +235,7 @@ it('sets optimistic changes synchronously', async () => {
   const unsubscribe1 = state1.subscribe()
   const unsubscribe2 = state2.subscribe()
 
-  // wait until the value is primed in the store
-  await resolveDocument(instance1, doc1)
+  await expectMissingInBothInstances(doc1)
 
   // then the actions are synchronous
   expect(state1.getCurrent()).toBeNull()
@@ -278,9 +285,7 @@ it('propagates changes between two instances', async () => {
 
   const state1Unsubscribe = state1.subscribe()
   const state2Unsubscribe = state2.subscribe()
-  expect(
-    await Promise.all([resolveDocument(instance1, doc), resolveDocument(instance2, doc)]),
-  ).toEqual([null, null])
+  await expectMissingInBothInstances(doc)
 
   // Create the document from instance1.
   await applyDocumentActions(instance1, {actions: [createDocument(doc)], resource: source1}).then(
@@ -443,6 +448,7 @@ it('handles concurrent edits and resolves conflicts', async () => {
 
   const state1Unsubscribe = state1.subscribe()
   const state2Unsubscribe = state2.subscribe()
+  await expectMissingInBothInstances(doc)
 
   const oneOffInstance = createSanityInstance({projectId: 'p', dataset: 'd'})
 
@@ -487,6 +493,7 @@ it('interleaves concurrent keyed-array edits when operations are preserved', asy
 
   const state1Unsubscribe = state1.subscribe()
   const state2Unsubscribe = state2.subscribe()
+  await expectMissingInBothInstances(doc)
 
   const oneOffInstance = createSanityInstance({projectId: 'p', dataset: 'd'})
   await applyDocumentActions(oneOffInstance, {
