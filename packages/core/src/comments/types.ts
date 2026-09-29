@@ -1,7 +1,7 @@
 import {
+  type CollaborationCommentAnchor,
   type CollaborationCommentDocument,
   type CollaborationCommentFieldValue,
-  type CollaborationCommentRange,
   type CollaborationCommentReactionShortName,
 } from '@sanity/client'
 import {type PortableTextBlock} from '@sanity/types'
@@ -40,8 +40,8 @@ export interface CommentTextSelectionItem {
 /**
  * A comment anchored to a run of text inside a Portable Text field.
  *
- * Resolved by the API when a comment is written, from the {@link CommentRange}
- * it was given. Read only: re-anchoring goes through `updateCommentRange`.
+ * Resolved by the API when a comment is written, from the {@link CommentAnchor}
+ * it was given. Read only: re-anchoring goes through `updateCommentAnchor`.
  *
  * The SDK passes this through untouched. Resolving it back to a position in a
  * live editor needs the editor's current value, so that lives in
@@ -57,23 +57,26 @@ export interface CommentTextSelection {
  * Where a comment attaches inside a Portable Text field, as an offset into each
  * end of the run of text it covers.
  *
- * This is the write side of {@link CommentTextSelection}: pass a range when
+ * This is the write side of {@link CommentTextSelection}: pass an anchor when
  * creating or re-anchoring a comment, and read the selection the API resolved
  * it into.
+ *
+ * Its optional `fieldValue` is the text the offsets count into, for an editor
+ * holding changes the server has not seen. See {@link CommentFieldValue}.
  * @beta
  */
-export type CommentRange = CollaborationCommentRange
+export type CommentAnchor = CollaborationCommentAnchor
 
 /**
- * The Portable Text a {@link CommentRange} is offsets into.
+ * The Portable Text a {@link CommentAnchor} is offsets into.
  *
- * Pass it alongside a range to have the API resolve the range against these
- * blocks rather than against the document it holds. That is what an editor with
- * unsaved changes needs: the range describes text the server has not seen yet,
- * so resolving it against the stored document lands the comment on the wrong
- * words, or nowhere.
+ * Set it as the anchor's `fieldValue` to have the API resolve the anchor
+ * against these blocks rather than against the document it holds. That is what
+ * an editor with unsaved changes needs: the anchor describes text the server
+ * has not seen yet, so resolving it against the stored document lands the
+ * comment on the wrong words, or nowhere.
  *
- * The blocks from the range's start `_key` through its end `_key` are enough;
+ * The blocks from the anchor's start `_key` through its end `_key` are enough;
  * the whole field is also fine.
  * @beta
  */

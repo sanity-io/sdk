@@ -171,8 +171,8 @@ catalogs:
       specifier: ^1.0.5
       version: 1.0.5
     '@sanity/client':
-      specifier: ^8.6.2
-      version: 8.6.2
+      specifier: ^8.8.0
+      version: 8.8.0
     '@sanity/comlink':
       specifier: ^4.0.3
       version: 4.0.3
@@ -590,7 +590,7 @@ importers:
     dependencies:
       '@sanity/client':
         specifier: 'catalog:'
-        version: 8.6.2(vitest@5.0.1)
+        version: 8.8.0(vitest@5.0.1)
       dotenv:
         specifier: ^17.4.2
         version: 17.4.2
@@ -681,7 +681,7 @@ importers:
         version: 1.0.0
       '@sanity/client':
         specifier: 'catalog:'
-        version: 8.6.2(vitest@5.0.1)
+        version: 8.8.0(vitest@5.0.1)
       '@sanity/comlink':
         specifier: 'catalog:'
         version: 4.0.3
@@ -781,7 +781,7 @@ importers:
         version: 2.9.0
       '@sanity/client':
         specifier: 'catalog:'
-        version: 8.6.2(vitest@5.0.1)
+        version: 8.8.0(vitest@5.0.1)
       '@sanity/message-protocol':
         specifier: 'catalog:'
         version: 0.24.0
@@ -3284,6 +3284,10 @@ packages:
     resolution: {integrity: sha512-e/rKvOxMy3hP+4p1fdVfONKrdmlNQQyjzHai/cQYPTe/CLLsxVQZWcPsXOq+rgZ3gitxXHtqx1H4nrYmBG97Qg==}
     engines: {node: '>=22.12.0'}
 
+  '@sanity/client@8.8.0':
+    resolution: {integrity: sha512-uA2wXSCrTRpTXudDLBUdFd78EVdXEMZi4e3GQUmu81A19v2vXq/aE7GockgQwjdRxsGkRKKOYq5NXpAXmZ8jig==}
+    engines: {node: '>=22.12.0'}
+
   '@sanity/codegen@3.88.1-typegen-experimental.0':
     resolution: {integrity: sha512-9GuT4aTNA1r8F8k6Rv2H2chmatzrmdK40fo4mosDr426nSsAkTD2gl632KVjmuI6veBnfT+ecv5Q/QvmvXl4SA==}
     engines: {node: '>=18'}
@@ -5382,6 +5386,10 @@ packages:
     resolution: {integrity: sha512-onrlI7l612Ee3xnBqZNTq4djf6Fho/0yIpO/rYjRG/FzjMyPJquNx9SS3QyjglnVFxwxrube1XmX41zB+0Rdgw==}
     engines: {node: '>=22.12.0'}
 
+  eventsource@5.1.2:
+    resolution: {integrity: sha512-VJnwqqp+fOT3WDkjnUy49Zuyh48+kH0JdJApZkslrRQyx35zIZJeJYJl0+a+LrTzh5TFv6MdmXnBDv71UXFyWQ==}
+    engines: {node: '>=22.12.0'}
+
   execa@10.0.1:
     resolution: {integrity: sha512-ge98qjkRK4IB7tL7Ju/6qmm5LHoH1eEMt5FNZrz3f4UIYhF28lggX20z3FaX1sgc67msLEn0N0BscOs29iuwyw==}
     engines: {node: '>=22'}
@@ -5589,6 +5597,15 @@ packages:
 
   get-it@9.5.4:
     resolution: {integrity: sha512-LXbU86HfKWzssHTTsQtUphDh5RB9ilOvncCPPDjaJTbli8zPIJBv4KA9EMB/Wv8GfPXy0dpulfRJzd76n7c3bg==}
+    engines: {node: '>=22.12.0'}
+    peerDependencies:
+      vitest: '>=2.0.0'
+    peerDependenciesMeta:
+      vitest:
+        optional: true
+
+  get-it@9.6.0:
+    resolution: {integrity: sha512-pLA1QOriV5d3DqCmQxxJZ9hIOHMcAmpPiNzZyXgJ5sqWGIBv+Lnpg4ob18Ke6CDSU59cN/ev/mPVSbdS7qkp8g==}
     engines: {node: '>=22.12.0'}
     peerDependencies:
       vitest: '>=2.0.0'
@@ -11046,6 +11063,15 @@ snapshots:
     transitivePeerDependencies:
       - vitest
 
+  '@sanity/client@8.8.0(vitest@5.0.1)':
+    dependencies:
+      eventsource: 5.1.2
+      get-it: 9.6.0(vitest@5.0.1)
+      obug: 3.0.0
+      rxjs: 7.8.2
+    transitivePeerDependencies:
+      - vitest
+
   '@sanity/codegen@3.88.1-typegen-experimental.0(supports-color@8.1.1)':
     dependencies:
       '@babel/core': 7.29.7(supports-color@8.1.1)
@@ -13459,6 +13485,10 @@ snapshots:
     dependencies:
       eventsource-parser: 4.1.1
 
+  eventsource@5.1.2:
+    dependencies:
+      eventsource-parser: 4.1.1
+
   execa@10.0.1:
     dependencies:
       '@sindresorhus/merge-streams': 4.0.0
@@ -13713,6 +13743,12 @@ snapshots:
       tunnel-agent: 0.6.0
 
   get-it@9.5.4(vitest@5.0.1):
+    dependencies:
+      undici: 7.29.1
+    optionalDependencies:
+      vitest: 5.0.1(@types/node@24.13.6)(@vitest/coverage-v8@5.0.1)(jsdom@30.1.1(@noble/hashes@2.4.0))(vite@8.3.0(@types/node@24.13.6)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
+
+  get-it@9.6.0(vitest@5.0.1):
     dependencies:
       undici: 7.29.1
     optionalDependencies:

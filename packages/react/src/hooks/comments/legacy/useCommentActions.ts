@@ -29,7 +29,7 @@ import {trackHookUsage} from '../../helpers/useTrackHookUsage'
  * @public
  * @category Types
  * @deprecated The add-on dataset write actions. See `CommentActions` in
- * `@sanity/sdk-react/collaboration`, which adds reactions and range re-anchoring.
+ * `@sanity/sdk-react/collaboration`, which adds reactions and re-anchoring.
  */
 export interface CommentActions {
   /** Starts a thread on a document, or on one of its fields. */
@@ -88,8 +88,8 @@ type Resolvable = {
  *
  * @public
  * @deprecated Comments have moved to the organization collaboration API. Use
- * `useCommentActions` from `@sanity/sdk-react/collaboration`, which writes inline anchors as
- * `range` plus `fieldValue` rather than a pre-built `selection`. This add-on dataset hook is
+ * `useCommentActions` from `@sanity/sdk-react/collaboration`, which writes inline anchors as an
+ * `anchor` of offsets rather than a pre-built `selection`. This add-on dataset hook is
  * removed in the next major.
  */
 export function useCommentActions(): CommentActions {

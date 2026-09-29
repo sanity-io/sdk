@@ -53,22 +53,21 @@ function CommentableEditor({
   comments: Comment[]
 }) {
   const {createComment} = useCommentActions()
-  const {range, fieldValue} = useSDKCommentAuthoring()
+  const {anchor} = useSDKCommentAuthoring()
   const decorations = useSDKCommentDecorations({comments, component: Highlight})
   const [draft, setDraft] = useState('')
 
   const submit = useCallback(() => {
-    if (!range || !draft) return
+    if (!anchor || !draft) return
 
     createComment({
       ...docHandle,
       fieldPath: FIELD_PATH,
       message: toMessage(draft),
-      range,
-      fieldValue,
+      anchor,
     })
     setDraft('')
-  }, [createComment, docHandle, draft, fieldValue, range])
+  }, [anchor, createComment, docHandle, draft])
 
   return (
     <Stack gap={3}>
@@ -86,7 +85,7 @@ function CommentableEditor({
           <TextInput
             fontSize={1}
             value={draft}
-            placeholder={range ? 'Comment on the selected text' : 'Select some text first'}
+            placeholder={anchor ? 'Comment on the selected text' : 'Select some text first'}
             onChange={(event) => setDraft(event.currentTarget.value)}
             data-testid="ptc-composer"
           />
@@ -95,7 +94,7 @@ function CommentableEditor({
           text="Comment"
           tone="primary"
           fontSize={1}
-          disabled={!range || !draft}
+          disabled={!anchor || !draft}
           onClick={submit}
           data-testid="ptc-submit"
         />
@@ -158,10 +157,10 @@ export function PortableTextCollaborationRoute(): JSX.Element {
       <Stack gap={4}>
         <Text size={1} muted>
           Comments on the <code>{FIELD_PATH}</code> field of an author document, anchored to a run
-          of text. The anchor is written as a <code>range</code> of offsets plus the editor&rsquo;s
-          current <code>fieldValue</code>, so a comment lands on the right words even when the text
-          it covers has not been saved yet. The API resolves that into a <code>selection</code>,
-          which is what the highlights are drawn from.
+          of text. The anchor is written as offsets plus the editor&rsquo;s current{' '}
+          <code>fieldValue</code>, so a comment lands on the right words even when the text it
+          covers has not been saved yet. The API resolves that into a <code>selection</code>, which
+          is what the highlights are drawn from.
         </Text>
         <Suspense fallback={<Spinner />}>
           {documentId ? (

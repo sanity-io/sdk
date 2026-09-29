@@ -13,9 +13,9 @@ import {
   setCommentStatus,
   type SetCommentStatusOptions,
   updateComment,
+  updateCommentAnchor,
+  type UpdateCommentAnchorOptions,
   type UpdateCommentOptions,
-  updateCommentRange,
-  type UpdateCommentRangeOptions,
 } from '@sanity/sdk/collaboration'
 import {useContext, useMemo} from 'react'
 
@@ -43,7 +43,9 @@ export interface CommentActions {
   /**
    * Re-anchors a comment to a different run of text, without marking it edited.
    */
-  updateCommentRange: (options: WithResourceNameSupport<UpdateCommentRangeOptions>) => Promise<void>
+  updateCommentAnchor: (
+    options: WithResourceNameSupport<UpdateCommentAnchorOptions>,
+  ) => Promise<void>
   /** Resolves or reopens a thread. Pass the thread's first comment. */
   setCommentStatus: (options: WithResourceNameSupport<SetCommentStatusOptions>) => Promise<void>
   /** Deletes a comment, and its replies when it starts a thread. */
@@ -115,7 +117,7 @@ export function useCommentActions(): CommentActions {
       createComment: (options) => createComment(instance, resolve(options)),
       replyToComment: (options) => replyToComment(instance, resolve(options)),
       updateComment: (options) => updateComment(instance, resolve(options)),
-      updateCommentRange: (options) => updateCommentRange(instance, resolve(options)),
+      updateCommentAnchor: (options) => updateCommentAnchor(instance, resolve(options)),
       setCommentStatus: (options) => setCommentStatus(instance, resolve(options)),
       removeComment: (options) => removeComment(instance, resolve(options)),
       addReaction: (options) => addReaction(instance, resolve(options)),

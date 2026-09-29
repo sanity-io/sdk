@@ -16,7 +16,7 @@ import {
   replyToComment,
   setCommentStatus,
   updateComment,
-  updateCommentRange,
+  updateCommentAnchor,
 } from './commentActions'
 import {commentTarget, storedComment} from './commentFixtures'
 import {observeCommentsClientForResource} from './commentsClient'
@@ -44,12 +44,13 @@ const CREATE = {...HANDLE, fieldPath: 'name'}
 
 const MESSAGE = [{_type: 'block', _key: 'b1', children: [{_type: 'span', text: 'hi'}]}]
 
-const RANGE = {
+const ANCHOR = {
+  type: 'portable-text',
   start: {_key: 'b1', offset: 0},
   end: {_key: 'b1', offset: 5},
-}
+} as const
 
-/** The blocks a range can be resolved against instead of the stored document. */
+/** The blocks an anchor can be resolved against instead of the stored document. */
 const FIELD_VALUE = [
   {_type: 'block', _key: 'b1', children: [{_type: 'span', text: 'unsaved text'}]},
 ]
@@ -178,16 +179,16 @@ describe('createComment', () => {
     expect(comments.create.mock.calls[0][0].target.documentId).toBe('versions.summer.doc-1')
   })
 
-  it('sends a range alongside the field it anchors within', async () => {
-    await createComment(instance, {...CREATE, message: MESSAGE, fieldPath: 'body', range: RANGE})
+  it('sends an anchor alongside the field it anchors within', async () => {
+    await createComment(instance, {...CREATE, message: MESSAGE, fieldPath: 'body', anchor: ANCHOR})
 
     expect(comments.create.mock.calls[0][0].target).toMatchObject({
       path: 'body',
-      range: RANGE,
+      anchor: ANCHOR,
     })
   })
 
-  it('sends the blocks a range is to be resolved against', async () => {
+  it('sends the blocks an anchor is to be resolved against', async () => {
     // What an editor holding unsaved changes has to pass: the offsets count
     // into text the server has not seen, so resolving them against the stored
     // document would land the comment on the wrong words.
@@ -195,14 +196,12 @@ describe('createComment', () => {
       ...CREATE,
       message: MESSAGE,
       fieldPath: 'body',
-      range: RANGE,
-      fieldValue: FIELD_VALUE,
+      anchor: {...ANCHOR, fieldValue: FIELD_VALUE},
     })
 
     expect(comments.create.mock.calls[0][0].target).toMatchObject({
       path: 'body',
-      range: RANGE,
-      fieldValue: FIELD_VALUE,
+      anchor: {...ANCHOR, fieldValue: FIELD_VALUE},
     })
   })
 
@@ -211,8 +210,7 @@ describe('createComment', () => {
 
     const body = comments.create.mock.calls[0][0]
     expect('context' in body).toBe(false)
-    expect('range' in body.target).toBe(false)
-    expect('fieldValue' in body.target).toBe(false)
+    expect('anchor' in body.target).toBe(false)
     expect('documentRevisionId' in body.target).toBe(false)
   })
 
@@ -601,31 +599,34 @@ describe('overlapping writes to one comment', () => {
   })
 })
 
-describe('updateCommentRange', () => {
-  it('patches the range', async () => {
-    await updateCommentRange(instance, {commentId: 'c1', range: RANGE})
+describe('updateCommentAnchor', () => {
+  it('patches the anchor', async () => {
+    await updateCommentAnchor(instance, {commentId: 'c1', anchor: ANCHOR})
 
     expect(comments.update).toHaveBeenCalledWith(
       'c1',
-      {range: RANGE},
-      {transactionId: expect.any(String), tag: 'comments.update-range'},
+      {anchor: ANCHOR},
+      {transactionId: expect.any(String), tag: 'comments.update-anchor'},
     )
   })
 
-  it('patches the blocks a new range is to be resolved against', async () => {
-    await updateCommentRange(instance, {commentId: 'c1', range: RANGE, fieldValue: FIELD_VALUE})
+  it('patches the blocks a new anchor is to be resolved against', async () => {
+    await updateCommentAnchor(instance, {
+      commentId: 'c1',
+      anchor: {...ANCHOR, fieldValue: FIELD_VALUE},
+    })
 
     expect(comments.update).toHaveBeenCalledWith(
       'c1',
-      {range: RANGE, fieldValue: FIELD_VALUE},
-      {transactionId: expect.any(String), tag: 'comments.update-range'},
+      {anchor: {...ANCHOR, fieldValue: FIELD_VALUE}},
+      {transactionId: expect.any(String), tag: 'comments.update-anchor'},
     )
   })
 
-  it('writes nothing when it is not given a range', async () => {
-    // Legal, since the API's update body treats an absent range as "leave it
+  it('writes nothing when it is not given an anchor', async () => {
+    // Legal, since the API's update body treats an absent anchor as "leave it
     // alone", but for this action that is a request with nothing in it.
-    await updateCommentRange(instance, {commentId: 'c1'})
+    await updateCommentAnchor(instance, {commentId: 'c1'})
 
     expect(comments.update).not.toHaveBeenCalled()
   })
@@ -637,7 +638,7 @@ describe('updateCommentRange', () => {
     source.subscribe()
     seedComments(instance, {comments: [comment({_id: 'c1'})]})
 
-    await updateCommentRange(instance, {commentId: 'c1', range: RANGE})
+    await updateCommentAnchor(instance, {commentId: 'c1', anchor: ANCHOR})
 
     expect(source.getCurrent()![0].parentComment.lastEditedAt).toBe(undefined)
   })
@@ -656,7 +657,7 @@ describe('updateCommentRange', () => {
       ],
     })
 
-    await updateCommentRange(instance, {commentId: 'c1', range: null})
+    await updateCommentAnchor(instance, {commentId: 'c1', anchor: null})
 
     // Knowable locally, unlike a new selection, which the API resolves against
     // the document.
@@ -673,7 +674,7 @@ describe('updateCommentRange', () => {
     })
     comments.update.mockRejectedValue(new Error('nope'))
 
-    await expect(updateCommentRange(instance, {commentId: 'c1', range: null})).rejects.toThrow(
+    await expect(updateCommentAnchor(instance, {commentId: 'c1', anchor: null})).rejects.toThrow(
       'nope',
     )
 

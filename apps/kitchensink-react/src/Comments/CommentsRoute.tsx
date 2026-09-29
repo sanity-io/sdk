@@ -1,7 +1,7 @@
 import {useCurrentUser} from '@sanity/sdk-react'
 import {
   type Comment,
-  type CommentRange,
+  type CommentAnchor,
   type CommentReactionShortName,
   type CommentStatus,
   type CommentThread,
@@ -156,11 +156,11 @@ function Reactions({comment}: {comment: Comment}): JSX.Element {
  *
  * Only shown once the API has resolved a selection, since there is nothing to
  * move until then. Re-anchoring keeps the block and shifts the offsets, which is
- * the mechanical case `updateCommentRange` exists for — the text moved, nobody
+ * the mechanical case `updateCommentAnchor` exists for — the text moved, nobody
  * edited the comment, so it must not come back marked as edited.
  */
 function AnchorControls({comment}: {comment: Comment}): JSX.Element | null {
-  const {updateCommentRange} = useCommentActions()
+  const {updateCommentAnchor} = useCommentActions()
   const blockKey = comment.selection?.value[0]?._key
   if (!blockKey) return null
 
@@ -171,9 +171,13 @@ function AnchorControls({comment}: {comment: Comment}): JSX.Element | null {
         mode="bleed"
         text="Re-anchor"
         onClick={() =>
-          updateCommentRange({
+          updateCommentAnchor({
             commentId: comment.id,
-            range: {start: {_key: blockKey, offset: 0}, end: {_key: blockKey, offset: 3}},
+            anchor: {
+              type: 'portable-text',
+              start: {_key: blockKey, offset: 0},
+              end: {_key: blockKey, offset: 3},
+            },
           })
         }
       />
@@ -181,7 +185,7 @@ function AnchorControls({comment}: {comment: Comment}): JSX.Element | null {
         data-testid="comment-clear-anchor"
         mode="bleed"
         text="Clear anchor"
-        onClick={() => updateCommentRange({commentId: comment.id, range: null})}
+        onClick={() => updateCommentAnchor({commentId: comment.id, anchor: null})}
       />
     </HStack>
   )
@@ -192,7 +196,7 @@ function AnchorControls({comment}: {comment: Comment}): JSX.Element | null {
  *
  * The badges are the point: `edited` is local until the listener catches up,
  * `createError` and `createRetrying` are the states a failed write leaves
- * behind, and `inline` says the API resolved the range into a selection.
+ * behind, and `inline` says the API resolved the anchor into a selection.
  */
 function CommentHeader({comment}: {comment: Comment}): JSX.Element {
   return (
@@ -483,18 +487,18 @@ function Inspector({comment}: {comment: Comment | undefined}): JSX.Element | nul
  *
  * A real app takes this from a Portable Text editor's selection. There is no
  * editor on this page, so the block key and offsets are typed in — which also
- * makes it easy to write a range that does not resolve and see what the API says
- * about it.
+ * makes it easy to write an anchor that does not resolve and see what the API
+ * says about it.
  */
-function RangeFields({
-  range,
+function AnchorFields({
+  anchor,
   onChange,
 }: {
-  range: CommentRange
-  onChange: (next: CommentRange) => void
+  anchor: CommentAnchor
+  onChange: (next: CommentAnchor) => void
 }): JSX.Element {
   const setOffset = (end: 'start' | 'end', value: string) =>
-    onChange({...range, [end]: {...range[end], offset: Number(value) || 0}})
+    onChange({...anchor, [end]: {...anchor[end], offset: Number(value) || 0}})
 
   return (
     <Flex alignItems="center" gap={2}>
@@ -503,10 +507,10 @@ function RangeFields({
       </Text>
       <TextInput
         data-testid="comments-range-key"
-        value={range.start._key}
+        value={anchor.start._key}
         onChange={(event) => {
           const _key = event.currentTarget.value
-          onChange({start: {...range.start, _key}, end: {...range.end, _key}})
+          onChange({...anchor, start: {...anchor.start, _key}, end: {...anchor.end, _key}})
         }}
       />
       <Text size={1} muted>
@@ -514,7 +518,7 @@ function RangeFields({
       </Text>
       <TextInput
         data-testid="comments-range-start"
-        value={String(range.start.offset)}
+        value={String(anchor.start.offset)}
         onChange={(event) => setOffset('start', event.currentTarget.value)}
       />
       <Text size={1} muted>
@@ -522,7 +526,7 @@ function RangeFields({
       </Text>
       <TextInput
         data-testid="comments-range-end"
-        value={String(range.end.offset)}
+        value={String(anchor.end.offset)}
         onChange={(event) => setOffset('end', event.currentTarget.value)}
       />
     </Flex>
@@ -545,7 +549,8 @@ function NewThreadPanel({
 }): JSX.Element {
   const {createComment} = useCommentActions()
   const [fieldPath, setFieldPath] = useState<string>(FIELDS[0].value)
-  const [range, setRange] = useState<CommentRange>({
+  const [anchor, setAnchor] = useState<CommentAnchor>({
+    type: 'portable-text',
     // `b1` is the block key the e2e fixtures seed `minimalBlock` with.
     start: {_key: 'b1', offset: 0},
     end: {_key: 'b1', offset: 5},
@@ -575,24 +580,22 @@ function NewThreadPanel({
         </Select>
       </Flex>
 
-      {/* A range only means something in a Portable Text field. */}
-      {isPortableTextField ? <RangeFields range={range} onChange={setRange} /> : null}
+      {/* An anchor only means something in a Portable Text field. */}
+      {isPortableTextField ? <AnchorFields anchor={anchor} onChange={setAnchor} /> : null}
 
       <Composer
         label="Comment"
         testId="comments-new-thread"
-        onSubmit={(text) => {
-          // Picked whole rather than spread in, since `range` and `fieldValue`
-          // are one option between them and a spread loses that.
-          const options = {
+        onSubmit={(text) =>
+          createComment({
             documentId,
             documentType: DOCUMENT_TYPE,
             perspective,
             fieldPath,
             message: toMessage(text),
-          }
-          return createComment(isPortableTextField ? {...options, range} : options)
-        }}
+            ...(isPortableTextField ? {anchor} : {}),
+          })
+        }
       />
     </VStack>
   )

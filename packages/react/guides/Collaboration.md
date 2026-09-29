@@ -133,16 +133,16 @@ function ResolveButton({commentId}: {commentId: string}) {
 }
 ```
 
-| Action               | Key options                                                      | Notes                                                                                    |
-| -------------------- | ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `createComment`      | document handle, `fieldPath`, `message`, `range?`, `fieldValue?` | Starts a thread. Returns the new `Comment`.                                              |
-| `replyToComment`     | `parentCommentId`, `message`                                     | Placement comes from the parent, which has to be loaded.                                 |
-| `updateComment`      | `commentId`, `message`                                           | Rewrites the message and marks the comment edited.                                       |
-| `updateCommentRange` | `commentId`, `range`, `fieldValue?`                              | Re-anchors without marking it edited. `null` drops the anchor; omitting it does nothing. |
-| `setCommentStatus`   | `commentId`, `status`                                            | Pass the thread's first comment; replies follow it.                                      |
-| `removeComment`      | `commentId`                                                      | Removes replies too when it starts a thread.                                             |
-| `addReaction`        | `commentId`, `shortName`                                         | Adds the current user's reaction.                                                        |
-| `removeReaction`     | `commentId`, `shortName`                                         | Removes the current user's reaction.                                                     |
+| Action                | Key options                                        | Notes                                                                                    |
+| --------------------- | -------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `createComment`       | document handle, `fieldPath`, `message`, `anchor?` | Starts a thread. Returns the new `Comment`.                                              |
+| `replyToComment`      | `parentCommentId`, `message`                       | Placement comes from the parent, which has to be loaded.                                 |
+| `updateComment`       | `commentId`, `message`                             | Rewrites the message and marks the comment edited.                                       |
+| `updateCommentAnchor` | `commentId`, `anchor`                              | Re-anchors without marking it edited. `null` drops the anchor; omitting it does nothing. |
+| `setCommentStatus`    | `commentId`, `status`                              | Pass the thread's first comment; replies follow it.                                      |
+| `removeComment`       | `commentId`                                        | Removes replies too when it starts a thread.                                             |
+| `addReaction`         | `commentId`, `shortName`                           | Adds the current user's reaction.                                                        |
+| `removeReaction`      | `commentId`, `shortName`                           | Removes the current user's reaction.                                                     |
 
 `createComment` also takes `commentId` and `threadId` to write against ids you chose, `documentRevisionId` to record which revision the comment was written about, and `context` for free-form data of your own. `replyToComment` takes `context` too, and both hand it back on the comment's `context`, so whatever you store there is readable wherever you read comments.
 
@@ -206,7 +206,7 @@ Mentions appear in a message as inline objects of type `mention` carrying a `use
 
 ## Inline comments
 
-A comment can be anchored to a run of text inside a Portable Text field. Pass a `range`, an offset into each end of the run, when creating it:
+A comment can be anchored to a run of text inside a Portable Text field. Pass an `anchor`, an offset into each end of the run, when creating it:
 
 ```tsx
 createComment({
@@ -214,20 +214,24 @@ createComment({
   documentType: 'article',
   fieldPath: 'body',
   message: toMessage('Tighten this up'),
-  range: {start: {_key: 'b1', offset: 0}, end: {_key: 'b1', offset: 12}},
+  anchor: {
+    type: 'portable-text',
+    start: {_key: 'b1', offset: 0},
+    end: {_key: 'b1', offset: 12},
+  },
 })
 ```
 
-The API resolves the range and the comment comes back with:
+The API resolves the anchor and the comment comes back with:
 
 - `selection`, the blocks the comment covers, each carrying the block's entire text with sentinel characters marking where the selection starts and ends. Storing marked-up text rather than offsets is what lets a highlight survive edits elsewhere in the same block.
 - `contentSnapshot`, a copy of the content the comment was written about.
 
 Resolving a selection back to a position in a live editor needs the editor's current value, so that lives in [`@portabletext/plugin-sdk-value`](https://github.com/portabletext/editor/tree/main/packages/plugin-sdk-value) rather than in the SDK.
 
-### Ranges into unsaved text
+### Anchors into unsaved text
 
-The range is resolved against the document the API holds, which is a problem when the offsets count into text nobody has saved yet: the comment lands on the wrong words, or on nothing. Pass `fieldValue`, the blocks the offsets belong to, and the range is resolved against those instead:
+The anchor is resolved against the document the API holds, which is a problem when the offsets count into text nobody has saved yet: the comment lands on the wrong words, or on nothing. Set the anchor's `fieldValue` to the blocks the offsets belong to, and it is resolved against those instead:
 
 ```tsx
 createComment({
@@ -235,22 +239,28 @@ createComment({
   documentType: 'article',
   fieldPath: 'body',
   message: toMessage('Tighten this up'),
-  range: {start: {_key: 'b1', offset: 0}, end: {_key: 'b1', offset: 12}},
-  fieldValue: editorValue, // the blocks `b1` through `b1`, or the whole field
+  anchor: {
+    type: 'portable-text',
+    start: {_key: 'b1', offset: 0},
+    end: {_key: 'b1', offset: 12},
+    fieldValue: editorValue, // the blocks `b1` through `b1`, or the whole field
+  },
 })
 ```
 
-`fieldValue` only means something as the text a range counts into, so it goes with a `range` or not at all. Passing one alone does not compile.
-
-When the anchored text moves, re-anchor with `updateCommentRange`. It exists precisely so that a mechanical move does not come back marked as edited, and it takes a `fieldValue` for the same reason `createComment` does:
+When the anchored text moves, re-anchor with `updateCommentAnchor`. It exists precisely so that a mechanical move does not come back marked as edited, and it takes a `fieldValue` for the same reason `createComment` does:
 
 ```tsx
-const range = {start: {_key: 'b1', offset: 4}, end: {_key: 'b1', offset: 16}}
+const anchor = {
+  type: 'portable-text',
+  start: {_key: 'b1', offset: 4},
+  end: {_key: 'b1', offset: 16},
+} as const
 
-updateCommentRange({commentId, range})
-updateCommentRange({commentId, range, fieldValue: editorValue})
-updateCommentRange({commentId, range: null}) // leaves a field-level comment
-updateCommentRange({commentId}) // legal, and does nothing
+updateCommentAnchor({commentId, anchor})
+updateCommentAnchor({commentId, anchor: {...anchor, fieldValue: editorValue}})
+updateCommentAnchor({commentId, anchor: null}) // leaves a field-level comment
+updateCommentAnchor({commentId}) // legal, and does nothing
 ```
 
 ## Multiple resources and perspectives
@@ -277,10 +287,9 @@ Exported from `@sanity/sdk-react/collaboration` and `@sanity/sdk/collaboration`:
 | `CommentThread`            | A parent comment plus its `replies`, with `commentsCount` and `lastActivityAt`.                                                            |
 | `CommentStatus`            | `'open' \| 'resolved'`.                                                                                                                    |
 | `CommentMessage`           | The Portable Text body.                                                                                                                    |
-| `CommentRange`             | The write side of an inline anchor: an offset into each end of a run of text.                                                              |
+| `CommentAnchor`            | The write side of an inline anchor: an offset into each end of a run of text, plus the `fieldValue` to resolve it against.                 |
 | `CommentTextSelection`     | The read side of an inline anchor: the covered blocks, with sentinels marking the run.                                                     |
-| `CommentFieldValue`        | Portable Text a `CommentRange` is resolved against.                                                                                        |
-| `CommentAnchor`            | A `CommentRange` and a `CommentFieldValue` together, as the write actions take them.                                                       |
+| `CommentFieldValue`        | Portable Text a `CommentAnchor` is resolved against.                                                                                       |
 | `CommentReaction`          | One reaction on a comment.                                                                                                                 |
 | `CommentReactionShortName` | An emoji short name such as `':+1:'`. The set is closed, and the API rejects anything else.                                                |
 | `CommentVariants`          | Which versions of a document to read comments from.                                                                                        |

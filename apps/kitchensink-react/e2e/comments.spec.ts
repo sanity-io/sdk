@@ -58,7 +58,7 @@ async function reply(context: PageContext, message: string): Promise<void> {
 
 /**
  * The Portable Text field the e2e fixtures seed, and the key of the block they
- * seed it with. An inline comment needs both: a range is offsets into a named
+ * seed it with. An inline comment needs both: an anchor is offsets into a named
  * block, so it only resolves against content that is actually there.
  */
 const PORTABLE_TEXT_FIELD = 'minimalBlock'
@@ -300,7 +300,7 @@ test.describe('Comments', () => {
 
     await expect(app.getByTestId('thread')).toBeVisible()
 
-    // The range itself is not stored. The API resolves it against the document
+    // The anchor itself is not stored. The API resolves it against the document
     // into a selection — the block's text with the selected part marked — plus a
     // snapshot of what was selected, so that is what comes back.
     await app.getByTestId('comment-inspect').first().click()

@@ -6,7 +6,7 @@ import {
   replyToComment,
   setCommentStatus,
   updateComment,
-  updateCommentRange,
+  updateCommentAnchor,
 } from '@sanity/sdk/collaboration'
 import {renderHook} from '@testing-library/react'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
@@ -22,7 +22,7 @@ vi.mock('@sanity/sdk/collaboration', async (importOriginal) => {
     createComment: vi.fn(),
     replyToComment: vi.fn(),
     updateComment: vi.fn(),
-    updateCommentRange: vi.fn(),
+    updateCommentAnchor: vi.fn(),
     setCommentStatus: vi.fn(),
     removeComment: vi.fn(),
     addReaction: vi.fn(),
@@ -37,7 +37,11 @@ const CREATE = {...HANDLE, fieldPath: 'name'}
 
 const MESSAGE = [{_type: 'block', _key: 'b1', children: [{_type: 'span', text: 'hi'}]}]
 
-const RANGE = {start: {_key: 'b1', offset: 0}, end: {_key: 'b1', offset: 5}}
+const ANCHOR = {
+  type: 'portable-text',
+  start: {_key: 'b1', offset: 0},
+  end: {_key: 'b1', offset: 5},
+} as const
 
 // Hoisted: an inline object here would be a new value on every render, and the
 // callbacks are memoised against it.
@@ -86,7 +90,7 @@ describe('useCommentActions', () => {
     result.current.createComment({...CREATE, message: MESSAGE})
     result.current.replyToComment({...HANDLE, parentCommentId: 'p1', message: MESSAGE})
     result.current.updateComment({commentId: 'c1', message: MESSAGE})
-    result.current.updateCommentRange({commentId: 'c1', range: RANGE})
+    result.current.updateCommentAnchor({commentId: 'c1', anchor: ANCHOR})
     result.current.setCommentStatus({commentId: 'c1', status: 'resolved'})
     result.current.removeComment({commentId: 'c1'})
     result.current.addReaction({commentId: 'c1', shortName: ':+1:'})
@@ -95,7 +99,7 @@ describe('useCommentActions', () => {
     expect(createComment).toHaveBeenCalledOnce()
     expect(replyToComment).toHaveBeenCalledOnce()
     expect(updateComment).toHaveBeenCalledOnce()
-    expect(updateCommentRange).toHaveBeenCalledOnce()
+    expect(updateCommentAnchor).toHaveBeenCalledOnce()
     expect(setCommentStatus).toHaveBeenCalledOnce()
     expect(removeComment).toHaveBeenCalledOnce()
     expect(addReaction).toHaveBeenCalledOnce()

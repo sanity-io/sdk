@@ -8,7 +8,6 @@
 
 export {
   addReaction,
-  type CommentAnchor,
   createComment,
   type CreateCommentOptions,
   type ReactionOptions,
@@ -20,9 +19,9 @@ export {
   setCommentStatus,
   type SetCommentStatusOptions,
   updateComment,
+  updateCommentAnchor,
+  type UpdateCommentAnchorOptions,
   type UpdateCommentOptions,
-  updateCommentRange,
-  type UpdateCommentRangeOptions,
 } from '../comments/commentActions'
 export {
   type CommentsOptions,
@@ -43,10 +42,10 @@ export {
 } from '../comments/commentsStore'
 export {
   type Comment,
+  type CommentAnchor,
   type CommentFieldValue,
   type CommentLocalState,
   type CommentMessage,
-  type CommentRange,
   type CommentReaction,
   type CommentReactionShortName,
   type CommentStatus,

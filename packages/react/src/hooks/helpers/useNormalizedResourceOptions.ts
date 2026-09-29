@@ -12,9 +12,9 @@ type NormalizedResourceFields = 'resourceName' | 'projectId' | 'dataset'
  * `Omit`, one union member at a time.
  *
  * A plain `Omit` collapses a union into its common keys, which loses the
- * relationships some option types are built on — `CreateCommentOptions` pairs
- * `fieldValue` with `range`, and a collapsed version satisfies neither branch.
- * Identical to `Omit` for everything else.
+ * relationships option types built as a union of mutually exclusive shapes rely
+ * on: a collapsed version satisfies none of the branches. Identical to `Omit`
+ * for everything else.
  */
 type OmitNormalizedFields<T> = T extends unknown ? Omit<T, NormalizedResourceFields> : never
 
