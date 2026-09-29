@@ -15,23 +15,43 @@ jobs:
         id: releasemarkdown
         with:
           text: "## Notes:\n${{ github.event.release.body }}"
+
+      # Slack rejects a section block whose text is over 3000 characters, and
+      # Changesets release bodies cover both packages, so they run well past
+      # that. Split the notes on paragraph breaks into sections of at most
+      # 2900 characters. A message holds at most 50 blocks.
+      - name: Build Slack payload
+        id: payload
+        env:
+          NOTES: ${{ steps.releasemarkdown.outputs.text }}
+          NAME: ${{ github.event.release.name }}
+          URL: ${{ github.event.release.html_url }}
+        run: |
+          payload=$(jq -cn --arg notes "$NOTES" --arg name "$NAME" --arg url "$URL" '
+            def chunks($max):
+              reduce (
+                $notes | split("\n\n")[] | select(length > 0)
+                | . as $p | range(0; length; $max) as $i | $p[$i:$i + $max]
+              ) as $para ([];
+                if length > 0 and (.[length - 1] | length) + ($para | length) + 2 <= $max
+                then .[length - 1] += "\n\n" + $para
+                else . + [$para]
+                end);
+            {
+              icon_emoji: "ship-it-pirate",
+              text: "New SDK Release Published: \($name)",
+              blocks: ([
+                {type: "header", text: {type: "plain_text", text: "New SDK Release Published!"}},
+                {type: "section", fields: [{type: "mrkdwn", text: "*Name:*\n<\($url)|\($name)>"}]}
+              ] + [chunks(2900)[] | {type: "section", text: {type: "mrkdwn", text: .}}])[:50]
+            }')
+          echo "payload=$payload" >> "$GITHUB_OUTPUT"
+
       - name: Send release notes to Slack
         uses: slackapi/slack-github-action@dcb1066f776dd043e64d0e8ba94ca15cc7e1875d # v4.0.0
         with:
           webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
           webhook-type: incoming-webhook
-          payload: |
-            icon_emoji: "ship-it-pirate"
-            blocks:
-              - type: header
-                text:
-                  type: plain_text
-                  text: "New SDK Release Published!"
-              - type: section
-                fields:
-                  - type: mrkdwn
-                    text: "*Name:*\n${{ github.event.release.name }}"
-              - type: section
-                text:
-                  type: mrkdwn
-                  text: ${{toJson(steps.releasemarkdown.outputs.text)}}
+          # Fail the run when Slack rejects the payload instead of passing silently.
+          errors: true
+          payload: ${{ steps.payload.outputs.payload }}
