@@ -35,3 +35,14 @@ export const OUT_OF_SYNC_RETRY_COUNT = 5
  */
 export const ACL_RETRY_BASE_DELAY = 500
 export const ACL_RETRY_MAX_DELAY = 10_000
+
+/**
+ * Base delay (ms) before resubmitting an outgoing transaction whose submission
+ * failed with a retryable error (a network error, a 5xx, 408 or 429 response,
+ * a 401 from an expired session, or a 409 `transactionConflictError` from
+ * contention while committing). Backoff doubles on each successive
+ * attempt, capped at {@link SUBMISSION_RETRY_MAX_DELAY}. A change of client
+ * (new credentials) triggers the next attempt immediately.
+ */
+export const SUBMISSION_RETRY_BASE_DELAY = 1000
+export const SUBMISSION_RETRY_MAX_DELAY = 10_000
