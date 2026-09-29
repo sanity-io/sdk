@@ -106,6 +106,16 @@ describe('dashboard topic types', () => {
     >().toEqualTypeOf<ApplicationContext | null>()
   })
 
+  it('types the access request topic', () => {
+    expectTypeOf<PayloadOf<'access.request'>>().toEqualTypeOf<{
+      resourceType: 'organization' | 'project'
+      resourceId: string
+    }>()
+    expectTypeOf<ReplyOf<'access.request'>>().toEqualTypeOf<
+      {ok: true} | {ok: false; reason: 'unsupported'}
+    >()
+  })
+
   it('exposes event payload and reply values', () => {
     expectTypeOf<PayloadOf<'navigation.location.update'>>().toEqualTypeOf<{
       url: string
