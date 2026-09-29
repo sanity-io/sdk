@@ -279,6 +279,15 @@ export {
   resolveUser,
   resolveUsers,
 } from '../users/usersStore'
+export {
+  getUsersWithGrantsState,
+  loadMoreUsersWithGrants,
+  resolveUsersWithGrants,
+  type ResolveUsersWithGrantsOptions,
+  type UsersWithGrantsOptions,
+  type UsersWithGrantsResult,
+  type UserWithGrants,
+} from '../users/usersWithGrants'
 export {getCorsErrorProjectId} from '../utils/getCorsErrorProjectId'
 export {isImportError} from '../utils/isImportError'
 export {CORE_SDK_VERSION} from '../version'
