@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.21.0
+
+### Patch Changes
+
+- Updated dependencies [[`d22a984`](https://github.com/sanity-io/sdk/commit/d22a984c8d364d5f343d3e8892591c772d38ad70)]:
+  - @sanity/sdk@2.21.0
+
 ## 2.20.2 (2026-08-26)
 
 
