@@ -49,7 +49,7 @@ test.describe('Portable Text editing across an expired session', () => {
 
     await page.goto('./portable-text')
     const pageContext = await getPageContext(page)
-    await pageContext.getByTestId('pte-document-id-input').fill(id.replace('drafts.', ''))
+    await pageContext.getByTestId('pte-document-id-input').fill(id)
     await pageContext.getByTestId('pte-load-button').click()
 
     const editableA = pageContext.getByTestId('pte-editable-a')
@@ -65,7 +65,12 @@ test.describe('Portable Text editing across an expired session', () => {
       )
     const readServerCopy = async () =>
       plainText(
-        await getClient().fetch('*[_id == $id][0].minimalBlock', {id}, {perspective: 'raw'}),
+        await getClient().fetch(
+          '*[_id == $id][0].minimalBlock',
+          // createDocuments returns the bare ID and creates the document as a draft
+          {id: `drafts.${id}`},
+          {perspective: 'raw'},
+        ),
       )
 
     // caret at the end of the seed text
