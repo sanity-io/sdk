@@ -65,8 +65,9 @@ export function initTelemetry(instance: SanityInstance, projectId: string): void
     import('./telemetryManager'),
     import('../client/clientStore'),
     import('../auth/authStore'),
+    import('../auth/authMode'),
   ])
-    .then(async ([{createTelemetryManager}, {getClient}, {getTokenState}]) => {
+    .then(async ([{createTelemetryManager}, {getClient}, {getTokenState}, {isStudioConfig}]) => {
       if (instance.isDisposed()) {
         initInFlight.delete(instance)
         logger.debug('telemetry skipped: instance disposed before imports resolved')
@@ -116,11 +117,23 @@ export function initTelemetry(instance: SanityInstance, projectId: string): void
         }
       }
 
+      const config = instance.config
+      const perspective = typeof config.perspective === 'string' ? config.perspective : 'published'
+      // Studio instances can use explicit tokens. Keep runtime context independent of auth.
+      const runtimeContext = isStudioConfig(config) ? 'studio' : 'app'
+      const authMethod = config.auth?.token
+        ? 'token'
+        : config.studio?.auth?.token
+          ? 'studio'
+          : 'default'
+
       const manager = createTelemetryManager({
         sessionId: instance.instanceId,
         getClient: () => getClient(instance, {apiVersion: DEFAULT_TELEMETRY_API_VERSION}),
         projectId,
         environment,
+        authMethod,
+        runtimeContext,
       })
 
       const consented = await manager.checkConsent()
@@ -143,19 +156,16 @@ export function initTelemetry(instance: SanityInstance, projectId: string): void
         pendingHooks.delete(instance)
       }
 
-      const config = instance.config
-      const perspective = typeof config.perspective === 'string' ? config.perspective : 'published'
-      const authMethod = config.auth?.token
-        ? 'token'
-        : config.studio?.auth?.token
-          ? 'studio'
-          : 'default'
-
-      logger.info('telemetry session started', {projectId, perspective, authMethod, environment})
-      manager.logSessionStarted({
+      logger.info('telemetry session started', {
         projectId,
         perspective,
         authMethod,
+        runtimeContext,
+        environment,
+      })
+      manager.logSessionStarted({
+        projectId,
+        perspective,
       })
 
       instance.onDispose(() => {

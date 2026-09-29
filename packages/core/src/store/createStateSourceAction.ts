@@ -1,4 +1,13 @@
-import {defer, distinctUntilChanged, finalize, map, Observable, shareReplay, skip} from 'rxjs'
+import {
+  defer,
+  distinctUntilChanged,
+  finalize,
+  map,
+  merge,
+  Observable,
+  shareReplay,
+  skip,
+} from 'rxjs'
 
 import {type StoreAction} from './createActionBinder'
 import {type SanityInstance} from './createSanityInstance'
@@ -214,6 +223,8 @@ export function createStateSourceAction<TState, TParams extends unknown[], TRetu
     if (subscribeHandler) {
       values = withSubscribeHook(values, () => subscribeHandler(context, ...params))
     }
+    // Before `shareReplay`, so each source holds upstream once however many subscribe to it
+    if (context.upstream$) values = merge(values, context.upstream$)
 
     // Share but replay the latest value so every subscriber gets an
     // initial synchronous emission, matching `state.observable`. That keeps
@@ -234,7 +245,12 @@ export function createStateSourceAction<TState, TParams extends unknown[], TRetu
     }
 
     return {
-      getCurrent: () => getCurrent(state.get()),
+      getCurrent: () => {
+        // The subscribe error handler above re-renders on a failed open, and relies on this throwing
+        const upstreamError = context.upstreamError?.()
+        if (upstreamError) throw upstreamError.error
+        return getCurrent(state.get())
+      },
       subscribe,
       observable: sharedValues,
     }

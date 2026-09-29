@@ -71,9 +71,9 @@ export function createRemoteInstance(options: CreateRemoteInstanceOptions): Remo
 
       return remoteModule
     },
-    // Include async chunks so lazy code is warm before the remote loads.
+    // Async chunks stay on demand: warming them downloads every lazily imported chunk up front.
     preloadRemote: (name, exposes) =>
-      instance.preloadRemote([{nameOrAlias: name, exposes, resourceCategory: 'all'}]),
+      instance.preloadRemote([{nameOrAlias: name, exposes, resourceCategory: 'sync'}]),
   }
 }
 

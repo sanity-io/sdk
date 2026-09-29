@@ -93,10 +93,5 @@ export function observeReleases(
         map((response) => response.result),
       )
     }),
-    // Emit synchronously on subscribe (mirroring StateSource semantics, which
-    // the releases store previously consumed) so the store can immediately
-    // record an empty list: consumers distinguish "no releases yet" from
-    // "never loaded", and the React hooks don't suspend on first load.
-    startWith(undefined),
   )
 }

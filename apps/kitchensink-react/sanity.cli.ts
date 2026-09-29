@@ -19,7 +19,9 @@ export default defineCliConfig({
     icon: './assets/favicon-kitchensink.svg',
   },
   deployment: {
-    appId: 'wkyoigmzawwnnwx458zgoh46',
+    // PR previews point this at a per-PR app. An empty string means no app yet,
+    // so `sanity deploy --create` makes one.
+    appId: process.env['KITCHENSINK_APP_ID'] ?? 'wkyoigmzawwnnwx458zgoh46',
   },
   // Compile with the React Compiler. Target React 19 so the output uses
   // react-compiler-runtime (a dependency of this app). The App SDK owns the

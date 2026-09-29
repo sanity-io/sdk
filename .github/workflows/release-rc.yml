@@ -56,9 +56,6 @@ jobs:
             echo "::error::No changeset found. Add a changeset first (pnpm changeset)."
             exit 1
           fi
-      - run: pnpm config set '//registry.npmjs.org/:_authToken' "${NODE_AUTH_TOKEN}"
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
       # Enter pre-release mode unless already in it. A leftover pre.json with
       # mode "exit" (what `changeset pre exit` commits) must NOT be treated as
       # "already in pre mode": versioning from it emits a stable version and
@@ -81,10 +78,10 @@ jobs:
         run: pnpm test:pack
       # In pre mode publish targets the dist-tag named in pre.json (`rc`), so no
       # --tag is needed. --no-git-tag stops the per-package tags.
+      # No npm token on purpose: pnpm silently falls back to it and skips provenance
+      # when trusted publishing (OIDC) fails.
       - name: Publish to npm
         run: pnpm changeset publish --no-git-tag
-        env:
-          NPM_CONFIG_PROVENANCE: true
       # Commit pre.json, the bumped package.json files and CHANGELOGs back to the
       # dispatched branch. [skip ci] so the push does not retrigger workflows.
       - name: Commit and push the rc versions

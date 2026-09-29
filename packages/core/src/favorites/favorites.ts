@@ -1,9 +1,12 @@
 import {
   type CanvasResource,
+  type Events,
+  type FrameMessages,
   type MediaResource,
   SDK_CHANNEL_NAME,
   SDK_NODE_NAME,
   type StudioResource,
+  type WindowMessages,
 } from '@sanity/message-protocol'
 import {catchError, first, from, map, type Observable, of, switchMap} from 'rxjs'
 
@@ -28,6 +31,27 @@ export interface FavoriteDocumentContext extends DocumentHandle {
   schemaName?: string
 }
 
+/**
+ * The `document` a favorite write addresses over Comlink.
+ *
+ * @internal
+ */
+export function toFavoriteDocument(context: FavoriteDocumentContext): {
+  id: string
+  type: string
+  resource: {id: string; type: FavoriteDocumentContext['resourceType']; schemaName?: string}
+} {
+  return {
+    id: context.documentId,
+    type: context.documentType,
+    resource: {
+      id: context.resourceId,
+      type: context.resourceType,
+      ...(context.schemaName ? {schemaName: context.schemaName} : {}),
+    },
+  }
+}
+
 // Helper to create a stable key for the store
 function createFavoriteKey(context: FavoriteDocumentContext): string {
   return `${context.documentId}:${context.documentType}:${context.resourceId}:${context.resourceType}${
@@ -49,34 +73,18 @@ export const favorites = defineFetcher<[context: FavoriteDocumentContext], Favor
   tags: (_data, context) => [{type: 'favorite', id: createFavoriteKey(context)}],
   fetch: (instance) => {
     return (context: FavoriteDocumentContext): Observable<FavoriteStatusResponse> => {
-      const nodeStateSource = getNodeState(instance, {
+      const nodeStateSource = getNodeState<FrameMessages, WindowMessages>(instance, {
         name: SDK_NODE_NAME,
         connectTo: SDK_CHANNEL_NAME,
       })
-      const payload = {
-        document: {
-          id: context.documentId,
-          type: context.documentType,
-          resource: {
-            id: context.resourceId,
-            type: context.resourceType,
-            schemaName: context.schemaName,
-          },
-        },
-      }
+      const payload = {document: toFavoriteDocument(context)}
 
       return nodeStateSource.observable.pipe(
         // Wait until connected, then complete after the single fetch settles.
         first((nodeState) => !!nodeState),
         switchMap((nodeState) => {
           const node = nodeState!.node
-          return from(
-            node.fetch(
-              // @ts-expect-error -- getOrCreateNode should be refactored to take type arguments
-              'dashboard/v1/events/favorite/query',
-              payload,
-            ) as Promise<FavoriteStatusResponse>,
-          ).pipe(
+          return from(node.fetch('dashboard/v1/events/favorite/query', payload)).pipe(
             map((response) => ({isFavorited: response.isFavorited})),
             catchError((err) => {
               // eslint-disable-next-line no-console
@@ -101,9 +109,10 @@ export type SetFavoriteInput = FavoriteDocumentContext & {
 }
 
 /**
- * Sets a document's favorite state over comlink, then invalidates the cached
- * {@link favorites} status for that document so active readers reconverge on
- * server truth. The write-side counterpart to {@link favorites}.
+ * Sets a document's favorite state over comlink. Writes the new state into the
+ * cached {@link favorites} status before the request (rolled back on failure),
+ * then invalidates it so active readers reconverge on server truth. The
+ * write-side counterpart to {@link favorites}.
  *
  * @internal
  */
@@ -111,21 +120,13 @@ export const setFavorite = defineMutation<SetFavoriteInput, FavoriteStatusRespon
   name: 'setFavorite',
   mutationFn: (instance) => {
     return ({isFavorited, ...context}: SetFavoriteInput): Observable<FavoriteStatusResponse> => {
-      const nodeStateSource = getNodeState(instance, {
+      const nodeStateSource = getNodeState<FrameMessages, WindowMessages>(instance, {
         name: SDK_NODE_NAME,
         connectTo: SDK_CHANNEL_NAME,
       })
-      const payload = {
+      const payload: Events.FavoriteMutateMessage['data'] = {
         eventType: isFavorited ? 'added' : 'removed',
-        document: {
-          id: context.documentId,
-          type: context.documentType,
-          resource: {
-            id: context.resourceId,
-            type: context.resourceType,
-            ...(context.schemaName ? {schemaName: context.schemaName} : {}),
-          },
-        },
+        document: toFavoriteDocument(context),
       }
 
       return nodeStateSource.observable.pipe(
@@ -133,13 +134,7 @@ export const setFavorite = defineMutation<SetFavoriteInput, FavoriteStatusRespon
         first((nodeState) => !!nodeState),
         switchMap((nodeState) => {
           const node = nodeState!.node
-          return from(
-            node.fetch(
-              // @ts-expect-error -- getOrCreateNode should be refactored to take type arguments
-              'dashboard/v1/events/favorite/mutate',
-              payload,
-            ) as Promise<{success: boolean}>,
-          ).pipe(
+          return from(node.fetch('dashboard/v1/events/favorite/mutate', payload)).pipe(
             map((response) => {
               if (!response.success) throw new Error('Failed to update favorite status')
               return {isFavorited}
@@ -149,5 +144,6 @@ export const setFavorite = defineMutation<SetFavoriteInput, FavoriteStatusRespon
       )
     }
   },
+  onMutate: (write, {isFavorited, ...context}) => write(favorites, [context], {isFavorited}),
   invalidates: (_result, input) => [{type: 'favorite', id: createFavoriteKey(input)}],
 })

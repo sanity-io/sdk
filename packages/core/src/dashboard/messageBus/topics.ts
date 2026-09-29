@@ -1,5 +1,6 @@
 import {type CurrentUser} from '@sanity/types'
 
+import {type AccessResourceType} from '../../access/checkPermissions'
 import {type Application, type ApplicationInclude} from '../../applications/applications'
 import {type Installation, type InstallationInclude} from '../../installations/installations'
 import {type OrganizationBase} from '../../organization/organization'
@@ -77,6 +78,12 @@ export interface DocumentActivity {
  * @public
  */
 export type ApplicationActivity = DocumentActivity
+
+/**
+ * A document a user favorited, addressed like {@link DocumentActivity}'s document.
+ * @public
+ */
+export type FavoriteDocument = DocumentActivity['document']
 
 /**
  * A label rendered for an application interface; `null` clears it.
@@ -170,6 +177,19 @@ export type NavigationLocation = NavigationTarget & {
  * @public
  */
 export interface DashboardTopics {
+  /**
+   * Asks the dashboard to show its access request prompt for a resource the user can't access,
+   * scoped like the Access API's `/access/{resourceType}/{resourceId}/requests`. Replies once the
+   * prompt is shown. The prompt handles the Access API outcome (SSO enforcement, pending or
+   * declined requests, request limits), so the reply doesn't report it.
+   *
+   * `ok: false` reasons:
+   * - `unsupported`: the dashboard doesn't show access requests for the sending application
+   */
+  'access.request': EventTopicDef<
+    {resourceType: Extract<AccessResourceType, 'organization' | 'project'>; resourceId: string},
+    {ok: true} | {ok: false; reason: 'unsupported'}
+  >
   /** Reports user activity in an application, e.g. for the recents feed. Fire-and-forget. */
   'applications.activity': EventTopicDef<ApplicationActivity>
   /**
@@ -208,6 +228,14 @@ export interface DashboardTopics {
   'auth.token': StateTopicDef<string | null>
   /** Requests a dashboard session token. */
   'auth.token.refresh': EventTopicDef<void, string>
+  /** The signed-in user's favorited documents, published while the host provides `favorites`. */
+  'favorites.documents': StateTopicDef<FavoriteDocument[]>
+  /**
+   * Favorites or unfavorites a document. The host replies once `favorites.documents` reflects
+   * the change, so a read after the reply sees it. A favorite is identified by its published
+   * document ID, type, resource and `schemaName` (workspace).
+   */
+  'favorites.update': EventTopicDef<{document: FavoriteDocument; favorited: boolean}, void>
   /** The current dashboard location and active navigation. */
   'navigation.location': StateTopicDef<NavigationLocation | null>
   /**
@@ -296,6 +324,7 @@ type DashboardTopicManifest = {
  * @internal
  */
 export const DASHBOARD_TOPIC_MANIFEST: DashboardTopicManifest = {
+  'access.request': dashboardEvent,
   'applications.activity': dashboardEvent,
   'applications.base-path': stateTopic(undefined),
   'applications.capabilities': stateTopic(undefined),
@@ -307,6 +336,8 @@ export const DASHBOARD_TOPIC_MANIFEST: DashboardTopicManifest = {
   'applications.status.update': dashboardEvent,
   'auth.token': stateTopic(undefined),
   'auth.token.refresh': dashboardEvent,
+  'favorites.documents': stateTopic(undefined),
+  'favorites.update': dashboardEvent,
   'navigation.location': stateTopic(undefined),
   'navigation.location.update': dashboardEvent,
   'organizations.current': stateTopic(undefined),

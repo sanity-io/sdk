@@ -37,6 +37,7 @@ import {getClientState} from '../client/clientStore'
 import {createDocumentHandle} from '../config/handles'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {type StateSource} from '../store/createStateSourceAction'
+import {UPSTREAM_CLOSE_DELAY_MS} from '../store/createStoreInstance'
 import {randomUuid} from '../utils/ids'
 import {
   createDocument,
@@ -617,6 +618,35 @@ it('cleans up document state when there are no subscribers', async () => {
   // When a new subscriber is created, if the state was cleared it should return undefined.
   const newDocumentState = getDocumentState(instance, doc)
   expect(newDocumentState.getCurrent()).toBeUndefined()
+})
+
+it('closes the listener connection once no document is subscribed, and reopens it', async () => {
+  // The real shared listener for a fresh store, so the connection behind it is observable
+  const actual = await vi.importActual<typeof import('./sharedListener')>('./sharedListener')
+  vi.mocked(createSharedListener).mockImplementationOnce(actual.createSharedListener)
+  const connection = new Subject<ListenEvent<SanityDocument>>()
+  Object.assign(client, {listen: vi.fn(() => connection)})
+  const lifecycleInstance = createSanityInstance({projectId: 'p', dataset: 'listener-lifecycle'})
+  const doc = createDocumentHandle({documentId: 'existing-doc', documentType: 'article'})
+  const documentState = getDocumentState(lifecycleInstance, doc)
+
+  try {
+    const unsubscribe = documentState.subscribe()
+    await vi.waitFor(() => expect(connection.observed).toBe(true))
+
+    vi.useFakeTimers()
+    unsubscribe()
+    // The document state clears first (25ms here), then the listener stops after its delay
+    vi.advanceTimersByTime(25 + UPSTREAM_CLOSE_DELAY_MS)
+    expect(connection.observed).toBe(false)
+    vi.useRealTimers()
+
+    documentState.subscribe()
+    await vi.waitFor(() => expect(connection.observed).toBe(true))
+  } finally {
+    vi.useRealTimers()
+    lifecycleInstance.dispose()
+  }
 })
 
 it('fetches documents if there are no active subscriptions for the actions applied', async () => {

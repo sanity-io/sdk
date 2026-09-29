@@ -83,7 +83,7 @@
     "deploy": {
       "cache": false,
       "dependsOn": ["^build"],
-      "env": ["SANITY_AUTH_TOKEN"]
+      "env": ["SANITY_AUTH_TOKEN", "KITCHENSINK_APP_ID"]
     }
   }
 }

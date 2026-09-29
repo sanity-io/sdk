@@ -72,11 +72,32 @@ export function applyDocumentActions(
 
 const boundApplyDocumentActions = bindActionByResource(documentStore, _applyDocumentActions)
 
+/**
+ * Returns the result of a transaction with no actions. `batchAppliedTransactions`
+ * skips empty transactions, so one that reached the queue would never be consumed
+ * into an outgoing transaction: it would sit in `applied` and its `submitted()`
+ * would never resolve.
+ */
+function emptyActionsResult(transactionId: string): ActionsResult {
+  return {
+    transactionId,
+    documents: {},
+    previous: {},
+    previousRevs: {},
+    appeared: [],
+    updated: [],
+    disappeared: [],
+    submitted: async () => ({transactionId}),
+  }
+}
+
 /** @internal */
 async function _applyDocumentActions(
   {state}: StoreContext<DocumentStoreState>,
   {actions, resource, transactionId = randomUuid(), disableBatching}: ApplyDocumentActionsOptions,
 ): Promise<ActionsResult> {
+  if (!actions.length) return emptyActionsResult(transactionId)
+
   const {events} = state.get()
 
   // Rewrite edit actions to match the bound resource's editing model (e.g.

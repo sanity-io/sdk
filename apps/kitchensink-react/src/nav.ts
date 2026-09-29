@@ -4,6 +4,7 @@ import {ComposeIcon} from '@sanity/icons/Compose'
 import {CubeIcon} from '@sanity/icons/Cube'
 import {DashboardIcon} from '@sanity/icons/Dashboard'
 import {DesktopIcon} from '@sanity/icons/Desktop'
+import {DocumentIcon} from '@sanity/icons/Document'
 import {DocumentsIcon} from '@sanity/icons/Documents'
 import {EditIcon} from '@sanity/icons/Edit'
 import {FolderIcon} from '@sanity/icons/Folder'
@@ -104,6 +105,7 @@ export const navGroups: NavGroup[] = [
     title: 'Demos',
     items: [
       {path: 'todo', title: 'Todo', icon: ListIcon},
+      {path: 'studio-demo', title: 'Studio', icon: DocumentIcon},
       {path: 'comlink-demo', title: 'Comlink', icon: LinkIcon},
     ],
   },

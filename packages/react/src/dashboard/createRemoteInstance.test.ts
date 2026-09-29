@@ -120,7 +120,7 @@ describe('createRemoteInstance', () => {
     })
   })
 
-  it('preloads specific exposes, warming sync and async assets', () => {
+  it('preloads the sync assets of specific exposes, leaving async chunks on demand', () => {
     const instance = createRemoteInstance({name: 'sanity-workbench'})
 
     instance.preloadRemote('studio-1', ['views/feed/panel'])
@@ -129,7 +129,7 @@ describe('createRemoteInstance', () => {
       {
         nameOrAlias: 'studio-1',
         exposes: ['views/feed/panel'],
-        resourceCategory: 'all',
+        resourceCategory: 'sync',
       },
     ])
   })
@@ -140,7 +140,7 @@ describe('createRemoteInstance', () => {
     instance.preloadRemote('studio-1')
 
     expect(mockPreloadRemote).toHaveBeenCalledWith([
-      {nameOrAlias: 'studio-1', exposes: undefined, resourceCategory: 'all'},
+      {nameOrAlias: 'studio-1', exposes: undefined, resourceCategory: 'sync'},
     ])
   })
 })

@@ -2,7 +2,7 @@ import {type PathChangeMessage} from '@sanity/message-protocol'
 import {installMessageBus, resetMessageBus} from '@sanity/sdk/_internal'
 import {type MessageBusHost, type NavigationLocation, type ValueOf} from '@sanity/sdk/dashboard'
 import {renderHook} from '@testing-library/react'
-import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
+import {afterEach, beforeEach, describe, expect, it, onTestFinished, vi} from 'vitest'
 
 import {act, renderHook as renderHookWithInstance} from '../../../test/test-utils'
 import {useNavigate} from './useNavigate'
@@ -55,6 +55,17 @@ describe('useNavigate', () => {
       'dashboard/v1/bridge/listeners/history/update-url',
       {url: 'http://localhost:3000/documents/abc'},
     )
+  })
+
+  it('drops a dashboard-scoped navigation with a warning', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    onTestFinished(() => warn.mockRestore())
+    const {result} = renderHook(() => useNavigate(mockNavigateFn))
+
+    result.current({path: '/studios/abc', scope: 'dashboard'})
+
+    expect(mockSendMessage).not.toHaveBeenCalled()
+    expect(warn).toHaveBeenCalledOnce()
   })
 })
 
@@ -415,6 +426,50 @@ describe('useNavigate (message bus)', () => {
 
     expect(navigateFn).toHaveBeenCalledTimes(1)
     expect(navigateFn).toHaveBeenCalledWith({path: 'documents/def', type: 'push'})
+  })
+
+  it('emits a dashboard-scoped URL as-is while the base path is unpublished and fires navigateFn when it lands in this app', async () => {
+    emitLocation({appId: 'app', path: 'documents/abc', transition: null})
+
+    const navigateFn = vi.fn()
+    const {result} = renderHookWithInstance(() => useNavigate(navigateFn))
+
+    await act(async () => {
+      result.current({path: '/applications/app/documents/def', scope: 'dashboard'})
+    })
+
+    expect(updates).toEqual([{url: '/applications/app/documents/def', history: 'push'}])
+
+    const to = {appId: 'app', path: 'documents/def'}
+    act(() => {
+      emitLocation({appId: 'app', path: 'documents/abc', transition: {navigationType: 'push', to}})
+      emitLocation({appId: 'app', path: 'documents/def', transition: null})
+    })
+
+    expect(navigateFn).toHaveBeenCalledTimes(1)
+    expect(navigateFn).toHaveBeenCalledWith({path: 'documents/def', type: 'push'})
+  })
+
+  it('keeps a pending in-app echo suppressed across a dashboard-scoped report', () => {
+    publishBasePath()
+    emitLocation({appId: 'app', path: 'documents/abc', transition: null})
+
+    const navigateFn = vi.fn()
+    const {result} = renderHookWithInstance(() => useNavigate(navigateFn))
+
+    const own = {appId: 'app', path: 'documents/def'}
+    act(() => {
+      result.current({path: 'documents/def'})
+      result.current({path: '/studios/xyz', scope: 'dashboard'})
+      emitLocation({
+        appId: 'app',
+        path: 'documents/abc',
+        transition: {navigationType: 'push', to: own},
+      })
+      emitLocation({appId: 'app', path: 'documents/def', transition: null})
+    })
+
+    expect(navigateFn).not.toHaveBeenCalled()
   })
 
   it('returns a referentially stable function across re-renders', () => {
