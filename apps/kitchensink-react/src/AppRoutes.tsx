@@ -23,6 +23,7 @@ import {DashboardContextRoute} from './routes/DashboardContextRoute'
 import {DashboardWorkspacesRoute} from './routes/DashboardWorkspacesRoute'
 import {MediaLibraryRoute} from './routes/MediaLibraryRoute'
 import {PerspectivesRoute} from './routes/PerspectivesRoute'
+import {PortableTextCollaborationRoute} from './routes/PortableTextCollaborationRoute'
 import {PortableTextRoute} from './routes/PortableTextRoute'
 import {ProjectsRoute} from './routes/ProjectsRoute'
 import {ReleasesRoute} from './routes/releases/ReleasesRoute'
@@ -82,6 +83,10 @@ const documentCollectionRoutes = [
   {
     path: 'comments',
     element: <CommentsRoute />,
+  },
+  {
+    path: 'portable-text-comments',
+    element: <PortableTextCollaborationRoute />,
   },
   {
     path: 'media-library',

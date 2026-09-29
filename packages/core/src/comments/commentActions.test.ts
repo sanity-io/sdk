@@ -1,6 +1,6 @@
 import {type SanityClient} from '@sanity/client'
 import {type CurrentUser} from '@sanity/types'
-import {NEVER, of} from 'rxjs'
+import {NEVER, of, throwError} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {getCurrentUserState} from '../auth/authStore'
@@ -18,24 +18,23 @@ import {
   updateComment,
   updateCommentRange,
 } from './commentActions'
-import {commentTarget, ORGANIZATION_ID, storedComment} from './commentFixtures'
-import {getCommentsClient} from './commentsClient'
-import {
-  commentsStore,
-  type CommentVariants,
-  getDocumentCommentsState,
-  toDocumentCommentsKey,
-} from './commentsStore'
+import {commentTarget, storedComment} from './commentFixtures'
+import {observeCommentsClientForResource} from './commentsClient'
+import {type CommentVariants} from './commentsOptions'
+import {commentsStore, getCommentThreadsState, toDocumentCommentsKey} from './commentsStore'
 import {addSubscriber, setComments} from './reducers'
 import {type StoredComment} from './types'
 
-vi.mock('../auth/authStore', () => ({getCurrentUserState: vi.fn()}))
+vi.mock('../auth/authStore', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../auth/authStore')>()),
+  getCurrentUserState: vi.fn(),
+}))
 vi.mock('./commentsClient', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./commentsClient')>()),
-  getCommentsClient: vi.fn(),
   // Reads are not what these tests are about, and a listener would need a whole
-  // observable client of its own.
-  observeCommentsClient: vi.fn(() => NEVER),
+  // observable client of its own. Writes take the first value, so the write
+  // client is a separate mock below.
+  observeCommentsClientForResource: vi.fn(() => NEVER),
 }))
 
 const HANDLE = {documentId: 'doc-1', documentType: 'author'}
@@ -98,7 +97,7 @@ let comments: {
 }
 
 beforeEach(() => {
-  vi.mocked(getCommentsClient).mockReset()
+  vi.mocked(observeCommentsClientForResource).mockReset()
 
   comments = {
     create: vi.fn(async (body: {_id: string}) => comment({_id: body._id})),
@@ -108,9 +107,14 @@ beforeEach(() => {
     removeReaction: vi.fn().mockResolvedValue(undefined),
   }
 
-  vi.mocked(getCommentsClient).mockReturnValue({
-    collaboration: {comments},
-  } as unknown as SanityClient)
+  // Reads are not what these tests are about, but seeding an entry opens a
+  // listener all the same, so the same client answers both and listens forever.
+  vi.mocked(observeCommentsClientForResource).mockReturnValue(
+    of({
+      collaboration: {comments},
+      observable: {collaboration: {comments: {listen: () => NEVER}}},
+    } as unknown as SanityClient),
+  )
 
   vi.mocked(getCurrentUserState).mockReturnValue({
     observable: of({id: 'user-1'}),
@@ -118,11 +122,7 @@ beforeEach(() => {
     subscribe: () => () => {},
   } as unknown as StateSource<CurrentUser | null>)
 
-  instance = createSanityInstance({
-    projectId: 'p',
-    dataset: 'd',
-    collaboration: {organizationId: ORGANIZATION_ID},
-  })
+  instance = createSanityInstance({projectId: 'p', dataset: 'd'})
 })
 
 afterEach(() => {
@@ -217,7 +217,7 @@ describe('createComment', () => {
   })
 
   it('shows the comment before the server confirms it', async () => {
-    const source = getDocumentCommentsState(instance, HANDLE)
+    const source = getCommentThreadsState(instance, HANDLE)
     source.subscribe()
     seedComments(instance, {comments: []})
 
@@ -242,7 +242,7 @@ describe('createComment', () => {
 
   it('reads its own context back, before and after the server confirms it', async () => {
     const context = {tool: 'kitchensink'}
-    const source = getDocumentCommentsState(instance, HANDLE)
+    const source = getCommentThreadsState(instance, HANDLE)
     source.subscribe()
     seedComments(instance, {comments: []})
     comments.create.mockResolvedValue(comment({_id: 'c1', context}))
@@ -254,7 +254,7 @@ describe('createComment', () => {
   })
 
   it('leaves a failed comment in place carrying the error', async () => {
-    const source = getDocumentCommentsState(instance, HANDLE)
+    const source = getCommentThreadsState(instance, HANDLE)
     source.subscribe()
     seedComments(instance, {comments: []})
     comments.create.mockRejectedValue(new Error('nope'))
@@ -270,7 +270,7 @@ describe('createComment', () => {
   })
 
   it('marks a failed comment as retrying while the retry is in flight', async () => {
-    const source = getDocumentCommentsState(instance, HANDLE)
+    const source = getCommentThreadsState(instance, HANDLE)
     source.subscribe()
     seedComments(instance, {comments: []})
     comments.create.mockRejectedValueOnce(new Error('nope'))
@@ -317,21 +317,26 @@ describe('createComment', () => {
     expect(comments.create).not.toHaveBeenCalled()
   })
 
-  it('says what is missing when no organization is configured', async () => {
-    const bare = createSanityInstance({projectId: 'p', dataset: 'd'})
-
-    await expect(createComment(bare, {...CREATE, message: MESSAGE})).rejects.toThrow(
-      /collaboration: \{organizationId\}/,
+  it('rolls the comment back when the organization cannot be resolved', async () => {
+    // The optimistic comment is applied before the client is asked for, so a
+    // failure to resolve the organization has to roll back like any other.
+    vi.mocked(observeCommentsClientForResource).mockReturnValue(
+      throwError(() => new Error('no organization')),
     )
 
-    bare.dispose()
+    await expect(createComment(instance, {...CREATE, message: MESSAGE})).rejects.toThrow(
+      /no organization/,
+    )
+
+    const {pendingCreates} = getCommentsStoreState(instance, {})
+    expect(pendingCreates).toEqual({})
   })
 })
 
 describe('the lists a new comment shows up in', () => {
   /** A reader watching one set of variants, with an empty list to start from. */
   function reading(variants: CommentVariants) {
-    const source = getDocumentCommentsState(instance, {...HANDLE, variants})
+    const source = getCommentThreadsState(instance, {...HANDLE, variants})
     source.subscribe()
     seedComments(instance, {variants, comments: []})
     return source
@@ -392,7 +397,7 @@ describe('the lists a new comment shows up in', () => {
     // Subscribed but unseeded: the listener is open and the snapshot has not
     // landed. Filling that list in with just this comment would resolve whoever
     // is suspended on it with a list of one, only to replace it a moment later.
-    const loading = getDocumentCommentsState(instance, {...HANDLE, variants: 'all'})
+    const loading = getCommentThreadsState(instance, {...HANDLE, variants: 'all'})
     loading.subscribe()
 
     const {promise, settle} = pendingCreate()
@@ -424,7 +429,7 @@ describe('the lists a new comment shows up in', () => {
 
   it('shows it to a reader looking at the release it was written on', async () => {
     const perspective = {releaseName: 'summer'}
-    const release = getDocumentCommentsState(instance, {...HANDLE, perspective})
+    const release = getCommentThreadsState(instance, {...HANDLE, perspective})
     release.subscribe()
     seedComments(instance, {perspective, comments: []})
 
@@ -489,7 +494,7 @@ describe('replyToComment', () => {
   })
 
   it('shows the reply in its parent’s thread before the server confirms it', async () => {
-    const source = getDocumentCommentsState(instance, HANDLE)
+    const source = getCommentThreadsState(instance, HANDLE)
     source.subscribe()
     seedComments(instance, {comments: [comment({_id: 'parent', threadId: 'thread-9'})]})
 
@@ -523,7 +528,7 @@ describe('updateComment', () => {
   })
 
   it('shows the edit and its timestamp right away', async () => {
-    const source = getDocumentCommentsState(instance, HANDLE)
+    const source = getCommentThreadsState(instance, HANDLE)
     source.subscribe()
     seedComments(instance, {comments: [comment({_id: 'c1'})]})
 
@@ -541,7 +546,7 @@ describe('updateComment', () => {
   })
 
   it('restores the previous message when the write fails', async () => {
-    const source = getDocumentCommentsState(instance, HANDLE)
+    const source = getCommentThreadsState(instance, HANDLE)
     source.subscribe()
     const original = [{_type: 'block', children: [{_type: 'span', text: 'hello'}]}]
     seedComments(instance, {comments: [comment({_id: 'c1'})]})
@@ -573,7 +578,7 @@ describe('overlapping writes to one comment', () => {
     // The later write's transaction marker is what its rollback keys off. An
     // earlier write settling used to clear whichever marker was there, which
     // left the later one unable to undo itself and its edit stuck on screen.
-    const source = getDocumentCommentsState(instance, HANDLE)
+    const source = getCommentThreadsState(instance, HANDLE)
     source.subscribe()
     seedComments(instance, {comments: [comment({_id: 'c1'})]})
 
@@ -628,7 +633,7 @@ describe('updateCommentRange', () => {
   it('leaves lastEditedAt alone', async () => {
     // Re-anchoring is the content moving under the comment, not somebody
     // rewriting it, so it must not read as an edit.
-    const source = getDocumentCommentsState(instance, HANDLE)
+    const source = getCommentThreadsState(instance, HANDLE)
     source.subscribe()
     seedComments(instance, {comments: [comment({_id: 'c1'})]})
 
@@ -638,7 +643,7 @@ describe('updateCommentRange', () => {
   })
 
   it('drops the selection right away when the anchor is removed', async () => {
-    const source = getDocumentCommentsState(instance, HANDLE)
+    const source = getCommentThreadsState(instance, HANDLE)
     source.subscribe()
     seedComments(instance, {
       comments: [
@@ -660,7 +665,7 @@ describe('updateCommentRange', () => {
   })
 
   it('restores the previous anchor when the write fails', async () => {
-    const source = getDocumentCommentsState(instance, HANDLE)
+    const source = getCommentThreadsState(instance, HANDLE)
     source.subscribe()
     const selection = {type: 'text' as const, value: [{_key: 'b1', text: 'marked'}]}
     seedComments(instance, {
@@ -690,7 +695,7 @@ describe('setCommentStatus', () => {
   it('moves known replies immediately rather than waiting for the echo', async () => {
     // The API cascades to replies, but a thread that resolves one comment at a
     // time on screen looks broken.
-    const source = getDocumentCommentsState(instance, HANDLE)
+    const source = getCommentThreadsState(instance, HANDLE)
     source.subscribe()
     seedComments(instance, {
       comments: [comment({_id: 'c1'}), comment({_id: 'r1', parentCommentId: 'c1'})],
@@ -705,7 +710,7 @@ describe('setCommentStatus', () => {
   })
 
   it('restores the parent and replies when the write fails', async () => {
-    const source = getDocumentCommentsState(instance, HANDLE)
+    const source = getCommentThreadsState(instance, HANDLE)
     source.subscribe()
     seedComments(instance, {
       comments: [comment({_id: 'c1'}), comment({_id: 'r1', parentCommentId: 'c1'})],
@@ -729,7 +734,7 @@ describe('removeComment', () => {
   })
 
   it('drops the comment and its replies locally right away', async () => {
-    const source = getDocumentCommentsState(instance, HANDLE)
+    const source = getCommentThreadsState(instance, HANDLE)
     source.subscribe()
     seedComments(instance, {
       comments: [
@@ -745,7 +750,7 @@ describe('removeComment', () => {
   })
 
   it('restores the comment and replies when the write fails', async () => {
-    const source = getDocumentCommentsState(instance, HANDLE)
+    const source = getCommentThreadsState(instance, HANDLE)
     source.subscribe()
     seedComments(instance, {
       comments: [
@@ -774,7 +779,7 @@ describe('a snapshot landing while a write is in flight', () => {
   }
 
   function reading() {
-    const source = getDocumentCommentsState(instance, HANDLE)
+    const source = getCommentThreadsState(instance, HANDLE)
     source.subscribe()
     return source
   }
@@ -868,7 +873,7 @@ describe('reactions', () => {
   })
 
   it('shows the reaction before the server confirms it', async () => {
-    const source = getDocumentCommentsState(instance, HANDLE)
+    const source = getCommentThreadsState(instance, HANDLE)
     source.subscribe()
     seedComments(instance, {comments: [comment({_id: 'c1'})]})
 
@@ -886,7 +891,7 @@ describe('reactions', () => {
   })
 
   it('leaves other people’s reactions alone', async () => {
-    const source = getDocumentCommentsState(instance, HANDLE)
+    const source = getCommentThreadsState(instance, HANDLE)
     source.subscribe()
     seedComments(instance, {
       comments: [
@@ -907,7 +912,7 @@ describe('reactions', () => {
   it('does not add the same reaction twice', async () => {
     // An app can ask for a reaction the list already shows, and two identical
     // entries would double the count on screen until the listener corrected it.
-    const source = getDocumentCommentsState(instance, HANDLE)
+    const source = getCommentThreadsState(instance, HANDLE)
     source.subscribe()
     seedComments(instance, {
       comments: [
@@ -924,7 +929,7 @@ describe('reactions', () => {
   })
 
   it('puts the reaction back when the write fails', async () => {
-    const source = getDocumentCommentsState(instance, HANDLE)
+    const source = getCommentThreadsState(instance, HANDLE)
     source.subscribe()
     const existing = {_key: 'r1', shortName: ':+1:' as const, userId: 'user-1', addedAt: 'then'}
     seedComments(instance, {comments: [comment({_id: 'c1', reactions: [existing]})]})
@@ -953,18 +958,11 @@ describe('reactions', () => {
 })
 
 describe('client resolution', () => {
-  it('builds one client per organization the caller asks for', async () => {
+  it('writes through a client for the resource the action is bound to', async () => {
     await createComment(instance, {...CREATE, message: MESSAGE})
-    await createComment(instance, {
-      ...CREATE,
-      message: MESSAGE,
-      collaboration: {organizationId: 'org-2'},
-    })
 
-    // A per-call organization has to reach the client, or a caller working
-    // across organizations would silently write into the configured one.
     expect(
-      new Set(vi.mocked(getCommentsClient).mock.calls.map(([, options]) => options.organizationId)),
-    ).toEqual(new Set([ORGANIZATION_ID, 'org-2']))
+      vi.mocked(observeCommentsClientForResource).mock.calls.map(([, resource]) => resource),
+    ).toContainEqual({projectId: 'p', dataset: 'd'})
   })
 })

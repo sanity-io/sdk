@@ -1,26 +1,29 @@
 import {combineLatest, distinctUntilChanged, map, type Observable, of, switchMap} from 'rxjs'
 
+import {observeAppOrganizationId} from '../organization/appOrganization'
 import {
   compareProjectOrganization,
   type OrgVerificationResult,
 } from '../project/organizationVerification'
 import {project} from '../project/project'
 import {type SanityInstance} from '../store/createSanityInstance'
-import {getDashboardOrganizationId} from './dashboardUtils'
 
 /**
  * Creates an observable that emits the organization verification state for a given instance.
- * It combines the dashboard organization ID (from auth context) with the
- * project's actual organization ID (fetched via the project fetcher) and compares them.
+ * It combines the app's own organization ID with each project's actual
+ * organization ID (fetched via the project fetcher) and compares them.
+ *
+ * The app's organization is the Dashboard's when there is one, and
+ * `organizationId` on the `SanityConfig` otherwise, so a standalone app that
+ * names its organization gets the same check a Dashboard app does.
  * @public
  */
 export function observeOrganizationVerificationState(
   instance: SanityInstance,
   projectIds: string[],
 ): Observable<OrgVerificationResult> {
-  // Observable for the dashboard org ID (potentially null)
-  const dashboardOrgId$ =
-    getDashboardOrganizationId(instance).observable.pipe(distinctUntilChanged())
+  // Observable for the app's org ID (potentially undefined)
+  const appOrgId$ = observeAppOrganizationId(instance).pipe(distinctUntilChanged())
 
   // Create observables for each project's org ID
   const projectOrgIdObservables = projectIds.map((id) =>
@@ -36,10 +39,10 @@ export function observeOrganizationVerificationState(
     projectOrgIdObservables.length > 0 ? combineLatest(projectOrgIdObservables) : of([])
 
   // Combine the sources
-  return combineLatest([dashboardOrgId$, allProjectOrgIds$]).pipe(
-    switchMap(([dashboardOrgId, projectOrgDataArray]) => {
-      // If no dashboard org ID is set, or no project IDs provided, verification isn't applicable/possible
-      if (!dashboardOrgId || projectOrgDataArray.length === 0) {
+  return combineLatest([appOrgId$, allProjectOrgIds$]).pipe(
+    switchMap(([appOrgId, projectOrgDataArray]) => {
+      // If no app org ID is set, or no project IDs provided, verification isn't applicable/possible
+      if (!appOrgId || projectOrgDataArray.length === 0) {
         return of<OrgVerificationResult>({error: null}) // Return success (no error)
       }
 
@@ -55,7 +58,7 @@ export function observeOrganizationVerificationState(
         const result = compareProjectOrganization(
           projectData.projectId,
           projectData.orgId,
-          dashboardOrgId,
+          appOrgId,
         )
 
         // If any project fails verification, immediately return the error

@@ -134,23 +134,6 @@ describe('useCommentActions', () => {
     )
   })
 
-  it('passes a per-call organization straight through', () => {
-    // Comments live in an organization store rather than the dataset, so this is
-    // the only thing saying where a write lands.
-    const {result} = setup()
-
-    result.current.addReaction({
-      commentId: 'c1',
-      shortName: ':+1:',
-      collaboration: {organizationId: 'org-2'},
-    })
-
-    expect(addReaction).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({collaboration: {organizationId: 'org-2'}}),
-    )
-  })
-
   it('fills in the perspective from context', () => {
     // Core turns a release perspective into the source document id the comment
     // is written against, so losing it here files the comment against the wrong

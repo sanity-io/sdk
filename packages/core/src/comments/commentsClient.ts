@@ -1,14 +1,27 @@
 import {type SanityClient} from '@sanity/client'
 import {DocumentId, getPublishedId} from '@sanity/id-utils'
-import {type Observable} from 'rxjs'
+import {
+  defer,
+  distinctUntilChanged,
+  EMPTY,
+  map,
+  merge,
+  mergeMap,
+  type Observable,
+  of,
+  switchMap,
+  throwError,
+} from 'rxjs'
 
 import {type ClientOptions, getClient, getClientState} from '../client/clientStore'
 import {
-  type DatasetHandle,
   type DatasetResource,
   type DocumentResource,
   isDatasetResource,
 } from '../config/sanityConfig'
+import {observeAppOrganizationId} from '../organization/appOrganization'
+import {compareProjectOrganization} from '../project/organizationVerification'
+import {project} from '../project/project'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {COMMENTS_API_VERSION} from './commentsConstants'
 import {type StoredComment} from './types'
@@ -29,29 +42,53 @@ export function assertDatasetResource(resource: DocumentResource): DatasetResour
 }
 
 /**
- * The organization whose comments a call addresses.
+ * The organization whose comments a resource's comments live in.
  *
- * Comments are stored per organization rather than per dataset, and nothing in
- * a dataset handle implies which organization owns it, so this has to be
- * configured. A per-call value wins over the instance default, matching how
- * `projectId` and `dataset` resolve.
+ * Comments are stored per organization rather than per dataset, so a resource
+ * alone does not say where they are. The app's own organization answers it
+ * when there is one — the Dashboard supplies it, or `organizationId` on the
+ * config does. Failing that, the project's owning organization is the answer,
+ * since a project belongs to exactly one.
+ *
+ * A configured organization is used as soon as it is known, and checked
+ * against the project's in parallel. Waiting for the check would delay every
+ * first read to save a request that the API would refuse anyway; the check is
+ * here to say plainly that the two disagree, and erroring the stream is enough
+ * for that.
  *
  * @internal
  */
-export function requireOrganizationId(
+export function observeCommentsOrganizationId(
   instance: SanityInstance,
-  options: Pick<DatasetHandle, 'collaboration'>,
-): string {
-  const organizationId = (options.collaboration ?? instance.config.collaboration)?.organizationId
+  resource: DocumentResource,
+): Observable<string> {
+  const {projectId} = assertDatasetResource(resource)
+  // `includeMembers: false` is what lets this be served from the projects list
+  // an app has usually already read, rather than a request of its own.
+  const projectOrganizationId$ = defer(() =>
+    project.resolveState(instance, {projectId, includeMembers: false}),
+  ).pipe(map((fetched) => fetched.organizationId))
 
-  if (!organizationId) {
-    throw new Error(
-      'Comments require an organization. Pass `collaboration: {organizationId}` to this call, ' +
-        'or set it on the Sanity config so every call inherits it.',
-    )
-  }
+  return observeAppOrganizationId(instance).pipe(
+    switchMap((appOrganizationId) => {
+      if (!appOrganizationId) return projectOrganizationId$
 
-  return organizationId
+      return merge(
+        of(appOrganizationId),
+        projectOrganizationId$.pipe(
+          mergeMap((projectOrganizationId) => {
+            const {error} = compareProjectOrganization(
+              projectId,
+              projectOrganizationId,
+              appOrganizationId,
+            )
+            return error ? throwError(() => new Error(error)) : EMPTY
+          }),
+        ),
+      )
+    }),
+    distinctUntilChanged(),
+  )
 }
 
 /**
@@ -122,4 +159,19 @@ export function observeCommentsClient(
 ): Observable<SanityClient> {
   return getClientState(instance, toClientOptions(options.resource, options.organizationId))
     .observable
+}
+
+/**
+ * The same, for a caller that has only a resource and needs the organization
+ * resolved first.
+ *
+ * @internal
+ */
+export function observeCommentsClientForResource(
+  instance: SanityInstance,
+  resource: DocumentResource,
+): Observable<SanityClient> {
+  return observeCommentsOrganizationId(instance, resource).pipe(
+    switchMap((organizationId) => observeCommentsClient(instance, {resource, organizationId})),
+  )
 }

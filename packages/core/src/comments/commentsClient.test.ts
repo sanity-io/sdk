@@ -1,45 +1,107 @@
-import {describe, expect, it} from 'vitest'
+import {firstValueFrom, of, toArray} from 'rxjs'
+import {beforeEach, describe, expect, it, vi} from 'vitest'
 
-import {createSanityInstance} from '../store/createSanityInstance'
+import {observeAppOrganizationId} from '../organization/appOrganization'
+import {project} from '../project/project'
+import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {ORGANIZATION_ID} from './commentFixtures'
 import {
   assertDatasetResource,
   getCommentsClient,
-  requireOrganizationId,
+  observeCommentsOrganizationId,
   toTargetDocumentRef,
 } from './commentsClient'
 
-describe('requireOrganizationId', () => {
-  it('takes the organization from the instance config', () => {
-    const instance = createSanityInstance({
-      projectId: 'p',
-      dataset: 'd',
-      collaboration: {organizationId: ORGANIZATION_ID},
-    })
+vi.mock('../organization/appOrganization', () => ({observeAppOrganizationId: vi.fn()}))
+vi.mock('../project/project', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../project/project')>()),
+  project: {resolveState: vi.fn()},
+}))
 
-    expect(requireOrganizationId(instance, {})).toBe(ORGANIZATION_ID)
-    instance.dispose()
+describe('observeCommentsOrganizationId', () => {
+  const RESOURCE = {projectId: 'p', dataset: 'd'}
+  let instance: SanityInstance
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    instance = createSanityInstance({projectId: 'p', dataset: 'd'})
   })
 
-  it('lets a call override the configured organization', () => {
-    const instance = createSanityInstance({
-      projectId: 'p',
-      dataset: 'd',
-      collaboration: {organizationId: ORGANIZATION_ID},
-    })
+  const mockAppOrganization = (organizationId: string | undefined) =>
+    vi.mocked(observeAppOrganizationId).mockReturnValue(of(organizationId))
 
-    expect(requireOrganizationId(instance, {collaboration: {organizationId: 'org-2'}})).toBe(
-      'org-2',
+  const mockProjectOrganization = (organizationId: string) =>
+    vi
+      .mocked(project.resolveState)
+      .mockResolvedValue({organizationId} as Awaited<ReturnType<typeof project.resolveState>>)
+
+  it('uses the app organization when there is one', async () => {
+    mockAppOrganization(ORGANIZATION_ID)
+    mockProjectOrganization(ORGANIZATION_ID)
+
+    await expect(firstValueFrom(observeCommentsOrganizationId(instance, RESOURCE))).resolves.toBe(
+      ORGANIZATION_ID,
     )
+
     instance.dispose()
   })
 
-  it('says what is missing when no organization is configured', () => {
-    // Comments cannot be read or written at all without one, so the failure has
-    // to name the setting rather than surfacing as a 400 from the API.
-    const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+  it('does not wait for the project check before emitting it', async () => {
+    // A standalone app that has configured its organization should not pay for
+    // a project read on its first comment read.
+    mockAppOrganization(ORGANIZATION_ID)
+    vi.mocked(project.resolveState).mockReturnValue(new Promise(() => {}))
 
-    expect(() => requireOrganizationId(instance, {})).toThrow(/collaboration: \{organizationId\}/)
+    await expect(firstValueFrom(observeCommentsOrganizationId(instance, RESOURCE))).resolves.toBe(
+      ORGANIZATION_ID,
+    )
+
+    instance.dispose()
+  })
+
+  it('errors when the app organization does not own the project', async () => {
+    // Standalone apps get the check the Dashboard's AuthBoundary already does.
+    mockAppOrganization('org-configured')
+    mockProjectOrganization('org-owning')
+
+    await expect(
+      firstValueFrom(observeCommentsOrganizationId(instance, RESOURCE).pipe(toArray())),
+    ).rejects.toThrow(/belongs to Organization org-owning/)
+
+    instance.dispose()
+  })
+
+  it('falls back to the organization owning the project', async () => {
+    // Nothing to configure in the common case: a project belongs to exactly one
+    // organization, and that is where its comments are.
+    mockAppOrganization(undefined)
+    mockProjectOrganization('org-owning')
+
+    await expect(firstValueFrom(observeCommentsOrganizationId(instance, RESOURCE))).resolves.toBe(
+      'org-owning',
+    )
+
+    instance.dispose()
+  })
+
+  it('surfaces a failed project read', async () => {
+    mockAppOrganization(undefined)
+    vi.mocked(project.resolveState).mockRejectedValue(new Error('project unreachable'))
+
+    await expect(firstValueFrom(observeCommentsOrganizationId(instance, RESOURCE))).rejects.toThrow(
+      /project unreachable/,
+    )
+
+    instance.dispose()
+  })
+
+  it('refuses a resource comments cannot live in', () => {
+    mockAppOrganization(ORGANIZATION_ID)
+
+    expect(() => observeCommentsOrganizationId(instance, {mediaLibraryId: 'ml-1'})).toThrow(
+      /dataset resources/,
+    )
+
     instance.dispose()
   })
 })

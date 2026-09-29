@@ -30,7 +30,7 @@ import {
 import {trackHookUsage} from '../helpers/useTrackHookUsage'
 
 /**
- * @public
+ * @beta
  * @category Types
  */
 export interface CommentActions {
@@ -67,7 +67,7 @@ type Resolvable = {
  *
  * Each writes optimistically: the change shows immediately and is rolled back
  * if the server rejects it, so an app can render straight from
- * {@link useDocumentComments} without tracking pending state itself.
+ * {@link useCommentThreads} without tracking pending state itself.
  *
  * Creating is the exception, and `replyToComment` counts as creating. A comment
  * that fails to post stays on screen carrying `state.createError` rather than
@@ -97,7 +97,7 @@ type Resolvable = {
  * }
  * ```
  *
- * @public
+ * @beta
  */
 export function useCommentActions(): CommentActions {
   const instance = useSanityInstance()

@@ -10,7 +10,7 @@ import {useCallback, useMemo, useSyncExternalStore} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
 import {useDeferredRequestKey} from '../helpers/useDeferredRequestKey'
-import {useResolvedProjectId, withResolvedProjectId} from '../helpers/useResolvedProjectId'
+import {useResolvedProjectId} from '../helpers/useResolvedProjectId'
 import {trackHookUsage} from '../helpers/useTrackHookUsage'
 
 /**
@@ -35,6 +35,23 @@ export interface UsersResult {
    * Load more users.
    */
   loadMore: () => void
+}
+
+/**
+ * Injects a resolved `projectId` into project-scoped users options. A missing
+ * `projectId` is a no-op, and organization-scoped queries (explicit
+ * `resourceType`/`organizationId`) or options that already carry a `projectId`
+ * are returned unchanged.
+ */
+function withResolvedProjectId(
+  options: GetUsersOptions | undefined,
+  projectId: string | undefined,
+): GetUsersOptions | undefined {
+  if (!projectId) return options
+  if (!options) return {projectId}
+  const isOrgScoped = options.resourceType === 'organization' || !!options.organizationId
+  if (isOrgScoped || options.projectId) return options
+  return {...options, projectId}
 }
 
 /**

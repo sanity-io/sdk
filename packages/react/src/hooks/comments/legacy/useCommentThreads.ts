@@ -14,7 +14,7 @@ import {getNoCommentsErrorState} from './noCommentsError'
 /**
  * @public
  * @category Types
- * @deprecated Renamed alongside {@link useCommentThreads}; see `UseDocumentCommentsResult` in
+ * @deprecated See the `UseCommentThreadsResult` exported from
  * `@sanity/sdk-react/collaboration`.
  */
 export interface UseCommentThreadsResult {
@@ -71,9 +71,9 @@ const SOURCE: CommentListSource<CommentsOptions, CommentThread[]> = {
  * ```
  *
  * @public
- * @deprecated Comments have moved to the organization collaboration API. Use
- * `useDocumentComments` from `@sanity/sdk-react/collaboration`, which returns the same thread
- * shape. This add-on dataset hook is removed in the next major.
+ * @deprecated Comments have moved to the organization collaboration API. Import
+ * `useCommentThreads` from `@sanity/sdk-react/collaboration` instead; it takes the same options
+ * and returns the same thread shape. This add-on dataset hook is removed in the next major.
  */
 export function useCommentThreads(
   options: WithResourceNameSupport<CommentsOptions>,

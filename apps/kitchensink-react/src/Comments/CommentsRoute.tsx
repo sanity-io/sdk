@@ -1,15 +1,13 @@
-import {randomUuid} from '@sanity/sdk/_internal'
 import {useCurrentUser} from '@sanity/sdk-react'
 import {
   type Comment,
-  type CommentMessage,
   type CommentRange,
   type CommentReactionShortName,
   type CommentStatus,
   type CommentThread,
   type CommentVariants,
   useCommentActions,
-  useDocumentComments,
+  useCommentThreads,
 } from '@sanity/sdk-react/collaboration'
 import {Badge, Button, Card, Select, TextInput} from '@sanity/ui'
 import {type JSX, useState} from 'react'
@@ -19,6 +17,7 @@ import {Box, Code, Flex, HStack, Text, VStack} from 'ui5'
 import {DocumentHeaderCard} from '../components/DocumentHeaderCard'
 import {PageLayout} from '../components/PageLayout'
 import {useDefaultDocumentId} from '../components/useDefaultDocumentId'
+import {toMessage, toPlainText} from './commentMessage'
 
 const DOCUMENT_TYPE = 'author'
 
@@ -64,29 +63,6 @@ const OPEN_DISPLAY = {
   action: 'Resolve',
   nextStatus: 'resolved',
 } as const
-
-/** Wraps plain text as the Portable Text the Studio stores. */
-function toMessage(text: string): CommentMessage {
-  return [
-    {
-      _type: 'block',
-      _key: randomUuid(),
-      style: 'normal',
-      markDefs: [],
-      children: [{_type: 'span', _key: randomUuid(), text, marks: []}],
-    },
-  ]
-}
-
-/** Flattens a message for display. Mentions render as nothing, which is fine here. */
-function toPlainText(message: CommentMessage): string {
-  return message
-    .map((block) => {
-      const children = (block as {children?: {text?: string}[]}).children ?? []
-      return children.map((child) => child.text ?? '').join('')
-    })
-    .join('\n')
-}
 
 function Composer({
   label,
@@ -374,7 +350,7 @@ function ThreadList({
   variants: CommentVariants
   onSelect: (comment: Comment) => void
 }): JSX.Element {
-  const {threads, isPending} = useDocumentComments({
+  const {threads, isPending} = useCommentThreads({
     documentId,
     documentType: DOCUMENT_TYPE,
     perspective,

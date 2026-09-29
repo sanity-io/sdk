@@ -2,9 +2,9 @@ import {type StateSource} from '@sanity/sdk'
 import {
   type CommentsOptions,
   type CommentThread,
-  getDocumentCommentsErrorState,
-  getDocumentCommentsState,
-  resolveDocumentComments,
+  getCommentsErrorState,
+  getCommentThreadsState,
+  resolveCommentThreads,
 } from '@sanity/sdk/collaboration'
 import {act, render, screen} from '@testing-library/react'
 import {Suspense} from 'react'
@@ -13,15 +13,15 @@ import {beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {ResourceProvider} from '../../context/ResourceProvider'
 import {ResourcesContext} from '../../context/ResourcesContext'
-import {useDocumentComments} from './useDocumentComments'
+import {useCommentThreads} from './useCommentThreads'
 
 vi.mock('@sanity/sdk/collaboration', async (importOriginal) => {
   const original = await importOriginal<typeof import('@sanity/sdk/collaboration')>()
   return {
     ...original,
-    getDocumentCommentsState: vi.fn(),
-    getDocumentCommentsErrorState: vi.fn(),
-    resolveDocumentComments: vi.fn(),
+    getCommentThreadsState: vi.fn(),
+    getCommentsErrorState: vi.fn(),
+    resolveCommentThreads: vi.fn(),
   }
 })
 
@@ -43,7 +43,7 @@ function mockSource(
   getCurrent: (options: CommentsOptions) => CommentThread[] | undefined,
   changed$?: Subject<void>,
 ) {
-  vi.mocked(getDocumentCommentsState).mockImplementation(
+  vi.mocked(getCommentThreadsState).mockImplementation(
     (_instance, options) =>
       ({
         getCurrent: () => getCurrent(options),
@@ -61,7 +61,7 @@ function mockSource(
 
 /** The companion source, live by default. Call again to override. */
 function mockErrorSource(getCurrent: () => unknown, changed$?: Subject<void>) {
-  vi.mocked(getDocumentCommentsErrorState).mockImplementation(
+  vi.mocked(getCommentsErrorState).mockImplementation(
     () =>
       ({
         getCurrent,
@@ -102,7 +102,7 @@ function PerspectiveWrapper({children}: {children: React.ReactNode}) {
   )
 }
 
-describe('useDocumentComments', () => {
+describe('useCommentThreads', () => {
   beforeEach(() => {
     vi.resetAllMocks()
   })
@@ -112,7 +112,7 @@ describe('useDocumentComments', () => {
     mockSource(() => loaded)
 
     function TestComponent() {
-      const {threads, isPending} = useDocumentComments(HANDLE)
+      const {threads, isPending} = useCommentThreads(HANDLE)
       return <div data-testid="out">{`${threads.length} ${isPending ? 'pending' : 'idle'}`}</div>
     }
 
@@ -128,14 +128,14 @@ describe('useDocumentComments', () => {
     mockSource(() => ref.current, changed$)
 
     let settle: () => void = () => {}
-    vi.mocked(resolveDocumentComments).mockReturnValue(
+    vi.mocked(resolveCommentThreads).mockReturnValue(
       new Promise<CommentThread[]>((resolve) => {
         settle = () => resolve(loaded)
       }),
     )
 
     function TestComponent() {
-      const {threads} = useDocumentComments(HANDLE)
+      const {threads} = useCommentThreads(HANDLE)
       return <div data-testid="out">{threads.length}</div>
     }
 
@@ -155,7 +155,7 @@ describe('useDocumentComments', () => {
     mockSource(() => loaded)
 
     function TestComponent() {
-      useDocumentComments({
+      useCommentThreads({
         ...HANDLE,
         fieldPath: ['body', {_key: 'intro'}],
         status: 'resolved',
@@ -166,7 +166,7 @@ describe('useDocumentComments', () => {
 
     render(<TestComponent />, {wrapper: Wrapper})
 
-    expect(getDocumentCommentsState).toHaveBeenCalledWith(
+    expect(getCommentThreadsState).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({
         documentId: 'doc-1',
@@ -178,37 +178,18 @@ describe('useDocumentComments', () => {
     )
   })
 
-  it('passes a per-call organization through to the store', () => {
-    // Comments live in an organization store rather than the dataset, so a call
-    // reading another organization's comments has to say so and be believed.
-    const loaded: CommentThread[] = []
-    mockSource(() => loaded)
-
-    function TestComponent() {
-      useDocumentComments({...HANDLE, collaboration: {organizationId: 'org-2'}})
-      return null
-    }
-
-    render(<TestComponent />, {wrapper: Wrapper})
-
-    expect(getDocumentCommentsState).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({collaboration: {organizationId: 'org-2'}}),
-    )
-  })
-
   it('resolves a named resource from context', () => {
     const loaded: CommentThread[] = []
     mockSource(() => loaded)
 
     function TestComponent() {
-      useDocumentComments({...HANDLE, resourceName: 'other'})
+      useCommentThreads({...HANDLE, resourceName: 'other'})
       return null
     }
 
     render(<TestComponent />, {wrapper: Wrapper})
 
-    expect(getDocumentCommentsState).toHaveBeenCalledWith(
+    expect(getCommentThreadsState).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({resource: {projectId: 'p2', dataset: 'd2'}}),
     )
@@ -222,13 +203,13 @@ describe('useDocumentComments', () => {
     mockSource(() => loaded)
 
     function TestComponent() {
-      useDocumentComments(HANDLE)
+      useCommentThreads(HANDLE)
       return null
     }
 
     render(<TestComponent />, {wrapper: PerspectiveWrapper})
 
-    expect(getDocumentCommentsState).toHaveBeenCalledWith(
+    expect(getCommentThreadsState).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({perspective: RELEASE_PERSPECTIVE}),
     )
@@ -242,14 +223,14 @@ describe('useDocumentComments', () => {
     mockSource((options) => byDocument[options.documentId])
 
     let settle: () => void = () => {}
-    vi.mocked(resolveDocumentComments).mockReturnValue(
+    vi.mocked(resolveCommentThreads).mockReturnValue(
       new Promise<CommentThread[]>((resolve) => {
         settle = () => resolve(second)
       }),
     )
 
     function TestComponent({documentId}: {documentId: string}) {
-      const {threads, isPending} = useDocumentComments({...HANDLE, documentId})
+      const {threads, isPending} = useCommentThreads({...HANDLE, documentId})
       return <div data-testid="out">{`${threads.length} ${isPending ? 'pending' : 'idle'}`}</div>
     }
 
@@ -265,7 +246,7 @@ describe('useDocumentComments', () => {
     // `isPending` is what reports the switch.
     expect(screen.queryByTestId('suspended')).not.toBeInTheDocument()
     expect(screen.getByTestId('out').textContent).toBe('1 pending')
-    expect(getDocumentCommentsState).toHaveBeenCalledWith(
+    expect(getCommentThreadsState).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({documentId: 'doc-2'}),
     )
@@ -286,7 +267,7 @@ describe('useDocumentComments', () => {
     mockErrorSource(() => failure.current, changed$)
 
     function TestComponent() {
-      const {threads, error} = useDocumentComments(HANDLE)
+      const {threads, error} = useCommentThreads(HANDLE)
       return (
         <div data-testid="out">{`${threads.length} ${error instanceof Error ? error.message : 'live'}`}</div>
       )

@@ -4,9 +4,10 @@ import {expect, type PageContext, test} from '@repo/e2e'
 /**
  * Comments do not live in the dataset under test. They live in an organization
  * store, reached through `/collaboration/comments` and scoped to the dataset by
- * request parameters, so nothing has to be provisioned before the first write —
- * but every read and write needs `SANITY_APP_E2E_ORGANIZATION_ID` to name the
- * organization, and the comments API has to be enabled for it.
+ * request parameters, so nothing has to be provisioned before the first write.
+ * Which organization is not configured here: inside the Dashboard it is the one
+ * the app was opened in, and standalone it falls back to the organization owning
+ * the e2e project. The comments API has to be enabled for it either way.
  *
  * Still generous on time: each test is a page load, several round trips, and
  * often a reload, which the default 30s does not cover on the slower browsers.

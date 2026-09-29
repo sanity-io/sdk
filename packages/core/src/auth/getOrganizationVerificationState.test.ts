@@ -194,4 +194,28 @@ describe('observeOrganizationVerificationState', () => {
     expect(compareProjectOrganization).toHaveBeenCalledTimes(1)
     expect(compareProjectOrganization).toHaveBeenCalledWith('proj-1', 'org-proj', 'org-dash')
   })
+
+  it('checks a standalone app against the organization it names', () => {
+    // No Dashboard to supply one, so `organizationId` on the config is what the
+    // project is measured against. Without this a standalone app gets no check.
+    const standalone = {
+      config: {projectId: 'proj-1', dataset: 'd', organizationId: 'org-configured'},
+    } as SanityInstance
+
+    testScheduler.run(({hot, expectObservable}) => {
+      const dashboardOrgId$ = hot('-a-', {a: undefined})
+      const projectOrgId$ = hot('--b', {b: {organizationId: 'org-proj'}})
+      const comparisonResult = {error: 'Mismatch detected'}
+
+      mockDashboardOrgId(dashboardOrgId$)
+      mockProjectOrgId(projectOrgId$)
+      mockComparisonResult(comparisonResult)
+
+      expectObservable(
+        observeOrganizationVerificationState(standalone, [standalone.config.projectId!]),
+      ).toBe('--r', {r: comparisonResult})
+    })
+
+    expect(compareProjectOrganization).toHaveBeenCalledWith('proj-1', 'org-proj', 'org-configured')
+  })
 })

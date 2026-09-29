@@ -12,7 +12,7 @@ import {type WithResourceNameSupport} from '../helpers/useNormalizedResourceOpti
 import {type CommentListSource, useCommentList} from './useCommentList'
 
 /**
- * @public
+ * @beta
  * @category Types
  */
 export interface UseCommentsQueryResult {
@@ -41,7 +41,7 @@ const SOURCE: CommentListSource<CommentsQueryOptions, Comment[]> = {
  *
  * The escape hatch for anything that is not "comments on this document":
  * cross-document views, per-user views, organization-wide activity. The list is
- * flat, replies included; reach for {@link useDocumentComments} to read one
+ * flat, replies included; reach for {@link useCommentThreads} to read one
  * document's comments grouped into threads.
  *
  * `_type == "sanity.comment"` is applied for you. Comments are stored per
@@ -69,7 +69,7 @@ const SOURCE: CommentListSource<CommentsQueryOptions, Comment[]> = {
  * }
  * ```
  *
- * @public
+ * @beta
  */
 export function useCommentsQuery(
   options: WithResourceNameSupport<CommentsQueryOptions>,

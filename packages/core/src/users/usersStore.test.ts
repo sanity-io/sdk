@@ -121,41 +121,16 @@ describe('usersStore', () => {
     instance.dispose()
   })
 
-  it('sends the search and sort options as query params', async () => {
-    const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
+  it('reads an organization list against the organization the app names', async () => {
+    // Outside the Dashboard there is nothing else to scope the request to, so
+    // an app that names its organization can still read its users.
+    const instance = createSanityInstance({organizationId: 'org-configured'})
 
-    await resolveUsers(instance, {
-      resourceType: 'project',
-      projectId: 'project1',
-      batchSize: 25,
-      displayName: 'ada',
-      email: 'ada@example.com',
-      sortBy: 'displayName',
-      orderBy: 'desc',
-    })
+    await resolveUsers(instance, {resourceType: 'organization'})
 
-    expect(request).toHaveBeenCalledWith({
-      method: 'GET',
-      url: 'access/project/project1/users',
-      tag: 'users.list',
-      query: {
-        limit: '25',
-        displayName: 'ada',
-        email: 'ada@example.com',
-        sortBy: 'displayName',
-        orderBy: 'desc',
-      },
-    })
-
-    instance.dispose()
-  })
-
-  it('omits the search and sort params when unset', async () => {
-    const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
-
-    await resolveUsers(instance, {resourceType: 'project', projectId: 'project1'})
-
-    expect(request).toHaveBeenCalledWith(expect.objectContaining({query: {limit: '100'}}))
+    expect(request).toHaveBeenCalledWith(
+      expect.objectContaining({url: 'access/organization/org-configured/users'}),
+    )
 
     instance.dispose()
   })

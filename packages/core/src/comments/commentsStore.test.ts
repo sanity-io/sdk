@@ -6,27 +6,30 @@ import {type DocumentResource} from '../config/sanityConfig'
 import {bindActionByResource} from '../store/createActionBinder'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {updateComment} from './commentActions'
-import {commentTarget, ORGANIZATION_ID, storedComment} from './commentFixtures'
-import {observeCommentsClient} from './commentsClient'
+import {commentTarget, storedComment} from './commentFixtures'
+import {observeCommentsClientForResource} from './commentsClient'
 import {
-  commentsStore,
   getCommentsQueryOptionsKey,
-  getCommentsQueryState,
-  getDocumentCommentsErrorState,
   getDocumentCommentsOptionsKey,
-  getDocumentCommentsState,
   parseCommentsQueryOptionsKey,
   parseDocumentCommentsOptionsKey,
+} from './commentsOptions'
+import {
+  commentsStore,
+  getCommentsErrorState,
+  getCommentsQueryState,
+  getCommentsState,
+  getCommentThreadsState,
+  resolveComments,
   resolveCommentsQuery,
-  resolveDocumentComments,
+  resolveCommentThreads,
 } from './commentsStore'
 import {setPendingTransaction} from './reducers'
 import {type StoredComment} from './types'
 
 vi.mock('./commentsClient', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./commentsClient')>()),
-  getCommentsClient: vi.fn(() => client),
-  observeCommentsClient: vi.fn(() => client$),
+  observeCommentsClientForResource: vi.fn(() => client$),
 }))
 
 const WELCOME = {type: 'welcome'} as ListenEvent<StoredComment>
@@ -85,13 +88,9 @@ beforeEach(() => {
   } as unknown as SanityClient
 
   client$ = new BehaviorSubject<SanityClient>(client)
-  vi.mocked(observeCommentsClient).mockReset().mockReturnValue(client$)
+  vi.mocked(observeCommentsClientForResource).mockReset().mockReturnValue(client$)
 
-  instance = createSanityInstance({
-    projectId: 'p',
-    dataset: 'd',
-    collaboration: {organizationId: ORGANIZATION_ID},
-  })
+  instance = createSanityInstance({projectId: 'p', dataset: 'd'})
 })
 
 afterEach(() => {
@@ -131,10 +130,9 @@ describe('getDocumentCommentsOptionsKey', () => {
       getDocumentCommentsOptionsKey({...HANDLE, status: 'open'}),
       getDocumentCommentsOptionsKey({...HANDLE, documentId: 'doc-2'}),
       getDocumentCommentsOptionsKey({...HANDLE, variants: 'all'}),
-      getDocumentCommentsOptionsKey({...HANDLE, collaboration: {organizationId: 'org-2'}}),
     ])
 
-    expect(keys.size).toBe(7)
+    expect(keys.size).toBe(6)
   })
 })
 
@@ -154,16 +152,58 @@ describe('getCommentsQueryOptionsKey', () => {
   })
 })
 
-describe('getDocumentCommentsState', () => {
+describe('getCommentsState', () => {
   it('is undefined until the first snapshot arrives', () => {
-    const source = getDocumentCommentsState(instance, HANDLE)
+    const source = getCommentsState(instance, HANDLE)
+    source.subscribe()
+
+    expect(source.getCurrent()).toBe(undefined)
+  })
+
+  it('returns every comment flat, newest first, replies included', () => {
+    const source = getCommentsState(instance, HANDLE)
+    source.subscribe()
+
+    snapshot([
+      storedComment({_id: 'a', _createdAt: '2026-01-01T00:00:00Z'}),
+      storedComment({_id: 'b', _createdAt: '2026-02-01T00:00:00Z', parentCommentId: 'a'}),
+    ])
+
+    expect(source.getCurrent()!.map((comment) => comment.id)).toEqual(['b', 'a'])
+  })
+
+  it('filters replies individually, unlike the thread read', () => {
+    // A resolved parent carries its replies along when read as a thread. Read
+    // flat there is nothing to carry, so the filter applies comment by comment.
+    const source = getCommentsState(instance, {...HANDLE, status: 'resolved'})
+    source.subscribe()
+
+    snapshot([
+      storedComment({_id: 'a', status: 'resolved'}),
+      storedComment({_id: 'b', parentCommentId: 'a'}),
+    ])
+
+    expect(source.getCurrent()!.map((comment) => comment.id)).toEqual(['a'])
+  })
+
+  it('shares one listener with the thread read of the same document', () => {
+    getCommentsState(instance, HANDLE).subscribe()
+    getCommentThreadsState(instance, HANDLE).subscribe()
+
+    expect(listeners.size).toBe(1)
+  })
+})
+
+describe('getCommentThreadsState', () => {
+  it('is undefined until the first snapshot arrives', () => {
+    const source = getCommentThreadsState(instance, HANDLE)
     source.subscribe()
 
     expect(source.getCurrent()).toBe(undefined)
   })
 
   it('groups a document’s comments into threads once someone reads them', () => {
-    const source = getDocumentCommentsState(instance, HANDLE)
+    const source = getCommentThreadsState(instance, HANDLE)
     source.subscribe()
 
     snapshot([storedComment({_id: 'a'}), storedComment({_id: 'b', parentCommentId: 'a'})])
@@ -174,7 +214,7 @@ describe('getDocumentCommentsState', () => {
   })
 
   it('reads the document by its global reference, whichever variant was asked for', () => {
-    getDocumentCommentsState(instance, HANDLE).subscribe()
+    getCommentThreadsState(instance, HANDLE).subscribe()
 
     expect(client.observable.collaboration.comments.listen).toHaveBeenCalledWith(
       expect.stringContaining('target.document._ref == $targetRef'),
@@ -184,7 +224,7 @@ describe('getDocumentCommentsState', () => {
   })
 
   it('sorts newest thread first', () => {
-    const source = getDocumentCommentsState(instance, HANDLE)
+    const source = getCommentThreadsState(instance, HANDLE)
     source.subscribe()
 
     snapshot([
@@ -196,7 +236,7 @@ describe('getDocumentCommentsState', () => {
   })
 
   it('filters by field path', () => {
-    const source = getDocumentCommentsState(instance, {...HANDLE, fieldPath: 'title'})
+    const source = getCommentThreadsState(instance, {...HANDLE, fieldPath: 'title'})
     source.subscribe()
 
     snapshot([
@@ -210,7 +250,7 @@ describe('getDocumentCommentsState', () => {
   it('matches the field path exactly rather than by prefix', () => {
     // Nothing writes an empty path any more, but the filter is still an exact
     // match, so it must not sweep up every comment on the document.
-    const source = getDocumentCommentsState(instance, {...HANDLE, fieldPath: ''})
+    const source = getCommentThreadsState(instance, {...HANDLE, fieldPath: ''})
     source.subscribe()
 
     snapshot([
@@ -222,7 +262,7 @@ describe('getDocumentCommentsState', () => {
   })
 
   it('filters by the parent status without dropping replies', () => {
-    const source = getDocumentCommentsState(instance, {...HANDLE, status: 'resolved'})
+    const source = getCommentThreadsState(instance, {...HANDLE, status: 'resolved'})
     source.subscribe()
 
     snapshot([
@@ -238,7 +278,7 @@ describe('getDocumentCommentsState', () => {
   it('returns the same array on repeated reads', () => {
     // A fresh array from one read to the next would make useSyncExternalStore
     // re-render without end.
-    const source = getDocumentCommentsState(instance, HANDLE)
+    const source = getCommentThreadsState(instance, HANDLE)
     source.subscribe()
 
     snapshot([storedComment({_id: 'a'})])
@@ -249,12 +289,12 @@ describe('getDocumentCommentsState', () => {
   it('returns the same array when an unrelated document loads', () => {
     // Every state change re-runs the selector, so without a cache keyed on the
     // data, one document loading would re-render readers of every other one.
-    const source = getDocumentCommentsState(instance, HANDLE)
+    const source = getCommentThreadsState(instance, HANDLE)
     source.subscribe()
     snapshot([storedComment({_id: 'a'})])
     const before = source.getCurrent()
 
-    const other = getDocumentCommentsState(instance, {...HANDLE, documentId: 'doc-2'})
+    const other = getCommentThreadsState(instance, {...HANDLE, documentId: 'doc-2'})
     other.subscribe()
     snapshot([storedComment({_id: 'b'})], 1)
 
@@ -264,7 +304,7 @@ describe('getDocumentCommentsState', () => {
 
 describe('variants', () => {
   it('pools draft and published by default, excluding releases', () => {
-    getDocumentCommentsState(instance, HANDLE).subscribe()
+    getCommentThreadsState(instance, HANDLE).subscribe()
 
     expect(client.observable.collaboration.comments.listen).toHaveBeenCalledWith(
       expect.stringContaining('!string::startsWith(target.sourceDocumentId, "versions.")'),
@@ -274,14 +314,14 @@ describe('variants', () => {
   })
 
   it('shares one list between a draft and its published document', () => {
-    getDocumentCommentsState(instance, HANDLE).subscribe()
-    getDocumentCommentsState(instance, {...HANDLE, documentId: 'drafts.doc-1'}).subscribe()
+    getCommentThreadsState(instance, HANDLE).subscribe()
+    getCommentThreadsState(instance, {...HANDLE, documentId: 'drafts.doc-1'}).subscribe()
 
     expect(listeners.size).toBe(1)
   })
 
   it('pins to the release version under a release perspective', () => {
-    getDocumentCommentsState(instance, {
+    getCommentThreadsState(instance, {
       ...HANDLE,
       perspective: {releaseName: 'summer'},
     }).subscribe()
@@ -294,8 +334,8 @@ describe('variants', () => {
   })
 
   it('keeps a release’s comments apart from the default ones', () => {
-    const base = getDocumentCommentsState(instance, HANDLE)
-    const release = getDocumentCommentsState(instance, {
+    const base = getCommentThreadsState(instance, HANDLE)
+    const release = getCommentThreadsState(instance, {
       ...HANDLE,
       perspective: {releaseName: 'summer'},
     })
@@ -312,7 +352,7 @@ describe('variants', () => {
   })
 
   it('pins to the exact id passed when asked for', () => {
-    getDocumentCommentsState(instance, {
+    getCommentThreadsState(instance, {
       ...HANDLE,
       documentId: 'drafts.doc-1',
       variants: 'exact',
@@ -328,7 +368,7 @@ describe('variants', () => {
   })
 
   it('ignores the perspective when asked for drafts', () => {
-    getDocumentCommentsState(instance, {
+    getCommentThreadsState(instance, {
       ...HANDLE,
       perspective: {releaseName: 'summer'},
       variants: 'drafts',
@@ -342,7 +382,7 @@ describe('variants', () => {
   })
 
   it('filters on the document alone when asked for all of them', () => {
-    getDocumentCommentsState(instance, {...HANDLE, variants: 'all'}).subscribe()
+    getCommentThreadsState(instance, {...HANDLE, variants: 'all'}).subscribe()
 
     const [query, params] = vi.mocked(client.observable.collaboration.comments.listen).mock.calls[0]
 
@@ -384,18 +424,15 @@ describe('getCommentsQueryState', () => {
     expect(listeners.size).toBe(1)
   })
 
-  it('keeps two organizations’ lists apart', () => {
+  it('reads through a client for the resource it is bound to', () => {
+    // The organization is resolved from the resource rather than keyed on, so
+    // one filter is one entry and one listener.
     getCommentsQueryState(instance, {filter: 'status == "open"'}).subscribe()
-    getCommentsQueryState(instance, {
-      filter: 'status == "open"',
-      collaboration: {organizationId: 'org-2'},
-    }).subscribe()
+    getCommentsQueryState(instance, {filter: 'status == "open"'}).subscribe()
 
-    // One filter, two entries, each read through its own client. Sharing an
-    // entry would show one organization the other's comments.
     expect(
-      vi.mocked(observeCommentsClient).mock.calls.map(([, options]) => options.organizationId),
-    ).toEqual([ORGANIZATION_ID, 'org-2'])
+      vi.mocked(observeCommentsClientForResource).mock.calls.map(([, resource]) => resource),
+    ).toEqual([{projectId: 'p', dataset: 'd'}])
   })
 })
 
@@ -411,7 +448,7 @@ describe('transaction reconciliation', () => {
   }
 
   function loaded() {
-    const source = getDocumentCommentsState(instance, HANDLE)
+    const source = getCommentThreadsState(instance, HANDLE)
     source.subscribe()
     snapshot([storedComment({_id: 'a'})])
     return source
@@ -482,7 +519,7 @@ describe('a comment leaving one list', () => {
 
   /** The document's threads and an open-only query, both holding one thread. */
   function twoLists() {
-    const document = getDocumentCommentsState(instance, HANDLE)
+    const document = getCommentThreadsState(instance, HANDLE)
     const query = getCommentsQueryState(instance, {filter: 'status == "open"'})
     document.subscribe()
     query.subscribe()
@@ -525,9 +562,20 @@ describe('a comment leaving one list', () => {
   })
 })
 
-describe('resolveDocumentComments', () => {
+describe('resolveComments', () => {
+  it('starts loading and resolves with the comments', async () => {
+    const promise = resolveComments(instance, HANDLE)
+
+    await vi.waitFor(() => expect(listeners.size).toBe(1))
+    snapshot([storedComment({_id: 'a'})])
+
+    await expect(promise).resolves.toMatchObject([{id: 'a'}])
+  })
+})
+
+describe('resolveCommentThreads', () => {
   it('starts loading and resolves with the threads', async () => {
-    const promise = resolveDocumentComments(instance, HANDLE)
+    const promise = resolveCommentThreads(instance, HANDLE)
 
     await vi.waitFor(() => expect(listeners.size).toBe(1))
     snapshot([storedComment({_id: 'a'})])
@@ -537,7 +585,7 @@ describe('resolveDocumentComments', () => {
 
   it('rejects when aborted', async () => {
     const controller = new AbortController()
-    const promise = resolveDocumentComments(instance, {...HANDLE, signal: controller.signal})
+    const promise = resolveCommentThreads(instance, {...HANDLE, signal: controller.signal})
 
     controller.abort()
 
@@ -546,7 +594,7 @@ describe('resolveDocumentComments', () => {
 
   it('tears the listener down when an abort leaves no readers', async () => {
     const controller = new AbortController()
-    const promise = resolveDocumentComments(instance, {...HANDLE, signal: controller.signal})
+    const promise = resolveCommentThreads(instance, {...HANDLE, signal: controller.signal})
     await vi.waitFor(() => expect(listeners.size).toBe(1))
 
     controller.abort()
@@ -569,7 +617,7 @@ describe('resolveCommentsQuery', () => {
 
 describe('listener recovery', () => {
   it('keeps serving a loaded list after its listener fails', () => {
-    const source = getDocumentCommentsState(instance, HANDLE)
+    const source = getCommentThreadsState(instance, HANDLE)
     source.subscribe()
     snapshot([storedComment({_id: 'a'})])
 
@@ -582,7 +630,7 @@ describe('listener recovery', () => {
   })
 
   it('surfaces a failure that arrives before anything has loaded', () => {
-    const source = getDocumentCommentsState(instance, HANDLE)
+    const source = getCommentThreadsState(instance, HANDLE)
     source.subscribe()
 
     listeners.values().next().value!.error(new Error('connection failed'))
@@ -593,7 +641,7 @@ describe('listener recovery', () => {
   })
 
   it('starts listening again when the client changes after a listener error', () => {
-    getDocumentCommentsState(instance, HANDLE).subscribe()
+    getCommentThreadsState(instance, HANDLE).subscribe()
 
     const failedListener = listeners.values().next().value!
     failedListener.error(new Error('connection failed'))
@@ -605,8 +653,8 @@ describe('listener recovery', () => {
   })
 
   it('reports why a loaded list stopped following the server', () => {
-    const source = getDocumentCommentsState(instance, HANDLE)
-    const errorSource = getDocumentCommentsErrorState(instance, HANDLE)
+    const source = getCommentThreadsState(instance, HANDLE)
+    const errorSource = getCommentsErrorState(instance, HANDLE)
     source.subscribe()
     snapshot([storedComment({_id: 'a'})])
 
@@ -619,8 +667,8 @@ describe('listener recovery', () => {
   })
 
   it('clears the report once a listener comes back', () => {
-    const source = getDocumentCommentsState(instance, HANDLE)
-    const errorSource = getDocumentCommentsErrorState(instance, HANDLE)
+    const source = getCommentThreadsState(instance, HANDLE)
+    const errorSource = getCommentsErrorState(instance, HANDLE)
     source.subscribe()
     snapshot([storedComment({_id: 'a'})])
 
@@ -634,8 +682,8 @@ describe('listener recovery', () => {
   })
 
   it('leaves a failure before the first snapshot to the read itself', () => {
-    const source = getDocumentCommentsState(instance, HANDLE)
-    const errorSource = getDocumentCommentsErrorState(instance, HANDLE)
+    const source = getCommentThreadsState(instance, HANDLE)
+    const errorSource = getCommentsErrorState(instance, HANDLE)
     source.subscribe()
 
     listeners.values().next().value!.error(new Error('connection failed'))

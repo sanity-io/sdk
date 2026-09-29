@@ -29,7 +29,6 @@ const FILTER = '_type == "sanity.comment" && target.document._ref == $targetRef'
 const KEY = getCommentsKey({
   filter: FILTER,
   params: {targetRef: TARGET_REF},
-  organizationId: ORGANIZATION_ID,
 })
 
 const comment = storedComment
@@ -51,7 +50,6 @@ function stateWith(comments: StoredComment[]): CommentsStoreState {
 const OTHER_KEY = getCommentsKey({
   filter: 'status == "open"',
   params: {},
-  organizationId: ORGANIZATION_ID,
 })
 
 function stateWithBoth(comments: StoredComment[]): CommentsStoreState {
@@ -68,11 +66,10 @@ const emptyState = (): CommentsStoreState => ({
 })
 
 describe('comment list keys', () => {
-  it('round-trips a filter, its params, and the organization', () => {
+  it('round-trips a filter and its params', () => {
     const parts = {
       filter: FILTER,
       params: {targetRef: TARGET_REF},
-      organizationId: ORGANIZATION_ID,
     }
 
     expect(parseCommentsKey(getCommentsKey(parts))).toEqual(parts)
@@ -81,20 +78,26 @@ describe('comment list keys', () => {
   it('addresses one entry however the params were ordered', () => {
     // The same query written by two callers has to reach one entry, or a write
     // optimistically applied to one list would not show in the other.
-    expect(getCommentsKey({filter: FILTER, params: {a: 1, b: 2}, organizationId: 'org-1'})).toBe(
-      getCommentsKey({filter: FILTER, params: {b: 2, a: 1}, organizationId: 'org-1'}),
+    expect(getCommentsKey({filter: FILTER, params: {a: 1, b: 2}})).toBe(
+      getCommentsKey({filter: FILTER, params: {b: 2, a: 1}}),
     )
   })
 
   it('separates entries that differ in any part', () => {
     const keys = new Set([
-      getCommentsKey({filter: FILTER, params: {}, organizationId: 'org-1'}),
-      getCommentsKey({filter: FILTER, params: {}, organizationId: 'org-2'}),
-      getCommentsKey({filter: 'status == "open"', params: {}, organizationId: 'org-1'}),
-      getCommentsKey({filter: FILTER, params: {targetRef: TARGET_REF}, organizationId: 'org-1'}),
+      getCommentsKey({filter: FILTER, params: {}}),
+      getCommentsKey({filter: 'status == "open"', params: {}}),
+      getCommentsKey({filter: FILTER, params: {targetRef: TARGET_REF}}),
     ])
 
-    expect(keys.size).toBe(4)
+    expect(keys.size).toBe(3)
+  })
+
+  it('leaves the organization out', () => {
+    // Resolved asynchronously, while a key has to be computable inside a
+    // selector. The filter names the dataset, and a project belongs to one
+    // organization, so nothing is lost by keying without it.
+    expect(getCommentsKey({filter: FILTER, params: {}})).not.toContain(ORGANIZATION_ID)
   })
 })
 
@@ -331,7 +334,7 @@ describe('applyCommentUpdate', () => {
   it('patches every entry holding the comment', () => {
     // A comment can sit in a document list and a GROQ query at once, and an
     // optimistic edit has to show in both.
-    const other = getCommentsKey({filter: 'status == "open"', params: {}, organizationId: 'org-1'})
+    const other = getCommentsKey({filter: 'status == "open"', params: {}})
     const before = addSubscriber(other, 'sub-2')(stateWith([comment({_id: 'a'})]))
     const seeded = setComments(other, [comment({_id: 'a'})])(before)
 

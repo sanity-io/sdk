@@ -4,6 +4,7 @@ import {
   type SanityClient,
 } from '@sanity/client'
 import {type Path} from '@sanity/types'
+import {firstValueFrom} from 'rxjs'
 
 import {getCurrentUserState} from '../auth/authStore'
 import {type DatasetHandle, type DocumentHandle} from '../config/sanityConfig'
@@ -14,7 +15,7 @@ import {type StoreContext} from '../store/defineStore'
 import {randomUuid} from '../utils/ids'
 import {toCommentFieldPath} from './commentFieldPath'
 import {toStoredMessage} from './commentMessage'
-import {getCommentsClient, requireOrganizationId, toTargetDocumentRef} from './commentsClient'
+import {observeCommentsClientForResource, toTargetDocumentRef} from './commentsClient'
 import {commentsStore, toSourceDocumentId, toWrittenCommentKeys} from './commentsStore'
 import {normalizeComment} from './normalizeComment'
 import {
@@ -181,15 +182,13 @@ function requireCurrentUserId(instance: SanityInstance): string {
   return userId
 }
 
-function getWritableClient(
-  instance: SanityInstance,
-  key: BoundResourceKey,
-  options: Pick<DatasetHandle, 'collaboration'>,
-): SanityClient {
-  return getCommentsClient(instance, {
-    resource: key.resource,
-    organizationId: requireOrganizationId(instance, options),
-  })
+/**
+ * Async because the organization holding the comments is resolved rather than
+ * configured. Called inside the same `try` as the write itself, so a failure
+ * to resolve it rolls an optimistic change back like any other failed write.
+ */
+function getWritableClient(instance: SanityInstance, key: BoundResourceKey): Promise<SanityClient> {
+  return firstValueFrom(observeCommentsClientForResource(instance, key.resource))
 }
 
 function findComment(
@@ -290,7 +289,7 @@ async function postComment(
   commentsKeys: string[],
   optimistic: StoredComment,
   body: CollaborationCommentCreate,
-  client: SanityClient,
+  client: Promise<SanityClient>,
 ): Promise<Comment> {
   const {state} = context
 
@@ -299,7 +298,11 @@ async function postComment(
   }
 
   try {
-    const created = await client.collaboration.comments.create(body, {tag: 'comments.create'})
+    const created = await (
+      await client
+    ).collaboration.comments.create(body, {
+      tag: 'comments.create',
+    })
     for (const commentsKey of commentsKeys) {
       state.set('receiveComment', receiveComment(commentsKey, created))
     }
@@ -338,7 +341,7 @@ export const createComment: (
   ) => {
     const {instance, key} = context
     const {range, fieldValue} = options
-    const client = getWritableClient(instance, key, options)
+    const client = getWritableClient(instance, key)
     const fieldPath = requireFieldPath(options.fieldPath)
     const commentId = options.commentId ?? randomUuid()
     const threadId = options.threadId ?? randomUuid()
@@ -360,7 +363,7 @@ export const createComment: (
 
     return postComment(
       context,
-      toWrittenCommentKeys(instance, options, optimistic),
+      toWrittenCommentKeys(optimistic),
       optimistic,
       {
         _id: commentId,
@@ -402,7 +405,7 @@ export const replyToComment: (
     options: ReplyToCommentOptions,
   ) => {
     const {instance, key, state} = context
-    const client = getWritableClient(instance, key, options)
+    const client = getWritableClient(instance, key)
     const commentId = options.commentId ?? randomUuid()
     const parent = requireLoadedParent(state, options.parentCommentId)
 
@@ -432,7 +435,7 @@ export const replyToComment: (
 
     return postComment(
       context,
-      toWrittenCommentKeys(instance, options, optimistic),
+      toWrittenCommentKeys(optimistic),
       optimistic,
       {
         _id: commentId,
@@ -474,7 +477,7 @@ async function writeOptimistically(
   }
 
   try {
-    await write(getWritableClient(instance, key, options), transactionId)
+    await write(await getWritableClient(instance, key), transactionId)
     if (previous) {
       state.set('clearPendingTransaction', clearPendingTransaction(commentId, transactionId))
     }
@@ -600,7 +603,7 @@ export const setCommentStatus: (
     }
 
     try {
-      const client = getWritableClient(instance, key, options)
+      const client = await getWritableClient(instance, key)
       await client.collaboration.comments.update(
         commentId,
         {status},
@@ -645,7 +648,7 @@ export const removeComment: (
     state.set('removeComment', removeCommentById(commentId))
 
     try {
-      const client = getWritableClient(instance, key, options)
+      const client = await getWritableClient(instance, key)
       await client.collaboration.comments.delete(commentId, {tag: 'comments.remove'})
       // The comments are gone for good, so a snapshot can no longer carry them
       // and the marks holding them out of one are spent.

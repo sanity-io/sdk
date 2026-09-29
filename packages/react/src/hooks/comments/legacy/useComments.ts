@@ -9,8 +9,7 @@ import {getNoCommentsErrorState} from './noCommentsError'
 /**
  * @public
  * @category Types
- * @deprecated Renamed alongside {@link useComments}; see `useDocumentComments` in
- * `@sanity/sdk-react/collaboration`.
+ * @deprecated See the `UseCommentsResult` exported from `@sanity/sdk-react/collaboration`.
  */
 export interface UseCommentsResult {
   /** Every matching comment, newest first, replies included. */
@@ -59,10 +58,9 @@ const SOURCE: CommentListSource<CommentsOptions, Comment[]> = {
  * ```
  *
  * @public
- * @deprecated Comments have moved to the organization collaboration API. Read threads with
- * `useDocumentComments` from `@sanity/sdk-react/collaboration`, or pass a GROQ filter to
- * `useCommentsQuery` for anything that is not one document's comments. This add-on dataset
- * hook is removed in the next major.
+ * @deprecated Comments have moved to the organization collaboration API. Import `useComments`
+ * from `@sanity/sdk-react/collaboration` instead; it takes the same options and returns the
+ * same flat list. This add-on dataset hook is removed in the next major.
  */
 export function useComments(options: WithResourceNameSupport<CommentsOptions>): UseCommentsResult {
   const {value, isPending} = useCommentList('useComments', options, SOURCE)

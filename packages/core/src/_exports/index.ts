@@ -71,12 +71,11 @@ export {
   updateComment,
   type UpdateCommentOptions,
 } from '../comments/legacy/commentActions'
+export {type CommentsOptions, type ResolveCommentsOptions} from '../comments/legacy/commentsOptions'
 export {
-  type CommentsOptions,
   getCommentsState,
   getCommentThreadsState,
   resolveComments,
-  type ResolveCommentsOptions,
   resolveCommentThreads,
 } from '../comments/legacy/commentsStore'
 export {
@@ -279,15 +278,6 @@ export {
   resolveUser,
   resolveUsers,
 } from '../users/usersStore'
-export {
-  getUsersWithGrantsState,
-  loadMoreUsersWithGrants,
-  resolveUsersWithGrants,
-  type ResolveUsersWithGrantsOptions,
-  type UsersWithGrantsOptions,
-  type UsersWithGrantsResult,
-  type UserWithGrants,
-} from '../users/usersWithGrants'
 export {getCorsErrorProjectId} from '../utils/getCorsErrorProjectId'
 export {isImportError} from '../utils/isImportError'
 export {CORE_SDK_VERSION} from '../version'

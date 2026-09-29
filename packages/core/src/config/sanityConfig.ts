@@ -1,4 +1,4 @@
-import {type ClientConfig, type ClientPerspective, type StackablePerspective} from '@sanity/client'
+import {type ClientPerspective, type StackablePerspective} from '@sanity/client'
 
 import {type AuthConfig} from './authConfig'
 
@@ -78,20 +78,6 @@ export interface DatasetHandle<TDataset extends string = string, TProjectId exte
    * `projectId`/`dataset`, this can also be a media library or canvas resource.
    */
   resource?: DocumentResource
-  /**
-   * Organization-scoped configuration.
-   *
-   * Comments are stored per organization rather than per dataset, so reading or
-   * writing one needs an `organizationId` on top of the resource. Set it on the
-   * `SanityConfig` to apply it everywhere, or per call to point one operation at
-   * a different organization — the same precedence as `projectId` and `dataset`.
-   *
-   * Typed off the client's own `collaboration` config, and passed through to it
-   * untouched, so the two cannot drift.
-   *
-   * @beta
-   */
-  collaboration?: ClientConfig['collaboration']
 }
 
 /**
@@ -146,6 +132,21 @@ export interface ReleaseHandle extends DatasetHandle {
  * @public
  */
 export interface SanityConfig extends DatasetHandle, PerspectiveHandle {
+  /**
+   * The organization this app belongs to.
+   *
+   * Only needed outside the Sanity Dashboard, which tells the app which
+   * organization it was opened in; that always wins over this. Set it when
+   * running standalone and something organization-scoped — comments, an
+   * organization user list — needs to know. Left unset, features that can fall
+   * back to the organization owning the project do so.
+   *
+   * Unrelated to `auth.oauth.organizationId`, which restricts the tokens the
+   * OAuth flow issues. Neither is derived from the other.
+   *
+   * @beta
+   */
+  organizationId?: string
   /**
    * Authentication configuration for the instance
    */

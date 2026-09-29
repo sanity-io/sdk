@@ -12,10 +12,6 @@ export const getUsersKey = (
     batchSize = DEFAULT_USERS_BATCH_SIZE,
     projectId = instance.config.projectId,
     userId,
-    displayName,
-    email,
-    sortBy,
-    orderBy,
   }: GetUsersOptions = {},
 ): string =>
   JSON.stringify({
@@ -24,10 +20,6 @@ export const getUsersKey = (
     batchSize,
     projectId,
     userId,
-    displayName,
-    email,
-    sortBy,
-    orderBy,
   } satisfies ReturnType<typeof parseUsersKey>)
 
 /** @internal */
@@ -39,10 +31,6 @@ export const parseUsersKey = (
   projectId?: string
   organizationId?: string
   userId?: string
-  displayName?: string
-  email?: string
-  sortBy?: 'displayName'
-  orderBy?: 'asc' | 'desc'
 } => JSON.parse(key)
 
 export const addSubscription =

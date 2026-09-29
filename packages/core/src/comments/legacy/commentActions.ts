@@ -24,7 +24,8 @@ import {
   provisionAddonDataset,
 } from './addonDatasetStore'
 import {COMMENTS_API_VERSION} from './commentsConstants'
-import {type CommentsOptions, commentsStore, toCommentsKeyParts} from './commentsStore'
+import {type CommentsOptions} from './commentsOptions'
+import {commentsStore, toCommentsKeyParts} from './commentsStore'
 import {normalizeComment} from './normalizeComment'
 import {
   addComment,

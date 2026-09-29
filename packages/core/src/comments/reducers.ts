@@ -47,30 +47,35 @@ export interface CommentsStoreState {
 }
 
 /**
- * What an entry holds comments for: one GROQ filter, in one organization.
+ * What an entry holds comments for: one GROQ filter.
  *
  * Both read paths reduce to this. A document read derives the filter from the
  * document and the variants asked for; a query read is handed one.
+ *
+ * The organization is deliberately absent. It is resolved asynchronously, and
+ * a key has to be computable inside a selector, so keying on it would force
+ * every read to know it up front. Nothing is lost: a store is bound to one
+ * resource, the filter names the dataset, and a project belongs to a single
+ * organization.
  */
 export interface CommentsKeyParts {
   filter: string
   params: Record<string, unknown>
-  organizationId: string
 }
 
-export function getCommentsKey({filter, params, organizationId}: CommentsKeyParts): string {
+export function getCommentsKey({filter, params}: CommentsKeyParts): string {
   // Parameters are sorted so two callers passing the same ones in a different
   // order address one entry rather than two.
   const sortedParams = Object.keys(params)
     .sort()
     .map((name) => [name, params[name]])
 
-  return JSON.stringify([organizationId, filter, sortedParams])
+  return JSON.stringify([filter, sortedParams])
 }
 
 export function parseCommentsKey(key: string): CommentsKeyParts {
-  const [organizationId, filter, params] = JSON.parse(key) as [string, string, [string, unknown][]]
-  return {organizationId, filter, params: Object.fromEntries(params)}
+  const [filter, params] = JSON.parse(key) as [string, [string, unknown][]]
+  return {filter, params: Object.fromEntries(params)}
 }
 
 /**

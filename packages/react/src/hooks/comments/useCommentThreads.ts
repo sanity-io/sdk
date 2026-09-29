@@ -2,9 +2,9 @@ import {getDocumentCommentsOptionsKey, parseDocumentCommentsOptionsKey} from '@s
 import {
   type CommentsOptions,
   type CommentThread,
-  getDocumentCommentsErrorState,
-  getDocumentCommentsState,
-  resolveDocumentComments,
+  getCommentsErrorState,
+  getCommentThreadsState,
+  resolveCommentThreads,
 } from '@sanity/sdk/collaboration'
 import {useMemo} from 'react'
 
@@ -12,10 +12,10 @@ import {type WithResourceNameSupport} from '../helpers/useNormalizedResourceOpti
 import {type CommentListSource, useCommentList} from './useCommentList'
 
 /**
- * @public
+ * @beta
  * @category Types
  */
-export interface UseDocumentCommentsResult {
+export interface UseCommentThreadsResult {
   /** Matching threads, newest first, each with its replies oldest first. */
   threads: CommentThread[]
   /** True while switching to a different document or filter. */
@@ -29,9 +29,9 @@ export interface UseDocumentCommentsResult {
 }
 
 const SOURCE: CommentListSource<CommentsOptions, CommentThread[]> = {
-  getState: getDocumentCommentsState,
-  getErrorState: getDocumentCommentsErrorState,
-  resolve: resolveDocumentComments,
+  getState: getCommentThreadsState,
+  getErrorState: getCommentsErrorState,
+  resolve: resolveCommentThreads,
   getKey: getDocumentCommentsOptionsKey,
   parseKey: parseDocumentCommentsOptionsKey,
 }
@@ -39,15 +39,12 @@ const SOURCE: CommentListSource<CommentsOptions, CommentThread[]> = {
 /**
  * Reads a document's comment threads and keeps them up to date.
  *
- * Comments are stored per organization, so `collaboration.organizationId` has to
- * be configured — on the Sanity config, or per call.
- *
- * Threads are the default shape: a thread carries its first comment plus its
- * replies, and `status` and `fieldPath` come from that first comment, so
- * filtering by either selects whole threads. Use `variants` to say which
- * versions of the document to pool; by default it follows the perspective in
- * view. Reach for {@link useCommentsQuery} when the question is not "comments on
- * this document".
+ * A thread carries its first comment plus its replies, and `status` and
+ * `fieldPath` come from that first comment, so filtering by either selects
+ * whole threads. Use {@link useComments} to read the same list flat, `variants`
+ * to say which versions of the document to pool — by default it follows the
+ * perspective in view — and {@link useCommentsQuery} when the question is not
+ * "comments on this document".
  *
  * Suspends until the comments have loaded. Switching document or filter is a
  * transition, so the previous list stays on screen and `isPending` goes true
@@ -61,7 +58,7 @@ const SOURCE: CommentListSource<CommentsOptions, CommentThread[]> = {
  * @example Count the open threads on a field
  * ```tsx
  * function TitleCommentCount({documentId}: {documentId: string}) {
- *   const {threads} = useDocumentComments({
+ *   const {threads} = useCommentThreads({
  *     documentId,
  *     documentType: 'article',
  *     fieldPath: 'title',
@@ -72,11 +69,11 @@ const SOURCE: CommentListSource<CommentsOptions, CommentThread[]> = {
  * }
  * ```
  *
- * @public
+ * @beta
  */
-export function useDocumentComments(
+export function useCommentThreads(
   options: WithResourceNameSupport<CommentsOptions>,
-): UseDocumentCommentsResult {
-  const {value, isPending, error} = useCommentList('useDocumentComments', options, SOURCE)
+): UseCommentThreadsResult {
+  const {value, isPending, error} = useCommentList('useCommentThreads', options, SOURCE)
   return useMemo(() => ({threads: value, isPending, error}), [error, isPending, value])
 }

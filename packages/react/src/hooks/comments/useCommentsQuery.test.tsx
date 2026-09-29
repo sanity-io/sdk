@@ -41,7 +41,7 @@ function comment(id: string): Comment {
   }
 }
 
-/** See the equivalent in `useDocumentComments.test.tsx` for why this is keyed. */
+/** See the equivalent in `useCommentThreads.test.tsx` for why this is keyed. */
 function mockSource(
   getCurrent: (options: CommentsQueryOptions) => Comment[] | undefined,
   changed$?: Subject<void>,

@@ -8,13 +8,18 @@ Collaboration features let your app take part in the same workflows people alrea
 
 The SDK reads and writes the same comments the studio shows. A comment hangs off a field of a document, comments with the same `threadId` form a thread, and everything is live: a comment written in the studio appears in your app without a refetch, and the other way around.
 
-This API is in beta. The hooks and types are exported from `@sanity/sdk-react/collaboration`, and the framework-agnostic half from `@sanity/sdk/collaboration`.
+This API is in beta. The hooks and types are exported from `@sanity/sdk-react/collaboration`, and the framework-agnostic half from `@sanity/sdk/collaboration`. The subpath is temporary: these APIs move to the package roots in the next major, once the deprecated add-on dataset ones are out of the way, and `/collaboration` stays as an alias so your imports do not have to change again.
 
-Still on the comment hooks exported from the `@sanity/sdk-react` root? Those are deprecated. The [Migration guide](./0-Migration-Guide.md) covers the move.
+Still on the comment hooks exported from the `@sanity/sdk-react` root? Those are deprecated. They are named the same as the ones here, so the move is a change of import. The [Migration guide](./0-Migration-Guide.md) covers it.
 
 ## Setup
 
-Comments are stored per organization rather than per dataset, so reading or writing one needs an organization id on top of the usual project and dataset. Set it once on your config and every call inherits it:
+Comments are stored per organization rather than per dataset, so reading or writing one needs to know which organization. Usually you do not have to say:
+
+- In the Sanity Dashboard, the app is told which organization it was opened in, and comments follow that.
+- Outside it, comments fall back to the organization that owns the project you are reading.
+
+Set `organizationId` on the config when neither of those is right — a standalone app whose project belongs to one organization but whose comments belong to another:
 
 ```tsx
 import {type SanityConfig} from '@sanity/sdk-react'
@@ -22,37 +27,25 @@ import {type SanityConfig} from '@sanity/sdk-react'
 const config: SanityConfig = {
   projectId: 'abc123',
   dataset: 'production',
-  collaboration: {organizationId: 'oQCq2WEnk'},
+  organizationId: 'oQCq2WEnk',
 }
 ```
 
-A per-call `collaboration` wins over the config, the same way `projectId` and `dataset` do:
+This is unrelated to `auth.oauth.organizationId`, which restricts what the OAuth flow issues tokens for. Setting one does not set the other.
 
-```tsx
-const {threads} = useDocumentComments({
-  documentId,
-  documentType: 'article',
-  collaboration: {organizationId: 'someOtherOrg'},
-})
-```
-
-Without an organization id, every comment call throws:
-
-```text
-Comments require an organization. Pass `collaboration: {organizationId}` to this call, or set it on the Sanity config so every call inherits it.
-```
+Naming an organization the project does not belong to is an error rather than a silent cross-organization read, and the comment call reporting it says so.
 
 Writing also requires a logged-in user, since the server records the author.
 
 ## Reading a document's comments
 
-`useDocumentComments` returns a document's threads and keeps them up to date. A thread carries its first comment plus its replies, so filtering by `status` or `fieldPath` selects whole threads.
+`useComments` returns a document's comments, newest first, replies included. `useCommentThreads` returns the same comments grouped: a thread carries its first comment plus its replies, so filtering by `status` or `fieldPath` selects whole threads rather than individual comments. Both take the same options and read the same list, so using them side by side costs one connection, not two.
 
 ```tsx
-import {useDocumentComments} from '@sanity/sdk-react/collaboration'
+import {useCommentThreads} from '@sanity/sdk-react/collaboration'
 
 function OpenTitleThreads({documentId}: {documentId: string}) {
-  const {threads} = useDocumentComments({
+  const {threads} = useCommentThreads({
     documentId,
     documentType: 'article',
     fieldPath: 'title',
@@ -69,7 +62,9 @@ function OpenTitleThreads({documentId}: {documentId: string}) {
 | `status`    | `'open'` or `'resolved'`. Omit for both.                             |
 | `variants`  | Which versions of the document to pool. Defaults to `'perspective'`. |
 
-`variants` decides which document ids the threads are gathered from:
+`status` and `fieldPath` mean slightly different things to the two hooks. Read as threads they select whole threads, so a resolved parent brings its replies with it. Read flat there is nothing to bring along, and each comment is judged on its own.
+
+`variants` decides which document ids the comments are gathered from:
 
 - `'perspective'` follows what you are viewing: a release shows that release's comments, anything else pools draft and published
 - `'drafts'` pools draft and published and ignores releases
@@ -80,7 +75,7 @@ The hook suspends until the comments have loaded, so wrap it in a Suspense bound
 
 ```tsx
 function Threads({documentId}: {documentId: string}) {
-  const {threads, isPending} = useDocumentComments({documentId, documentType: 'article'})
+  const {threads, isPending} = useCommentThreads({documentId, documentType: 'article'})
 
   return <ul data-pending={isPending}>{threads.map(/* ... */)}</ul>
 }
@@ -92,7 +87,7 @@ Comments arrive over a live connection, and that connection can drop, usually be
 
 ```tsx
 function Threads({documentId}: {documentId: string}) {
-  const {threads, error} = useDocumentComments({documentId, documentType: 'article'})
+  const {threads, error} = useCommentThreads({documentId, documentType: 'article'})
 
   return (
     <>
@@ -122,7 +117,7 @@ function Mentions({userId}: {userId: string}) {
 }
 ```
 
-Suspense, `isPending`, and `error` work the same as in `useDocumentComments`.
+Suspense, `isPending`, and `error` work the same as in `useCommentThreads`.
 
 ## Writing comments
 
@@ -153,7 +148,7 @@ function ResolveButton({commentId}: {commentId: string}) {
 
 ### Optimistic writes and failed creates
 
-Every action writes optimistically: the change shows immediately and rolls back if the server rejects it, so you can render straight from `useDocumentComments` without tracking pending state.
+Every action writes optimistically: the change shows immediately and rolls back if the server rejects it, so you can render straight from `useCommentThreads` without tracking pending state.
 
 Creating is the exception, and `replyToComment` counts as creating. A comment that fails to post stays on screen carrying `state.createError` rather than disappearing, so nobody loses what they typed. Passing the same `commentId` again retries it:
 

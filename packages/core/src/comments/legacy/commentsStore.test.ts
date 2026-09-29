@@ -6,12 +6,11 @@ import {type DocumentResource} from '../../config/sanityConfig'
 import {bindActionByResource} from '../../store/createActionBinder'
 import {createSanityInstance, type SanityInstance} from '../../store/createSanityInstance'
 import {observeAddonDatasetClient} from './addonDatasetStore'
+import {getCommentsOptionsKey, parseCommentsOptionsKey} from './commentsOptions'
 import {
   commentsStore,
-  getCommentsOptionsKey,
   getCommentsState,
   getCommentThreadsState,
-  parseCommentsOptionsKey,
   resolveComments,
 } from './commentsStore'
 import {setPendingTransaction} from './reducers'
