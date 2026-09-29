@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.7.0
+
+### Minor Changes
+
+- [#1343](https://github.com/sanity-io/sdk/pull/1343) [`46ec927`](https://github.com/sanity-io/sdk/commit/46ec9278d44f5a9b75b48401df8c2131b322da88) Thanks [@ryanbonial](https://github.com/ryanbonial)! - Keep local edits when saving them fails with a 401 (for example an expired session), a 408, 429 or 5xx response, a 409 transaction conflict from contention while committing, or a dropped connection. The document store now resubmits the same transaction with backoff, and right away when the credentials change, instead of reverting the edits. Each failed attempt emits a `submission-failed` document event, and `getDocumentSyncStatus` reports the document as not in sync until the transaction is saved. Transactions the server rejects, such as a 400, a 403 or a revision conflict, are still reverted.
+
 ## 3.6.0
 
 ### Minor Changes
