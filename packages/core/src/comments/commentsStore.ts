@@ -331,26 +331,7 @@ function selectComments(
   if (!comments) return undefined
 
   const all = normalizeAll(comments)
-
-  let byFilter = filteredCache.get(all)
-  if (!byFilter) {
-    byFilter = new Map()
-    filteredCache.set(all, byFilter)
-  }
-
-  const cacheKey = toFilterCacheKey(options)
-  const cached = byFilter.get(cacheKey)
-  if (cached) return cached
-
-  const fieldPath =
-    options.fieldPath === undefined ? undefined : toCommentFieldPath(options.fieldPath)
-  const filtered = all.filter((comment) => {
-    if (options.status && comment.status !== options.status) return false
-    if (fieldPath === undefined) return true
-    return comment.fieldPath === fieldPath
-  })
-  byFilter.set(cacheKey, filtered)
-  return filtered
+  return filterCached(filteredCache, all, options, () => all)
 }
 
 function selectCommentThreads(
@@ -362,10 +343,23 @@ function selectCommentThreads(
   const all = selectComments(context, {...options, fieldPath: undefined, status: undefined})
   if (!all) return undefined
 
-  let byFilter = threadCache.get(all)
+  return filterCached(threadCache, all, options, () => buildCommentThreads(all))
+}
+
+/**
+ * Narrows `build()` by the status and field path in `options`, memoized per
+ * source list and filter so a read returns the same array until `source` changes.
+ */
+function filterCached<T extends Pick<Comment, 'status' | 'fieldPath'>>(
+  cache: WeakMap<object, Map<string, T[]>>,
+  source: object,
+  options: CommentsOptions,
+  build: () => T[],
+): T[] {
+  let byFilter = cache.get(source)
   if (!byFilter) {
     byFilter = new Map()
-    threadCache.set(all, byFilter)
+    cache.set(source, byFilter)
   }
 
   const cacheKey = toFilterCacheKey(options)
@@ -374,13 +368,13 @@ function selectCommentThreads(
 
   const fieldPath =
     options.fieldPath === undefined ? undefined : toCommentFieldPath(options.fieldPath)
-  const threads = buildCommentThreads(all).filter((thread) => {
-    if (options.status && thread.parentComment.status !== options.status) return false
+  const filtered = build().filter((item) => {
+    if (options.status && item.status !== options.status) return false
     if (fieldPath === undefined) return true
-    return thread.fieldPath === fieldPath
+    return item.fieldPath === fieldPath
   })
-  byFilter.set(cacheKey, threads)
-  return threads
+  byFilter.set(cacheKey, filtered)
+  return filtered
 }
 
 function selectCommentsQuery(
@@ -554,18 +548,8 @@ export const resolveComments: (
   options: ResolveCommentsOptions,
 ) => Promise<Comment[]> = bindActionByResource(
   commentsStore,
-  (
-    context: StoreContext<CommentsStoreState, BoundResourceKey>,
-    {signal, ...options}: ResolveCommentsOptions,
-  ) => {
-    const withResource = {...options, resource: context.key.resource}
-    return resolveList(
-      context.state,
-      toDocumentCommentsKey(context.instance, withResource),
-      commentsState(context, withResource),
-      signal,
-    )
-  },
+  (context: StoreContext<CommentsStoreState, BoundResourceKey>, options: ResolveCommentsOptions) =>
+    resolveDocumentList(context, options, commentsState),
 )
 
 /**
@@ -578,18 +562,8 @@ export const resolveCommentThreads: (
   options: ResolveCommentsOptions,
 ) => Promise<CommentThread[]> = bindActionByResource(
   commentsStore,
-  (
-    context: StoreContext<CommentsStoreState, BoundResourceKey>,
-    {signal, ...options}: ResolveCommentsOptions,
-  ) => {
-    const withResource = {...options, resource: context.key.resource}
-    return resolveList(
-      context.state,
-      toDocumentCommentsKey(context.instance, withResource),
-      commentThreadsState(context, withResource),
-      signal,
-    )
-  },
+  (context: StoreContext<CommentsStoreState, BoundResourceKey>, options: ResolveCommentsOptions) =>
+    resolveDocumentList(context, options, commentThreadsState),
 )
 
 /**
@@ -615,6 +589,23 @@ export const resolveCommentsQuery: (
     )
   },
 )
+
+function resolveDocumentList<T>(
+  context: StoreContext<CommentsStoreState, BoundResourceKey>,
+  {signal, ...options}: ResolveCommentsOptions,
+  stateSource: (
+    context: StoreContext<CommentsStoreState, BoundResourceKey>,
+    options: WithResource<CommentsOptions>,
+  ) => StateSource<T | undefined>,
+): Promise<T> {
+  const withResource = {...options, resource: context.key.resource}
+  return resolveList(
+    context.state,
+    toDocumentCommentsKey(context.instance, withResource),
+    stateSource(context, withResource),
+    signal,
+  )
+}
 
 function resolveList<T>(
   state: StoreState<CommentsStoreState>,

@@ -1,3 +1,4 @@
+// fallow-ignore-file code-duplication -- deprecated add-on dataset comments, kept alongside comments/ until removal in the next major
 import {type ListenEvent, type SanityClient} from '@sanity/client'
 import {filter, map, Observable, share, switchMap, take} from 'rxjs'
 

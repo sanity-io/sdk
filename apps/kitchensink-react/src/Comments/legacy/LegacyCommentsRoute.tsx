@@ -1,3 +1,4 @@
+// fallow-ignore-file code-duplication -- demo for the deprecated comments API, mirrors CommentsRoute until removal in the next major
 import {randomUuid} from '@sanity/sdk/_internal'
 import {
   type Comment,

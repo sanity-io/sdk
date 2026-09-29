@@ -1,3 +1,4 @@
+// fallow-ignore-file code-duplication duplicate-export -- deprecated add-on dataset comments, kept alongside comments/ until removal in the next major
 import {DocumentId, getPublishedId} from '@sanity/id-utils'
 import {
   catchError,

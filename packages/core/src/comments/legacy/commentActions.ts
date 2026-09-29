@@ -1,3 +1,4 @@
+// fallow-ignore-file code-duplication -- deprecated add-on dataset comments, kept alongside comments/ until removal in the next major
 import {type SanityClient} from '@sanity/client'
 import {DocumentId, getPublishedId} from '@sanity/id-utils'
 import {type Path} from '@sanity/types'

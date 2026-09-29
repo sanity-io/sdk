@@ -1,3 +1,4 @@
+// fallow-ignore-file code-duplication -- deprecated add-on dataset comments, kept alongside comments/ until removal in the next major
 import {omitProperty} from '../../utils/object'
 import {type CommentPostPayload, type StoredComment} from './types'
 

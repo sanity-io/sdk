@@ -1,3 +1,4 @@
+// fallow-ignore-file code-duplication -- deprecated add-on dataset comments, kept alongside hooks/comments/ until removal in the next major
 import {
   type Comment,
   createComment,
