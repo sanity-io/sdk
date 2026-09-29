@@ -23,6 +23,7 @@ test.describe('Portable Text editing across an expired session', () => {
   test('text typed while writes return 401 stays in the editor and is saved once the session is back', async ({
     page,
     createDocuments,
+    getClient,
     getPageContext,
   }) => {
     // ~2s of typing, 3s held, then up to one 10s retry backoff and the echo
@@ -54,10 +55,18 @@ test.describe('Portable Text editing across an expired session', () => {
     const editableA = pageContext.getByTestId('pte-editable-a')
     await expect(editableA).toContainText('Start:')
 
-    // Pane A's preview is its store's local value. Pane B runs on its own
-    // instance and only sees what the server has.
-    const readPreview = async (testId: string) =>
-      plainText(JSON.parse((await pageContext.getByTestId(testId).textContent()) || 'null'))
+    // The preview shows the document store's local value. The server copy is
+    // read with the e2e client, which runs outside the page, so the route
+    // below doesn't touch it. (Both panes share one document store per
+    // resource, so pane B's preview is local state too.)
+    const readLocalCopy = async () =>
+      plainText(
+        JSON.parse((await pageContext.getByTestId('pte-preview-a').textContent()) || 'null'),
+      )
+    const readServerCopy = async () =>
+      plainText(
+        await getClient().fetch('*[_id == $id][0].minimalBlock', {id}, {perspective: 'raw'}),
+      )
 
     // caret at the end of the seed text
     await editableA.click()
@@ -101,13 +110,13 @@ test.describe('Portable Text editing across an expired session', () => {
     // well past the editor plugin's 1s repair window after a reverted write
     await page.waitForTimeout(3000)
     await expect(editableA).toContainText(`Start:${TYPED}`)
-    expect(await readPreview('pte-preview-a')).toBe(`Start:${TYPED}`)
-    expect(await readPreview('pte-preview-b')).toBe('Start:')
+    expect(await readLocalCopy()).toBe(`Start:${TYPED}`)
+    expect(await readServerCopy()).toBe('Start:')
 
     // the session is back: the held writes go through on the next retry
     await page.unroute('**/data/actions/**', expireSession)
-    await expect.poll(() => readPreview('pte-preview-b'), {timeout: 20_000}).toBe(`Start:${TYPED}`)
-    expect(await readPreview('pte-preview-a')).toBe(`Start:${TYPED}`)
+    await expect.poll(readServerCopy, {timeout: 20_000}).toBe(`Start:${TYPED}`)
+    expect(await readLocalCopy()).toBe(`Start:${TYPED}`)
     await expect(editableA).toContainText(`Start:${TYPED}`)
   })
 })
