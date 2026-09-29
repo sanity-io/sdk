@@ -1,6 +1,6 @@
 # Changelog
 
-## [2.20.2](https://github.com/sanity-io/sdk/compare/sdk-react-v2.20.1...sdk-react-v2.20.2) (2026-08-26)
+## 2.20.2 (2026-08-26)
 
 
 ### Dependencies

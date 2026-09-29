@@ -59,8 +59,9 @@ export interface TransactionRevertedEvent {
 /**
  * @beta
  * Event emitted when submitting a transaction fails with an error the store
- * retries: a network failure, a 5xx, 408 or 429 response, or a 401 (for
- * example an expired session). The transaction and its local changes are kept
+ * retries: a network failure, a 5xx, 408 or 429 response, a 401 (for example
+ * an expired session), or a 409 `transactionConflictError` (contention while
+ * committing). The transaction and its local changes are kept
  * and submitted again, so the document stays out of sync until an attempt
  * succeeds. Emitted once per failed attempt; `attempt` starts at 1.
  */
