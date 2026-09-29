@@ -507,7 +507,7 @@ function AnchorFields({
         Block
       </Text>
       <TextInput
-        data-testid="comments-range-key"
+        data-testid="comments-anchor-key"
         value={anchor.start._key}
         onChange={(event) => {
           const _key = event.currentTarget.value
@@ -518,7 +518,7 @@ function AnchorFields({
         from
       </Text>
       <TextInput
-        data-testid="comments-range-start"
+        data-testid="comments-anchor-start"
         value={String(anchor.start.offset)}
         onChange={(event) => setOffset('start', event.currentTarget.value)}
       />
@@ -526,7 +526,7 @@ function AnchorFields({
         to
       </Text>
       <TextInput
-        data-testid="comments-range-end"
+        data-testid="comments-anchor-end"
         value={String(anchor.end.offset)}
         onChange={(event) => setOffset('end', event.currentTarget.value)}
       />

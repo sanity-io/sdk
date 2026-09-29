@@ -9,16 +9,6 @@ import {SanityInstanceContext} from '../../context/SanityInstanceContext'
 type NormalizedResourceFields = 'resourceName' | 'projectId' | 'dataset'
 
 /**
- * `Omit`, one union member at a time.
- *
- * A plain `Omit` collapses a union into its common keys, which loses the
- * relationships option types built as a union of mutually exclusive shapes rely
- * on: a collapsed version satisfies none of the branches. Identical to `Omit`
- * for everything else.
- */
-type OmitNormalizedFields<T> = T extends unknown ? Omit<T, NormalizedResourceFields> : never
-
-/**
  * Adds React hook support (resourceName resolution) to core types.
  * Prefer using the React-layer handle types (ResourceHandle, DocumentHandle)
  * from `@sanity/sdk-react` — this wrapper is kept for cases where overloads
@@ -62,7 +52,7 @@ export function normalizeResourceOptions<
   resources: Record<string, DocumentResource>,
   contextResource?: DocumentResource,
   contextPerspective?: PerspectiveHandle['perspective'],
-): OmitNormalizedFields<T> {
+): Omit<T, NormalizedResourceFields> {
   const {resourceName, projectId, dataset, ...rest} = options
   const resource = options.resource
 
@@ -104,13 +94,11 @@ export function normalizeResourceOptions<
     ? options.perspective
     : contextPerspective
 
-  // Cast because the omit is deferred while `T` is a type parameter, so nothing
-  // built here can be checked against it.
   return {
     ...rest,
     ...(resolvedResource !== undefined && {resource: resolvedResource}),
     ...(resolvedPerspective !== undefined && {perspective: resolvedPerspective}),
-  } as OmitNormalizedFields<T>
+  }
 }
 
 /**

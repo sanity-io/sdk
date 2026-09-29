@@ -6,10 +6,9 @@ import {
   type SanityUser,
 } from '@sanity/sdk'
 import {getUsersKey, parseUsersKey} from '@sanity/sdk/_internal'
-import {useCallback, useMemo, useSyncExternalStore} from 'react'
+import {useCallback, useEffect, useMemo, useState, useSyncExternalStore, useTransition} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
-import {useDeferredRequestKey} from '../helpers/useDeferredRequestKey'
 import {useResolvedProjectId} from '../helpers/useResolvedProjectId'
 import {trackHookUsage} from '../helpers/useTrackHookUsage'
 
@@ -95,6 +94,8 @@ function withResolvedProjectId(
 export function useUsers(options?: GetUsersOptions): UsersResult {
   const instance = useSanityInstance()
   trackHookUsage(instance, 'useUsers')
+  // Use React's useTransition to avoid UI jank when user options change
+  const [isPending, startTransition] = useTransition()
 
   // Resolve the projectId from the ambient project/resource context so a
   // project-scoped users request can pick it up rather than the top-level config.
@@ -105,11 +106,28 @@ export function useUsers(options?: GetUsersOptions): UsersResult {
   )
 
   // Get the unique key for this users request and its options
-  const {deferredKey, signal, isPending} = useDeferredRequestKey(
-    getUsersKey(instance, effectiveOptions),
-  )
+  const key = getUsersKey(instance, effectiveOptions)
+  // Use a deferred state to avoid immediate re-renders when the users request changes
+  const [deferredKey, setDeferredKey] = useState(key)
   // Parse the deferred users key back into users options
   const deferred = useMemo(() => parseUsersKey(deferredKey), [deferredKey])
+
+  // Create an AbortController to cancel in-flight requests when needed
+  const [ref, setRef] = useState<AbortController>(new AbortController())
+
+  // When the users request or options change, start a transition to update the request
+  useEffect(() => {
+    if (key === deferredKey) return
+
+    startTransition(() => {
+      if (!ref.signal.aborted) {
+        ref.abort()
+        setRef(new AbortController())
+      }
+
+      setDeferredKey(key)
+    })
+  }, [deferredKey, key, ref])
 
   // Get the state source for this users request from the users store
   const {getCurrent, subscribe} = useMemo(() => {
@@ -120,7 +138,7 @@ export function useUsers(options?: GetUsersOptions): UsersResult {
   // This is the React Suspense integration - throwing a promise
   // will cause React to show the nearest Suspense fallback
   if (getCurrent() === undefined) {
-    throw resolveUsers(instance, {...deferred, signal})
+    throw resolveUsers(instance, {...deferred, signal: ref.signal})
   }
 
   // Subscribe to updates and get the current data

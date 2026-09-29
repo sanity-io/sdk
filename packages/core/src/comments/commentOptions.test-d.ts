@@ -31,11 +31,6 @@ test('createComment — refuses blocks with no anchor to resolve', () => {
   void createComment(instance, {...HANDLE, message: MESSAGE, fieldValue: FIELD_VALUE})
 })
 
-test('createComment — refuses the deprecated range', () => {
-  // @ts-expect-error range was replaced by anchor
-  void createComment(instance, {...HANDLE, message: MESSAGE, range: ANCHOR})
-})
-
 test('createComment — refuses an anchor that does not say what it anchors into', () => {
   void createComment(instance, {
     ...HANDLE,

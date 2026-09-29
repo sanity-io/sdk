@@ -293,9 +293,9 @@ test.describe('Comments', () => {
 
     // Offsets 6 to 11 cover "World" in the seeded block.
     await app.getByTestId('comments-new-thread-field').selectOption(PORTABLE_TEXT_FIELD)
-    await app.getByTestId('comments-range-key').fill(BLOCK_KEY)
-    await app.getByTestId('comments-range-start').fill('6')
-    await app.getByTestId('comments-range-end').fill('11')
+    await app.getByTestId('comments-anchor-key').fill(BLOCK_KEY)
+    await app.getByTestId('comments-anchor-start').fill('6')
+    await app.getByTestId('comments-anchor-end').fill('11')
     await settle(page, () => startThread(app, 'This word', PORTABLE_TEXT_FIELD))
 
     await expect(app.getByTestId('thread')).toBeVisible()
