@@ -150,10 +150,8 @@ export function getCommentsClient(
  *
  * Long-lived readers must follow this rather than holding a client, because the
  * client store drops every cached client on a token change.
- *
- * @internal
  */
-export function observeCommentsClient(
+function observeCommentsClient(
   instance: SanityInstance,
   options: {resource: DocumentResource; organizationId: string},
 ): Observable<SanityClient> {
