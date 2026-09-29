@@ -5,6 +5,7 @@ import {Route, Routes} from 'react-router'
 import Framed from './Comlink/Framed'
 import ParentApp from './Comlink/ParentApp'
 import {CommentsRoute} from './Comments/CommentsRoute'
+import {LegacyCommentsRoute} from './Comments/legacy/LegacyCommentsRoute'
 import {DocumentDashboardInteractionsRoute} from './DocumentCollection/DocumentDashboardInteractionsRoute'
 import {DocumentEditorRoute} from './DocumentCollection/DocumentEditorRoute'
 import {DocumentGridRoute} from './DocumentCollection/DocumentGridRoute'
@@ -84,6 +85,10 @@ const documentCollectionRoutes = [
   {
     path: 'comments',
     element: <CommentsRoute />,
+  },
+  {
+    path: 'comments-legacy',
+    element: <LegacyCommentsRoute />,
   },
   {
     path: 'portable-text-comments',

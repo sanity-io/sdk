@@ -162,7 +162,9 @@ const watchSubscribedDocuments = ({
 }
 
 export const commentsStore = defineStore<CommentsStoreState, BoundResourceKey>({
-  name: 'Comments',
+  // Stores are registered by name per resource, so sharing a name with the
+  // organization comments store would hand both the same state.
+  name: 'LegacyComments',
   getInitialState: () => ({
     entries: {},
     pendingCreates: {},

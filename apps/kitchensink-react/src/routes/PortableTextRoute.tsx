@@ -35,29 +35,20 @@ import {
   useStyleSelector,
   useToolbarSchema,
 } from '@portabletext/toolbar'
-import {createSanityInstance, isDatasetResource, type SanityInstance} from '@sanity/sdk'
+import {isDatasetResource} from '@sanity/sdk'
 import {
   createDocumentHandle,
   type DocumentHandle,
-  SanityInstanceProvider,
   useDocument,
   useDocuments,
   useResource,
 } from '@sanity/sdk-react'
 import {Badge, Box, Button, Flex, Spinner, Stack, Text, TextInput} from '@sanity/ui'
-import {
-  type JSX,
-  type ReactElement,
-  type ReactNode,
-  Suspense,
-  useEffect,
-  useMemo,
-  useState,
-} from 'react'
+import {type JSX, type ReactElement, Suspense, useMemo, useState} from 'react'
 import {Card} from 'ui5'
 
+import {IsolatedClient} from '../components/IsolatedClient'
 import {PageLayout} from '../components/PageLayout'
-import {isE2E} from '../sanityConfigs'
 
 const PTE_FIELD_PATH = 'minimalBlock'
 
@@ -403,44 +394,6 @@ function EditorPane({
         <FieldPreview docHandle={docHandle} testId={testId} />
       </Stack>
     </Card>
-  )
-}
-
-/**
- * Renders its children inside an independent, explicitly configured
- * SanityInstance so each pane behaves like a separate client: edits
- * round-trip through the Content Lake listener instead of sharing a
- * document store. The explicit projectId/dataset config is also required
- * by the plugin, which calls core APIs on the context instance directly
- * rather than resolving resources from the document handle.
- */
-function IsolatedClient({
-  projectId,
-  dataset,
-  children,
-}: {
-  projectId: string
-  dataset: string
-  children: ReactNode
-}) {
-  const [instance] = useState<SanityInstance>(() =>
-    createSanityInstance({
-      projectId,
-      dataset,
-      // Standalone instances don't inherit SanityApp's config, so in e2e
-      // mode they need the staging API host set explicitly like App.tsx.
-      ...(isE2E ? {auth: {apiHost: 'https://api.sanity.work'}} : {}),
-    }),
-  )
-
-  useEffect(() => {
-    return () => instance.dispose()
-  }, [instance])
-
-  return (
-    <SanityInstanceProvider instance={instance} fallback={<Spinner />}>
-      {children}
-    </SanityInstanceProvider>
   )
 }
 

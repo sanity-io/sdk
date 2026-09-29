@@ -6,7 +6,8 @@ import {
 } from '@portabletext/editor'
 import {NodePlugin} from '@portabletext/editor/plugins'
 import {SDKValuePlugin} from '@portabletext/plugin-sdk-value'
-import {createDocumentHandle, type DocumentHandle} from '@sanity/sdk-react'
+import {type DatasetResource, isDatasetResource} from '@sanity/sdk'
+import {createDocumentHandle, type DocumentHandle, useResource} from '@sanity/sdk-react'
 import {type Comment, useCommentActions, useComments} from '@sanity/sdk-react/collaboration'
 import {Badge, Box, Button, Flex, Spinner, Stack, Text, TextInput} from '@sanity/ui'
 import {type JSX, type PropsWithChildren, Suspense, useCallback, useState} from 'react'
@@ -14,6 +15,7 @@ import {Card} from 'ui5'
 
 import {toMessage, toPlainText} from '../Comments/commentMessage'
 import {useSDKCommentAuthoring, useSDKCommentDecorations} from '../Comments/useSDKComments'
+import {IsolatedClient} from '../components/IsolatedClient'
 import {PageLayout} from '../components/PageLayout'
 import {useDefaultDocumentId} from '../components/useDefaultDocumentId'
 
@@ -47,9 +49,11 @@ function Highlight({children}: PropsWithChildren) {
  */
 function CommentableEditor({
   docHandle,
+  resource,
   comments,
 }: {
   docHandle: DocumentHandle<'author'>
+  resource: DatasetResource
   comments: Comment[]
 }) {
   const {createComment} = useCommentActions()
@@ -79,7 +83,9 @@ function CommentableEditor({
           data-testid="ptc-editable"
         />
       </Card>
-      <SDKValuePlugin {...docHandle} path={FIELD_PATH} />
+      <IsolatedClient projectId={resource.projectId} dataset={resource.dataset}>
+        <SDKValuePlugin {...docHandle} path={FIELD_PATH} />
+      </IsolatedClient>
       <Flex gap={2} align="center">
         <Box flex={1}>
           <TextInput
@@ -128,7 +134,7 @@ function CommentList({comments}: {comments: Comment[]}) {
   )
 }
 
-function InlineComments({documentId}: {documentId: string}) {
+function InlineComments({documentId, resource}: {documentId: string; resource: DatasetResource}) {
   const docHandle = createDocumentHandle({documentType: DOCUMENT_TYPE, documentId})
   const {comments} = useComments({...docHandle, fieldPath: FIELD_PATH})
 
@@ -136,7 +142,7 @@ function InlineComments({documentId}: {documentId: string}) {
     <Flex gap={4} align="flex-start">
       <Card density="regular" style={{flex: 2}}>
         <EditorProvider initialConfig={{schemaDefinition}}>
-          <CommentableEditor docHandle={docHandle} comments={comments} />
+          <CommentableEditor docHandle={docHandle} resource={resource} comments={comments} />
         </EditorProvider>
       </Card>
       <Card density="regular" style={{flex: 1}}>
@@ -148,6 +154,7 @@ function InlineComments({documentId}: {documentId: string}) {
 
 export function PortableTextCollaborationRoute(): JSX.Element {
   const {documentId} = useDefaultDocumentId(DOCUMENT_TYPE)
+  const resource = useResource()
 
   return (
     <PageLayout
@@ -163,8 +170,8 @@ export function PortableTextCollaborationRoute(): JSX.Element {
           is what the highlights are drawn from.
         </Text>
         <Suspense fallback={<Spinner />}>
-          {documentId ? (
-            <InlineComments documentId={documentId} />
+          {documentId && resource && isDatasetResource(resource) ? (
+            <InlineComments documentId={documentId} resource={resource} />
           ) : (
             <Text size={1} muted>
               No author document found.

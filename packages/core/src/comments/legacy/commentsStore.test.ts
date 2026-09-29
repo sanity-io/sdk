@@ -5,6 +5,7 @@ import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 import {type DocumentResource} from '../../config/sanityConfig'
 import {bindActionByResource} from '../../store/createActionBinder'
 import {createSanityInstance, type SanityInstance} from '../../store/createSanityInstance'
+import {commentsStore as organizationCommentsStore} from '../commentsStore'
 import {observeAddonDatasetClient} from './addonDatasetStore'
 import {getCommentsOptionsKey, parseCommentsOptionsKey} from './commentsOptions'
 import {
@@ -414,5 +415,12 @@ describe('listener recovery', () => {
     client$.next(client)
 
     expect(listeners.size).toBe(1)
+  })
+})
+
+describe('store identity', () => {
+  it('is registered apart from the organization comments store', () => {
+    // Both are bound by resource, so one name would give both stores one state.
+    expect(commentsStore.name).not.toBe(organizationCommentsStore.name)
   })
 })

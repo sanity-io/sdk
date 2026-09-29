@@ -15,7 +15,7 @@ import {
 import {type PropsWithChildren, type ReactElement, useMemo} from 'react'
 
 /**
- * Local stand-ins for the comment hooks in `@portabletext/plugin-sdk-comments`,
+ * Local stand-ins for the comment hooks in `@portabletext/plugin-sdk-value`,
  * which still reads the deprecated add-on dataset API. They exist so the
  * kitchensink can exercise the two things the collaboration API added for
  * editors — writing an `anchor`, and resolving the `selection` it comes back
