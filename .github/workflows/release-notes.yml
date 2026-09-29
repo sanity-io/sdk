@@ -19,7 +19,9 @@ jobs:
       # Slack rejects a section block whose text is over 3000 characters, and
       # Changesets release bodies cover both packages, so they run well past
       # that. Split the notes on paragraph breaks into sections of at most
-      # 2900 characters. A message holds at most 50 blocks.
+      # 2900 characters, keeping a code block that contains blank lines in one
+      # piece so its fences land in the same section. A message holds at most
+      # 50 blocks, so the last one links to the release when notes run over.
       - name: Build Slack payload
         id: payload
         env:
@@ -28,23 +30,32 @@ jobs:
           URL: ${{ github.event.release.html_url }}
         run: |
           payload=$(jq -cn --arg notes "$NOTES" --arg name "$NAME" --arg url "$URL" '
+            def fenceOpen: [match("```"; "g")] | length % 2 == 1;
+            def paragraphs:
+              reduce ($notes | split("\n\n")[] | select(length > 0)) as $p ({out: [], open: false};
+                if .open then .out[-1] += "\n\n" + $p else .out += [$p] end
+                | .open = (.out[-1] | fenceOpen))
+              | .out;
             def chunks($max):
               reduce (
-                $notes | split("\n\n")[] | select(length > 0)
-                | . as $p | range(0; length; $max) as $i | $p[$i:$i + $max]
+                paragraphs[] | . as $p | range(0; length; $max) as $i | $p[$i:$i + $max]
               ) as $para ([];
                 if length > 0 and (.[length - 1] | length) + ($para | length) + 2 <= $max
                 then .[length - 1] += "\n\n" + $para
                 else . + [$para]
                 end);
-            {
-              icon_emoji: "ship-it-pirate",
-              text: "New SDK Release Published: \($name)",
-              blocks: ([
-                {type: "header", text: {type: "plain_text", text: "New SDK Release Published!"}},
-                {type: "section", fields: [{type: "mrkdwn", text: "*Name:*\n<\($url)|\($name)>"}]}
-              ] + [chunks(2900)[] | {type: "section", text: {type: "mrkdwn", text: .}}])[:50]
-            }')
+            [chunks(2900)[] | {type: "section", text: {type: "mrkdwn", text: .}}] as $sections
+            | {
+                icon_emoji: "ship-it-pirate",
+                text: "New SDK Release Published: \($name)",
+                blocks: ([
+                  {type: "header", text: {type: "plain_text", text: "New SDK Release Published!"}},
+                  {type: "section", fields: [{type: "mrkdwn", text: "*Name:*\n<\($url)|\($name)>"}]}
+                ] + if ($sections | length) > 48
+                  then $sections[:47] + [{type: "section", text: {type: "mrkdwn", text: "_Notes truncated, see <\($url)|the full release>._"}}]
+                  else $sections
+                  end)
+              }')
           echo "payload=$payload" >> "$GITHUB_OUTPUT"
 
       - name: Send release notes to Slack
