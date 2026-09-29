@@ -1,5 +1,21 @@
 # Changelog
 
+## 3.6.0
+
+### Minor Changes
+
+- [#1319](https://github.com/sanity-io/sdk/pull/1319) [`c307818`](https://github.com/sanity-io/sdk/commit/c3078180d24b5001c49c8e1108d421b6bb166435) Thanks [@gu-stav](https://github.com/gu-stav)! - `useFavorite` and `useUpdateFavorite` work under the message bus through the new `favorites.documents` and `favorites.update` topics.
+
+- [#1326](https://github.com/sanity-io/sdk/pull/1326) [`e83f11c`](https://github.com/sanity-io/sdk/commit/e83f11c0ffdf287eef092094ce558341eaceb04d) Thanks [@joshuaellis](https://github.com/joshuaellis)! - Hidden or unmounted SDK apps close their live connections and presence session about a second after nothing uses them, and reopen them when shown again. `reportPresence` from `@sanity/sdk` now only announces while something subscribes to `getPresence` or `getDocumentPresence`. `useReportPresence` does this for you.
+
+### Patch Changes
+
+- [#1316](https://github.com/sanity-io/sdk/pull/1316) [`8feb564`](https://github.com/sanity-io/sdk/commit/8feb564f9382d7406e4396d2897062f0ba84b125) Thanks [@gu-stav](https://github.com/gu-stav)! - Preload only the chunks a federated expose needs to render. Warming async chunks downloaded every lazily imported chunk of a remote, such as syntax highlighting grammars, before anything asked for them.
+
+- [#1322](https://github.com/sanity-io/sdk/pull/1322) [`5805f05`](https://github.com/sanity-io/sdk/commit/5805f05329a286ef71effd3a2521b04076f9c43d) Thanks [@joshuaellis](https://github.com/joshuaellis)! - SDK apps hidden by React `<Activity>` keep working when shown again, instead of crashing on a disposed Sanity instance. Unmounting `SanityApp` no longer disposes its Sanity instance. To dispose it yourself, for example between tests, create the instance with the same config and render `SanityApp` inside `<SanityInstanceProvider instance={instance}>`, then call `instance.dispose()` when you are done.
+- Updated dependencies [[`59a24ed`](https://github.com/sanity-io/sdk/commit/59a24ed138868846d551311ced6eddb71c14995a), [`d7dbd5e`](https://github.com/sanity-io/sdk/commit/d7dbd5efef057b301935497236bbc6a323840586), [`83ecb66`](https://github.com/sanity-io/sdk/commit/83ecb66fcba81e1dd271e2db52a3494b817b6f59), [`c307818`](https://github.com/sanity-io/sdk/commit/c3078180d24b5001c49c8e1108d421b6bb166435), [`ee458fc`](https://github.com/sanity-io/sdk/commit/ee458fc064de7e38692fea15a074946a245f41b3), [`e83f11c`](https://github.com/sanity-io/sdk/commit/e83f11c0ffdf287eef092094ce558341eaceb04d)]:
+  - @sanity/sdk@3.6.0
+
 ## 3.5.0
 
 ### Minor Changes
