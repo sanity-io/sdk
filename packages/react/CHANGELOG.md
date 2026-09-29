@@ -4,6 +4,9 @@
 
 ### Minor Changes
 
+> [!NOTE]
+> `SanityApp` and `ResourceProvider` no longer dispose their Sanity instance when they unmount. The instance and the stores it created now live until the page reloads. This fixes SDK apps crashing when React `<Activity>` hides and shows them, since React runs the same cleanup for a hidden tree as for an unmounted one. Tests that relied on unmounting to clean up now need to dispose the instance themselves, see [#1322](https://github.com/sanity-io/sdk/pull/1322) below.
+
 - [#1319](https://github.com/sanity-io/sdk/pull/1319) [`c307818`](https://github.com/sanity-io/sdk/commit/c3078180d24b5001c49c8e1108d421b6bb166435) Thanks [@gu-stav](https://github.com/gu-stav)! - `useFavorite` and `useUpdateFavorite` work under the message bus through the new `favorites.documents` and `favorites.update` topics.
 
 - [#1326](https://github.com/sanity-io/sdk/pull/1326) [`e83f11c`](https://github.com/sanity-io/sdk/commit/e83f11c0ffdf287eef092094ce558341eaceb04d) Thanks [@joshuaellis](https://github.com/joshuaellis)! - Hidden or unmounted SDK apps close their live connections and presence session about a second after nothing uses them, and reopen them when shown again. `reportPresence` from `@sanity/sdk` now only announces while something subscribes to `getPresence` or `getDocumentPresence`. `useReportPresence` does this for you.
