@@ -283,6 +283,27 @@ describe('LoginError', () => {
       expect(mockLogout).not.toHaveBeenCalled()
     })
 
+    it('still renders the error when the bus cannot connect', async () => {
+      vi.stubGlobal('__SANITY_APP_ID__', undefined)
+      vi.spyOn(console, 'warn').mockImplementation(() => {})
+      const error = new AuthError(
+        makeClientError(401, {
+          error: {
+            type: 'projectUserNotFoundError',
+            description: 'User is not a member of this project.',
+          },
+        }),
+      )
+
+      render(
+        <ResourceProvider projectId="abc123" dataset="production" fallback={<div>SUSPENDED</div>}>
+          <LoginError error={error} resetErrorBoundary={vi.fn()} />
+        </ResourceProvider>,
+      )
+
+      expect(await screen.findByText('User is not a member of this project.')).toBeInTheDocument()
+    })
+
     it('does not auto-log-out on a non-projectUserNotFound 401 when a bus is installed', async () => {
       const mockReset = vi.fn()
       const error = new AuthError(
