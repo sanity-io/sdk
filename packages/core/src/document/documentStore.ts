@@ -447,8 +447,15 @@ const subscribeToAppliedAndSubmitNextTransaction = ({
 
   return scheduleOutgoingTransactions(state)
     .pipe(
-      // The scheduler has already moved this transaction to `outgoing`. Waiting for a
-      // client with `first()` keeps it queued instead of dropping it.
+      // The scheduler has already moved this transaction to `outgoing`. Wait for a client
+      // instead of dropping the transaction, which would leave the queue blocked for good.
+      // An empty client source errors here, outside the submission retry.
+      concatMap((outgoing) =>
+        clients$.pipe(
+          first(),
+          map(() => outgoing),
+        ),
+      ),
       concatMap((outgoing) => {
         // once the credential changes, a retry after a 401 can go right away
         // instead of waiting out the backoff
