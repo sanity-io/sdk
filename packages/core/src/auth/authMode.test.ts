@@ -1,4 +1,4 @@
-import {describe, expect, it} from 'vitest'
+import {describe, expect, it, onTestFinished} from 'vitest'
 
 import {type SanityConfig} from '../config/sanityConfig'
 import {installMessageBus} from '../dashboard/messageBus/bus'
@@ -18,11 +18,10 @@ describe('resolveAuthMode', () => {
 
   it('returns "dashboard" when a message bus is installed', () => {
     installMessageBus({appId: 'dashboard'})
-    try {
-      expect(resolveAuthMode({}, 'https://example.com')).toBe('dashboard')
-    } finally {
+    onTestFinished(() => {
       delete (globalThis as {[key: symbol]: unknown})[Symbol.for('sanity.os.bus')]
-    }
+    })
+    expect(resolveAuthMode({}, 'https://example.com')).toBe('dashboard')
   })
 
   it('returns "standalone" by default', () => {
@@ -43,6 +42,17 @@ describe('resolveAuthMode', () => {
       auth: {oauth: {clientId: 'c', redirectUri: 'https://app/cb', organizationId: 'o'}},
     }
     expect(resolveAuthMode(config, href)).toBe('oauth')
+  })
+
+  it('prefers "oauth" over an installed message bus', () => {
+    installMessageBus({appId: 'dashboard'})
+    onTestFinished(() => {
+      delete (globalThis as {[key: symbol]: unknown})[Symbol.for('sanity.os.bus')]
+    })
+    const config: SanityConfig = {
+      auth: {oauth: {clientId: 'c', redirectUri: 'https://app/cb', organizationId: 'o'}},
+    }
+    expect(resolveAuthMode(config, 'https://example.com')).toBe('oauth')
   })
 
   it('prefers "studio" over oauth config', () => {

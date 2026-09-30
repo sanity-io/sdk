@@ -3,6 +3,7 @@ import {type CurrentUser} from '@sanity/types'
 import {NEVER, type Subscription} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
+import {installMessageBus} from '../dashboard/messageBus/bus'
 import {createSanityInstance} from '../store/createSanityInstance'
 import {AuthStateType} from './authStateType'
 import {
@@ -906,6 +907,29 @@ describe('authStore', () => {
 
       const organizationId = getDashboardOrganizationId(instance)
       expect(organizationId.getCurrent()).toBeUndefined()
+    })
+  })
+
+  describe('under the message bus', () => {
+    let instance: ReturnType<typeof createSanityInstance>
+
+    beforeEach(() => {
+      installMessageBus({appId: 'dashboard'})
+      instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+    })
+
+    afterEach(() => {
+      instance.dispose()
+      delete (globalThis as {[key: symbol]: unknown})[Symbol.for('sanity.os.bus')]
+    })
+
+    it('sets to logged out without storage (ignores storage token)', () => {
+      vi.mocked(getAuthCode).mockReturnValue(null)
+      vi.mocked(getTokenFromStorage).mockReturnValue('storage-token')
+
+      const {authState, options} = authStore.getInitialState(instance, null)
+      expect(authState).toMatchObject({type: AuthStateType.LOGGED_OUT})
+      expect(options.storageArea).toBeUndefined()
     })
   })
 
