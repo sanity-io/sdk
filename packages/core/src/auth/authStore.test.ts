@@ -3,6 +3,7 @@ import {type CurrentUser} from '@sanity/types'
 import {NEVER, type Subscription} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
+import {uninstallTestMessageBus} from '../dashboard/messageBus/__fixtures__/uninstallTestMessageBus'
 import {installMessageBus} from '../dashboard/messageBus/bus'
 import {createSanityInstance} from '../store/createSanityInstance'
 import {AuthStateType} from './authStateType'
@@ -915,21 +916,33 @@ describe('authStore', () => {
 
     beforeEach(() => {
       installMessageBus({appId: 'dashboard'})
-      instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+      const storageArea = {getItem: vi.fn(), setItem: vi.fn(), removeItem: vi.fn()}
+      instance = createSanityInstance({
+        projectId: 'p',
+        dataset: 'd',
+        auth: {storageArea: storageArea as unknown as Storage},
+      })
     })
 
     afterEach(() => {
       instance.dispose()
-      delete (globalThis as {[key: symbol]: unknown})[Symbol.for('sanity.os.bus')]
+      uninstallTestMessageBus()
     })
 
-    it('sets to logged out without storage (ignores storage token)', () => {
+    it('sets to logged out without storage (ignores the configured storage and its token)', () => {
       vi.mocked(getAuthCode).mockReturnValue(null)
       vi.mocked(getTokenFromStorage).mockReturnValue('storage-token')
 
       const {authState, options} = authStore.getInitialState(instance, null)
       expect(authState).toMatchObject({type: AuthStateType.LOGGED_OUT})
       expect(options.storageArea).toBeUndefined()
+    })
+
+    it('does not subscribe to storage events', () => {
+      getAuthState(instance)
+
+      expect(subscribeToStateAndFetchCurrentUser).toHaveBeenCalled()
+      expect(subscribeToStorageEventsAndSetToken).not.toHaveBeenCalled()
     })
   })
 

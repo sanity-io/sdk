@@ -43,7 +43,7 @@ function parseDashboardContext(locationHref: string): DashboardContext {
 /**
  * Resolves the initial auth state for Dashboard mode.
  *
- * In dashboard mode the token is provided by the parent frame via Comlink,
+ * In dashboard mode the token is provided by the message bus or the parent frame via Comlink,
  * so the SDK starts in a `LOGGED_OUT` state and waits for the token to arrive.
  * The `_context` URL parameter provides dashboard metadata (orgId, mode, env).
  *
@@ -85,7 +85,7 @@ export function getDashboardInitialState(options: AuthStrategyOptions): AuthStra
     }
   }
 
-  // Default: logged out, waiting for Comlink to provide token
+  // Default: logged out, waiting for the dashboard to provide token
   return {
     authState: {type: AuthStateType.LOGGED_OUT, isDestroyingSession: false},
     storageKey,

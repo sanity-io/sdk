@@ -1,5 +1,5 @@
 import {type SanityConfig} from '../config/sanityConfig'
-import {isDashboardEnvironment} from '../dashboard/messageBus/store'
+import {isMessageBusInstalled} from '../dashboard/messageBus/installed'
 import {DEFAULT_BASE} from './authConstants'
 
 /**
@@ -9,8 +9,8 @@ import {DEFAULT_BASE} from './authConstants'
  *                  Studio's localStorage entry or via cookie auth.
  * - `oauth`      — Configured with `auth.oauth`. Authenticates via Sanity's
  *                  OAuth 2.0 authorization-code + PKCE flow.
- * - `dashboard`  — Running inside the Sanity Dashboard iframe. Token is
- *                  provided by the parent frame via Comlink.
+ * - `dashboard`  — Running inside the Sanity Dashboard. Token is provided by
+ *                  the message bus `auth.token` topic, or by the parent frame via Comlink.
  * - `standalone` — Running as an independent app. Token comes from
  *                  localStorage or the OAuth login flow.
  *
@@ -25,7 +25,7 @@ type AuthMode = 'studio' | 'oauth' | 'dashboard' | 'standalone'
  * 1. `studio` config provided → `'studio'`
  * 2. `auth.oauth` config provided → `'oauth'` (explicit config wins over
  *    environment detection)
- * 3. Dashboard context detected (`_context` URL param with content) → `'dashboard'`
+ * 3. Message bus installed, or dashboard context detected (`_context` URL param with content) → `'dashboard'`
  * 4. Otherwise → `'standalone'`
  *
  * @internal
@@ -33,7 +33,7 @@ type AuthMode = 'studio' | 'oauth' | 'dashboard' | 'standalone'
 export function resolveAuthMode(config: SanityConfig, locationHref: string): AuthMode {
   if (isStudioConfig(config)) return 'studio'
   if (config.auth?.oauth) return 'oauth'
-  if (isDashboardEnvironment() || detectDashboardContext(locationHref)) return 'dashboard'
+  if (isMessageBusInstalled() || detectDashboardContext(locationHref)) return 'dashboard'
   return 'standalone'
 }
 

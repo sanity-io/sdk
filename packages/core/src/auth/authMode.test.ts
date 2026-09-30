@@ -1,6 +1,7 @@
 import {describe, expect, it, onTestFinished} from 'vitest'
 
 import {type SanityConfig} from '../config/sanityConfig'
+import {uninstallTestMessageBus} from '../dashboard/messageBus/__fixtures__/uninstallTestMessageBus'
 import {installMessageBus} from '../dashboard/messageBus/bus'
 import {isStudioConfig, resolveAuthMode} from './authMode'
 
@@ -18,9 +19,7 @@ describe('resolveAuthMode', () => {
 
   it('returns "dashboard" when a message bus is installed', () => {
     installMessageBus({appId: 'dashboard'})
-    onTestFinished(() => {
-      delete (globalThis as {[key: symbol]: unknown})[Symbol.for('sanity.os.bus')]
-    })
+    onTestFinished(uninstallTestMessageBus)
     expect(resolveAuthMode({}, 'https://example.com')).toBe('dashboard')
   })
 
@@ -46,9 +45,7 @@ describe('resolveAuthMode', () => {
 
   it('prefers "oauth" over an installed message bus', () => {
     installMessageBus({appId: 'dashboard'})
-    onTestFinished(() => {
-      delete (globalThis as {[key: symbol]: unknown})[Symbol.for('sanity.os.bus')]
-    })
+    onTestFinished(uninstallTestMessageBus)
     const config: SanityConfig = {
       auth: {oauth: {clientId: 'c', redirectUri: 'https://app/cb', organizationId: 'o'}},
     }
