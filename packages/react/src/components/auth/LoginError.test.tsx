@@ -1,5 +1,7 @@
 import {ClientError} from '@sanity/client'
 import {getIsInDashboardState} from '@sanity/sdk'
+import {installMessageBus, resetMessageBus} from '@sanity/sdk/_internal'
+import {type MessageBusHost, type PayloadOf} from '@sanity/sdk/dashboard'
 import {fireEvent, render, screen, waitFor} from '@testing-library/react'
 import {afterEach, beforeEach, describe, expect, it, type Mock, vi} from 'vitest'
 
@@ -236,5 +238,68 @@ describe('LoginError', () => {
     expect(mockReset).not.toHaveBeenCalled()
     // Generic 401s should not trigger the dashboard access request flow.
     expect(mockWindowConnectionFetch).not.toHaveBeenCalled()
+  })
+
+  describe('under the message bus', () => {
+    const MESSAGE_BUS_KEY = Symbol.for('sanity.os.bus')
+    let host: MessageBusHost
+
+    beforeEach(() => {
+      vi.stubGlobal('__SANITY_APP_ID__', 'app')
+      host = installMessageBus({appId: 'dashboard'})
+    })
+
+    afterEach(() => {
+      resetMessageBus()
+      delete (globalThis as {[MESSAGE_BUS_KEY]?: unknown})[MESSAGE_BUS_KEY]
+      vi.unstubAllGlobals()
+    })
+
+    it('requests project access over the bus on a 401 projectUserNotFound error', async () => {
+      const requests: PayloadOf<'access.request'>[] = []
+      host.subscribe('access.request', (message) => {
+        requests.push(message.payload)
+        message.reply({ok: true})
+      })
+      const error = new AuthError(
+        makeClientError(401, {
+          error: {
+            type: 'projectUserNotFoundError',
+            description: 'User is not a member of this project.',
+          },
+        }),
+      )
+
+      render(
+        <ResourceProvider projectId="abc123" dataset="production" fallback={<div>SUSPENDED</div>}>
+          <LoginError error={error} resetErrorBoundary={vi.fn()} />
+        </ResourceProvider>,
+      )
+
+      await waitFor(() => {
+        expect(requests).toEqual([{resourceType: 'project', resourceId: 'abc123'}])
+      })
+      expect(mockWindowConnectionFetch).not.toHaveBeenCalled()
+      expect(mockLogout).not.toHaveBeenCalled()
+    })
+
+    it('does not auto-log-out on a non-projectUserNotFound 401 when a bus is installed', async () => {
+      const mockReset = vi.fn()
+      const error = new AuthError(
+        makeClientError(401, {error: {type: 'someOther401Type', description: 'Token is invalid'}}),
+      )
+
+      render(
+        <ResourceProvider projectId="abc123" dataset="production" fallback={null}>
+          <LoginError error={error} resetErrorBoundary={mockReset} />
+        </ResourceProvider>,
+      )
+
+      expect(
+        await screen.findByText('Please try again or contact support if the problem persists.'),
+      ).toBeInTheDocument()
+      expect(mockLogout).not.toHaveBeenCalled()
+      expect(mockReset).not.toHaveBeenCalled()
+    })
   })
 })
