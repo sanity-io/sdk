@@ -8,7 +8,7 @@ import {
   MessageParseError,
   type SanityClient,
 } from '@sanity/client'
-import {Subject, Subscription, throwError} from 'rxjs'
+import {concat, of, Subject, Subscription, throwError} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {
@@ -68,6 +68,50 @@ describe('observeQueryChanges', () => {
     const previousCalls = listen.mock.calls.length
     await vi.advanceTimersByTimeAsync(60000)
     expect(listen).toHaveBeenCalledTimes(previousCalls)
+  })
+
+  it('backs off welcome-then-error loops instead of resetting on each welcome', async () => {
+    listen.mockReturnValue(
+      concat(
+        of({type: 'welcome'} as ListenEvent),
+        throwError(() => new MessageError('server error', {})),
+      ),
+    )
+    subscription.add(observeQueryChanges(client, {tag: 'test'}).subscribe())
+    for (const delay of [1000, 2000, 4000, 8000, 16000, 30000, 30000]) {
+      const previousCalls = listen.mock.calls.length
+      await vi.advanceTimersByTimeAsync(delay - 1)
+      expect(listen).toHaveBeenCalledTimes(previousCalls)
+      await vi.advanceTimersByTimeAsync(1)
+      expect(listen).toHaveBeenCalledTimes(previousCalls + 1)
+    }
+  })
+
+  it('resets backoff after a stable connection, including an idle dataset', async () => {
+    listen.mockReturnValueOnce(throwError(() => new MessageError('server error', {})))
+    subscription.add(observeQueryChanges(client, {tag: 'test'}).subscribe())
+    await vi.advanceTimersByTimeAsync(1000)
+    events.next({type: 'welcome'} as ListenEvent)
+    await vi.advanceTimersByTimeAsync(30000)
+    events.error(new MessageError('server error', {}))
+    await vi.advanceTimersByTimeAsync(999)
+    expect(listen).toHaveBeenCalledTimes(2)
+    await vi.advanceTimersByTimeAsync(1)
+    expect(listen).toHaveBeenCalledTimes(3)
+  })
+
+  it('does not count time disconnected as a stable connection', async () => {
+    listen.mockReturnValueOnce(throwError(() => new MessageError('server error', {})))
+    subscription.add(observeQueryChanges(client, {tag: 'test'}).subscribe())
+    await vi.advanceTimersByTimeAsync(1000)
+    events.next({type: 'welcome'} as ListenEvent)
+    events.next({type: 'reconnect'} as ListenEvent)
+    await vi.advanceTimersByTimeAsync(30000)
+    events.error(new MessageError('server error', {}))
+    await vi.advanceTimersByTimeAsync(1999)
+    expect(listen).toHaveBeenCalledTimes(2)
+    await vi.advanceTimersByTimeAsync(1)
+    expect(listen).toHaveBeenCalledTimes(3)
   })
 
   it.each([new CorsOriginError({projectId: 'test'}), new ChannelError('invalid query', {})])(
