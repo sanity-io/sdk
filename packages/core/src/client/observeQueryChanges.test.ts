@@ -70,18 +70,33 @@ describe('observeQueryChanges', () => {
     expect(listen).toHaveBeenCalledTimes(previousCalls)
   })
 
+  it.each([new CorsOriginError({projectId: 'test'}), new ChannelError('invalid query', {})])(
+    'surfaces $name without retrying a rejected listener',
+    async (error) => {
+      listen.mockReturnValue(throwError(() => error))
+      const onError = vi.fn()
+      subscription.add(observeQueryChanges(client, {tag: 'test'}).subscribe({error: onError}))
+      await vi.advanceTimersByTimeAsync(60000)
+      expect(listen).toHaveBeenCalledTimes(1)
+      expect(onError).toHaveBeenCalledExactlyOnceWith(error)
+    },
+  )
+
   it.each([
     new ConnectionFailedError('expired token', {status: 401}),
-    new CorsOriginError({projectId: 'test'}),
+    new ConnectionFailedError('forbidden', {status: 403}),
     new DisconnectError('dataset removed'),
-    new ChannelError('invalid query', {}),
-  ])('surfaces $name without retrying a rejected listener', async (error) => {
+  ])('ends invalidation after $name without failing readable query data', async (error) => {
     listen.mockReturnValue(throwError(() => error))
     const onError = vi.fn()
-    subscription.add(observeQueryChanges(client, {tag: 'test'}).subscribe({error: onError}))
+    const complete = vi.fn()
+    subscription.add(
+      observeQueryChanges(client, {tag: 'test'}).subscribe({error: onError, complete}),
+    )
     await vi.advanceTimersByTimeAsync(60000)
     expect(listen).toHaveBeenCalledTimes(1)
-    expect(onError).toHaveBeenCalledExactlyOnceWith(error)
+    expect(onError).not.toHaveBeenCalled()
+    expect(complete).toHaveBeenCalledTimes(1)
   })
 
   it('cancels a pending indexing refresh on unsubscribe', async () => {

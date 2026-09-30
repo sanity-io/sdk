@@ -1,5 +1,7 @@
 import {
   ConnectionFailedError,
+  CorsOriginError,
+  DisconnectError,
   type ListenEvent,
   type RawQuerylessQueryResponse,
   type SanityClient,
@@ -376,10 +378,10 @@ describe('queryStore', () => {
     expect(fetch).toHaveBeenCalledTimes(3)
   })
 
-  it.each(['welcome', 'reconnect'] as const)('refetches on %s', async (type) => {
+  it('refetches after the listener welcomes the connection', async () => {
     getQueryState(instance, {query: '*'}).subscribe()
     await vi.advanceTimersByTimeAsync(10)
-    listenerEvents.next({type} as ListenEvent)
+    listenerEvents.next({type: 'welcome'} as ListenEvent)
     await settleChanges()
     expect(fetch).toHaveBeenCalledTimes(2)
   })
@@ -486,8 +488,9 @@ describe('queryStore', () => {
     const state = getQueryState(instance, {query: '*'})
     state.subscribe()
     await vi.advanceTimersByTimeAsync(10)
-    listenerEvents.error(new ConnectionFailedError('expired token', {status: 401}))
-    expect(() => state.getCurrent()).toThrow('expired token')
+    const error = new CorsOriginError({projectId: 'test'})
+    listenerEvents.error(error)
+    expect(() => state.getCurrent()).toThrow(error)
     await vi.advanceTimersByTimeAsync(5000)
     expect(listen).toHaveBeenCalledTimes(1)
     const nextEvents = new Subject<ListenEvent>()
@@ -499,6 +502,49 @@ describe('queryStore', () => {
     nextEvents.next({type: 'welcome'} as ListenEvent)
     await settleChanges()
     expect(state.getCurrent()).toEqual(mockData.movies)
+  })
+
+  it.each([new ConnectionFailedError('expired token', {status: 401}), new DisconnectError('stop')])(
+    'keeps queries subscribed after $name and recovers when credentials change',
+    async (error) => {
+      const state = getQueryState(instance, {query: '*'})
+      const onError = vi.fn()
+      const subscription = state.observable.subscribe({error: onError})
+      await vi.advanceTimersByTimeAsync(10)
+      listenerEvents.error(error)
+      await vi.advanceTimersByTimeAsync(5000)
+      expect(state.getCurrent()).toEqual(mockData.movies)
+      expect(onError).not.toHaveBeenCalled()
+      expect(subscription.closed).toBe(false)
+      expect(listen).toHaveBeenCalledTimes(1)
+      const nextEvents = new Subject<ListenEvent>()
+      vi.mocked(fetch).mockReturnValue(of({result: 'new credentials', ms: 0}))
+      clients.next({
+        ...client,
+        observable: {fetch, listen: () => nextEvents},
+      } as unknown as SanityClient)
+      await settleChanges()
+      expect(nextEvents.observed).toBe(true)
+      expect(state.getCurrent()).toBe('new credentials')
+      subscription.unsubscribe()
+    },
+  )
+
+  it('waits for welcome after reconnect and catches writes missed during establishment', async () => {
+    const state = getQueryState(instance, {query: '*'})
+    state.subscribe()
+    await vi.advanceTimersByTimeAsync(10)
+    expect(state.getCurrent()).toEqual(mockData.movies)
+    listenerEvents.next({type: 'reconnect'} as ListenEvent)
+    await settleChanges()
+    expect(fetch).toHaveBeenCalledTimes(1)
+    // The initial read preceded a write, but the listener opened after that write.
+    // No mutation event exists to deliver; the first welcome must refetch it.
+    vi.mocked(fetch).mockReturnValue(of({result: 'missed write', ms: 0}))
+    listenerEvents.next({type: 'welcome'} as ListenEvent)
+    await settleChanges()
+    expect(fetch).toHaveBeenCalledTimes(2)
+    expect(state.getCurrent()).toBe('missed write')
   })
 
   it('cancels pending refreshes when a query is removed', async () => {

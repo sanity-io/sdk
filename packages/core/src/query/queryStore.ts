@@ -62,11 +62,12 @@ export interface QueryOptions<
   TProjectId extends string = string,
 >
   extends
-    Pick<ResponseQueryOptions, 'useCdn' | 'cache' | 'next' | 'cacheMode' | 'tag'>,
+    Pick<ResponseQueryOptions, 'cache' | 'next' | 'cacheMode' | 'tag'>,
     DatasetHandle<TDataset, TProjectId> {
   /**
    * Retained for compatibility. SDK queries always bypass the CDN because listener
    * notifications cannot invalidate cached query responses.
+   * @deprecated SDK queries always bypass the CDN.
    */
   useCdn?: boolean
   query: TQuery

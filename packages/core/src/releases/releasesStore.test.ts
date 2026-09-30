@@ -1,5 +1,5 @@
 import {
-  ConnectionFailedError,
+  CorsOriginError,
   type ListenEvent,
   type ReleaseDocument,
   type SanityClient,
@@ -294,7 +294,7 @@ describe('releasesStore', () => {
       const state = getActiveReleasesState(instance)
       state.subscribe()
       await vi.advanceTimersByTimeAsync(10)
-      const error = new ConnectionFailedError('expired token', {status: 401})
+      const error = new CorsOriginError({projectId: 'test'})
       if (failure === 'listener') events.error(error)
       else responses.error(error)
       expect(() => state.getCurrent()).toThrow(error)

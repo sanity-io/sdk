@@ -1,4 +1,9 @@
-import {type ListenEvent, type ReleaseDocument, type SanityClient} from '@sanity/client'
+import {
+  ConnectionFailedError,
+  type ListenEvent,
+  type ReleaseDocument,
+  type SanityClient,
+} from '@sanity/client'
 import {BehaviorSubject, of, Subject, Subscription, throwError} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
@@ -124,10 +129,13 @@ describe('observeReleases', () => {
     expect(emissions).toEqual([[release]])
   })
 
-  it.each(['welcome', 'reconnect'] as const)('refreshes on %s', async (type) => {
+  it('refreshes after welcome rather than while reconnecting', async () => {
     observe()
     await settle()
-    events.next({type} as ListenEvent)
+    events.next({type: 'reconnect'} as ListenEvent)
+    await settle()
+    expect(fetch).toHaveBeenCalledTimes(1)
+    events.next({type: 'welcome'} as ListenEvent)
     await settle()
     expect(fetch).toHaveBeenCalledTimes(2)
   })
@@ -161,6 +169,25 @@ describe('observeReleases', () => {
     await settle()
     expect(nextEvents.observed).toBe(true)
     expect(fetch).toHaveBeenCalledTimes(2)
+  })
+
+  it('retains releases through listener token expiration and refreshes with the next client', async () => {
+    const onError = vi.fn()
+    const emissions = observe(onError)
+    await settle()
+    events.error(new ConnectionFailedError('expired token', {status: 401}))
+    await vi.advanceTimersByTimeAsync(5000)
+    expect(emissions).toEqual([[release]])
+    expect(onError).not.toHaveBeenCalled()
+    expect(listen).toHaveBeenCalledTimes(1)
+    const updated = {...release, metadata: {...release.metadata, title: 'Updated'}}
+    const nextEvents = new Subject<ListenEvent>()
+    clients.next({
+      observable: {fetch: () => of({result: [updated]}), listen: () => nextEvents},
+    } as unknown as SanityClient)
+    await settle()
+    expect(nextEvents.observed).toBe(true)
+    expect(emissions).toEqual([[release], [updated]])
   })
 
   it('cancels a trailing fetch on unsubscribe', async () => {
