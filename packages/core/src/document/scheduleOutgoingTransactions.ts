@@ -29,6 +29,7 @@ export function scheduleOutgoingTransactions(
   state: StoreState<SyncTransactionState>,
 ): Observable<OutgoingTransaction> {
   return defer(() => {
+    // Timer deadlines must not move when the system clock is corrected.
     let nextEditSubmissionAt = 0
 
     return state.observable.pipe(
@@ -41,7 +42,7 @@ export function scheduleOutgoingTransactions(
         // Flush the FIFO prefix when any ready transaction requires its own
         // request. The reducer still decides which adjacent edits can be combined.
         const flush = pending.some((transaction) => !isBatchableTransaction(transaction))
-        const delay = flush ? 0 : Math.max(0, nextEditSubmissionAt - Date.now())
+        const delay = flush ? 0 : Math.max(0, nextEditSubmissionAt - performance.now())
         // Even an immediate flush uses the next scheduler turn. This avoids
         // reentrant submission while local application/acknowledgement is emitting.
         return timer(delay)
@@ -50,7 +51,7 @@ export function scheduleOutgoingTransactions(
       filter((next) => !!next.outgoing),
       tap((next) => {
         if (!next.outgoing!.disableBatching) {
-          nextEditSubmissionAt = Date.now() + EDIT_BATCH_INTERVAL
+          nextEditSubmissionAt = performance.now() + EDIT_BATCH_INTERVAL
         }
         state.set('transitionAppliedTransactionsToOutgoing', next)
       }),
