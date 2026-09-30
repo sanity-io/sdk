@@ -170,8 +170,6 @@ const listenForNewSubscribersAndFetch = ({
             const {
               query,
               params,
-              projectId,
-              dataset,
               tag,
               resource,
               perspective: perspectiveFromOptions,
@@ -189,8 +187,6 @@ const listenForNewSubscribersAndFetch = ({
 
             const client$ = getClientState(instance, {
               apiVersion: QUERY_STORE_API_VERSION,
-              projectId,
-              dataset,
               resource,
             }).observable
 

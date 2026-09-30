@@ -107,6 +107,19 @@ describe('queryStore', () => {
     vi.useRealTimers()
   })
 
+  it.each([{projectId: 'other'}, {dataset: 'other'}])(
+    'rejects a partial dataset override without dataset defaults: %o',
+    (override) => {
+      instance.dispose()
+      instance = createSanityInstance({resource: {mediaLibraryId: 'library'}})
+      const options = {query: '*', ...override}
+      const message = 'Query dataset overrides require both a projectId and dataset.'
+      expect(() => getQueryState(instance, options)).toThrow(message)
+      expect(() => resolveQuery(instance, options)).toThrow(message)
+      expect(getClientState).not.toHaveBeenCalled()
+    },
+  )
+
   it('initializes query state and cleans up after unsubscribe', async () => {
     const query = '*[_type == "movie"]'
     const state = getQueryState(instance, {query})
@@ -755,7 +768,6 @@ describe('queryStore', () => {
     await advanceAndAwait(firstValueFrom(state.observable.pipe(filter((i) => i !== undefined))))
 
     // Verify getClientState was called with the resource from params in listenForNewSubscribersAndFetch
-    // This call includes projectId, dataset, and resource
     expect(getClientState).toHaveBeenCalledWith(
       instance,
       expect.objectContaining({

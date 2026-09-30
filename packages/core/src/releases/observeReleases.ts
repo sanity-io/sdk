@@ -35,6 +35,11 @@ export function observeReleases(
         query: RELEASES_LISTEN_QUERY,
         tag: 'releases.listen',
       }).pipe(
+        // Completing the listener must allow an in-flight fetch to finish.
+        catchError((error: unknown) => {
+          onError(error)
+          return EMPTY
+        }),
         startWith(undefined),
         exhaustMapWithTrailing(() =>
           defer(() =>
@@ -60,10 +65,6 @@ export function observeReleases(
             }),
           ),
         ),
-        catchError((error: unknown) => {
-          onError(error)
-          return EMPTY
-        }),
       )
     }),
   )

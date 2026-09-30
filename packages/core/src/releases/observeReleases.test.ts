@@ -198,6 +198,23 @@ describe('observeReleases', () => {
     expect(fetch).toHaveBeenCalledTimes(2)
   })
 
+  it('finishes an in-flight fetch when the listener fails', async () => {
+    const pending = new Subject<{result: ReleaseDocument[]}>()
+    fetch.mockReturnValueOnce(pending)
+    const onError = vi.fn()
+    const emissions = observe(onError)
+    await settle()
+    expect(pending.observed).toBe(true)
+    const error = new Error('listener unavailable')
+    events.error(error)
+    expect(onError).toHaveBeenCalledExactlyOnceWith(error)
+    expect(pending.observed).toBe(true)
+    pending.next({result: [release]})
+    pending.complete()
+    await settle()
+    expect(emissions).toEqual([[release]])
+  })
+
   it('retains releases through listener token expiration and refreshes with the next client', async () => {
     const onError = vi.fn()
     const emissions = observe(onError)
