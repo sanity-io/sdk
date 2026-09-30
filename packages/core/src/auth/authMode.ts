@@ -1,4 +1,5 @@
 import {type SanityConfig} from '../config/sanityConfig'
+import {isDashboardEnvironment} from '../dashboard/messageBus/store'
 import {DEFAULT_BASE} from './authConstants'
 
 /**
@@ -32,7 +33,7 @@ type AuthMode = 'studio' | 'oauth' | 'dashboard' | 'standalone'
 export function resolveAuthMode(config: SanityConfig, locationHref: string): AuthMode {
   if (isStudioConfig(config)) return 'studio'
   if (config.auth?.oauth) return 'oauth'
-  if (detectDashboardContext(locationHref)) return 'dashboard'
+  if (isDashboardEnvironment() || detectDashboardContext(locationHref)) return 'dashboard'
   return 'standalone'
 }
 

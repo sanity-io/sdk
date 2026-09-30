@@ -1,6 +1,7 @@
 import {describe, expect, it} from 'vitest'
 
 import {type SanityConfig} from '../config/sanityConfig'
+import {installMessageBus} from '../dashboard/messageBus/bus'
 import {isStudioConfig, resolveAuthMode} from './authMode'
 
 describe('resolveAuthMode', () => {
@@ -13,6 +14,15 @@ describe('resolveAuthMode', () => {
     const context = encodeURIComponent(JSON.stringify({orgId: '123'}))
     const href = `https://example.com?_context=${context}`
     expect(resolveAuthMode({}, href)).toBe('dashboard')
+  })
+
+  it('returns "dashboard" when a message bus is installed', () => {
+    installMessageBus({appId: 'dashboard'})
+    try {
+      expect(resolveAuthMode({}, 'https://example.com')).toBe('dashboard')
+    } finally {
+      delete (globalThis as {[key: symbol]: unknown})[Symbol.for('sanity.os.bus')]
+    }
   })
 
   it('returns "standalone" by default', () => {
