@@ -1,6 +1,7 @@
 import {type DocumentHandle, getProjectionState, resolveProjection} from '@sanity/sdk'
 import {act, render, screen} from '@testing-library/react'
 import {useRef} from 'react'
+import {NEVER} from 'rxjs'
 import {type Mock} from 'vitest'
 
 import {ResourceProvider} from '../../context/ResourceProvider'
@@ -251,37 +252,72 @@ describe('useDocumentProjection', () => {
     expect(screen.getByText('Added Description')).toBeInTheDocument()
   })
 
-  test('it keeps its state source when re-rendered with an equal handle', async () => {
+  test('it keeps its subscription when re-rendered with an equal handle', async () => {
     getCurrent.mockReturnValue({
       data: {title: 'Title', description: 'Description'},
       isPending: false,
     })
-    subscribe.mockImplementation(() => vi.fn())
+    const unsubscribe = vi.fn()
+    subscribe.mockReturnValue(unsubscribe)
+    const original = vi.mocked(getProjectionState).getMockImplementation()!
+    vi.mocked(getProjectionState)
+      .mockClear()
+      .mockImplementation(() => ({
+        getCurrent,
+        subscribe: (...args) => subscribe(...args),
+        observable: NEVER,
+      }))
+    try {
+      const {rerender} = render(
+        <ResourceProvider fallback={<div>Loading...</div>}>
+          <TestComponent document={{...mockDocument}} projection="{title, description}" />
+        </ResourceProvider>,
+      )
+      await act(async () => {
+        intersectionObserverCallback([{isIntersecting: true} as IntersectionObserverEntry])
+      })
+      expect(subscribe).toHaveBeenCalledTimes(1)
+      rerender(
+        <ResourceProvider fallback={<div>Loading...</div>}>
+          <TestComponent document={{...mockDocument}} projection="{title, description}" />
+        </ResourceProvider>,
+      )
+      expect(getProjectionState).toHaveBeenCalledTimes(1)
+      expect(subscribe).toHaveBeenCalledTimes(1)
+      expect(unsubscribe).not.toHaveBeenCalled()
+
+      rerender(
+        <ResourceProvider fallback={<div>Loading...</div>}>
+          <TestComponent
+            document={{...mockDocument, documentId: 'doc2'}}
+            projection="{title, description}"
+          />
+        </ResourceProvider>,
+      )
+      expect(getProjectionState).toHaveBeenCalledTimes(2)
+      expect(unsubscribe).toHaveBeenCalledTimes(1)
+      expect(vi.mocked(getProjectionState).mock.calls[1][1]).toMatchObject({documentId: 'doc2'})
+    } finally {
+      vi.mocked(getProjectionState).mockImplementation(original)
+    }
+  })
+
+  test('it excludes unused params from the serialized handle', () => {
+    getCurrent.mockReturnValue({
+      data: {title: 'Title', description: 'Description'},
+      isPending: false,
+    })
+    const circular: {self?: unknown} = {}
+    circular.self = circular
+    const document = {...mockDocument, params: {count: 1n, circular}}
     vi.mocked(getProjectionState).mockClear()
-
-    // Handles from a list query are new objects after every refetch
-    const {rerender} = render(
+    render(
       <ResourceProvider fallback={<div>Loading...</div>}>
-        <TestComponent document={{...mockDocument}} projection="{title, description}" />
+        <TestComponent document={document} projection="{title, description}" />
       </ResourceProvider>,
     )
-    rerender(
-      <ResourceProvider fallback={<div>Loading...</div>}>
-        <TestComponent document={{...mockDocument}} projection="{title, description}" />
-      </ResourceProvider>,
-    )
-    expect(getProjectionState).toHaveBeenCalledTimes(1)
-
-    rerender(
-      <ResourceProvider fallback={<div>Loading...</div>}>
-        <TestComponent
-          document={{...mockDocument, documentId: 'doc2'}}
-          projection="{title, description}"
-        />
-      </ResourceProvider>,
-    )
-    expect(getProjectionState).toHaveBeenCalledTimes(2)
-    expect(vi.mocked(getProjectionState).mock.calls[1][1]).toMatchObject({documentId: 'doc2'})
+    expect(screen.getByText('Title')).toBeInTheDocument()
+    expect(vi.mocked(getProjectionState).mock.calls[0][1]).not.toHaveProperty('params')
   })
 
   test('it subscribes immediately when no ref is provided', async () => {
