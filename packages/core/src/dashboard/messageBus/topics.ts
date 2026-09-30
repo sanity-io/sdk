@@ -185,10 +185,11 @@ export interface DashboardTopics {
    *
    * `ok: false` reasons:
    * - `unsupported`: the dashboard doesn't show access requests for the sending application
+   * - `already-has-access`: the user already has access to the resource, so there is nothing to request
    */
   'access.request': EventTopicDef<
     {resourceType: Extract<AccessResourceType, 'organization' | 'project'>; resourceId: string},
-    {ok: true} | {ok: false; reason: 'unsupported'}
+    {ok: true} | {ok: false; reason: 'unsupported' | 'already-has-access'}
   >
   /** Reports user activity in an application, e.g. for the recents feed. Fire-and-forget. */
   'applications.activity': EventTopicDef<ApplicationActivity>
