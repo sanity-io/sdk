@@ -1,4 +1,5 @@
 import {
+  ChannelError,
   ConnectionFailedError,
   CorsOriginError,
   DisconnectError,
@@ -497,6 +498,26 @@ describe('queryStore', () => {
       expect(state.getCurrent()).toEqual(mockData.movies)
     },
   )
+
+  it('keeps query results readable while reconnecting after a channel error', async () => {
+    const state = getQueryState(instance, {query: '*'})
+    const onError = vi.fn()
+    const subscription = state.observable.subscribe({error: onError})
+    await vi.advanceTimersByTimeAsync(10)
+    const nextEvents = new Subject<ListenEvent>()
+    vi.mocked(listen).mockReturnValue(nextEvents)
+    listenerEvents.error(new ChannelError('channel failure', {}))
+    expect(state.getCurrent()).toEqual(mockData.movies)
+    expect(onError).not.toHaveBeenCalled()
+    expect(subscription.closed).toBe(false)
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(nextEvents.observed).toBe(true)
+    vi.mocked(fetch).mockReturnValue(of({result: 'reconnected', ms: 0}))
+    nextEvents.next({type: 'welcome'} as ListenEvent)
+    await settleChanges()
+    expect(state.getCurrent()).toBe('reconnected')
+    subscription.unsubscribe()
+  })
 
   it('surfaces terminal listener errors and reconnects with a replacement client', async () => {
     const state = getQueryState(instance, {query: '*'})

@@ -36,23 +36,24 @@ describe('observeQueryChanges', () => {
     vi.useRealTimers()
   })
 
-  it.each([new MessageError('server error', {}), new MessageParseError('invalid JSON')])(
-    'reopens after $name and invalidates on the new welcome',
-    async (error) => {
-      listen.mockReturnValueOnce(throwError(() => error))
-      const next = vi.fn()
-      const onError = vi.fn()
-      subscription.add(observeQueryChanges(client, {tag: 'test'}).subscribe({next, error: onError}))
-      await vi.advanceTimersByTimeAsync(999)
-      expect(listen).toHaveBeenCalledTimes(1)
-      await vi.advanceTimersByTimeAsync(1)
-      expect(listen).toHaveBeenCalledTimes(2)
-      events.next({type: 'welcome'} as ListenEvent)
-      await vi.advanceTimersByTimeAsync(QUERY_CHANGE_INTERVAL)
-      expect(next).toHaveBeenCalledTimes(1)
-      expect(onError).not.toHaveBeenCalled()
-    },
-  )
+  it.each([
+    new ChannelError('channel failure', {}),
+    new MessageError('server error', {}),
+    new MessageParseError('invalid JSON'),
+  ])('reopens after $name and invalidates on the new welcome', async (error) => {
+    listen.mockReturnValueOnce(throwError(() => error))
+    const next = vi.fn()
+    const onError = vi.fn()
+    subscription.add(observeQueryChanges(client, {tag: 'test'}).subscribe({next, error: onError}))
+    await vi.advanceTimersByTimeAsync(999)
+    expect(listen).toHaveBeenCalledTimes(1)
+    await vi.advanceTimersByTimeAsync(1)
+    expect(listen).toHaveBeenCalledTimes(2)
+    events.next({type: 'welcome'} as ListenEvent)
+    await vi.advanceTimersByTimeAsync(QUERY_CHANGE_INTERVAL)
+    expect(next).toHaveBeenCalledTimes(1)
+    expect(onError).not.toHaveBeenCalled()
+  })
 
   it('backs off repeated server errors and cancels the retry on unsubscribe', async () => {
     listen.mockReturnValue(throwError(() => new MessageError('server error', {})))
@@ -70,22 +71,25 @@ describe('observeQueryChanges', () => {
     expect(listen).toHaveBeenCalledTimes(previousCalls)
   })
 
-  it('backs off welcome-then-error loops instead of resetting on each welcome', async () => {
-    listen.mockReturnValue(
-      concat(
-        of({type: 'welcome'} as ListenEvent),
-        throwError(() => new MessageError('server error', {})),
-      ),
-    )
-    subscription.add(observeQueryChanges(client, {tag: 'test'}).subscribe())
-    for (const delay of [1000, 2000, 4000, 8000, 16000, 30000, 30000]) {
-      const previousCalls = listen.mock.calls.length
-      await vi.advanceTimersByTimeAsync(delay - 1)
-      expect(listen).toHaveBeenCalledTimes(previousCalls)
-      await vi.advanceTimersByTimeAsync(1)
-      expect(listen).toHaveBeenCalledTimes(previousCalls + 1)
-    }
-  })
+  it.each([new ChannelError('channel failure', {}), new MessageError('server error', {})])(
+    'backs off welcome-then-$name loops instead of resetting on each welcome',
+    async (error) => {
+      listen.mockReturnValue(
+        concat(
+          of({type: 'welcome'} as ListenEvent),
+          throwError(() => error),
+        ),
+      )
+      subscription.add(observeQueryChanges(client, {tag: 'test'}).subscribe())
+      for (const delay of [1000, 2000, 4000, 8000, 16000, 30000, 30000]) {
+        const previousCalls = listen.mock.calls.length
+        await vi.advanceTimersByTimeAsync(delay - 1)
+        expect(listen).toHaveBeenCalledTimes(previousCalls)
+        await vi.advanceTimersByTimeAsync(1)
+        expect(listen).toHaveBeenCalledTimes(previousCalls + 1)
+      }
+    },
+  )
 
   it('resets backoff after a stable connection, including an idle dataset', async () => {
     listen.mockReturnValueOnce(throwError(() => new MessageError('server error', {})))
@@ -114,17 +118,15 @@ describe('observeQueryChanges', () => {
     expect(listen).toHaveBeenCalledTimes(3)
   })
 
-  it.each([new CorsOriginError({projectId: 'test'}), new ChannelError('invalid query', {})])(
-    'surfaces $name without retrying a rejected listener',
-    async (error) => {
-      listen.mockReturnValue(throwError(() => error))
-      const onError = vi.fn()
-      subscription.add(observeQueryChanges(client, {tag: 'test'}).subscribe({error: onError}))
-      await vi.advanceTimersByTimeAsync(60000)
-      expect(listen).toHaveBeenCalledTimes(1)
-      expect(onError).toHaveBeenCalledExactlyOnceWith(error)
-    },
-  )
+  it('surfaces CORS errors without retrying a rejected listener', async () => {
+    const error = new CorsOriginError({projectId: 'test'})
+    listen.mockReturnValue(throwError(() => error))
+    const onError = vi.fn()
+    subscription.add(observeQueryChanges(client, {tag: 'test'}).subscribe({error: onError}))
+    await vi.advanceTimersByTimeAsync(60000)
+    expect(listen).toHaveBeenCalledTimes(1)
+    expect(onError).toHaveBeenCalledExactlyOnceWith(error)
+  })
 
   it.each([
     new ConnectionFailedError('expired token', {status: 401}),

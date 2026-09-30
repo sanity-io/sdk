@@ -1,4 +1,5 @@
 import {
+  ChannelError,
   ConnectionFailedError,
   DisconnectError,
   MessageError,
@@ -62,12 +63,19 @@ export function observeQueryChanges(
         if (event.type === 'welcome') welcomedAt = performance.now()
         if (event.type === 'reconnect') welcomedAt = undefined
       }),
-      // The client retries transient connection failures. Retry server messages here,
+      // The client retries transient connection failures. Retry server channel errors
+      // and messages here: ChannelError does not distinguish permanent failures,
       // but do not reset the backoff on welcome: a flapping connection emits one on
       // every attempt. Reset only after a connection has stayed open for 30 seconds.
       retry({
         delay: (error: unknown) => {
-          if (!(error instanceof MessageError || error instanceof MessageParseError)) {
+          if (
+            !(
+              error instanceof ChannelError ||
+              error instanceof MessageError ||
+              error instanceof MessageParseError
+            )
+          ) {
             return throwError(() => error)
           }
           if (
