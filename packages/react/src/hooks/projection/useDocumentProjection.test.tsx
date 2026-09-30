@@ -28,13 +28,11 @@ beforeAll(() => {
 // Mock the projection store
 vi.mock('@sanity/sdk', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@sanity/sdk')>()
-  const getCurrent = vi.fn()
-  const subscribe = vi.fn()
 
   return {
     ...actual,
     resolveProjection: vi.fn(),
-    getProjectionState: vi.fn().mockReturnValue({getCurrent, subscribe}),
+    getProjectionState: vi.fn(),
   }
 })
 
@@ -66,14 +64,11 @@ describe('useDocumentProjection', () => {
   let subscribe: Mock
 
   beforeEach(() => {
-    // @ts-expect-error mock does not need param
-    getCurrent = getProjectionState().getCurrent as Mock
-    // @ts-expect-error mock does not need param
-    subscribe = getProjectionState().subscribe as Mock
-
-    // Reset all mocks between tests
-    getCurrent.mockReset()
-    subscribe.mockReset()
+    getCurrent = vi.fn()
+    subscribe = vi.fn()
+    vi.mocked(getProjectionState)
+      .mockReset()
+      .mockReturnValue({getCurrent, subscribe, observable: NEVER})
     mockIntersectionObserver.mockReset()
   })
 
@@ -252,25 +247,40 @@ describe('useDocumentProjection', () => {
     expect(screen.getByText('Added Description')).toBeInTheDocument()
   })
 
-  test('it keeps its subscription when re-rendered with an equal handle', async () => {
-    getCurrent.mockReturnValue({
-      data: {title: 'Title', description: 'Description'},
-      isPending: false,
-    })
-    const unsubscribe = vi.fn()
-    subscribe.mockReturnValue(unsubscribe)
-    const original = vi.mocked(getProjectionState).getMockImplementation()!
-    vi.mocked(getProjectionState)
-      .mockClear()
-      .mockImplementation(() => ({
-        getCurrent,
-        subscribe: (...args) => subscribe(...args),
-        observable: NEVER,
-      }))
-    try {
+  test.each([
+    {
+      documentId: 'doc1',
+      documentType: 'exampleType',
+      resource: {projectId: 'test', dataset: 'test'},
+    },
+    {
+      resource: {dataset: 'test', projectId: 'test'},
+      ignored: 'unrelated data',
+      documentType: 'exampleType',
+      documentId: 'doc1',
+    },
+  ])(
+    'it keeps its subscription across equivalent handle and resource values: %j',
+    async (document) => {
+      getCurrent.mockReturnValue({
+        data: {title: 'Title', description: 'Description'},
+        isPending: false,
+      })
+      const unsubscribe = vi.fn()
+      subscribe.mockReturnValue(unsubscribe)
+      vi.mocked(getProjectionState)
+        .mockClear()
+        .mockImplementation(() => ({
+          getCurrent,
+          subscribe: (...args) => subscribe(...args),
+          observable: NEVER,
+        }))
       const {rerender} = render(
         <ResourceProvider fallback={<div>Loading...</div>}>
-          <TestComponent document={{...mockDocument}} projection="{title, description}" />
+          <TestComponent
+            document={{...mockDocument, resource: {projectId: 'test', dataset: 'test'}}}
+            projection="{title, description}"
+          />
         </ResourceProvider>,
       )
       await act(async () => {
@@ -279,7 +289,7 @@ describe('useDocumentProjection', () => {
       expect(subscribe).toHaveBeenCalledTimes(1)
       rerender(
         <ResourceProvider fallback={<div>Loading...</div>}>
-          <TestComponent document={{...mockDocument}} projection="{title, description}" />
+          <TestComponent document={document} projection="{title, description}" />
         </ResourceProvider>,
       )
       expect(getProjectionState).toHaveBeenCalledTimes(1)
@@ -297,19 +307,17 @@ describe('useDocumentProjection', () => {
       expect(getProjectionState).toHaveBeenCalledTimes(2)
       expect(unsubscribe).toHaveBeenCalledTimes(1)
       expect(vi.mocked(getProjectionState).mock.calls[1][1]).toMatchObject({documentId: 'doc2'})
-    } finally {
-      vi.mocked(getProjectionState).mockImplementation(original)
-    }
-  })
+    },
+  )
 
-  test('it excludes unused params from the serialized handle', () => {
+  test('it excludes unused params and extra document properties from the serialized handle', () => {
     getCurrent.mockReturnValue({
       data: {title: 'Title', description: 'Description'},
       isPending: false,
     })
     const circular: {self?: unknown} = {}
     circular.self = circular
-    const document = {...mockDocument, params: {count: 1n, circular}}
+    const document = {...mockDocument, count: 1n, circular, params: {count: 1n, circular}}
     vi.mocked(getProjectionState).mockClear()
     render(
       <ResourceProvider fallback={<div>Loading...</div>}>
@@ -318,6 +326,8 @@ describe('useDocumentProjection', () => {
     )
     expect(screen.getByText('Title')).toBeInTheDocument()
     expect(vi.mocked(getProjectionState).mock.calls[0][1]).not.toHaveProperty('params')
+    expect(vi.mocked(getProjectionState).mock.calls[0][1]).not.toHaveProperty('count')
+    expect(vi.mocked(getProjectionState).mock.calls[0][1]).not.toHaveProperty('circular')
   })
 
   test('it subscribes immediately when no ref is provided', async () => {
