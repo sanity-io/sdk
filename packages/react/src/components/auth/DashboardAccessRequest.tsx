@@ -54,7 +54,16 @@ function BusAccessRequest({
   projectId,
 }: DashboardAccessRequestProps & {messageBus: MessageBus}): null {
   useEffect(() => {
-    messageBus.emit('access.request', {resourceType: 'project', resourceId: projectId})
+    messageBus.emit('access.request', {resourceType: 'project', resourceId: projectId}).then(
+      (reply) => {
+        // eslint-disable-next-line no-console
+        if (!reply.ok) console.warn('[sanity/sdk] Dashboard declined the access request:', reply)
+      },
+      (error) => {
+        // eslint-disable-next-line no-console
+        console.warn('[sanity/sdk] Dashboard access request failed:', error)
+      },
+    )
   }, [messageBus, projectId])
 
   return null

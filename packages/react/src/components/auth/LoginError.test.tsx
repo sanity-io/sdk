@@ -284,7 +284,54 @@ describe('LoginError', () => {
       expect(mockLogout).not.toHaveBeenCalled()
     })
 
-    it('falls back to comlink when the bus cannot connect', async () => {
+    const projectUserNotFound = () =>
+      new AuthError(
+        makeClientError(401, {
+          error: {
+            type: 'projectUserNotFoundError',
+            description: 'User is not a member of this project.',
+          },
+        }),
+      )
+
+    it('warns when the dashboard declines the access request', async () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      host.subscribe('access.request', (message) =>
+        message.reply({ok: false, reason: 'already-has-access'}),
+      )
+
+      render(
+        <ResourceProvider projectId="abc123" dataset="production" fallback={null}>
+          <LoginError error={projectUserNotFound()} resetErrorBoundary={vi.fn()} />
+        </ResourceProvider>,
+      )
+
+      await waitFor(() => {
+        expect(warn).toHaveBeenCalledWith('[sanity/sdk] Dashboard declined the access request:', {
+          ok: false,
+          reason: 'already-has-access',
+        })
+      })
+    })
+
+    it('warns when nothing responds to the access request', async () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+      render(
+        <ResourceProvider projectId="abc123" dataset="production" fallback={null}>
+          <LoginError error={projectUserNotFound()} resetErrorBoundary={vi.fn()} />
+        </ResourceProvider>,
+      )
+
+      await waitFor(() => {
+        expect(warn).toHaveBeenCalledWith(
+          '[sanity/sdk] Dashboard access request failed:',
+          expect.objectContaining({code: 'NO_RESPONDER'}),
+        )
+      })
+    })
+
+    it('falls back to comlink when a bus is installed but cannot connect', async () => {
       vi.stubGlobal('__SANITY_APP_ID__', undefined)
       vi.spyOn(console, 'warn').mockImplementation(() => {})
       const error = new AuthError(
