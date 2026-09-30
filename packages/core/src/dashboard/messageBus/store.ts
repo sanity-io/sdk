@@ -1,8 +1,7 @@
 import {createActionBinder} from '../../store/createActionBinder'
 import {type SanityInstance} from '../../store/createSanityInstance'
 import {defineStore} from '../../store/defineStore'
-import {connectMessageBus, type MessageBusConnection} from './bus'
-import {isMessageBusInstalled} from './installed'
+import {connectMessageBus, isMessageBusInstalled, type MessageBusConnection} from './bus'
 
 interface DashboardMessageBusState {
   connection?: MessageBusConnection

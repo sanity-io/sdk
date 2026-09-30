@@ -15,7 +15,6 @@ import {
 } from 'rxjs'
 
 import {type Application} from '../../applications/applications'
-import {isMessageBusInstalled, MESSAGE_BUS_KEY, MESSAGE_BUS_REGISTRY_KEY} from './installed'
 import {
   DASHBOARD_TOPIC_MANIFEST,
   type EventTopic,
@@ -252,7 +251,9 @@ export interface MessageBusHost<TTopics = MessageBusTopics> extends MessageBusCo
   readonly connections: Observable<MessageBusClient>
 }
 
+const MESSAGE_BUS_KEY = Symbol.for('sanity.os.bus')
 const MESSAGE_BUS_PROTOCOL_KEY = Symbol.for('sanity.os.protocol')
+const MESSAGE_BUS_REGISTRY_KEY = Symbol.for('sanity.os.registry')
 const MESSAGE_BUS_PENDING_REPLY_KEY = Symbol.for('sanity.os.request')
 
 const MESSAGE_BUS_PROTOCOL = 1
@@ -1207,9 +1208,18 @@ const resolveAppId = (appId?: string): string | undefined =>
   appId ?? (typeof __SANITY_APP_ID__ === 'string' ? __SANITY_APP_ID__ : undefined)
 
 function getInstalledMessageBus(): MessageBus | undefined {
-  return isMessageBusInstalled()
-    ? (globalThis as {[MESSAGE_BUS_KEY]?: MessageBus})[MESSAGE_BUS_KEY]
+  const bus = (globalThis as {[MESSAGE_BUS_KEY]?: unknown})[MESSAGE_BUS_KEY]
+  return typeof bus === 'object' && bus !== null && MESSAGE_BUS_REGISTRY_KEY in bus
+    ? (bus as unknown as MessageBus)
     : undefined
+}
+
+/**
+ * Returns whether a message bus registry is installed.
+ * @internal
+ */
+export function isMessageBusInstalled(): boolean {
+  return getInstalledMessageBus() !== undefined
 }
 
 /**
