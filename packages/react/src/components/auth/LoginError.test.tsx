@@ -253,6 +253,7 @@ describe('LoginError', () => {
       resetMessageBus()
       delete (globalThis as {[MESSAGE_BUS_KEY]?: unknown})[MESSAGE_BUS_KEY]
       vi.unstubAllGlobals()
+      vi.restoreAllMocks()
     })
 
     it('requests project access over the bus on a 401 projectUserNotFound error', async () => {
@@ -283,7 +284,7 @@ describe('LoginError', () => {
       expect(mockLogout).not.toHaveBeenCalled()
     })
 
-    it('still renders the error when the bus cannot connect', async () => {
+    it('falls back to comlink when the bus cannot connect', async () => {
       vi.stubGlobal('__SANITY_APP_ID__', undefined)
       vi.spyOn(console, 'warn').mockImplementation(() => {})
       const error = new AuthError(
@@ -302,6 +303,10 @@ describe('LoginError', () => {
       )
 
       expect(await screen.findByText('User is not a member of this project.')).toBeInTheDocument()
+      expect(mockWindowConnectionFetch).toHaveBeenCalledWith('dashboard/v1/auth/access/request', {
+        resourceType: 'project',
+        resourceId: 'abc123',
+      })
     })
 
     it('does not auto-log-out on a non-projectUserNotFound 401 when a bus is installed', async () => {
