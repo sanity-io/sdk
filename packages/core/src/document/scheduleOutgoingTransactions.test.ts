@@ -98,6 +98,23 @@ describe('scheduleOutgoingTransactions', () => {
     expect(submissions[2].at).toBe(2500)
   })
 
+  it('keeps the edit deadline through a backward system-clock change and continued edits', async () => {
+    enqueue(transaction('first'))
+    await vi.advanceTimersByTimeAsync(0)
+    acknowledge()
+    await vi.advanceTimersByTimeAsync(100)
+    vi.setSystemTime(-60_000)
+    enqueue(transaction('second'))
+    for (let index = 0; index < 8; index++) {
+      await vi.advanceTimersByTimeAsync(100)
+      enqueue(transaction(`continued-${index}`))
+    }
+    expect(submissions).toHaveLength(1)
+    await vi.advanceTimersByTimeAsync(100)
+    expect(submissions).toHaveLength(2)
+    expect(submissions[1].transaction.batchedTransactionIds).toHaveLength(9)
+  })
+
   it('waits for an in-flight request and drains immediately when the edit deadline has passed', async () => {
     enqueue(transaction('first'))
     await vi.advanceTimersByTimeAsync(0)

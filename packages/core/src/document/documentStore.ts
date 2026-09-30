@@ -29,7 +29,6 @@ import {
   startWith,
   Subject,
   switchMap,
-  take,
   tap,
   throwError,
   timer,
@@ -465,7 +464,7 @@ const subscribeToAppliedAndSubmitNextTransaction = ({
       // instead of dropping the transaction, which would leave the queue blocked for good.
       concatMap((outgoing) =>
         clients$.pipe(
-          take(1),
+          first(),
           map((client) => [outgoing, client] as const),
         ),
       ),
