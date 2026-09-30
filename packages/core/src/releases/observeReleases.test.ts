@@ -129,6 +129,33 @@ describe('observeReleases', () => {
     expect(emissions).toEqual([[release]])
   })
 
+  it('retains loaded releases after a failed refresh and recovers on the next event', async () => {
+    const onError = vi.fn()
+    const emissions = observe(onError)
+    await settle()
+    fetch.mockReturnValueOnce(throwError(() => new Error('unavailable')))
+    mutate()
+    await settle()
+    expect(onError).not.toHaveBeenCalled()
+    expect(emissions).toEqual([[release]])
+    const updated = {...release, metadata: {...release.metadata, title: 'Updated'}}
+    fetch.mockReturnValueOnce(of({result: [updated]}))
+    mutate()
+    await settle()
+    expect(emissions).toEqual([[release], [updated]])
+  })
+
+  it('does not reuse release results when a new client cannot fetch them', async () => {
+    const onError = vi.fn()
+    observe(onError)
+    await settle()
+    const failure = new Error('forbidden')
+    fetch.mockReturnValueOnce(throwError(() => failure))
+    clients.next({...clients.value} as SanityClient)
+    await settle()
+    expect(onError).toHaveBeenCalledExactlyOnceWith(failure)
+  })
+
   it('refreshes after welcome rather than while reconnecting', async () => {
     observe()
     await settle()

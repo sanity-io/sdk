@@ -5,7 +5,7 @@ import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 import {getClientState} from '../client/clientStore'
 import {type DocumentResource, isDatasetResource} from '../config/sanityConfig'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
-import {getQueryState} from './queryStore'
+import {getQueryState, resolveQuery} from './queryStore'
 
 vi.mock('../client/clientStore', () => ({getClientState: vi.fn()}))
 
@@ -32,30 +32,42 @@ describe('query listener integration', () => {
     vi.useRealTimers()
   })
 
-  it('invalidates queries only in the resource whose listener emitted', async () => {
-    const first = mockClient()
-    const second = mockClient()
-    vi.mocked(getClientState).mockImplementation((_instance, options) => {
-      const resource = options?.resource
-      const {client} =
-        resource && isDatasetResource(resource) && resource.dataset === 'second' ? second : first
-      return {observable: of(client), getCurrent: () => client, subscribe: () => () => {}}
-    })
-    const resource = (dataset: string): DocumentResource => ({projectId: 'test', dataset})
-    getQueryState(instance, {query: '*', resource: resource('first')}).subscribe()
-    getQueryState(instance, {query: '*', resource: resource('second')}).subscribe()
-    await vi.advanceTimersByTimeAsync(10)
-    expect(first.listen).toHaveBeenCalledTimes(1)
-    expect(second.listen).toHaveBeenCalledTimes(1)
-    first.mutations.next({type: 'mutation', visibility: 'query'} as ListenEvent)
-    await vi.advanceTimersByTimeAsync(60)
-    expect(first.fetch).toHaveBeenCalledTimes(2)
-    expect(second.fetch).toHaveBeenCalledTimes(1)
-    second.mutations.next({type: 'mutation', visibility: 'query'} as ListenEvent)
-    await vi.advanceTimersByTimeAsync(60)
-    expect(first.fetch).toHaveBeenCalledTimes(2)
-    expect(second.fetch).toHaveBeenCalledTimes(2)
-  })
+  it.each(['resource', 'project and dataset', 'dataset only'])(
+    'invalidates queries only in their target resource using %s options',
+    async (target) => {
+      const first = mockClient()
+      const second = mockClient()
+      vi.mocked(getClientState).mockImplementation((_instance, options) => {
+        const resource = options?.resource
+        const {client} =
+          resource && isDatasetResource(resource) && resource.dataset === 'second' ? second : first
+        return {observable: of(client), getCurrent: () => client, subscribe: () => () => {}}
+      })
+      const resource = (dataset: string): DocumentResource => ({projectId: 'test', dataset})
+      getQueryState(instance, {query: '*', resource: resource('first')}).subscribe()
+      const secondOptions =
+        target === 'resource'
+          ? {resource: resource('second')}
+          : target === 'dataset only'
+            ? {dataset: 'second'}
+            : {projectId: 'test', dataset: 'second'}
+      const resolved = resolveQuery(instance, {query: '*', ...secondOptions})
+      await vi.advanceTimersByTimeAsync(10)
+      await expect(resolved).resolves.toEqual([])
+      getQueryState(instance, {query: '*', ...secondOptions}).subscribe()
+      await vi.advanceTimersByTimeAsync(10)
+      expect(first.listen).toHaveBeenCalledTimes(1)
+      expect(second.listen).toHaveBeenCalledTimes(1)
+      first.mutations.next({type: 'mutation', visibility: 'query'} as ListenEvent)
+      await vi.advanceTimersByTimeAsync(60)
+      expect(first.fetch).toHaveBeenCalledTimes(2)
+      expect(second.fetch).toHaveBeenCalledTimes(1)
+      second.mutations.next({type: 'mutation', visibility: 'query'} as ListenEvent)
+      await vi.advanceTimersByTimeAsync(60)
+      expect(first.fetch).toHaveBeenCalledTimes(2)
+      expect(second.fetch).toHaveBeenCalledTimes(2)
+    },
+  )
 
   it('recomputes a query perspective from release metadata and cancels its obsolete fetch', async () => {
     const {client, fetch, releases} = mockClient()

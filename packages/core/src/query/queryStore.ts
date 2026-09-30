@@ -25,7 +25,7 @@ import {exhaustMapWithTrailing} from 'rxjs-exhaustmap-with-trailing'
 
 import {getClientState} from '../client/clientStore'
 import {observeQueryChanges} from '../client/observeQueryChanges'
-import {type DatasetHandle} from '../config/sanityConfig'
+import {type DatasetHandle, isDatasetResource} from '../config/sanityConfig'
 import {getPerspectiveState} from '../releases/getPerspectiveState'
 import {isReleasePerspective} from '../releases/utils/isReleasePerspective'
 import {bindActionByResource, type BoundResourceKey} from '../store/createActionBinder'
@@ -87,30 +87,38 @@ export interface ResolveQueryOptions<
 
 /** @internal */
 export const getQueryKey = (instance: SanityInstance, options: QueryOptions): string =>
-  JSON.stringify(normalizeOptionsWithPerspective(instance, options))
+  JSON.stringify(normalizeQueryOptions(instance, options))
 /** @internal */
 export const parseQueryKey = (key: string): QueryOptions => JSON.parse(key)
 
-/**
- * Ensures the query key includes an effective perspective so that
- * implicit differences (e.g. different instance.config.perspective)
- * don't collide in the dataset-scoped store.
- *
- * Since perspectives are unique, we can depend on the release stacks
- * to be correct when we retrieve the results.
- *
- */
-function normalizeOptionsWithPerspective(
-  instance: SanityInstance,
-  options: QueryOptions,
-): QueryOptions {
-  if (options.perspective !== undefined) return options
-  const instancePerspective = instance.config.perspective
+/** Normalize the query target before binding its store and building its cache key. */
+function normalizeQueryOptions(instance: SanityInstance, options: QueryOptions): QueryOptions {
+  const {useCdn: _useCdn, projectId, dataset, ...rest} = options
+  const hasDatasetOverride = projectId !== undefined || dataset !== undefined
+  const resource =
+    rest.resource ??
+    (hasDatasetOverride
+      ? resolveDatasetOverride(instance, {projectId, dataset})
+      : instance.config.resource)
   return {
-    ...options,
-    perspective:
-      instancePerspective !== undefined ? instancePerspective : QUERY_STORE_DEFAULT_PERSPECTIVE,
+    ...rest,
+    ...(resource && {resource}),
+    perspective: rest.perspective ?? instance.config.perspective ?? QUERY_STORE_DEFAULT_PERSPECTIVE,
   }
+}
+
+function resolveDatasetOverride(
+  instance: SanityInstance,
+  {projectId, dataset}: Pick<QueryOptions, 'projectId' | 'dataset'>,
+) {
+  const resource = instance.config.resource
+  const fallback = resource && isDatasetResource(resource) ? resource : instance.config
+  const targetProject = projectId ?? fallback.projectId
+  const targetDataset = dataset ?? fallback.dataset
+  if (!targetProject || !targetDataset) {
+    throw new Error('Query dataset overrides require both a projectId and dataset.')
+  }
+  return {projectId: targetProject, dataset: targetDataset}
 }
 
 const queryStore = defineStore<QueryStoreState, BoundResourceKey>({
@@ -312,7 +320,8 @@ export function getQueryState(
 export function getQueryState(
   ...args: Parameters<typeof _getQueryState>
 ): ReturnType<typeof _getQueryState> {
-  return _getQueryState(...args)
+  const [instance, options] = args
+  return _getQueryState(instance, normalizeQueryOptions(instance, options))
 }
 const _getQueryState = bindActionByResource(
   queryStore,
@@ -372,12 +381,16 @@ export function resolveQuery<TData>(
 ): Promise<TData>
 /** @beta */
 export function resolveQuery(...args: Parameters<typeof _resolveQuery>): Promise<unknown> {
-  return _resolveQuery(...args)
+  const [instance, options] = args
+  return _resolveQuery(instance, {
+    ...normalizeQueryOptions(instance, options),
+    signal: options.signal,
+  })
 }
 const _resolveQuery = bindActionByResource(
   queryStore,
   ({state, instance}, {signal, ...options}: ResolveQueryOptions) => {
-    const normalized = normalizeOptionsWithPerspective(instance, options)
+    const normalized = normalizeQueryOptions(instance, options)
     const {getCurrent} = getQueryState(instance, normalized)
     const key = getQueryKey(instance, normalized)
 

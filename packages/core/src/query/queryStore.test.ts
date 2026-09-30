@@ -337,6 +337,20 @@ describe('queryStore', () => {
     }
   })
 
+  it('shares a query entry across ignored CDN options', async () => {
+    const states = [undefined, false, true].map((useCdn) =>
+      getQueryState(instance, {query: '*', useCdn}),
+    )
+    const unsubscribe = states.map((state) => state.subscribe())
+    await vi.advanceTimersByTimeAsync(10)
+    expect(fetch).toHaveBeenCalledTimes(1)
+    for (const state of states) expect(state.getCurrent()).toEqual(mockData.movies)
+    mutate()
+    await settleChanges()
+    expect(fetch).toHaveBeenCalledTimes(2)
+    unsubscribe.forEach((stop) => stop())
+  })
+
   it('coalesces bursts and continues refetching during sustained mutations', async () => {
     getQueryState(instance, {query: '*'}).subscribe()
     await vi.advanceTimersByTimeAsync(10)

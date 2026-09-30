@@ -1,5 +1,5 @@
 import {type ReleaseDocument} from '@sanity/client'
-import {catchError, defer, EMPTY, map, type Observable, startWith, switchMap} from 'rxjs'
+import {catchError, defer, EMPTY, map, type Observable, startWith, switchMap, tap} from 'rxjs'
 import {exhaustMapWithTrailing} from 'rxjs-exhaustmap-with-trailing'
 
 import {getClientState} from '../client/clientStore'
@@ -29,8 +29,12 @@ export function observeReleases(
   {resource, onError}: ObserveReleasesOptions,
 ): Observable<ReleaseDocument[] | undefined> {
   return getClientState(instance, {apiVersion: RELEASES_API_VERSION, resource}).observable.pipe(
-    switchMap((client) =>
-      observeQueryChanges(client, {query: RELEASES_LISTEN_QUERY, tag: 'releases.listen'}).pipe(
+    switchMap((client) => {
+      let hasCurrentResult = false
+      return observeQueryChanges(client, {
+        query: RELEASES_LISTEN_QUERY,
+        tag: 'releases.listen',
+      }).pipe(
         startWith(undefined),
         exhaustMapWithTrailing(() =>
           defer(() =>
@@ -47,8 +51,11 @@ export function observeReleases(
             ),
           ).pipe(
             map((response) => response.result),
+            tap(() => {
+              hasCurrentResult = true
+            }),
             catchError((error: unknown) => {
-              onError(error)
+              if (!hasCurrentResult) onError(error)
               return EMPTY
             }),
           ),
@@ -57,7 +64,7 @@ export function observeReleases(
           onError(error)
           return EMPTY
         }),
-      ),
-    ),
+      )
+    }),
   )
 }
