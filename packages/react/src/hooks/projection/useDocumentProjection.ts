@@ -176,6 +176,7 @@ export function useDocumentProjection<TData extends object>(
 export function useDocumentProjection<TData extends object>({
   ref,
   projection,
+  params: _params,
   ...docHandle
 }: useDocumentProjectionOptions): useDocumentProjectionResults<TData> {
   const instance = useSanityInstance()
@@ -189,6 +190,8 @@ export function useDocumentProjection<TData extends object>({
   // Normalize options: resolve resourceName to resource and strip resourceName
   const normalizedDocHandle = useNormalizedResourceOptions(docHandle)
 
+  // Projection queries generate their own params; exclude the unused public params
+  // option so arbitrary user values cannot affect handle serialization.
   // Key the state source on the handle's values, not its identity. The normalized handle is
   // a new object on every render, and handles from a list query are new objects after every
   // refetch. A new state source makes useSyncExternalStore resubscribe, and each resubscribe
