@@ -1,5 +1,5 @@
 import {getDashboardOrganizationId, type OrganizationBase} from '@sanity/sdk'
-import {getTopicState, isDashboardEnvironment} from '@sanity/sdk/_internal'
+import {getTopicState, isMessageBusEnvironment} from '@sanity/sdk/_internal'
 import {useMemo, useSyncExternalStore} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
@@ -31,7 +31,7 @@ type CurrentOrganization = Pick<OrganizationBase, 'id' | 'name' | 'slug'> | null
 export function useOrganizationId(): string | undefined {
   const instance = useSanityInstance()
   const {subscribe, getCurrent} = useMemo(() => {
-    if (!isDashboardEnvironment()) return getDashboardOrganizationId(instance)
+    if (!isMessageBusEnvironment()) return getDashboardOrganizationId(instance)
     const source = getTopicState(instance, 'organizations.current')
     return {
       subscribe: source.subscribe,

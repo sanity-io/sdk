@@ -1,5 +1,5 @@
 import {ClientError} from '@sanity/client'
-import {AuthStateType, getIsInDashboardState} from '@sanity/sdk'
+import {AuthStateType} from '@sanity/sdk'
 import {
   getClientErrorApiBody,
   getClientErrorApiDescription,
@@ -55,7 +55,7 @@ export function LoginError({error, resetErrorBoundary}: LoginErrorProps): React.
         ? error.cause
         : null
 
-  const isInDashboard = isDashboardEnvironment() || getIsInDashboardState(instance).getCurrent()
+  const isInDashboard = isDashboardEnvironment(instance)
 
   const isProjectUserNotFound =
     !!clientError && clientError.statusCode === 401 && isProjectUserNotFoundClientError(clientError)

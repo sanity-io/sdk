@@ -1,6 +1,5 @@
 import {ClientError} from '@sanity/client'
-import {getIsInDashboardState} from '@sanity/sdk'
-import {installMessageBus, resetMessageBus} from '@sanity/sdk/_internal'
+import {installMessageBus, isDashboardEnvironment, resetMessageBus} from '@sanity/sdk/_internal'
 import {type MessageBusHost, type PayloadOf} from '@sanity/sdk/dashboard'
 import {fireEvent, render, screen, waitFor} from '@testing-library/react'
 import {afterEach, beforeEach, describe, expect, it, type Mock, vi} from 'vitest'
@@ -9,12 +8,9 @@ import {ResourceProvider} from '../../context/ResourceProvider'
 import {AuthError} from './AuthError'
 import {LoginError} from './LoginError'
 
-vi.mock('@sanity/sdk', async () => {
-  const actual = await vi.importActual('@sanity/sdk')
-  return {
-    ...actual,
-    getIsInDashboardState: vi.fn(() => ({getCurrent: vi.fn(() => false)})),
-  }
+vi.mock('@sanity/sdk/_internal', async () => {
+  const actual = await vi.importActual('@sanity/sdk/_internal')
+  return {...actual, isDashboardEnvironment: vi.fn(() => false)}
 })
 
 const mockLogout = vi.fn(async () => {})
@@ -27,7 +23,7 @@ vi.mock('../../hooks/comlink/useWindowConnection', () => ({
   useWindowConnection: vi.fn(() => ({fetch: mockWindowConnectionFetch})),
 }))
 
-const mockGetIsInDashboardState = getIsInDashboardState as Mock
+const mockIsDashboardEnvironment = isDashboardEnvironment as Mock
 
 function makeClientError(statusCode: number, body: unknown): ClientError {
   return new ClientError({
@@ -41,7 +37,7 @@ function makeClientError(statusCode: number, body: unknown): ClientError {
 
 describe('LoginError', () => {
   beforeEach(() => {
-    mockGetIsInDashboardState.mockReturnValue({getCurrent: vi.fn(() => false)})
+    mockIsDashboardEnvironment.mockReturnValue(false)
   })
 
   afterEach(() => {
@@ -89,7 +85,7 @@ describe('LoginError', () => {
   // request path must not render, because useWindowConnection would suspend
   // waiting for a comlink node that never arrives.
   it('renders synchronously on a 401 projectUserNotFound error outside the dashboard', async () => {
-    mockGetIsInDashboardState.mockReturnValue({getCurrent: vi.fn(() => false)})
+    mockIsDashboardEnvironment.mockReturnValue(false)
 
     const error = makeClientError(401, {
       error: {
@@ -116,7 +112,7 @@ describe('LoginError', () => {
   })
 
   it('fires the dashboard access request on a 401 projectUserNotFound error inside the dashboard', async () => {
-    mockGetIsInDashboardState.mockReturnValue({getCurrent: vi.fn(() => true)})
+    mockIsDashboardEnvironment.mockReturnValue(true)
 
     const error = makeClientError(401, {
       error: {
@@ -145,7 +141,7 @@ describe('LoginError', () => {
   // at runtime (without it, the previous `error instanceof ClientError` check
   // was dead code in the dashboard).
   it('fires the dashboard access request when the projectUserNotFound ClientError is wrapped in an AuthError', async () => {
-    mockGetIsInDashboardState.mockReturnValue({getCurrent: vi.fn(() => true)})
+    mockIsDashboardEnvironment.mockReturnValue(true)
 
     const clientError = makeClientError(401, {
       error: {
@@ -187,7 +183,7 @@ describe('LoginError', () => {
   // AuthBoundary wraps the real ClientError in an AuthError before it reaches
   // the error boundary, so the component must unwrap `.cause` to see it.
   it('auto-logs-out on a non-projectUserNotFound 401 outside the dashboard', async () => {
-    mockGetIsInDashboardState.mockReturnValue({getCurrent: vi.fn(() => false)})
+    mockIsDashboardEnvironment.mockReturnValue(false)
 
     const mockReset = vi.fn()
     const clientError = makeClientError(401, {
@@ -215,7 +211,7 @@ describe('LoginError', () => {
   // ComlinkTokenRefreshProvider is responsible for asking the parent window
   // for a fresh token; the Retry button stays as a manual fallback.
   it('does not auto-log-out on a non-projectUserNotFound 401 inside the dashboard', async () => {
-    mockGetIsInDashboardState.mockReturnValue({getCurrent: vi.fn(() => true)})
+    mockIsDashboardEnvironment.mockReturnValue(true)
 
     const mockReset = vi.fn()
     const clientError = makeClientError(401, {
@@ -244,7 +240,10 @@ describe('LoginError', () => {
     const MESSAGE_BUS_KEY = Symbol.for('sanity.os.bus')
     let host: MessageBusHost
 
-    beforeEach(() => {
+    beforeEach(async () => {
+      const actual =
+        await vi.importActual<typeof import('@sanity/sdk/_internal')>('@sanity/sdk/_internal')
+      mockIsDashboardEnvironment.mockImplementation(actual.isDashboardEnvironment)
       vi.stubGlobal('__SANITY_APP_ID__', 'app')
       host = installMessageBus({appId: 'dashboard'})
     })

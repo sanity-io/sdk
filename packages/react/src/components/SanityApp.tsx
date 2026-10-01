@@ -1,5 +1,5 @@
 import {type DocumentResource, type SanityConfig} from '@sanity/sdk'
-import {isDashboardEnvironment, isStudioConfig} from '@sanity/sdk/_internal'
+import {isMessageBusEnvironment, isStudioConfig} from '@sanity/sdk/_internal'
 import {type ReactElement, useContext, useEffect, useMemo} from 'react'
 
 import {SDKStudioContext, type StudioWorkspaceHandle} from '../context/SDKStudioContext'
@@ -150,7 +150,7 @@ export function SanityApp({
     return []
   }, [configProp, studioWorkspace])
 
-  const shouldRedirect = !isInIframe() && !isDashboardEnvironment() && !isLocalUrl(window)
+  const shouldRedirect = !isInIframe() && !isMessageBusEnvironment() && !isLocalUrl(window)
 
   useEffect(() => {
     let timeout: NodeJS.Timeout | undefined

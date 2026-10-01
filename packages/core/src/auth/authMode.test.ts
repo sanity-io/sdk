@@ -1,4 +1,4 @@
-import {describe, expect, it, onTestFinished} from 'vitest'
+import {describe, expect, it, onTestFinished, vi} from 'vitest'
 
 import {type SanityConfig} from '../config/sanityConfig'
 import {uninstallTestMessageBus} from '../dashboard/messageBus/__fixtures__/uninstallTestMessageBus'
@@ -41,6 +41,16 @@ describe('resolveAuthMode', () => {
       auth: {oauth: {clientId: 'c', redirectUri: 'https://app/cb', organizationId: 'o'}},
     }
     expect(resolveAuthMode(config, href)).toBe('oauth')
+  })
+
+  it('returns "standalone" for the application that installed the message bus', () => {
+    vi.stubGlobal('__SANITY_APP_ID__', 'dashboard')
+    installMessageBus({appId: 'dashboard'})
+    onTestFinished(() => {
+      uninstallTestMessageBus()
+      vi.unstubAllGlobals()
+    })
+    expect(resolveAuthMode({}, 'https://example.com')).toBe('standalone')
   })
 
   it('prefers "oauth" over an installed message bus', () => {

@@ -11,6 +11,7 @@ export {getCommentsOptionsKey, parseCommentsOptionsKey} from '../comments/commen
 export {
   installMessageBus,
   type InstallMessageBusOptions,
+  isMessageBusEnvironment,
   resetMessageBus,
 } from '../dashboard/messageBus/bus'
 export {

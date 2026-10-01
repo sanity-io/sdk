@@ -5,7 +5,7 @@ import {
   SDK_CHANNEL_NAME,
   SDK_NODE_NAME,
 } from '@sanity/message-protocol'
-import {isDashboardEnvironment, requireDashboardMessageBus} from '@sanity/sdk/_internal'
+import {isMessageBusEnvironment, requireDashboardMessageBus} from '@sanity/sdk/_internal'
 import {type NavigationLocation, TopicError} from '@sanity/sdk/dashboard'
 import {useCallback, useEffect, useEffectEvent, useRef} from 'react'
 import {filter, map, pairwise} from 'rxjs'
@@ -92,7 +92,7 @@ export function useNavigate(
   // The branch is stable: the transport is fixed for the page lifetime, so one set of hooks
   // always runs and the other never does.
   // eslint-disable-next-line react-hooks/rules-of-hooks -- transport is fixed for the page lifetime
-  if (isDashboardEnvironment()) return useBusNavigate(navigateFn)
+  if (isMessageBusEnvironment()) return useBusNavigate(navigateFn)
   // eslint-disable-next-line react-hooks/rules-of-hooks -- transport is fixed for the page lifetime
   return useComlinkNavigate(navigateFn)
 }
