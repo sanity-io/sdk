@@ -24,8 +24,8 @@ import {
   withLatestFrom,
 } from 'rxjs'
 
-import {getDashboardOrganizationId} from '../auth/authStore'
 import {getClient, getClientState} from '../client/clientStore'
+import {getDashboardOrganizationId} from '../dashboard/messageBus/topicStore'
 import {bindActionGlobally} from '../store/createActionBinder'
 import {createStateSourceAction, type SelectorContext} from '../store/createStateSourceAction'
 import {type StoreState} from '../store/createStoreState'

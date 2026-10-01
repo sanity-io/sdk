@@ -284,14 +284,6 @@ export const getAuthState = bindActionGlobally(
 )
 
 /**
- * @public
- */
-export const getDashboardOrganizationId = bindActionGlobally(
-  authStore,
-  createStateSourceAction(({state: {dashboardContext}}) => dashboardContext?.orgId),
-)
-
-/**
  * Returns a state source indicating if the SDK is running within a dashboard context.
  * @public
  */
