@@ -135,6 +135,50 @@ describe('LoginError', () => {
     })
   })
 
+  it('prefers the project named in the error over the configured projectId', async () => {
+    mockIsDashboardEnvironment.mockReturnValue(true)
+    const error = makeClientError(401, {
+      error: {type: 'projectUserNotFoundError', description: 'No access.', projectID: 'exx11uqh'},
+    })
+
+    render(
+      <ResourceProvider projectId="abc123" dataset="production" fallback={<div>SUSPENDED</div>}>
+        <LoginError error={error} resetErrorBoundary={vi.fn()} />
+      </ResourceProvider>,
+    )
+
+    await waitFor(() => {
+      expect(mockWindowConnectionFetch).toHaveBeenCalledWith('dashboard/v1/auth/access/request', {
+        resourceType: 'project',
+        resourceId: 'exx11uqh',
+      })
+    })
+  })
+
+  it('requests access to the project named in the error without a configured projectId', async () => {
+    mockIsDashboardEnvironment.mockReturnValue(true)
+    const error = makeClientError(401, {
+      error: {
+        type: 'projectUserNotFoundError',
+        description: 'User is not a member of this project.',
+        projectID: 'exx11uqh',
+      },
+    })
+
+    render(
+      <ResourceProvider fallback={<div>SUSPENDED</div>}>
+        <LoginError error={error} resetErrorBoundary={vi.fn()} />
+      </ResourceProvider>,
+    )
+
+    await waitFor(() => {
+      expect(mockWindowConnectionFetch).toHaveBeenCalledWith('dashboard/v1/auth/access/request', {
+        resourceType: 'project',
+        resourceId: 'exx11uqh',
+      })
+    })
+  })
+
   // Mirrors the real production chain: AuthBoundary wraps the ClientError in
   // an AuthError before the error boundary hands it to LoginError. The
   // `.cause` unwrap is what makes the dashboard access request path reachable
@@ -281,6 +325,33 @@ describe('LoginError', () => {
       })
       expect(mockWindowConnectionFetch).not.toHaveBeenCalled()
       expect(mockLogout).not.toHaveBeenCalled()
+    })
+
+    it('requests access over the bus to the project named in the error', async () => {
+      const requests: PayloadOf<'access.request'>[] = []
+      host.subscribe('access.request', (message) => {
+        requests.push(message.payload)
+        message.reply({ok: true})
+      })
+      const error = new AuthError(
+        makeClientError(401, {
+          error: {
+            type: 'projectUserNotFoundError',
+            description: 'No access.',
+            projectID: 'exx11uqh',
+          },
+        }),
+      )
+
+      render(
+        <ResourceProvider fallback={<div>SUSPENDED</div>}>
+          <LoginError error={error} resetErrorBoundary={vi.fn()} />
+        </ResourceProvider>,
+      )
+
+      await waitFor(() => {
+        expect(requests).toEqual([{resourceType: 'project', resourceId: 'exx11uqh'}])
+      })
     })
 
     const projectUserNotFound = () =>
