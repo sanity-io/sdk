@@ -1,9 +1,6 @@
-import {distinctUntilChanged, map} from 'rxjs'
-
-import {authStore, getIsInDashboardState} from '../../auth/authStore'
-import {bindActionGlobally, createActionBinder} from '../../store/createActionBinder'
+import {getIsInDashboardState} from '../../auth/authStore'
+import {createActionBinder} from '../../store/createActionBinder'
 import {type SanityInstance} from '../../store/createSanityInstance'
-import {createStateSourceAction, type StateSource} from '../../store/createStateSourceAction'
 import {defineStore} from '../../store/defineStore'
 import {connectMessageBus, isMessageBusInstalled, type MessageBusConnection} from './bus'
 
@@ -75,31 +72,4 @@ export function requireDashboardMessageBus(
  */
 export function isDashboardEnvironment(instance: SanityInstance): boolean {
   return getIsInDashboardState(instance).getCurrent() || isMessageBusInstalled()
-}
-
-const getComlinkOrganizationId = bindActionGlobally(
-  authStore,
-  createStateSourceAction(({state: {dashboardContext}}) => dashboardContext?.orgId),
-)
-
-/**
- * @public
- */
-export function getDashboardOrganizationId(
-  instance: SanityInstance,
-): StateSource<string | undefined> {
-  const messageBus = getDashboardMessageBus(instance)
-  if (!messageBus) return getComlinkOrganizationId(instance)
-  const organization = messageBus.subscribe('organizations.current')
-  return {
-    getCurrent: () => organization.getCurrent()?.id,
-    subscribe: (onStoreChanged) => {
-      const subscription = organization.subscribe(() => onStoreChanged?.())
-      return () => subscription.unsubscribe()
-    },
-    observable: organization.pipe(
-      map((value) => value?.id),
-      distinctUntilChanged(),
-    ),
-  }
 }

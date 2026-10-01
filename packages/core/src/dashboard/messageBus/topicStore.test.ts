@@ -4,7 +4,7 @@ import {createSanityInstance, type SanityInstance} from '../../store/createSanit
 import {uninstallTestMessageBus} from './__fixtures__/uninstallTestMessageBus'
 import {installMessageBus, type MessageBus, MessageBusError, type MessageBusHost} from './bus'
 import {getDashboardMessageBus} from './store'
-import {getTopicState, resolveTopic, TopicError} from './topicStore'
+import {getDashboardOrganizationId, getTopicState, resolveTopic, TopicError} from './topicStore'
 
 let host: MessageBusHost
 let instance: SanityInstance
@@ -159,5 +159,50 @@ describe('dashboard topic store', () => {
       'Cannot read topic "auth.token" without an installed dashboard message bus',
     )
     other.dispose()
+  })
+
+  describe('getDashboardOrganizationId', () => {
+    const publishOrganization = (value: {id: string; name: string; slug: string} | null) =>
+      host.connections.subscribe((client) => client.emit('organizations.current', value))
+
+    it('emits undefined until the host publishes, then the organization id', () => {
+      const organizationId = getDashboardOrganizationId(instance)
+      const values: (string | undefined)[] = []
+      const subscription = organizationId.observable.subscribe((value) => values.push(value))
+      expect(values).toEqual([undefined])
+
+      publishOrganization({id: 'oSyH1iET5', name: 'Fernway', slug: 'fernway'})
+      expect(organizationId.getCurrent()).toBe('oSyH1iET5')
+      expect(values).toEqual([undefined, 'oSyH1iET5'])
+      subscription.unsubscribe()
+    })
+
+    it('emits once when the host republishes the same organization', () => {
+      const values: (string | undefined)[] = []
+      const subscription = getDashboardOrganizationId(instance).observable.subscribe((value) =>
+        values.push(value),
+      )
+      publishOrganization({id: 'oSyH1iET5', name: 'Fernway', slug: 'fernway'})
+      publishOrganization({id: 'oSyH1iET5', name: 'Fernway Outdoors', slug: 'fernway'})
+
+      expect(values).toEqual([undefined, 'oSyH1iET5'])
+      subscription.unsubscribe()
+    })
+
+    it('notifies subscribers on changes, not on subscribe', () => {
+      publishOrganization({id: 'oSyH1iET5', name: 'Fernway', slug: 'fernway'})
+      const onStoreChanged = vi.fn()
+      const unsubscribe = getDashboardOrganizationId(instance).subscribe(onStoreChanged)
+      expect(onStoreChanged).not.toHaveBeenCalled()
+
+      publishOrganization({id: 'oPx7Kd2Lm', name: 'Other', slug: 'other'})
+      expect(onStoreChanged).toHaveBeenCalledOnce()
+      unsubscribe()
+    })
+
+    it('has no organization id when the host has no active organization', () => {
+      publishOrganization(null)
+      expect(getDashboardOrganizationId(instance).getCurrent()).toBeUndefined()
+    })
   })
 })

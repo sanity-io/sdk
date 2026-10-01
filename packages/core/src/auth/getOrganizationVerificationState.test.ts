@@ -2,7 +2,7 @@ import {map, type Observable} from 'rxjs'
 import {TestScheduler} from 'rxjs/testing'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
-import {getDashboardOrganizationId} from '../dashboard/messageBus/store'
+import {getDashboardOrganizationId} from '../dashboard/messageBus/topicStore'
 import {
   compareProjectOrganization,
   type OrgVerificationResult,
@@ -13,7 +13,7 @@ import {type StateSource} from '../store/createStateSourceAction'
 import {observeOrganizationVerificationState} from './getOrganizationVerificationState'
 
 // Mock dependencies
-vi.mock('../dashboard/messageBus/store', () => ({
+vi.mock('../dashboard/messageBus/topicStore', () => ({
   getDashboardOrganizationId: vi.fn(),
 }))
 vi.mock('../project/project', () => ({

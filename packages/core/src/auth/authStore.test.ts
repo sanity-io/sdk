@@ -1,11 +1,11 @@
 import {type ClientConfig, createClient, type SanityClient} from '@sanity/client'
 import {type CurrentUser} from '@sanity/types'
-import {firstValueFrom, NEVER, type Subscription} from 'rxjs'
+import {NEVER, type Subscription} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {uninstallTestMessageBus} from '../dashboard/messageBus/__fixtures__/uninstallTestMessageBus'
-import {installMessageBus, type MessageBusHost} from '../dashboard/messageBus/bus'
-import {getDashboardOrganizationId} from '../dashboard/messageBus/store'
+import {installMessageBus} from '../dashboard/messageBus/bus'
+import {getDashboardOrganizationId} from '../dashboard/messageBus/topicStore'
 import {createSanityInstance} from '../store/createSanityInstance'
 import {AuthStateType} from './authStateType'
 import {
@@ -912,12 +912,11 @@ describe('authStore', () => {
   })
 
   describe('under the message bus', () => {
-    let host: MessageBusHost
     let instance: ReturnType<typeof createSanityInstance>
 
     beforeEach(() => {
       vi.stubGlobal('__SANITY_APP_ID__', 'app')
-      host = installMessageBus({appId: 'dashboard'})
+      installMessageBus({appId: 'dashboard'})
       const storageArea = {getItem: vi.fn(), setItem: vi.fn(), removeItem: vi.fn()}
       instance = createSanityInstance({
         projectId: 'p',
@@ -946,27 +945,6 @@ describe('authStore', () => {
 
       expect(subscribeToStateAndFetchCurrentUser).toHaveBeenCalled()
       expect(subscribeToStorageEventsAndSetToken).not.toHaveBeenCalled()
-    })
-
-    const publishOrganization = (value: {id: string; name: string; slug: string} | null) =>
-      host.connections.subscribe((client) => client.emit('organizations.current', value))
-
-    it('reads the organization id from organizations.current', async () => {
-      const organizationId = getDashboardOrganizationId(instance)
-      const onStoreChanged = vi.fn()
-      const unsubscribe = organizationId.subscribe(onStoreChanged)
-      expect(organizationId.getCurrent()).toBeUndefined()
-
-      publishOrganization({id: 'oSyH1iET5', name: 'Fernway', slug: 'fernway'})
-      expect(organizationId.getCurrent()).toBe('oSyH1iET5')
-      expect(onStoreChanged).toHaveBeenCalled()
-      await expect(firstValueFrom(organizationId.observable)).resolves.toBe('oSyH1iET5')
-      unsubscribe()
-    })
-
-    it('has no organization id when the host has no active organization', () => {
-      publishOrganization(null)
-      expect(getDashboardOrganizationId(instance).getCurrent()).toBeUndefined()
     })
   })
 

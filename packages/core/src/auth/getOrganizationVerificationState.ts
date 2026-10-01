@@ -1,6 +1,6 @@
 import {combineLatest, distinctUntilChanged, map, type Observable, of, switchMap} from 'rxjs'
 
-import {getDashboardOrganizationId} from '../dashboard/messageBus/store'
+import {getDashboardOrganizationId} from '../dashboard/messageBus/topicStore'
 import {
   compareProjectOrganization,
   type OrgVerificationResult,

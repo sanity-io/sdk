@@ -123,7 +123,7 @@ export {
   type StudioConfig,
   type TokenSource,
 } from '../config/sanityConfig'
-export {getDashboardOrganizationId} from '../dashboard/messageBus/store'
+export {getDashboardOrganizationId} from '../dashboard/messageBus/topicStore'
 export {datasets} from '../datasets/datasets'
 export {
   type Action,
