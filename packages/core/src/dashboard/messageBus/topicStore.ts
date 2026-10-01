@@ -1,4 +1,4 @@
-import {distinctUntilChanged, map} from 'rxjs'
+import {distinctUntilChanged, map, skip} from 'rxjs'
 
 import {authStore} from '../../auth/authStore'
 import {bindActionGlobally, createActionBinder} from '../../store/createActionBinder'
@@ -203,12 +203,19 @@ export function getDashboardOrganizationId(
 ): StateSource<string | undefined> {
   if (!getDashboardMessageBus(instance)) return getComlinkOrganizationId(instance)
   const organization = getTopicState(instance, 'organizations.current')
+  const observable = organization.observable.pipe(
+    map((value) => (value as CurrentOrganization)?.id),
+    distinctUntilChanged(),
+  )
   return {
-    subscribe: organization.subscribe,
+    subscribe: (onStoreChanged) => {
+      const subscription = observable.pipe(skip(1)).subscribe({
+        next: () => onStoreChanged?.(),
+        error: () => onStoreChanged?.(),
+      })
+      return () => subscription.unsubscribe()
+    },
     getCurrent: () => (organization.getCurrent() as CurrentOrganization)?.id,
-    observable: organization.observable.pipe(
-      map((value) => (value as CurrentOrganization)?.id),
-      distinctUntilChanged(),
-    ),
+    observable,
   }
 }

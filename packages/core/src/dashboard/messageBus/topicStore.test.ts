@@ -1,4 +1,4 @@
-import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
+import {afterEach, beforeEach, describe, expect, it, onTestFinished, vi} from 'vitest'
 
 import {createSanityInstance, type SanityInstance} from '../../store/createSanityInstance'
 import {uninstallTestMessageBus} from './__fixtures__/uninstallTestMessageBus'
@@ -198,6 +198,45 @@ describe('dashboard topic store', () => {
       publishOrganization({id: 'oPx7Kd2Lm', name: 'Other', slug: 'other'})
       expect(onStoreChanged).toHaveBeenCalledOnce()
       unsubscribe()
+    })
+
+    it('does not notify subscribers when the host republishes the same organization', () => {
+      publishOrganization({id: 'oSyH1iET5', name: 'Fernway', slug: 'fernway'})
+      const onStoreChanged = vi.fn()
+      const unsubscribe = getDashboardOrganizationId(instance).subscribe(onStoreChanged)
+
+      publishOrganization({id: 'oSyH1iET5', name: 'Fernway Outdoors', slug: 'fernway'})
+      expect(onStoreChanged).not.toHaveBeenCalled()
+      unsubscribe()
+    })
+
+    it('notifies subscribers when the topic fails, so the failure surfaces on read', () => {
+      const organizationId = getDashboardOrganizationId(instance)
+      const onStoreChanged = vi.fn()
+      const unsubscribe = organizationId.subscribe(onStoreChanged)
+
+      // Deliberately publishes a failed topic result, which this topic's type doesn't allow.
+      host.connections.subscribe((client) =>
+        client.emit('organizations.current', {ok: false} as never),
+      )
+      expect(onStoreChanged).toHaveBeenCalledOnce()
+      expect(() => organizationId.getCurrent()).toThrow(TopicError)
+      unsubscribe()
+    })
+
+    it('falls back to the _context organization when the instance cannot connect to the bus', () => {
+      vi.stubGlobal('__SANITY_APP_ID__', undefined)
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      onTestFinished(() => warn.mockRestore())
+      const context = encodeURIComponent(JSON.stringify({orgId: 'oSyH1iET5'}))
+      const other = createSanityInstance({
+        projectId: 'p',
+        dataset: 'd',
+        auth: {initialLocationHref: `https://app.test/?_context=${context}`},
+      })
+
+      expect(getDashboardOrganizationId(other).getCurrent()).toBe('oSyH1iET5')
+      other.dispose()
     })
 
     it('has no organization id when the host has no active organization', () => {

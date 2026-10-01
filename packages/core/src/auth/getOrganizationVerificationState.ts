@@ -10,7 +10,7 @@ import {type SanityInstance} from '../store/createSanityInstance'
 
 /**
  * Creates an observable that emits the organization verification state for a given instance.
- * It combines the dashboard organization ID (from auth context) with the
+ * It combines the dashboard organization ID (from the message bus or `_context`) with the
  * project's actual organization ID (fetched via the project fetcher) and compares them.
  * @public
  */
