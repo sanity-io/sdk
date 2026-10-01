@@ -9,8 +9,8 @@ import {
   useCommentActions,
   useCommentThreads,
 } from '@sanity/sdk-react/collaboration'
-import {Badge, Button, Card, Select, TextInput} from '@sanity/ui'
-import {type JSX, useState} from 'react'
+import {Badge, Button, Card, Select, Spinner, TextInput} from '@sanity/ui'
+import {type JSX, Suspense, useState} from 'react'
 import {useSearchParams} from 'react-router'
 import {Box, Code, Flex, HStack, Text, VStack} from 'ui5'
 
@@ -639,14 +639,19 @@ function CommentsDemo({documentId}: {documentId: string}): JSX.Element {
 
       <NewThreadPanel documentId={documentId} perspective={perspective} />
 
-      <ThreadList
-        documentId={documentId}
-        perspective={perspective}
-        fieldPath={fieldPath}
-        status={status}
-        variants={variants}
-        onSelect={setSelected}
-      />
+      {/* `useCommentThreads` suspends until the list loads. Without a boundary
+          here the nearest one is `SanityApp`'s, which would blank the page —
+          and everything above is usable while the comments are still coming. */}
+      <Suspense fallback={<Spinner />}>
+        <ThreadList
+          documentId={documentId}
+          perspective={perspective}
+          fieldPath={fieldPath}
+          status={status}
+          variants={variants}
+          onSelect={setSelected}
+        />
+      </Suspense>
 
       <Inspector comment={selected} />
     </PageLayout>

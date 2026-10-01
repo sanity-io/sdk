@@ -1,5 +1,5 @@
 import {type Page} from '@playwright/test'
-import {expect, type PageContext, test} from '@repo/e2e'
+import {expect as baseExpect, type PageContext, test, waitForCommentsApi} from '@repo/e2e'
 
 /**
  * Comments do not live in the dataset under test. They live in an organization
@@ -9,10 +9,22 @@ import {expect, type PageContext, test} from '@repo/e2e'
  * the app was opened in, and standalone it falls back to the organization owning
  * the e2e project. The comments API has to be enabled for it either way.
  *
+ * Nothing has to be provisioned, but the store still has to warm up. On a
+ * dataset this run created the first listener and snapshot can each take
+ * minutes. Dataset setup asks for comments once to start that off, and
+ * `waitForCommentsApi` below holds the tests until it has finished.
+ *
  * Still generous on time: each test is a page load, several round trips, and
  * often a reload, which the default 30s does not cover on the slower browsers.
  */
 test.describe.configure({timeout: 90_000})
+
+/**
+ * A store that has just woken up still answers slowly for a while, which the
+ * default 10s does not always cover. Short enough that real breakage still
+ * fails quickly.
+ */
+const expect = baseExpect.configure({timeout: 30_000})
 
 /**
  * Waits for a write to reach the organization store rather than just the screen.
@@ -75,6 +87,13 @@ const seededBlock = (text: string) => [
 ]
 
 test.describe('Comments', () => {
+  // Warming up can take minutes, far longer than any one test is given, so the
+  // hook raises its own timeout rather than borrowing the describe's.
+  test.beforeAll(async () => {
+    test.setTimeout(6 * 60_000)
+    await waitForCommentsApi()
+  })
+
   test('a thread survives a reload, then takes replies and edits', async ({
     page,
     createDocuments,
