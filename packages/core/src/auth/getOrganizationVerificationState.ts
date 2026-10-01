@@ -1,12 +1,12 @@
 import {combineLatest, distinctUntilChanged, map, type Observable, of, switchMap} from 'rxjs'
 
+import {getDashboardOrganizationId} from '../dashboard/messageBus/store'
 import {
   compareProjectOrganization,
   type OrgVerificationResult,
 } from '../project/organizationVerification'
 import {project} from '../project/project'
 import {type SanityInstance} from '../store/createSanityInstance'
-import {getDashboardOrganizationId} from './dashboardUtils'
 
 /**
  * Creates an observable that emits the organization verification state for a given instance.
