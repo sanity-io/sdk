@@ -1,7 +1,7 @@
 import {defer, filter, map, type Observable} from 'rxjs'
 
 import {getDashboardOrganizationId} from '../auth/dashboardUtils'
-import {isDashboardEnvironment} from '../dashboard/messageBus/store'
+import {isMessageBusEnvironment} from '../dashboard/messageBus/bus'
 import {getTopicState} from '../dashboard/messageBus/topicStore'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {type OrganizationBase} from './organization'
@@ -31,13 +31,13 @@ export function observeAppOrganizationId(instance: SanityInstance): Observable<s
  * running in one.
  *
  * Both Dashboard runtimes are covered, the same way `useOrganizationId` covers
- * them. `isDashboardEnvironment` is read per subscription rather than once at
+ * them. `isMessageBusEnvironment` is read per subscription rather than once at
  * module scope, because the host installs the bus and may not have run by the
  * time this module is first imported.
  */
 function observeDashboardOrganizationId(instance: SanityInstance): Observable<string | undefined> {
   return defer(() => {
-    if (!isDashboardEnvironment()) {
+    if (!isMessageBusEnvironment()) {
       return getDashboardOrganizationId(instance).observable
     }
 
