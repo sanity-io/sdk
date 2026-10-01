@@ -178,7 +178,6 @@ export type ApiErrorBody = {
   error?: {type?: string; description?: string; projectID?: string}
   type?: string
   description?: string
-  projectID?: string
   message?: string
 }
 
@@ -200,10 +199,12 @@ export function getClientErrorApiDescription(error: ClientError): string | undef
   return body?.error?.description ?? body?.description
 }
 
-/** @internal Returns the project an API error refers to, if available. */
+/**
+ * Returns the project an API error refers to, if available.
+ * @internal
+ */
 export function getClientErrorApiProjectId(error: ClientError): string | undefined {
-  const body = getClientErrorApiBody(error)
-  const projectId = body?.error?.projectID ?? body?.projectID
+  const projectId = getClientErrorApiBody(error)?.error?.projectID
   return typeof projectId === 'string' && projectId ? projectId : undefined
 }
 

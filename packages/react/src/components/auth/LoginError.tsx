@@ -61,7 +61,6 @@ export function LoginError({error, resetErrorBoundary}: LoginErrorProps): React.
   const isProjectUserNotFound =
     !!clientError && clientError.statusCode === 401 && isProjectUserNotFoundClientError(clientError)
 
-  // The failing project; an app configured with `resources` has no `projectId`.
   const accessProjectId = clientError && getClientErrorApiProjectId(clientError)
 
   // The dashboard access request flow relies on a comlink connection to the
