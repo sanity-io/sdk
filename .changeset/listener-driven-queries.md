@@ -3,8 +3,10 @@
 '@sanity/sdk-react': patch
 ---
 
-Replace Live Content API subscriptions with mutation listeners for query results and release metadata. Queries now bypass the CDN, including when the deprecated `useCdn: true` option is supplied, because listener notifications do not carry a cache consistency cursor. Dataset mutations refresh every active query, including queries with references, instead of selecting queries by sync tags. This reduces notification latency at the cost of additional query requests. Mutation bursts are coalesced and changes arriving during a fetch trigger a trailing refetch. Failed refreshes retain existing query results and later notifications can recover.
+Improve update responsiveness for SDK queries and release metadata using shared mutation listeners. Rapid changes are grouped, and updates received during a fetch trigger a follow-up refresh.
 
-The initial listener welcome can trigger an additional refresh to catch writes between the first fetch and listener establishment. Draft edits also invalidate every active query, so continuous editing can cause repeated query requests even when their results do not change.
+SDK queries and release metadata now read directly from the API. The `useCdn` query option is deprecated and remains accepted for compatibility, but no longer enables CDN reads or creates a separate query cache entry.
 
-Core query APIs normalize legacy `projectId` and `dataset` overrides before selecting a store, so reads and invalidation target the same resource. The ignored `useCdn` option no longer creates a separate query cache entry. Failed release-metadata refreshes retain data already loaded by the same client.
+Content changes, including draft edits, refresh all active queries in the affected resource. This may increase query traffic in apps with frequent writes or many active queries, even when query results do not change. Connecting a listener can also trigger an additional refresh to include changes made during initial loading.
+
+Improve recovery after failed refreshes and ensure legacy `projectId` and `dataset` overrides consistently target the same resource for reads and updates.
