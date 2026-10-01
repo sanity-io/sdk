@@ -13,9 +13,10 @@ import {type SanityInstance} from '../store/createSanityInstance'
  * It combines the app's own organization ID with each project's actual
  * organization ID (fetched via the project fetcher) and compares them.
  *
- * The app's organization is the Dashboard's when there is one, and
- * `organizationId` on the `SanityConfig` otherwise, so a standalone app that
- * names its organization gets the same check a Dashboard app does.
+ * The app's organization is the Dashboard's when there is one (from the
+ * message bus or `_context`), and `organizationId` on the `SanityConfig`
+ * otherwise, so a standalone app that names its organization gets the same
+ * check a Dashboard app does.
  * @public
  */
 export function observeOrganizationVerificationState(

@@ -1,12 +1,15 @@
 import {firstValueFrom, of} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
-import {getDashboardOrganizationId} from '../auth/dashboardUtils'
 import {installMessageBus, resetMessageBus} from '../dashboard/messageBus/bus'
+import {getDashboardOrganizationId} from '../dashboard/messageBus/topicStore'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {observeAppOrganizationId} from './appOrganization'
 
-vi.mock('../auth/dashboardUtils', () => ({getDashboardOrganizationId: vi.fn()}))
+vi.mock('../dashboard/messageBus/topicStore', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../dashboard/messageBus/topicStore')>()),
+  getDashboardOrganizationId: vi.fn(),
+}))
 
 const MESSAGE_BUS_KEY = Symbol.for('sanity.os.bus')
 

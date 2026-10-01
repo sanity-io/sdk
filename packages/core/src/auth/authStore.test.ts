@@ -5,6 +5,7 @@ import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {uninstallTestMessageBus} from '../dashboard/messageBus/__fixtures__/uninstallTestMessageBus'
 import {installMessageBus} from '../dashboard/messageBus/bus'
+import {getDashboardOrganizationId} from '../dashboard/messageBus/topicStore'
 import {createSanityInstance} from '../store/createSanityInstance'
 import {AuthStateType} from './authStateType'
 import {
@@ -12,7 +13,6 @@ import {
   getAuthMethodState,
   getAuthState,
   getCurrentUserState,
-  getDashboardOrganizationId,
   getLoginUrlState,
   getTokenState,
 } from './authStore'

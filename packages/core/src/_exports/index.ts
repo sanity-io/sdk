@@ -37,7 +37,6 @@ export {
   type ErrorAuthState,
   getAuthState,
   getCurrentUserState,
-  getDashboardOrganizationId,
   getIsInDashboardState,
   getLoginUrlState,
   getTokenState,
@@ -123,6 +122,7 @@ export {
   type StudioConfig,
   type TokenSource,
 } from '../config/sanityConfig'
+export {getDashboardOrganizationId} from '../dashboard/messageBus/topicStore'
 export {datasets} from '../datasets/datasets'
 export {
   type Action,

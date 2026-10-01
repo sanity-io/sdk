@@ -1,8 +1,7 @@
 import {defer, filter, map, type Observable} from 'rxjs'
 
-import {getDashboardOrganizationId} from '../auth/dashboardUtils'
 import {isMessageBusEnvironment} from '../dashboard/messageBus/bus'
-import {getTopicState} from '../dashboard/messageBus/topicStore'
+import {getDashboardOrganizationId, getTopicState} from '../dashboard/messageBus/topicStore'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {type OrganizationBase} from './organization'
 
