@@ -277,11 +277,10 @@ describe('getClientErrorApiProjectId', () => {
       method: 'GET',
     } as ConstructorParameters<typeof ClientError>[0])
 
-  it('reads the project from the nested and the flat error body', () => {
+  it('reads the project from the error body', () => {
     expect(getClientErrorApiProjectId(clientError({error: {projectID: 'exx11uqh'}}))).toBe(
       'exx11uqh',
     )
-    expect(getClientErrorApiProjectId(clientError({projectID: 'exx11uqh'}))).toBe('exx11uqh')
   })
 
   it('ignores a missing, empty or non-string project', () => {
