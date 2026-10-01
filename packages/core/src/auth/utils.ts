@@ -178,6 +178,7 @@ export type ApiErrorBody = {
   error?: {type?: string; description?: string; projectID?: string}
   type?: string
   description?: string
+  projectID?: string
   message?: string
 }
 
@@ -197,6 +198,13 @@ export function getClientErrorApiType(error: ClientError): string | undefined {
 export function getClientErrorApiDescription(error: ClientError): string | undefined {
   const body = getClientErrorApiBody(error)
   return body?.error?.description ?? body?.description
+}
+
+/** @internal Returns the project an API error refers to, if available. */
+export function getClientErrorApiProjectId(error: ClientError): string | undefined {
+  const body = getClientErrorApiBody(error)
+  const projectId = body?.error?.projectID ?? body?.projectID
+  return typeof projectId === 'string' && projectId ? projectId : undefined
 }
 
 /** @internal True if the error represents a projectUserNotFoundError. */

@@ -1,3 +1,4 @@
+import {ClientError} from '@sanity/client'
 import {EMPTY, NEVER} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
@@ -5,6 +6,7 @@ import {AUTH_CODE_PARAM, DEFAULT_BASE} from './authConstants'
 import {
   getAuthCode,
   getCleanedUrl,
+  getClientErrorApiProjectId,
   getDefaultLocation,
   getDefaultStorage,
   getStorageEvents,
@@ -262,5 +264,29 @@ describe('getCleanedUrl', () => {
     const url = 'http://example.com/page#section'
     const cleaned = getCleanedUrl(url)
     expect(cleaned).toBe('http://example.com/page#section')
+  })
+})
+
+describe('getClientErrorApiProjectId', () => {
+  const clientError = (body: unknown) =>
+    new ClientError({
+      statusCode: 401,
+      headers: {},
+      body,
+      url: 'https://exx11uqh.api.sanity.work/v2025-05-06/data/query/production',
+      method: 'GET',
+    } as ConstructorParameters<typeof ClientError>[0])
+
+  it('reads the project from the nested and the flat error body', () => {
+    expect(getClientErrorApiProjectId(clientError({error: {projectID: 'exx11uqh'}}))).toBe(
+      'exx11uqh',
+    )
+    expect(getClientErrorApiProjectId(clientError({projectID: 'exx11uqh'}))).toBe('exx11uqh')
+  })
+
+  it('ignores a missing, empty or non-string project', () => {
+    expect(getClientErrorApiProjectId(clientError({error: {}}))).toBeUndefined()
+    expect(getClientErrorApiProjectId(clientError({error: {projectID: 42}}))).toBeUndefined()
+    expect(getClientErrorApiProjectId(clientError({error: {projectID: ''}}))).toBeUndefined()
   })
 })

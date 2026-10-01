@@ -135,6 +135,26 @@ describe('LoginError', () => {
     })
   })
 
+  it('does not request access when neither the error nor the config names a project', async () => {
+    mockIsDashboardEnvironment.mockReturnValue(true)
+    const error = makeClientError(401, {
+      error: {
+        type: 'projectUserNotFoundError',
+        description: 'User is not a member of this project.',
+      },
+    })
+
+    render(
+      <ResourceProvider fallback={<div>SUSPENDED</div>}>
+        <LoginError error={error} resetErrorBoundary={vi.fn()} />
+      </ResourceProvider>,
+    )
+
+    expect(await screen.findByText('User is not a member of this project.')).toBeInTheDocument()
+    expect(screen.queryByText('SUSPENDED')).not.toBeInTheDocument()
+    expect(mockWindowConnectionFetch).not.toHaveBeenCalled()
+  })
+
   it('prefers the project named in the error over the configured projectId', async () => {
     mockIsDashboardEnvironment.mockReturnValue(true)
     const error = makeClientError(401, {
