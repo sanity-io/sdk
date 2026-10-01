@@ -57,7 +57,7 @@ export default function App(): JSX.Element {
     <ThemedApp>
       <SanityApp
         fallback={<Spinner />}
-        config={isE2E ? {auth: {apiHost: 'https://api.sanity.work'}} : {auth: devAuth}}
+        config={{auth: isE2E ? {apiHost: 'https://api.sanity.work'} : devAuth}}
         resources={isE2E ? e2eResources : devResources}
         inferMediaLibraryAndCanvas
       >

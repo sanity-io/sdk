@@ -1,73 +1,79 @@
+import {getDocumentCommentsOptionsKey, parseDocumentCommentsOptionsKey} from '@sanity/sdk/_internal'
 import {
   type CommentsOptions,
   type CommentThread,
+  getCommentsErrorState,
   getCommentThreadsState,
   resolveCommentThreads,
-} from '@sanity/sdk'
+} from '@sanity/sdk/collaboration'
 import {useMemo} from 'react'
 
 import {type WithResourceNameSupport} from '../helpers/useNormalizedResourceOptions'
 import {type CommentListSource, useCommentList} from './useCommentList'
 
 /**
- * @public
+ * @beta
  * @category Types
  */
 export interface UseCommentThreadsResult {
-  /** Newest thread first, each with its replies oldest first. */
+  /** Matching threads, newest first, each with its replies oldest first. */
   threads: CommentThread[]
   /** True while switching to a different document or filter. */
   isPending: boolean
+  /**
+   * Set when the threads have stopped following the server: the listener
+   * failed after they had loaded, so what you are reading is the list as it
+   * last stood rather than as it is. Clears when a listener comes back.
+   */
+  error?: unknown
 }
 
-const SOURCE: CommentListSource<CommentThread[]> = {
+const SOURCE: CommentListSource<CommentsOptions, CommentThread[]> = {
   getState: getCommentThreadsState,
+  getErrorState: getCommentsErrorState,
   resolve: resolveCommentThreads,
+  getKey: getDocumentCommentsOptionsKey,
+  parseKey: parseDocumentCommentsOptionsKey,
 }
 
 /**
- * Reads a document's comments grouped into threads.
+ * Reads a document's comment threads and keeps them up to date.
  *
- * A thread is one comment plus its replies. Its `status` and `fieldPath` come
- * from the first comment, so filtering by either selects whole threads rather
- * than stray replies.
+ * A thread carries its first comment plus its replies, and `status` and
+ * `fieldPath` come from that first comment, so filtering by either selects
+ * whole threads. Use {@link useComments} to read the same list flat, `variants`
+ * to say which versions of the document to pool — by default it follows the
+ * perspective in view — and {@link useCommentsQuery} when the question is not
+ * "comments on this document".
  *
- * Unlike the Studio, every thread is returned. The Studio hides threads whose
- * field has left the schema or is hidden by a conditional, which it can do
- * because it has the schema to check against. Inspect `fieldPath` yourself if
- * your app needs to do the same.
+ * Suspends until the comments have loaded. Switching document or filter is a
+ * transition, so the previous list stays on screen and `isPending` goes true
+ * rather than the component suspending again.
  *
  * @category Comments
  * @function
- * @param options - The document to read, optionally narrowed by `fieldPath` or `status`
+ * @param options - The document to read, optionally narrowed by `fieldPath`, `status`, or `variants`
  * @returns The matching threads, and whether a switch is in flight
  *
- * @example Render the open threads on a document
+ * @example Count the open threads on a field
  * ```tsx
- * function Threads({documentId}: {documentId: string}) {
+ * function TitleCommentCount({documentId}: {documentId: string}) {
  *   const {threads} = useCommentThreads({
  *     documentId,
  *     documentType: 'article',
+ *     fieldPath: 'title',
  *     status: 'open',
  *   })
  *
- *   return (
- *     <ul>
- *       {threads.map((thread) => (
- *         <li key={thread.threadId}>
- *           {thread.fieldPath || 'Document'} — {thread.commentsCount} comments
- *         </li>
- *       ))}
- *     </ul>
- *   )
+ *   return <span>{threads.length}</span>
  * }
  * ```
  *
- * @public
+ * @beta
  */
 export function useCommentThreads(
   options: WithResourceNameSupport<CommentsOptions>,
 ): UseCommentThreadsResult {
-  const {value, isPending} = useCommentList('useCommentThreads', options, SOURCE)
-  return useMemo(() => ({threads: value, isPending}), [isPending, value])
+  const {value, isPending, error} = useCommentList('useCommentThreads', options, SOURCE)
+  return useMemo(() => ({threads: value, isPending, error}), [error, isPending, value])
 }

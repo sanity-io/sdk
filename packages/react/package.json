@@ -38,6 +38,10 @@
       "default": "./dist/index.js"
     },
     "./package.json": "./package.json",
+    "./collaboration": {
+      "source": "./src/_exports/collaboration.ts",
+      "default": "./dist/_exports/collaboration.js"
+    },
     "./dashboard": {
       "source": "./src/_exports/dashboard.ts",
       "default": "./dist/_exports/dashboard.js"
@@ -51,6 +55,7 @@
     "exports": {
       ".": "./dist/index.js",
       "./package.json": "./package.json",
+      "./collaboration": "./dist/_exports/collaboration.js",
       "./dashboard": "./dist/_exports/dashboard.js",
       "./dashboard/_internal": "./dist/_exports/dashboard-internal.js"
     },

@@ -121,6 +121,20 @@ describe('usersStore', () => {
     instance.dispose()
   })
 
+  it('reads an organization list against the organization the app names', async () => {
+    // Outside the Dashboard there is nothing else to scope the request to, so
+    // an app that names its organization can still read its users.
+    const instance = createSanityInstance({organizationId: 'org-configured'})
+
+    await resolveUsers(instance, {resourceType: 'organization'})
+
+    expect(request).toHaveBeenCalledWith(
+      expect.objectContaining({url: 'access/organization/org-configured/users'}),
+    )
+
+    instance.dispose()
+  })
+
   it('maintains state when multiple subscribers exist', async () => {
     const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
     const state = getUsersState(instance, {

@@ -5,6 +5,7 @@ import {Route, Routes} from 'react-router'
 import Framed from './Comlink/Framed'
 import ParentApp from './Comlink/ParentApp'
 import {CommentsRoute} from './Comments/CommentsRoute'
+import {LegacyCommentsRoute} from './Comments/legacy/LegacyCommentsRoute'
 import {DocumentDashboardInteractionsRoute} from './DocumentCollection/DocumentDashboardInteractionsRoute'
 import {DocumentEditorRoute} from './DocumentCollection/DocumentEditorRoute'
 import {DocumentGridRoute} from './DocumentCollection/DocumentGridRoute'
@@ -23,6 +24,7 @@ import {DashboardContextRoute} from './routes/DashboardContextRoute'
 import {DashboardWorkspacesRoute} from './routes/DashboardWorkspacesRoute'
 import {MediaLibraryRoute} from './routes/MediaLibraryRoute'
 import {PerspectivesRoute} from './routes/PerspectivesRoute'
+import {PortableTextCollaborationRoute} from './routes/PortableTextCollaborationRoute'
 import {PortableTextRoute} from './routes/PortableTextRoute'
 import {ProjectsRoute} from './routes/ProjectsRoute'
 import {ReleasesRoute} from './routes/releases/ReleasesRoute'
@@ -83,6 +85,14 @@ const documentCollectionRoutes = [
   {
     path: 'comments',
     element: <CommentsRoute />,
+  },
+  {
+    path: 'comments-legacy',
+    element: <LegacyCommentsRoute />,
+  },
+  {
+    path: 'portable-text-comments',
+    element: <PortableTextCollaborationRoute />,
   },
   {
     path: 'media-library',

@@ -24,9 +24,10 @@ import {
   withLatestFrom,
 } from 'rxjs'
 
-import {getDashboardOrganizationId} from '../auth/authStore'
 import {getClient, getClientState} from '../client/clientStore'
+import {observeAppOrganizationId} from '../organization/appOrganization'
 import {bindActionGlobally} from '../store/createActionBinder'
+import {type SanityInstance} from '../store/createSanityInstance'
 import {createStateSourceAction, type SelectorContext} from '../store/createStateSourceAction'
 import {type StoreState} from '../store/createStoreState'
 import {defineStore, type StoreContext} from '../store/defineStore'
@@ -84,6 +85,41 @@ const errorHandler =
   (state: StoreState<{error?: unknown}>) =>
   (error: unknown): void =>
     state.set('setError', {error})
+
+/**
+ * Which resource a list of users is read from.
+ *
+ * Explicit wins. Failing that, whichever id was given decides, and an
+ * organization list is what is left when neither was: the organization can be
+ * resolved from the app itself, a project cannot.
+ */
+function toUsersResourceType(options: GetUsersOptions): 'project' | 'organization' {
+  if (options.resourceType) return options.resourceType
+  if (options.organizationId) return 'organization'
+  return options.projectId ? 'project' : 'organization'
+}
+
+/**
+ * That resource and its id, as an observable because the organization may not
+ * be known yet: unconfigured, it comes from the app, which the Dashboard can
+ * take a moment to tell.
+ */
+function observeUsersResource(
+  instance: SanityInstance,
+  options: GetUsersOptions,
+): Observable<{type: 'project' | 'organization'; id: string}> {
+  if (toUsersResourceType(options) === 'project') {
+    return options.projectId
+      ? of({type: 'project', id: options.projectId})
+      : throwError(() => new Error('Project ID required for this API.'))
+  }
+
+  const organizationId$ = options.organizationId
+    ? of(options.organizationId)
+    : observeAppOrganizationId(instance).pipe(filter((id) => typeof id === 'string'))
+
+  return organizationId$.pipe(map((id) => ({type: 'organization', id})))
+}
 
 /**
  * Internal action that listens for new user subscriptions and load more requests.
@@ -206,31 +242,7 @@ const listenForLoadMoreAndFetch = ({state, instance}: StoreContext<UsersStoreSta
                   tap((response) => state.set('setUsersData', setUsersData(group$.key, response))),
                 )
             }
-            const projectId = options.projectId
-
-            // the resource type this request will use
-            // If resourceType is explicitly provided, use it
-            // Otherwise, infer from context: organization if organizationId exists,
-            // project if projectId exists, or default to organization
-            const resourceType =
-              options.resourceType ??
-              (options.organizationId ? 'organization' : projectId ? 'project' : 'organization')
-
-            const organizationId$ = options.organizationId
-              ? of(options.organizationId)
-              : getDashboardOrganizationId(instance).observable.pipe(
-                  filter((i) => typeof i === 'string'),
-                )
-
-            const resource$: Observable<{
-              type: 'project' | 'organization'
-              id: string
-            }> =
-              resourceType === 'project'
-                ? projectId
-                  ? of({type: 'project', id: projectId})
-                  : throwError(() => new Error('Project ID required for this API.'))
-                : organizationId$.pipe(map((id) => ({type: 'organization', id})))
+            const resource$ = observeUsersResource(instance, options)
 
             const client$ = getClientState(instance, {
               scope: 'global',

@@ -12,16 +12,16 @@ import {
   take,
 } from 'rxjs'
 
-import {getClient, getClientState} from '../client/clientStore'
+import {getClient, getClientState} from '../../client/clientStore'
 import {
   type DatasetResource,
   type DocumentResource,
   isDatasetResource,
-} from '../config/sanityConfig'
-import {bindActionByResource, type BoundResourceKey} from '../store/createActionBinder'
-import {type SanityInstance} from '../store/createSanityInstance'
-import {createStateSourceAction, type StateSource} from '../store/createStateSourceAction'
-import {defineStore, type StoreContext} from '../store/defineStore'
+} from '../../config/sanityConfig'
+import {bindActionByResource, type BoundResourceKey} from '../../store/createActionBinder'
+import {type SanityInstance} from '../../store/createSanityInstance'
+import {createStateSourceAction, type StateSource} from '../../store/createStateSourceAction'
+import {defineStore, type StoreContext} from '../../store/defineStore'
 import {
   ADDON_DATASET_API_VERSION,
   ADDON_DATASET_PROFILE,

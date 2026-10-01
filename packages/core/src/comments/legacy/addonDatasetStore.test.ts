@@ -2,16 +2,16 @@ import {type SanityClient} from '@sanity/client'
 import {BehaviorSubject, firstValueFrom, NEVER, of, throwError} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
-import {getClient, getClientState} from '../client/clientStore'
-import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
-import {type StateSource} from '../store/createStateSourceAction'
+import {getClient, getClientState} from '../../client/clientStore'
+import {createSanityInstance, type SanityInstance} from '../../store/createSanityInstance'
+import {type StateSource} from '../../store/createStateSourceAction'
 import {
   getAddonDatasetState,
   observeAddonDatasetClient,
   provisionAddonDataset,
 } from './addonDatasetStore'
 
-vi.mock('../client/clientStore', () => ({
+vi.mock('../../client/clientStore', () => ({
   getClient: vi.fn(),
   getClientState: vi.fn(),
 }))

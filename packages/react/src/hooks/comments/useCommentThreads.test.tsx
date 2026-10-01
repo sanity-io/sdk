@@ -1,20 +1,28 @@
+import {type StateSource} from '@sanity/sdk'
 import {
+  type CommentsOptions,
   type CommentThread,
+  getCommentsErrorState,
   getCommentThreadsState,
   resolveCommentThreads,
-  type StateSource,
-} from '@sanity/sdk'
+} from '@sanity/sdk/collaboration'
 import {act, render, screen} from '@testing-library/react'
 import {Suspense} from 'react'
-import {type Observable} from 'rxjs'
+import {type Observable, Subject} from 'rxjs'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {ResourceProvider} from '../../context/ResourceProvider'
+import {ResourcesContext} from '../../context/ResourcesContext'
 import {useCommentThreads} from './useCommentThreads'
 
-vi.mock('@sanity/sdk', async (importOriginal) => {
-  const original = await importOriginal<typeof import('@sanity/sdk')>()
-  return {...original, getCommentThreadsState: vi.fn(), resolveCommentThreads: vi.fn()}
+vi.mock('@sanity/sdk/collaboration', async (importOriginal) => {
+  const original = await importOriginal<typeof import('@sanity/sdk/collaboration')>()
+  return {
+    ...original,
+    getCommentThreadsState: vi.fn(),
+    getCommentsErrorState: vi.fn(),
+    resolveCommentThreads: vi.fn(),
+  }
 })
 
 const HANDLE = {documentId: 'doc-1', documentType: 'author'}
@@ -23,19 +31,72 @@ function thread(threadId: string) {
   return {threadId, commentsCount: 2, fieldPath: ''} as CommentThread
 }
 
-function mockSource(getCurrent: () => CommentThread[] | undefined) {
-  vi.mocked(getCommentThreadsState).mockReturnValue({
-    getCurrent,
-    subscribe: vi.fn(() => () => {}),
-    get observable(): Observable<CommentThread[] | undefined> {
-      throw new Error('Not implemented')
-    },
-  } as StateSource<CommentThread[] | undefined>)
+/**
+ * Stands in for the store, one source per option set so a test can hold one
+ * document loaded and another not.
+ *
+ * `getCurrent` must hand back the same array every call for a given option set.
+ * Returning a fresh one sends `useSyncExternalStore` into a render loop, which
+ * is why the store memoises its selectors.
+ */
+function mockSource(
+  getCurrent: (options: CommentsOptions) => CommentThread[] | undefined,
+  changed$?: Subject<void>,
+) {
+  vi.mocked(getCommentThreadsState).mockImplementation(
+    (_instance, options) =>
+      ({
+        getCurrent: () => getCurrent(options),
+        subscribe: vi.fn((cb?: () => void) => {
+          const subscription = changed$?.subscribe(() => cb?.())
+          return () => subscription?.unsubscribe()
+        }),
+        get observable(): Observable<CommentThread[] | undefined> {
+          throw new Error('Not implemented')
+        },
+      }) as StateSource<CommentThread[] | undefined>,
+  )
+  mockErrorSource(() => undefined)
 }
+
+/** The companion source, live by default. Call again to override. */
+function mockErrorSource(getCurrent: () => unknown, changed$?: Subject<void>) {
+  vi.mocked(getCommentsErrorState).mockImplementation(
+    () =>
+      ({
+        getCurrent,
+        subscribe: vi.fn((cb?: () => void) => {
+          const subscription = changed$?.subscribe(() => cb?.())
+          return () => subscription?.unsubscribe()
+        }),
+        get observable(): Observable<unknown> {
+          throw new Error('Not implemented')
+        },
+      }) as StateSource<unknown>,
+  )
+}
+
+/** Hoisted so the context value stays identical across renders. */
+const RELEASE_PERSPECTIVE = {releaseName: 'summer'}
 
 function Wrapper({children}: {children: React.ReactNode}) {
   return (
     <ResourceProvider projectId="p" dataset="d" fallback={<p>Loading…</p>}>
+      <ResourcesContext.Provider value={{other: {projectId: 'p2', dataset: 'd2'}}}>
+        <Suspense fallback={<p data-testid="suspended">Suspended</p>}>{children}</Suspense>
+      </ResourcesContext.Provider>
+    </ResourceProvider>
+  )
+}
+
+function PerspectiveWrapper({children}: {children: React.ReactNode}) {
+  return (
+    <ResourceProvider
+      projectId="p"
+      dataset="d"
+      perspective={RELEASE_PERSPECTIVE}
+      fallback={<p>Loading…</p>}
+    >
       <Suspense fallback={<p data-testid="suspended">Suspended</p>}>{children}</Suspense>
     </ResourceProvider>
   )
@@ -60,10 +121,11 @@ describe('useCommentThreads', () => {
     expect(screen.getByTestId('out').textContent).toBe('2 idle')
   })
 
-  it('suspends until the threads are available', async () => {
+  it('suspends until the first snapshot arrives', async () => {
     const loaded = [thread('t1')]
     const ref: {current: CommentThread[] | undefined} = {current: undefined}
-    mockSource(() => ref.current)
+    const changed$ = new Subject<void>()
+    mockSource(() => ref.current, changed$)
 
     let settle: () => void = () => {}
     vi.mocked(resolveCommentThreads).mockReturnValue(
@@ -88,12 +150,17 @@ describe('useCommentThreads', () => {
     expect(screen.getByTestId('out').textContent).toBe('1')
   })
 
-  it('narrows to one field when asked', () => {
+  it('passes the field path, status, and variants through to the store', () => {
     const loaded: CommentThread[] = []
     mockSource(() => loaded)
 
     function TestComponent() {
-      useCommentThreads({...HANDLE, fieldPath: 'title'})
+      useCommentThreads({
+        ...HANDLE,
+        fieldPath: ['body', {_key: 'intro'}],
+        status: 'resolved',
+        variants: 'all',
+      })
       return null
     }
 
@@ -101,7 +168,128 @@ describe('useCommentThreads', () => {
 
     expect(getCommentThreadsState).toHaveBeenCalledWith(
       expect.anything(),
-      expect.objectContaining({fieldPath: 'title'}),
+      expect.objectContaining({
+        documentId: 'doc-1',
+        fieldPath: 'body[_key=="intro"]',
+        status: 'resolved',
+        variants: 'all',
+        resource: {projectId: 'p', dataset: 'd'},
+      }),
     )
+  })
+
+  it('resolves a named resource from context', () => {
+    const loaded: CommentThread[] = []
+    mockSource(() => loaded)
+
+    function TestComponent() {
+      useCommentThreads({...HANDLE, resourceName: 'other'})
+      return null
+    }
+
+    render(<TestComponent />, {wrapper: Wrapper})
+
+    expect(getCommentThreadsState).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({resource: {projectId: 'p2', dataset: 'd2'}}),
+    )
+  })
+
+  it('fills in the perspective from context', () => {
+    // The perspective decides which of a document's variants the default
+    // `variants` covers, so dropping it here would quietly read a release's
+    // comments as if they were the draft's.
+    const loaded: CommentThread[] = []
+    mockSource(() => loaded)
+
+    function TestComponent() {
+      useCommentThreads(HANDLE)
+      return null
+    }
+
+    render(<TestComponent />, {wrapper: PerspectiveWrapper})
+
+    expect(getCommentThreadsState).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({perspective: RELEASE_PERSPECTIVE}),
+    )
+  })
+
+  it('keeps the previous list on screen while a different document loads', async () => {
+    const first = [thread('t1')]
+    const second = [thread('t2'), thread('t3')]
+    // Only `doc-1` is loaded, so switching to `doc-2` has to suspend.
+    const byDocument: Record<string, CommentThread[] | undefined> = {'doc-1': first}
+    mockSource((options) => byDocument[options.documentId])
+
+    let settle: () => void = () => {}
+    vi.mocked(resolveCommentThreads).mockReturnValue(
+      new Promise<CommentThread[]>((resolve) => {
+        settle = () => resolve(second)
+      }),
+    )
+
+    function TestComponent({documentId}: {documentId: string}) {
+      const {threads, isPending} = useCommentThreads({...HANDLE, documentId})
+      return <div data-testid="out">{`${threads.length} ${isPending ? 'pending' : 'idle'}`}</div>
+    }
+
+    const {rerender} = render(<TestComponent documentId="doc-1" />, {wrapper: Wrapper})
+    expect(screen.getByTestId('out').textContent).toBe('1 idle')
+
+    await act(async () => {
+      rerender(<TestComponent documentId="doc-2" />)
+    })
+
+    // The swap happens inside a transition, so the render that suspends is
+    // thrown away rather than falling back: `doc-1` stays on screen and
+    // `isPending` is what reports the switch.
+    expect(screen.queryByTestId('suspended')).not.toBeInTheDocument()
+    expect(screen.getByTestId('out').textContent).toBe('1 pending')
+    expect(getCommentThreadsState).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({documentId: 'doc-2'}),
+    )
+
+    await act(async () => {
+      byDocument['doc-2'] = second
+      settle()
+    })
+
+    expect(screen.getByTestId('out').textContent).toBe('2 idle')
+  })
+
+  it('reports a listener that failed after the threads had loaded', async () => {
+    const loaded = [thread('t1')]
+    mockSource(() => loaded)
+    const failure: {current: unknown} = {current: undefined}
+    const changed$ = new Subject<void>()
+    mockErrorSource(() => failure.current, changed$)
+
+    function TestComponent() {
+      const {threads, error} = useCommentThreads(HANDLE)
+      return (
+        <div data-testid="out">{`${threads.length} ${error instanceof Error ? error.message : 'live'}`}</div>
+      )
+    }
+
+    render(<TestComponent />, {wrapper: Wrapper})
+    expect(screen.getByTestId('out').textContent).toBe('1 live')
+
+    await act(async () => {
+      failure.current = new Error('connection failed')
+      changed$.next()
+    })
+
+    // The threads are still on screen; only their claim to being current is
+    // withdrawn.
+    expect(screen.getByTestId('out').textContent).toBe('1 connection failed')
+
+    await act(async () => {
+      failure.current = undefined
+      changed$.next()
+    })
+
+    expect(screen.getByTestId('out').textContent).toBe('1 live')
   })
 })

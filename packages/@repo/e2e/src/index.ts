@@ -114,5 +114,6 @@ export const createPlaywrightConfig = (
 
 // Export test fixtures
 export {test} from './fixtures'
+export {waitForCommentsApi} from './helpers/comments'
 export {type PageContext} from './helpers/pageContext'
 export {expect} from '@playwright/test'
