@@ -91,13 +91,15 @@ export function getDashboardOrganizationId(
   const messageBus = getDashboardMessageBus(instance)
   if (!messageBus) return getComlinkOrganizationId(instance)
   const organization = messageBus.subscribe('organizations.current')
-  const toId = (value: {id: string} | null | undefined) => value?.id
   return {
-    getCurrent: () => toId(organization.getCurrent()),
+    getCurrent: () => organization.getCurrent()?.id,
     subscribe: (onStoreChanged) => {
       const subscription = organization.subscribe(() => onStoreChanged?.())
       return () => subscription.unsubscribe()
     },
-    observable: organization.pipe(map(toId), distinctUntilChanged()),
+    observable: organization.pipe(
+      map((value) => value?.id),
+      distinctUntilChanged(),
+    ),
   }
 }
