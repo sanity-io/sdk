@@ -1,6 +1,6 @@
 /* eslint-disable react-compiler/react-compiler -- the transport branch in `useUpdateFavorite` is a deliberate rules-of-hooks exception; the compiler refuses files that disable it */
 import {type FavoriteStatusResponse, setFavorite} from '@sanity/sdk'
-import {isDashboardEnvironment, setBusFavorite} from '@sanity/sdk/_internal'
+import {isMessageBusEnvironment, setBusFavorite} from '@sanity/sdk/_internal'
 import {useCallback} from 'react'
 
 import {createMutationHook} from '../helpers/createMutationHook'
@@ -84,7 +84,7 @@ export function useUpdateFavorite(props: UseFavoriteProps): UpdateFavorite {
   // The branch is stable: the transport is fixed for the page lifetime, so one set of hooks
   // always runs and the other never does.
   // eslint-disable-next-line react-hooks/rules-of-hooks -- transport is fixed for the page lifetime
-  if (isDashboardEnvironment()) return useFavoriteActions(props, useSetBusFavorite())
+  if (isMessageBusEnvironment()) return useFavoriteActions(props, useSetBusFavorite())
   // eslint-disable-next-line react-hooks/rules-of-hooks -- transport is fixed for the page lifetime
   return useFavoriteActions(props, useSetFavorite())
 }

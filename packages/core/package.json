@@ -1,6 +1,6 @@
 {
   "name": "@sanity/sdk",
-  "version": "3.6.0",
+  "version": "3.7.0",
   "private": false,
   "description": "Sanity SDK",
   "keywords": [
@@ -89,7 +89,7 @@
     "@sanity/bifur-client": "^1.0.0",
     "@sanity/client": "catalog:",
     "@sanity/comlink": "catalog:",
-    "@sanity/diff-match-patch": "^3.2.0",
+    "@sanity/diff-match-patch": "^3.2.1",
     "@sanity/diff-patch": "^6.0.0",
     "@sanity/id-utils": "^1.1.0",
     "@sanity/image-url": "^2.1.1",

@@ -1,6 +1,8 @@
-import {describe, expect, it} from 'vitest'
+import {describe, expect, it, onTestFinished, vi} from 'vitest'
 
 import {type SanityConfig} from '../config/sanityConfig'
+import {uninstallTestMessageBus} from '../dashboard/messageBus/__fixtures__/uninstallTestMessageBus'
+import {installMessageBus} from '../dashboard/messageBus/bus'
 import {isStudioConfig, resolveAuthMode} from './authMode'
 
 describe('resolveAuthMode', () => {
@@ -13,6 +15,16 @@ describe('resolveAuthMode', () => {
     const context = encodeURIComponent(JSON.stringify({orgId: '123'}))
     const href = `https://example.com?_context=${context}`
     expect(resolveAuthMode({}, href)).toBe('dashboard')
+  })
+
+  it('returns "dashboard" when a message bus is installed', () => {
+    vi.stubGlobal('__SANITY_APP_ID__', 'app')
+    installMessageBus({appId: 'dashboard'})
+    onTestFinished(() => {
+      uninstallTestMessageBus()
+      vi.unstubAllGlobals()
+    })
+    expect(resolveAuthMode({}, 'https://example.com')).toBe('dashboard')
   })
 
   it('returns "standalone" by default', () => {
@@ -33,6 +45,25 @@ describe('resolveAuthMode', () => {
       auth: {oauth: {clientId: 'c', redirectUri: 'https://app/cb', organizationId: 'o'}},
     }
     expect(resolveAuthMode(config, href)).toBe('oauth')
+  })
+
+  it('returns "standalone" for the application that installed the message bus', () => {
+    vi.stubGlobal('__SANITY_APP_ID__', 'dashboard')
+    installMessageBus({appId: 'dashboard'})
+    onTestFinished(() => {
+      uninstallTestMessageBus()
+      vi.unstubAllGlobals()
+    })
+    expect(resolveAuthMode({}, 'https://example.com')).toBe('standalone')
+  })
+
+  it('prefers "oauth" over an installed message bus', () => {
+    installMessageBus({appId: 'dashboard'})
+    onTestFinished(uninstallTestMessageBus)
+    const config: SanityConfig = {
+      auth: {oauth: {clientId: 'c', redirectUri: 'https://app/cb', organizationId: 'o'}},
+    }
+    expect(resolveAuthMode(config, 'https://example.com')).toBe('oauth')
   })
 
   it('prefers "studio" over oauth config', () => {

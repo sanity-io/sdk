@@ -1,5 +1,6 @@
 import {ClientError} from '@sanity/client'
-import {getIsInDashboardState} from '@sanity/sdk'
+import {installMessageBus, isDashboardEnvironment, resetMessageBus} from '@sanity/sdk/_internal'
+import {type MessageBusHost, type PayloadOf} from '@sanity/sdk/dashboard'
 import {fireEvent, render, screen, waitFor} from '@testing-library/react'
 import {afterEach, beforeEach, describe, expect, it, type Mock, vi} from 'vitest'
 
@@ -7,12 +8,9 @@ import {ResourceProvider} from '../../context/ResourceProvider'
 import {AuthError} from './AuthError'
 import {LoginError} from './LoginError'
 
-vi.mock('@sanity/sdk', async () => {
-  const actual = await vi.importActual('@sanity/sdk')
-  return {
-    ...actual,
-    getIsInDashboardState: vi.fn(() => ({getCurrent: vi.fn(() => false)})),
-  }
+vi.mock('@sanity/sdk/_internal', async () => {
+  const actual = await vi.importActual('@sanity/sdk/_internal')
+  return {...actual, isDashboardEnvironment: vi.fn(() => false)}
 })
 
 const mockLogout = vi.fn(async () => {})
@@ -25,7 +23,7 @@ vi.mock('../../hooks/comlink/useWindowConnection', () => ({
   useWindowConnection: vi.fn(() => ({fetch: mockWindowConnectionFetch})),
 }))
 
-const mockGetIsInDashboardState = getIsInDashboardState as Mock
+const mockIsDashboardEnvironment = isDashboardEnvironment as Mock
 
 function makeClientError(statusCode: number, body: unknown): ClientError {
   return new ClientError({
@@ -39,7 +37,7 @@ function makeClientError(statusCode: number, body: unknown): ClientError {
 
 describe('LoginError', () => {
   beforeEach(() => {
-    mockGetIsInDashboardState.mockReturnValue({getCurrent: vi.fn(() => false)})
+    mockIsDashboardEnvironment.mockReturnValue(false)
   })
 
   afterEach(() => {
@@ -87,7 +85,7 @@ describe('LoginError', () => {
   // request path must not render, because useWindowConnection would suspend
   // waiting for a comlink node that never arrives.
   it('renders synchronously on a 401 projectUserNotFound error outside the dashboard', async () => {
-    mockGetIsInDashboardState.mockReturnValue({getCurrent: vi.fn(() => false)})
+    mockIsDashboardEnvironment.mockReturnValue(false)
 
     const error = makeClientError(401, {
       error: {
@@ -114,7 +112,7 @@ describe('LoginError', () => {
   })
 
   it('fires the dashboard access request on a 401 projectUserNotFound error inside the dashboard', async () => {
-    mockGetIsInDashboardState.mockReturnValue({getCurrent: vi.fn(() => true)})
+    mockIsDashboardEnvironment.mockReturnValue(true)
 
     const error = makeClientError(401, {
       error: {
@@ -143,7 +141,7 @@ describe('LoginError', () => {
   // at runtime (without it, the previous `error instanceof ClientError` check
   // was dead code in the dashboard).
   it('fires the dashboard access request when the projectUserNotFound ClientError is wrapped in an AuthError', async () => {
-    mockGetIsInDashboardState.mockReturnValue({getCurrent: vi.fn(() => true)})
+    mockIsDashboardEnvironment.mockReturnValue(true)
 
     const clientError = makeClientError(401, {
       error: {
@@ -185,7 +183,7 @@ describe('LoginError', () => {
   // AuthBoundary wraps the real ClientError in an AuthError before it reaches
   // the error boundary, so the component must unwrap `.cause` to see it.
   it('auto-logs-out on a non-projectUserNotFound 401 outside the dashboard', async () => {
-    mockGetIsInDashboardState.mockReturnValue({getCurrent: vi.fn(() => false)})
+    mockIsDashboardEnvironment.mockReturnValue(false)
 
     const mockReset = vi.fn()
     const clientError = makeClientError(401, {
@@ -213,7 +211,7 @@ describe('LoginError', () => {
   // ComlinkTokenRefreshProvider is responsible for asking the parent window
   // for a fresh token; the Retry button stays as a manual fallback.
   it('does not auto-log-out on a non-projectUserNotFound 401 inside the dashboard', async () => {
-    mockGetIsInDashboardState.mockReturnValue({getCurrent: vi.fn(() => true)})
+    mockIsDashboardEnvironment.mockReturnValue(true)
 
     const mockReset = vi.fn()
     const clientError = makeClientError(401, {
@@ -236,5 +234,144 @@ describe('LoginError', () => {
     expect(mockReset).not.toHaveBeenCalled()
     // Generic 401s should not trigger the dashboard access request flow.
     expect(mockWindowConnectionFetch).not.toHaveBeenCalled()
+  })
+
+  describe('under the message bus', () => {
+    const MESSAGE_BUS_KEY = Symbol.for('sanity.os.bus')
+    let host: MessageBusHost
+
+    beforeEach(async () => {
+      const actual =
+        await vi.importActual<typeof import('@sanity/sdk/_internal')>('@sanity/sdk/_internal')
+      mockIsDashboardEnvironment.mockImplementation(actual.isDashboardEnvironment)
+      vi.stubGlobal('__SANITY_APP_ID__', 'app')
+      host = installMessageBus({appId: 'dashboard'})
+    })
+
+    afterEach(() => {
+      resetMessageBus()
+      delete (globalThis as {[MESSAGE_BUS_KEY]?: unknown})[MESSAGE_BUS_KEY]
+      vi.unstubAllGlobals()
+      vi.restoreAllMocks()
+    })
+
+    it('requests project access over the bus on a 401 projectUserNotFound error', async () => {
+      const requests: PayloadOf<'access.request'>[] = []
+      host.subscribe('access.request', (message) => {
+        requests.push(message.payload)
+        message.reply({ok: true})
+      })
+      const error = new AuthError(
+        makeClientError(401, {
+          error: {
+            type: 'projectUserNotFoundError',
+            description: 'User is not a member of this project.',
+          },
+        }),
+      )
+
+      render(
+        <ResourceProvider projectId="abc123" dataset="production" fallback={<div>SUSPENDED</div>}>
+          <LoginError error={error} resetErrorBoundary={vi.fn()} />
+        </ResourceProvider>,
+      )
+
+      await waitFor(() => {
+        expect(requests).toEqual([{resourceType: 'project', resourceId: 'abc123'}])
+      })
+      expect(mockWindowConnectionFetch).not.toHaveBeenCalled()
+      expect(mockLogout).not.toHaveBeenCalled()
+    })
+
+    const projectUserNotFound = () =>
+      new AuthError(
+        makeClientError(401, {
+          error: {
+            type: 'projectUserNotFoundError',
+            description: 'User is not a member of this project.',
+          },
+        }),
+      )
+
+    it('warns when the dashboard declines the access request', async () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      host.subscribe('access.request', (message) =>
+        message.reply({ok: false, reason: 'already-has-access'}),
+      )
+
+      render(
+        <ResourceProvider projectId="abc123" dataset="production" fallback={null}>
+          <LoginError error={projectUserNotFound()} resetErrorBoundary={vi.fn()} />
+        </ResourceProvider>,
+      )
+
+      await waitFor(() => {
+        expect(warn).toHaveBeenCalledWith('[sanity/sdk] Dashboard declined the access request:', {
+          ok: false,
+          reason: 'already-has-access',
+        })
+      })
+    })
+
+    it('warns when nothing responds to the access request', async () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+      render(
+        <ResourceProvider projectId="abc123" dataset="production" fallback={null}>
+          <LoginError error={projectUserNotFound()} resetErrorBoundary={vi.fn()} />
+        </ResourceProvider>,
+      )
+
+      await waitFor(() => {
+        expect(warn).toHaveBeenCalledWith(
+          '[sanity/sdk] Dashboard access request failed:',
+          expect.objectContaining({code: 'NO_RESPONDER'}),
+        )
+      })
+    })
+
+    it('falls back to comlink when a bus is installed but cannot connect', async () => {
+      vi.stubGlobal('__SANITY_APP_ID__', undefined)
+      vi.spyOn(console, 'warn').mockImplementation(() => {})
+      const error = new AuthError(
+        makeClientError(401, {
+          error: {
+            type: 'projectUserNotFoundError',
+            description: 'User is not a member of this project.',
+          },
+        }),
+      )
+
+      render(
+        <ResourceProvider projectId="abc123" dataset="production" fallback={<div>SUSPENDED</div>}>
+          <LoginError error={error} resetErrorBoundary={vi.fn()} />
+        </ResourceProvider>,
+      )
+
+      expect(await screen.findByText('User is not a member of this project.')).toBeInTheDocument()
+      expect(mockWindowConnectionFetch).toHaveBeenCalledWith('dashboard/v1/auth/access/request', {
+        resourceType: 'project',
+        resourceId: 'abc123',
+      })
+    })
+
+    it('does not auto-log-out on a non-projectUserNotFound 401 when a bus is installed', async () => {
+      const mockReset = vi.fn()
+      const error = new AuthError(
+        makeClientError(401, {error: {type: 'someOther401Type', description: 'Token is invalid'}}),
+      )
+
+      render(
+        <ResourceProvider projectId="abc123" dataset="production" fallback={null}>
+          <LoginError error={error} resetErrorBoundary={mockReset} />
+        </ResourceProvider>,
+      )
+
+      expect(
+        await screen.findByText('Please try again or contact support if the problem persists.'),
+      ).toBeInTheDocument()
+      expect(mockLogout).not.toHaveBeenCalled()
+      expect(mockReset).not.toHaveBeenCalled()
+    })
   })
 })

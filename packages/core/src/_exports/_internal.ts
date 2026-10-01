@@ -19,6 +19,7 @@ export {getCommentsOptionsKey, parseCommentsOptionsKey} from '../comments/legacy
 export {
   installMessageBus,
   type InstallMessageBusOptions,
+  isMessageBusEnvironment,
   resetMessageBus,
 } from '../dashboard/messageBus/bus'
 export {

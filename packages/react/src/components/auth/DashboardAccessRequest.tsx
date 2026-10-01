@@ -1,26 +1,39 @@
 import {SDK_CHANNEL_NAME, SDK_NODE_NAME} from '@sanity/message-protocol'
+import {getDashboardMessageBus} from '@sanity/sdk/_internal'
+import {type MessageBus} from '@sanity/sdk/dashboard'
 import {useEffect} from 'react'
 
 import {useWindowConnection} from '../../hooks/comlink/useWindowConnection'
+import {useSanityInstance} from '../../hooks/context/useSanityInstance'
 
 interface DashboardAccessRequestProps {
   projectId: string
 }
 
 /**
- * Sends a `dashboard/v1/auth/access/request` message to the dashboard via
- * comlink so the user can request access to a project they don't belong to.
+ * Asks the dashboard to show its access request prompt for a project the user
+ * doesn't belong to: `access.request` over the message bus when this instance
+ * is connected to one, `dashboard/v1/auth/access/request` over comlink otherwise.
  *
  * This is intentionally isolated in its own component because
  * `useWindowConnection` suspends until a comlink node is available, which
- * never happens outside the dashboard. Callers must gate rendering on
- * `getIsInDashboardState(...).getCurrent()` and wrap this in a
+ * never happens outside the dashboard. Callers must gate rendering on being
+ * in a dashboard and wrap this in a
  * {@link https://react.dev/reference/react/Suspense | Suspense} boundary
  * so the suspension stays local instead of bubbling up to the app shell.
  *
  * @internal
  */
-export function DashboardAccessRequest({projectId}: DashboardAccessRequestProps): null {
+export function DashboardAccessRequest({projectId}: DashboardAccessRequestProps): React.ReactNode {
+  const messageBus = getDashboardMessageBus(useSanityInstance())
+  return messageBus ? (
+    <BusAccessRequest messageBus={messageBus} projectId={projectId} />
+  ) : (
+    <ComlinkAccessRequest projectId={projectId} />
+  )
+}
+
+function ComlinkAccessRequest({projectId}: DashboardAccessRequestProps): null {
   const {fetch} = useWindowConnection({
     name: SDK_NODE_NAME,
     connectTo: SDK_CHANNEL_NAME,
@@ -32,6 +45,26 @@ export function DashboardAccessRequest({projectId}: DashboardAccessRequestProps)
       resourceId: projectId,
     })
   }, [fetch, projectId])
+
+  return null
+}
+
+function BusAccessRequest({
+  messageBus,
+  projectId,
+}: DashboardAccessRequestProps & {messageBus: MessageBus}): null {
+  useEffect(() => {
+    messageBus.emit('access.request', {resourceType: 'project', resourceId: projectId}).then(
+      (reply) => {
+        // eslint-disable-next-line no-console
+        if (!reply.ok) console.warn('[sanity/sdk] Dashboard declined the access request:', reply)
+      },
+      (error) => {
+        // eslint-disable-next-line no-console
+        console.warn('[sanity/sdk] Dashboard access request failed:', error)
+      },
+    )
+  }, [messageBus, projectId])
 
   return null
 }

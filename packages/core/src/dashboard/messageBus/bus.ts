@@ -1223,6 +1223,26 @@ export function isMessageBusInstalled(): boolean {
 }
 
 /**
+ * Returns whether this application installed the message bus and hosts the others on it.
+ * @internal
+ */
+export function isMessageBusHost(): boolean {
+  const installedMessageBus = getInstalledMessageBus()
+  return (
+    !!installedMessageBus &&
+    (installedMessageBus as InternalMessageBus)[MESSAGE_BUS_REGISTRY_KEY].appId === resolveAppId()
+  )
+}
+
+/**
+ * Returns whether this application runs on an installed message bus.
+ * @internal
+ */
+export function isMessageBusEnvironment(): boolean {
+  return isMessageBusInstalled()
+}
+
+/**
  * Options for connecting to an installed message bus.
  * @public
  */

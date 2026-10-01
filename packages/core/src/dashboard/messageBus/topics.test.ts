@@ -112,7 +112,7 @@ describe('dashboard topic types', () => {
       resourceId: string
     }>()
     expectTypeOf<ReplyOf<'access.request'>>().toEqualTypeOf<
-      {ok: true} | {ok: false; reason: 'unsupported'}
+      {ok: true} | {ok: false; reason: 'unsupported' | 'already-has-access'}
     >()
   })
 

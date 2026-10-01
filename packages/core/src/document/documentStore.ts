@@ -1,10 +1,18 @@
-import {type Action, ClientError, CorsOriginError, type Mutation, ServerError} from '@sanity/client'
+import {
+  type Action,
+  ClientError,
+  CorsOriginError,
+  type Mutation,
+  type SanityClient,
+  ServerError,
+} from '@sanity/client'
 import {DocumentId, getDraftId} from '@sanity/id-utils'
 import {jsonMatch} from '@sanity/json-match'
 import {type ExprNode} from 'groq-js'
 import {
   catchError,
   concatMap,
+  defer,
   distinctUntilChanged,
   EMPTY,
   filter,
@@ -16,6 +24,7 @@ import {
   Observable,
   of,
   pairwise,
+  race,
   retry,
   startWith,
   Subject,
@@ -54,6 +63,8 @@ import {
   OUT_OF_SYNC_RETRY_BASE_DELAY,
   OUT_OF_SYNC_RETRY_COUNT,
   OUT_OF_SYNC_RETRY_MAX_DELAY,
+  SUBMISSION_RETRY_BASE_DELAY,
+  SUBMISSION_RETRY_MAX_DELAY,
 } from './documentConstants'
 import {
   type DocumentEvent,
@@ -86,6 +97,7 @@ import {
   type UnverifiedDocumentRevision,
 } from './reducers'
 import {createFetchDocument, createSharedListener, type SharedListener} from './sharedListener'
+import {classifySubmissionError} from './submissionErrors'
 
 export interface DocumentStoreState {
   documentStates: {[TDocumentId in string]?: DocumentState}
@@ -415,12 +427,39 @@ const subscribeToQueuedAndApplyNextTransaction = ({
     .subscribe({error: (error) => state.set('setError', {error})})
 }
 
+const getErrorMessage = (error: unknown) =>
+  error instanceof Error ? error.message : 'Request failed'
+
+const submitOutgoingTransaction = (client: SanityClient, outgoing: OutgoingTransaction) => {
+  // liveEdit transactions route to the mutations API; everything else routes
+  // to the actions API. processActions rejects transactions that mix the two,
+  // and reducers won't batch across that boundary, so a batch is always
+  // entirely liveEdit or entirely not.
+  if (outgoing.actions.some((action) => !isReleaseAction(action) && action.liveEdit)) {
+    return client.observable.mutate(outgoing.outgoingMutations as Mutation[], {
+      transactionId: outgoing.transactionId,
+      visibility: 'async',
+      returnDocuments: false,
+      returnFirst: false,
+      tag: 'document.mutate',
+      skipCrossDatasetReferenceValidation: true,
+    })
+  }
+
+  return client.observable.action(outgoing.outgoingActions as Action[], {
+    transactionId: outgoing.transactionId,
+    skipCrossDatasetReferenceValidation: true,
+    tag: 'document.action',
+  })
+}
+
 const subscribeToAppliedAndSubmitNextTransaction = ({
   state,
   instance,
   key: {resource},
 }: StoreContext<DocumentStoreState, BoundResourceKey>) => {
   const {events} = state.get()
+  const clients$ = getClientState(instance, {apiVersion: API_VERSION, resource}).observable
 
   return state.observable
     .pipe(
@@ -439,51 +478,59 @@ const subscribeToAppliedAndSubmitNextTransaction = ({
       tap((next) => state.set('transitionAppliedTransactionsToOutgoing', next)),
       map((s) => s.outgoing),
       distinctUntilChanged(),
-      withLatestFrom(
-        getClientState(instance, {
-          apiVersion: API_VERSION,
-          resource,
-        }).observable,
-      ),
-      concatMap(([outgoing, client]) => {
+      withLatestFrom(clients$),
+      concatMap(([outgoing, initialClient]) => {
         if (!outgoing) return EMPTY
 
-        const revertOnError = catchError((error: unknown) => {
-          state.set('revertOutgoingTransaction', revertOutgoingTransaction)
-          const message = error instanceof Error ? error.message : 'Request failed'
-          events.next({type: 'reverted', message, outgoing, error})
-          return EMPTY
-        })
+        // the client that made the latest attempt. the client store rebuilds
+        // its clients when the token changes, so a different client means
+        // different credentials and a retry after a 401 can go right away
+        let attemptClient: SanityClient | undefined
 
-        const toResult = map((result: unknown) => ({
-          result: result as DocumentTransactionSubmissionResult,
-          outgoing,
-        }))
+        return defer(() => (attemptClient ? clients$.pipe(first()) : of(initialClient))).pipe(
+          concatMap((client) => {
+            attemptClient = client
+            return submitOutgoingTransaction(client, outgoing)
+          }),
+          retry({
+            delay: (error: unknown, retryCount) => {
+              if (classifySubmissionError(error) !== 'retry') return throwError(() => error)
 
-        // liveEdit transactions route to the mutations API; everything else routes
-        // to the actions API. processActions rejects transactions that mix the two,
-        // and reducers won't batch across that boundary, so a batch is always
-        // entirely liveEdit or entirely not.
-        if (outgoing.actions.some((action) => !isReleaseAction(action) && action.liveEdit)) {
-          return client.observable
-            .mutate(outgoing.outgoingMutations as Mutation[], {
-              transactionId: outgoing.transactionId,
-              visibility: 'async',
-              returnDocuments: false,
-              returnFirst: false,
-              tag: 'document.mutate',
-              skipCrossDatasetReferenceValidation: true,
-            })
-            .pipe(revertOnError, toResult)
-        }
-
-        return client.observable
-          .action(outgoing.outgoingActions as Action[], {
-            transactionId: outgoing.transactionId,
-            skipCrossDatasetReferenceValidation: true,
-            tag: 'document.action',
-          })
-          .pipe(revertOnError, toResult)
+              // keep the transaction and its optimistic local state. the
+              // document stays out of sync (see `getDocumentSyncStatus`) and
+              // later edits queue behind this transaction until it lands
+              events.next({
+                type: 'submission-failed',
+                message: getErrorMessage(error),
+                error,
+                outgoing,
+                attempt: retryCount,
+              })
+              const backoff = Math.min(
+                SUBMISSION_RETRY_BASE_DELAY * 2 ** (retryCount - 1),
+                SUBMISSION_RETRY_MAX_DELAY,
+              )
+              return race(
+                timer(backoff),
+                clients$.pipe(first((client) => client !== attemptClient)),
+              )
+            },
+          }),
+          catchError((error: unknown) => {
+            if (classifySubmissionError(error) === 'accepted') {
+              // an earlier attempt was committed and only its response was
+              // lost, so this is an ack
+              return of({transactionId: outgoing.transactionId, documentIds: [], results: []})
+            }
+            state.set('revertOutgoingTransaction', revertOutgoingTransaction)
+            events.next({type: 'reverted', message: getErrorMessage(error), outgoing, error})
+            return EMPTY
+          }),
+          map((result: unknown) => ({
+            result: result as DocumentTransactionSubmissionResult,
+            outgoing,
+          })),
+        )
       }),
       tap(({outgoing, result}) => {
         state.set('cleanupOutgoingTransaction', cleanupOutgoingTransaction)
