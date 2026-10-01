@@ -79,8 +79,10 @@ type Resolvable = {
  * The resource is resolved when an action is called rather than when the hook
  * runs, so one set of callbacks works across several resources. Pass `resource`
  * or `resourceName` per call to choose; otherwise the surrounding
- * `ResourceProvider` decides. Every action needs an organization, from
- * `collaboration.organizationId` on the config or on the call.
+ * `ResourceProvider` decides. The organization the comments live in is
+ * resolved per call as well: the one the Dashboard opened the app in, else
+ * `organizationId` on the Sanity config, else the organization owning the
+ * resource's project. It cannot be passed on the call.
  *
  * @category Comments
  * @function

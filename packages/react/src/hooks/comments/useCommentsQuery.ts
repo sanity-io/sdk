@@ -45,8 +45,9 @@ const SOURCE: CommentListSource<CommentsQueryOptions, Comment[]> = {
  * document's comments grouped into threads.
  *
  * `_type == "sanity.comment"` is applied for you. Comments are stored per
- * organization, so `collaboration.organizationId` has to be configured — on the
- * Sanity config, or per call.
+ * organization, resolved rather than configured: the one the Dashboard opened
+ * the app in, else `organizationId` on the Sanity config, else the organization
+ * owning the resource's project. The filter runs within that organization.
  *
  * Suspends until the comments have loaded. Switching filter is a transition, so
  * the previous list stays on screen and `isPending` goes true rather than the
