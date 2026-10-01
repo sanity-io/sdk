@@ -1,17 +1,10 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {createSanityInstance, type SanityInstance} from '../../store/createSanityInstance'
-import {
-  installMessageBus,
-  type MessageBus,
-  MessageBusError,
-  type MessageBusHost,
-  resetMessageBus,
-} from './bus'
+import {uninstallTestMessageBus} from './__fixtures__/uninstallTestMessageBus'
+import {installMessageBus, type MessageBus, MessageBusError, type MessageBusHost} from './bus'
 import {getDashboardMessageBus} from './store'
 import {getTopicState, resolveTopic, TopicError} from './topicStore'
-
-const MESSAGE_BUS_KEY = Symbol.for('sanity.os.bus')
 
 let host: MessageBusHost
 let instance: SanityInstance
@@ -28,8 +21,7 @@ describe('dashboard topic store', () => {
 
   afterEach(() => {
     instance.dispose()
-    resetMessageBus()
-    delete (globalThis as {[MESSAGE_BUS_KEY]?: unknown})[MESSAGE_BUS_KEY]
+    uninstallTestMessageBus()
     vi.unstubAllGlobals()
     vi.useRealTimers()
   })
@@ -160,8 +152,7 @@ describe('dashboard topic store', () => {
   })
 
   it('throws without an installed message bus', () => {
-    resetMessageBus()
-    delete (globalThis as {[MESSAGE_BUS_KEY]?: unknown})[MESSAGE_BUS_KEY]
+    uninstallTestMessageBus()
     const other = createSanityInstance({projectId: 'p', dataset: 'd'})
 
     expect(() => getTopicState(other, 'auth.token').getCurrent()).toThrow(
