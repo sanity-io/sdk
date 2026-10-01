@@ -60,13 +60,16 @@ export function LoginError({error, resetErrorBoundary}: LoginErrorProps): React.
   const isProjectUserNotFound =
     !!clientError && clientError.statusCode === 401 && isProjectUserNotFoundClientError(clientError)
 
+  // The failing project; an app configured with `resources` has no `projectId`.
+  const accessProjectId = clientError && getClientErrorApiBody(clientError)?.error?.projectID
+
   // The dashboard access request flow relies on a comlink connection to the
   // parent window. In standalone apps that connection never materializes, so
   // we must skip it entirely to avoid suspending forever on the parent's
   // Suspense boundary. Resolving to the projectId (or null) here lets the JSX
   // render the child with a single non-null guard.
   const dashboardAccessProjectId =
-    isProjectUserNotFound && projectId && isInDashboard ? projectId : null
+    isProjectUserNotFound && isInDashboard ? accessProjectId || projectId || null : null
 
   const handleRetry = useCallback(async () => {
     await logout()

@@ -175,7 +175,7 @@ export function getCleanedUrl(locationUrl: string): string {
 
 /** @internal */
 export type ApiErrorBody = {
-  error?: {type?: string; description?: string}
+  error?: {type?: string; description?: string; projectID?: string}
   type?: string
   description?: string
   message?: string
