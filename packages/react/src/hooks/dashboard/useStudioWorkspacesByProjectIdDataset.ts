@@ -1,6 +1,6 @@
 /* eslint-disable react-compiler/react-compiler -- the transport branch in `useStudioWorkspacesByProjectIdDataset` is a deliberate rules-of-hooks exception; the compiler refuses files that disable it */
 import {SDK_CHANNEL_NAME, SDK_NODE_NAME} from '@sanity/message-protocol'
-import {getApplicationOrigin, isDashboardEnvironment} from '@sanity/sdk/_internal'
+import {getApplicationOrigin, isMessageBusEnvironment} from '@sanity/sdk/_internal'
 import {type TopicData} from '@sanity/sdk/dashboard'
 import {useEffect, useMemo, useState} from 'react'
 
@@ -71,7 +71,7 @@ export function useStudioWorkspacesByProjectIdDataset(): StudioWorkspacesResult 
   // The branch is stable: the transport is fixed for the page lifetime, so one set of hooks
   // always runs and the other never does.
   // eslint-disable-next-line react-hooks/rules-of-hooks -- transport is fixed for the page lifetime
-  if (isDashboardEnvironment()) return useBusStudioWorkspaces()
+  if (isMessageBusEnvironment()) return useBusStudioWorkspaces()
   // eslint-disable-next-line react-hooks/rules-of-hooks -- transport is fixed for the page lifetime
   return useComlinkStudioWorkspaces()
 }

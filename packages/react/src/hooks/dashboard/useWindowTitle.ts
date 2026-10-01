@@ -1,6 +1,6 @@
 /* eslint-disable react-compiler/react-compiler -- the transport branch in `useWindowTitle` is a deliberate rules-of-hooks exception; the compiler refuses files that disable it */
 import {SDK_CHANNEL_NAME, SDK_NODE_NAME} from '@sanity/message-protocol'
-import {isDashboardEnvironment} from '@sanity/sdk/_internal'
+import {isMessageBusEnvironment} from '@sanity/sdk/_internal'
 import {useEffect, useState} from 'react'
 
 import {useWindowConnection} from '../comlink/useWindowConnection'
@@ -74,7 +74,7 @@ export function useWindowTitle(viewTitle?: string): void {
   // The document title is set by the Dashboard host under the message bus, so this hook only
   // manages it in the Comlink runtime. The branch is stable: the transport is fixed for the page
   // lifetime, so the Comlink hooks below always run or never run.
-  if (isDashboardEnvironment()) return
+  if (isMessageBusEnvironment()) return
   // eslint-disable-next-line react-hooks/rules-of-hooks -- transport is fixed for the page lifetime
   useComlinkWindowTitle(viewTitle)
 }

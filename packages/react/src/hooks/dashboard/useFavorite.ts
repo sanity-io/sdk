@@ -2,7 +2,7 @@
 import {type FavoriteDocumentContext, favorites, type SanityInstance} from '@sanity/sdk'
 import {
   getBusFavoriteState,
-  isDashboardEnvironment,
+  isMessageBusEnvironment,
   resolveBusFavorite,
 } from '@sanity/sdk/_internal'
 
@@ -57,7 +57,7 @@ export function useFavorite(props: UseFavoriteProps): boolean {
   // The branch is stable: the transport is fixed for the page lifetime, so one set of hooks
   // always runs and the other never does.
   // eslint-disable-next-line react-hooks/rules-of-hooks -- transport is fixed for the page lifetime
-  if (isDashboardEnvironment()) return useBusFavorite(props)
+  if (isMessageBusEnvironment()) return useBusFavorite(props)
   // eslint-disable-next-line react-hooks/rules-of-hooks -- transport is fixed for the page lifetime
   return useComlinkFavorite(props)
 }
