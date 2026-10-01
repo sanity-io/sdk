@@ -915,6 +915,7 @@ describe('authStore', () => {
     let instance: ReturnType<typeof createSanityInstance>
 
     beforeEach(() => {
+      vi.stubGlobal('__SANITY_APP_ID__', 'app')
       installMessageBus({appId: 'dashboard'})
       const storageArea = {getItem: vi.fn(), setItem: vi.fn(), removeItem: vi.fn()}
       instance = createSanityInstance({
@@ -927,6 +928,7 @@ describe('authStore', () => {
     afterEach(() => {
       instance.dispose()
       uninstallTestMessageBus()
+      vi.unstubAllGlobals()
     })
 
     it('sets to logged out without storage (ignores the configured storage and its token)', () => {

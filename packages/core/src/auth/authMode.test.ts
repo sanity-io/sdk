@@ -18,8 +18,12 @@ describe('resolveAuthMode', () => {
   })
 
   it('returns "dashboard" when a message bus is installed', () => {
+    vi.stubGlobal('__SANITY_APP_ID__', 'app')
     installMessageBus({appId: 'dashboard'})
-    onTestFinished(uninstallTestMessageBus)
+    onTestFinished(() => {
+      uninstallTestMessageBus()
+      vi.unstubAllGlobals()
+    })
     expect(resolveAuthMode({}, 'https://example.com')).toBe('dashboard')
   })
 
