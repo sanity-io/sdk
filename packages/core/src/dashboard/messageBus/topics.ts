@@ -8,6 +8,7 @@ import {type OrganizationBase} from '../../organization/organization'
 /**
  * Identifies a module federation expose and the manifest that serves it.
  * @public
+ * @category Remote Modules
  */
 export interface RemoteModuleRef {
   readonly entry: string
@@ -21,12 +22,16 @@ export interface RemoteModuleRef {
  * The dashboard supplies this value over the message bus, so any string is accepted; known
  * types are listed for autocomplete. `& {}` keeps the literal from collapsing into `string`.
  * @public
+ * @category Types
+ * @category Message Bus
  */
 export type ApplicationConfigAppType = 'media-library' | (string & {})
 
 /**
  * Identifies a configuration module for an application or application type.
  * @public
+ * @category Types
+ * @category Message Bus
  */
 export interface ApplicationConfig extends RemoteModuleRef {
   readonly appId?: Application['id']
@@ -39,24 +44,29 @@ export interface ApplicationConfig extends RemoteModuleRef {
  * Reuses the Studio's rendering-context identifiers so an application can hide its own
  * implementation of anything the host provides.
  * @public
+ * @category Message Bus
  */
 export const capabilities = ['globalUserMenu', 'favorites', 'history'] as const
 
 /**
  * A capability a host can provide.
  * @public
+ * @category Message Bus
  */
 export type Capability = (typeof capabilities)[number]
 
 /**
  * The capabilities the host provides. A missing key means the host does not provide it.
  * @public
+ * @category Message Bus
  */
 export type CapabilityRecord = Partial<Record<Capability, boolean>>
 
 /**
  * A document a user viewed, edited, created, or deleted in an application.
  * @public
+ * @category Types
+ * @category Message Bus
  */
 export interface DocumentActivity {
   readonly kind: 'document'
@@ -76,12 +86,16 @@ export interface DocumentActivity {
 /**
  * Activity an application reports to the host. Discriminated on `kind`.
  * @public
+ * @category Types
+ * @category Message Bus
  */
 export type ApplicationActivity = DocumentActivity
 
 /**
  * A document a user favorited, addressed like {@link DocumentActivity}'s document.
  * @public
+ * @category Types
+ * @category Message Bus
  */
 export type FavoriteDocument = DocumentActivity['document']
 
@@ -105,6 +119,8 @@ export type ApplicationStatusUpdate = {
 /**
  * What an application is currently showing: the Comlink agent resource context, made generic.
  * @public
+ * @category Types
+ * @category Message Bus
  */
 export interface ApplicationContext {
   /** The resource the application is working in. Types follow `@sanity/client`'s resource config. */
@@ -120,6 +136,8 @@ export interface ApplicationContext {
  * An application served by a CLI dev server. The workbench publishes it in the same shape as a
  * deployed application; `local` marks it and names the dev server it is served from.
  * @public
+ * @category Types
+ * @category Message Bus
  */
 export type LocalApplication = Application<ApplicationInclude> & {
   readonly local: {readonly host: string; readonly port: number}
@@ -128,12 +146,14 @@ export type LocalApplication = Application<ApplicationInclude> & {
 /**
  * Declares a topic that stores and replays its current value.
  * @public
+ * @category Message Bus
  */
 export type StateTopicDef<T> = {kind: 'state'; value: T}
 
 /**
  * Declares a topic that delivers events and an optional reply.
  * @public
+ * @category Message Bus
  */
 export type EventTopicDef<P, R = never> = {
   kind: 'event'
@@ -144,12 +164,15 @@ export type EventTopicDef<P, R = never> = {
 /**
  * Represents a successful topic value or a failed topic operation.
  * @public
+ * @category Message Bus
  */
 export type TopicResult<T> = {ok: true; value: T} | {ok: false}
 
 /**
  * Identifies a dashboard application and a route within it.
  * @public
+ * @category Types
+ * @category Message Bus
  */
 export type NavigationTarget = {
   /** The application ID, or `null` for dashboard-level routes. */
@@ -161,6 +184,8 @@ export type NavigationTarget = {
 /**
  * Describes the current dashboard location and an active navigation.
  * @public
+ * @category Types
+ * @category Message Bus
  */
 export type NavigationLocation = NavigationTarget & {
   /** The active navigation, or `null` when navigation is idle. */
@@ -175,6 +200,7 @@ export type NavigationLocation = NavigationTarget & {
 /**
  * Declares the topics provided by the dashboard.
  * @public
+ * @category Message Bus
  */
 export interface DashboardTopics {
   /**
@@ -277,6 +303,7 @@ export interface DashboardTopics {
 /**
  * Declares every topic available through the message bus.
  * @public
+ * @category Message Bus
  */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type -- Declaration merging extends the SDK manifest.
 export interface Topics extends DashboardTopics {}
@@ -290,6 +317,7 @@ export type MessageBusTopics = Omit<Topics, 'applications.status.update'>
 /**
  * Every declared topic name.
  * @public
+ * @category Message Bus
  */
 export type TopicName<TTopics = Topics> = keyof TTopics
 
@@ -300,6 +328,7 @@ type StateTopicsOf<T> = {
 /**
  * Names of state topics exposed by message bus methods.
  * @public
+ * @category Message Bus
  */
 export type StateTopic<TTopics = MessageBusTopics> = StateTopicsOf<TTopics>
 
@@ -364,6 +393,7 @@ export type TopicManifest = Readonly<
 /**
  * Names of event topics exposed by message bus methods.
  * @public
+ * @category Message Bus
  */
 export type EventTopic<TTopics = MessageBusTopics> = {
   [K in keyof TTopics]: TTopics[K] extends {kind: 'event'} ? K : never
@@ -372,6 +402,7 @@ export type EventTopic<TTopics = MessageBusTopics> = {
 /**
  * The value type of a state topic.
  * @public
+ * @category Message Bus
  */
 export type ValueOf<K extends StateTopic<TTopics>, TTopics = Topics> =
   TTopics[K] extends StateTopicDef<infer T> ? T : never
@@ -379,6 +410,7 @@ export type ValueOf<K extends StateTopic<TTopics>, TTopics = Topics> =
 /**
  * The payload type of an event topic.
  * @public
+ * @category Message Bus
  */
 export type PayloadOf<K extends EventTopic<TTopics>, TTopics = Topics> =
   TTopics[K] extends EventTopicDef<infer P, infer _R> ? P : never
@@ -386,6 +418,7 @@ export type PayloadOf<K extends EventTopic<TTopics>, TTopics = Topics> =
 /**
  * The reply type of an event topic (`never` if it declares none).
  * @public
+ * @category Message Bus
  */
 export type ReplyOf<K extends EventTopic<TTopics>, TTopics = Topics> =
   TTopics[K] extends EventTopicDef<infer _P, infer R> ? R : never

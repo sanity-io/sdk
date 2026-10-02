@@ -15,6 +15,7 @@ import {useQuery} from '../query/useQuery'
  *
  * @public
  * @category Types
+ * @category Documents
  */
 export interface PaginatedDocumentsOptions<
   TDocumentType extends string = string,
@@ -48,6 +49,7 @@ export interface PaginatedDocumentsOptions<
  *
  * @public
  * @category Types
+ * @category Documents
  */
 export interface PaginatedDocumentsResponse<
   TDocumentType extends string = string,

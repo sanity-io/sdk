@@ -6,6 +6,8 @@ import {SanityInstanceContext} from './SanityInstanceContext'
 /**
  * Props for the SanityInstanceProvider component
  * @public
+ * @category Types
+ * @category Components
  */
 export interface SanityInstanceProviderProps {
   /**

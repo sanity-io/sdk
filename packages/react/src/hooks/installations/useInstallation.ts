@@ -13,6 +13,7 @@ import {createFetcherHook, type FetcherHookResult} from '../helpers/createFetche
  * @param installationId - The installation id.
  * @param options - Optional `include` list to expand related resources.
  * @returns The result envelope `{data, isFetching, error, refetch}`.
+ * @category Applications
  */
 export const useInstallation = createFetcherHook(installation) as <
   Include extends InstallationInclude = never,

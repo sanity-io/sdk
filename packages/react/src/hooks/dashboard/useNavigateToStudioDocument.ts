@@ -15,6 +15,7 @@ import {
 /**
  * @public
  * @category Types
+ * @category Documents
  */
 export interface NavigateToStudioResult {
   navigateToStudioDocument: () => void

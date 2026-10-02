@@ -20,6 +20,8 @@ type UpdateURLMessage = Bridge.Listeners.History.UpdateURLMessage
  * `path` is relative to the app's own route, with no leading slash (`'documents/abc'`), and may
  * carry a query string and hash.
  * @public
+ * @category Types
+ * @category Dashboard
  */
 export type DashboardNavigation = PathChangeMessage['data']
 
@@ -32,6 +34,8 @@ export type DashboardNavigation = PathChangeMessage['data']
  * `'dashboard'`, `path` is a Dashboard URL from {@link urlFor} and is navigated to as-is; only
  * the federated runtime supports it.
  * @public
+ * @category Types
+ * @category Dashboard
  */
 export type NavigateToDashboardPath = (options: {
   path: string
@@ -85,6 +89,7 @@ export type NavigateToDashboardPath = (options: {
  *   return null
  * }
  * ```
+ * @category Dashboard
  */
 export function useNavigate(
   navigateFn: (options: DashboardNavigation) => void,

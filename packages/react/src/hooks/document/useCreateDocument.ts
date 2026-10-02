@@ -11,6 +11,8 @@ type IgnoredKey = '_id' | '_type' | '_rev' | '_createdAt' | '_updatedAt'
 /**
  * Optional per-call overrides for {@link useCreateDocument}'s create function.
  * @public
+ * @category Types
+ * @category Documents
  */
 export interface CreateDocumentOverrides {
   /**

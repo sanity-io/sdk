@@ -10,28 +10,6 @@ import {type ResourceHandle} from '../../config/handles'
 import {createStateSourceHook} from '../helpers/createStateSourceHook'
 import {useNormalizedResourceOptions} from '../helpers/useNormalizedResourceOptions'
 
-/**
- * @public
- * @function
- *
- * Returns a single or stack of perspectives for the given perspective handle,
- * which can then be used to correctly query the documents
- * via the `perspective` parameter in the client.
- *
- * @param perspectiveHandle - The perspective handle to get the perspective for.
- * @category Documents
- * @example
- * ```tsx
- * import {usePerspective, useQuery} from '@sanity/sdk-react'
-
- * const perspective = usePerspective({perspective: 'rxg1346', projectId: 'abc123', dataset: 'production'})
- * const {data} = useQuery<Movie[]>('*[_type == "movie"]', {
- *   perspective: perspective,
- * })
- * ```
- *
- * @returns The perspective for the given perspective handle.
- */
 type UsePerspectiveValue = {
   (perspectiveHandle: {resource?: DocumentResource}): string | string[]
 }
@@ -48,8 +26,24 @@ const usePerspectiveValue: UsePerspectiveValue = createStateSourceHook({
 })
 
 /**
+ * Returns a single or stack of perspectives for the given perspective handle,
+ * which can then be used to correctly query the documents
+ * via the `perspective` parameter in the client.
+ *
  * @public
- * @function
+ * @param perspectiveHandle - The perspective handle to get the perspective for.
+ * @category Documents
+ * @example
+ * ```tsx
+ * import {usePerspective, useQuery} from '@sanity/sdk-react'
+ *
+ * const perspective = usePerspective({perspective: 'rxg1346', projectId: 'abc123', dataset: 'production'})
+ * const {data} = useQuery<Movie[]>('*[_type == "movie"]', {
+ *   perspective: perspective,
+ * })
+ * ```
+ *
+ * @returns The perspective for the given perspective handle.
  */
 export function usePerspective(perspectiveHandle?: ResourceHandle): string | string[] {
   const normalizedOptions = useNormalizedResourceOptions(perspectiveHandle ?? {})

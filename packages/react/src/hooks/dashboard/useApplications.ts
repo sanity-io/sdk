@@ -22,6 +22,8 @@ type ViewInterface = Exclude<DashboardApplicationInterface, {type: 'worker'}>
  * {@link DashboardWebWorker.application}, and the input to module loading. Widens
  * {@link ApplicationBase} so `type` also covers installations.
  * @public
+ * @category Types
+ * @category Dashboard
  */
 export type DashboardApplicationBase = Omit<ApplicationBase, 'type'> & {
   readonly type: ApplicationBase['type'] | 'installation'
@@ -32,6 +34,8 @@ export type DashboardApplicationBase = Omit<ApplicationBase, 'type'> & {
 /**
  * A dashboard view exposed by an application or installation.
  * @public
+ * @category Types
+ * @category Dashboard
  */
 export type DashboardView = {
   [Type in ViewInterface['type']]: Omit<Extract<ViewInterface, {type: Type}>, 'type'> & {
@@ -44,6 +48,8 @@ export type DashboardView = {
 /**
  * A web worker exposed by an application or installation.
  * @public
+ * @category Types
+ * @category Dashboard
  */
 export type DashboardWebWorker = Extract<DashboardApplicationInterface, {type: 'worker'}> & {
   readonly application: DashboardApplicationBase
@@ -54,6 +60,8 @@ export type DashboardWebWorker = Extract<DashboardApplicationInterface, {type: '
  * An installation shaped into the shared application base, with its raw record kept under
  * `installation` for consumers that need the full record.
  * @public
+ * @category Types
+ * @category Dashboard
  */
 export type DashboardInstallation = Omit<DashboardApplicationBase, 'type'> & {
   readonly type: 'installation'
@@ -65,6 +73,8 @@ export type DashboardInstallation = Omit<DashboardApplicationBase, 'type'> & {
  * loadable views and web workers. `type` distinguishes the kinds and `isLocal` marks dev-server
  * applications; render a list without branching.
  * @public
+ * @category Types
+ * @category Dashboard
  */
 export type DashboardApplication = (DashboardTopicApplication | DashboardInstallation) &
   Pick<DashboardApplicationBase, 'isLocal'> & {
@@ -180,6 +190,7 @@ const toInstallation = (installation: DashboardTopicInstallation): DashboardAppl
  * ```
  *
  * @public
+ * @category Dashboard
  */
 export function useApplications(): DashboardApplication[] {
   const applications = useTopic('applications.list')
