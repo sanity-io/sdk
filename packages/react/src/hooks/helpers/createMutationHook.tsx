@@ -11,6 +11,7 @@ import {useSanityInstance} from '../context/useSanityInstance'
  *
  * @public
  * @category Types
+ * @category Platform
  */
 export interface MutationHookResult<TInput, TResult> {
   /**

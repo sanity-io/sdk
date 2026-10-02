@@ -23,6 +23,7 @@ export interface RemoteModuleRef {
  * types are listed for autocomplete. `& {}` keeps the literal from collapsing into `string`.
  * @public
  * @category Types
+ * @category Message Bus
  */
 export type ApplicationConfigAppType = 'media-library' | (string & {})
 
@@ -30,6 +31,7 @@ export type ApplicationConfigAppType = 'media-library' | (string & {})
  * Identifies a configuration module for an application or application type.
  * @public
  * @category Types
+ * @category Message Bus
  */
 export interface ApplicationConfig extends RemoteModuleRef {
   readonly appId?: Application['id']
@@ -64,6 +66,7 @@ export type CapabilityRecord = Partial<Record<Capability, boolean>>
  * A document a user viewed, edited, created, or deleted in an application.
  * @public
  * @category Types
+ * @category Message Bus
  */
 export interface DocumentActivity {
   readonly kind: 'document'
@@ -84,6 +87,7 @@ export interface DocumentActivity {
  * Activity an application reports to the host. Discriminated on `kind`.
  * @public
  * @category Types
+ * @category Message Bus
  */
 export type ApplicationActivity = DocumentActivity
 
@@ -91,6 +95,7 @@ export type ApplicationActivity = DocumentActivity
  * A document a user favorited, addressed like {@link DocumentActivity}'s document.
  * @public
  * @category Types
+ * @category Message Bus
  */
 export type FavoriteDocument = DocumentActivity['document']
 
@@ -115,6 +120,7 @@ export type ApplicationStatusUpdate = {
  * What an application is currently showing: the Comlink agent resource context, made generic.
  * @public
  * @category Types
+ * @category Message Bus
  */
 export interface ApplicationContext {
   /** The resource the application is working in. Types follow `@sanity/client`'s resource config. */
@@ -131,6 +137,7 @@ export interface ApplicationContext {
  * deployed application; `local` marks it and names the dev server it is served from.
  * @public
  * @category Types
+ * @category Message Bus
  */
 export type LocalApplication = Application<ApplicationInclude> & {
   readonly local: {readonly host: string; readonly port: number}
@@ -165,6 +172,7 @@ export type TopicResult<T> = {ok: true; value: T} | {ok: false}
  * Identifies a dashboard application and a route within it.
  * @public
  * @category Types
+ * @category Message Bus
  */
 export type NavigationTarget = {
   /** The application ID, or `null` for dashboard-level routes. */
@@ -177,6 +185,7 @@ export type NavigationTarget = {
  * Describes the current dashboard location and an active navigation.
  * @public
  * @category Types
+ * @category Message Bus
  */
 export type NavigationLocation = NavigationTarget & {
   /** The active navigation, or `null` when navigation is idle. */

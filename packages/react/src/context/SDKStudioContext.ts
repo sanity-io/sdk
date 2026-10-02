@@ -8,6 +8,7 @@ import {createContext} from 'react'
  *
  * @public
  * @category Types
+ * @category Components
  */
 export interface StudioWorkspaceHandle {
   /** The Sanity project ID for this workspace. */

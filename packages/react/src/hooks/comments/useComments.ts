@@ -7,6 +7,7 @@ import {type CommentListSource, useCommentList} from './useCommentList'
 /**
  * @public
  * @category Types
+ * @category Comments
  */
 export interface UseCommentsResult {
   /** Every matching comment, newest first, replies included. */

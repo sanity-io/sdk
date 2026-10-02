@@ -11,6 +11,7 @@ import {useApplicationContext} from './useApplicationContext'
 /**
  * @public
  * @category Types
+ * @category Agent Actions
  */
 export interface AgentResourceContextOptions {
   /**

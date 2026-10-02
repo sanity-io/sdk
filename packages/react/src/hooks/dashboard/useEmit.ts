@@ -14,6 +14,7 @@ import {useSanityInstance} from '../context/useSanityInstance'
  * Emits a dashboard event topic, typed to the topic's payload and reply.
  * @public
  * @category Types
+ * @category Dashboard
  */
 export type TopicEmitter<K extends EventTopic> = (
   ...args: PayloadOf<K> extends void

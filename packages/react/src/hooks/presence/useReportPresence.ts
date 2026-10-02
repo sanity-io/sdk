@@ -28,6 +28,7 @@ const SELECTION_THROTTLE_MS = 250
 /**
  * @beta
  * @category Types
+ * @category Presence
  */
 export interface UseReportPresenceOptions extends DocumentHandle {
   /**

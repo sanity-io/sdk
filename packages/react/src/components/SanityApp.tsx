@@ -9,6 +9,7 @@ import {isInIframe, isLocalUrl} from './utils'
 /**
  * @public
  * @category Types
+ * @category Components
  */
 export interface SanityAppProps {
   /**

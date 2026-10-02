@@ -10,6 +10,7 @@ import {trackHookUsage} from '../helpers/useTrackHookUsage'
 /**
  * @beta
  * @category Types
+ * @category Presence
  */
 export interface UsePresenceForDocumentOptions extends DocumentHandle {
   /**

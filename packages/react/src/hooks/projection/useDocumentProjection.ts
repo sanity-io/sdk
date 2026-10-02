@@ -10,6 +10,7 @@ import {trackHookUsage} from '../helpers/useTrackHookUsage'
 /**
  * @public
  * @category Types
+ * @category Documents
  */
 export interface useDocumentProjectionOptions<
   TProjection extends string = string,
@@ -28,6 +29,7 @@ export interface useDocumentProjectionOptions<
 /**
  * @public
  * @category Types
+ * @category Documents
  */
 export interface useDocumentProjectionResults<TData> {
   /** The projected data */

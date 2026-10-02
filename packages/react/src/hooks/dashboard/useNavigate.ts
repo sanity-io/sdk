@@ -21,6 +21,7 @@ type UpdateURLMessage = Bridge.Listeners.History.UpdateURLMessage
  * carry a query string and hash.
  * @public
  * @category Types
+ * @category Dashboard
  */
 export type DashboardNavigation = PathChangeMessage['data']
 
@@ -34,6 +35,7 @@ export type DashboardNavigation = PathChangeMessage['data']
  * the federated runtime supports it.
  * @public
  * @category Types
+ * @category Dashboard
  */
 export type NavigateToDashboardPath = (options: {
   path: string

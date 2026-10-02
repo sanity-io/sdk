@@ -9,6 +9,7 @@ import {useSanityInstance} from '../context/useSanityInstance'
  *
  * @public
  * @category Types
+ * @category Platform
  */
 export interface FetcherHookResult<TData> {
   /** The resolved data. Guaranteed present — the hook suspends until the first fetch succeeds. */

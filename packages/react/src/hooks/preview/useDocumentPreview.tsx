@@ -11,6 +11,7 @@ import {useDocumentProjection} from '../projection/useDocumentProjection'
 /**
  * @public
  * @category Types
+ * @category Documents
  */
 export interface useDocumentPreviewOptions extends DocumentHandle {
   /**
@@ -23,6 +24,7 @@ export interface useDocumentPreviewOptions extends DocumentHandle {
 /**
  * @public
  * @category Types
+ * @category Documents
  */
 export interface useDocumentPreviewResults {
   /** The results of inferring the document's preview values */

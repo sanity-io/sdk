@@ -14,6 +14,7 @@ import {createStateSourceHook} from '../helpers/createStateSourceHook'
  *
  * @public
  * @category Types
+ * @category Authentication
  */
 export interface UseOAuthTokensResult {
   /**
