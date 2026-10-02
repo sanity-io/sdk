@@ -29,7 +29,7 @@ import {transformSync} from 'esbuild'
 // 2. Every JavaScript file under `dist/` must parse as plain JS. Vite and
 //    esbuild parse `.js` files with JSX disabled, so raw JSX or TypeScript
 //    syntax in the bundle breaks real installs even when Node can import it.
-// 3. A TypeScript consumer must infer legacy types through the packed declarations.
+// 3. TypeScript consumers must infer legacy and resource types through the packed declarations.
 //
 // Run after building: `pnpm build:packages && pnpm test:pack`.
 
@@ -126,32 +126,34 @@ try {
     }
     if (parsed > 0) console.log(`  ✓ ${parsed}/${jsFiles.length} dist files parse as plain JS`)
   }
-  // Compile one legacy app through sdk-react, which also loads the packed core package.
-  for (const filename of ['consumer.ts', 'legacy.types.ts']) {
+  for (const filename of ['consumer.ts', 'legacy.types.ts', 'resource-consumer.ts']) {
     copyFileSync(
       path.join(BASE_PATH, 'scripts/fixtures/typegen', `${filename}.txt`),
       path.join(tempDir, filename),
     )
   }
   writeFileSync(path.join(tempDir, 'package.json'), '{"type":"module"}')
-  execFileSync(
-    process.execPath,
-    [
-      path.join(BASE_PATH, 'node_modules/typescript/bin/tsc'),
-      '--noEmit',
-      '--strict',
-      '--skipLibCheck',
-      '--target',
-      'es2022',
-      '--module',
-      'nodenext',
-      '--types',
-      'node',
-      'consumer.ts',
-    ],
-    {cwd: tempDir, stdio: 'inherit'},
-  )
-  console.log('  ✓ legacy document, query, and projection inference')
+  // Separate programs keep legacy and resource registrations from affecting each other.
+  for (const consumer of ['consumer.ts', 'resource-consumer.ts']) {
+    execFileSync(
+      process.execPath,
+      [
+        path.join(BASE_PATH, 'node_modules/typescript/bin/tsc'),
+        '--noEmit',
+        '--strict',
+        '--skipLibCheck',
+        '--target',
+        'es2022',
+        '--module',
+        'nodenext',
+        '--types',
+        'node',
+        consumer,
+      ],
+      {cwd: tempDir, stdio: 'inherit'},
+    )
+    console.log(`  ✓ inference: ${consumer}`)
+  }
 } finally {
   rmSync(tempDir, {recursive: true, force: true})
 }
