@@ -1,5 +1,19 @@
 # Changelog
 
+## 3.8.0
+
+### Minor Changes
+
+- [#1349](https://github.com/sanity-io/sdk/pull/1349) [`5d54e86`](https://github.com/sanity-io/sdk/commit/5d54e864646f90f0ccdba9973c865eee5833d95c) Thanks [@gu-stav](https://github.com/gu-stav)! - Ask the dashboard for project access over the message bus, and don't log out on other 401s when a bus is installed.
+
+- [#1361](https://github.com/sanity-io/sdk/pull/1361) [`7182edc`](https://github.com/sanity-io/sdk/commit/7182edc83117b7be9a5f330389fdb1359b917111) Thanks [@joshuaellis](https://github.com/joshuaellis)! - `useUsers` now returns `totalCount`, the number of users the resource has, including those not fetched yet.
+
+### Patch Changes
+
+- [#1346](https://github.com/sanity-io/sdk/pull/1346) [`6dce406`](https://github.com/sanity-io/sdk/commit/6dce406127025b649028425b22ac20a8a197ddec) Thanks [@squiggler-app](https://github.com/apps/squiggler-app)! - Update dependencies: `@sanity/client@8.9.0`, `@sanity/diff-match-patch@3.2.1`, `@sanity/pkg-utils@13.0.4`, `@sanity/types@6.17.0`
+- Updated dependencies [[`8f6f9ab`](https://github.com/sanity-io/sdk/commit/8f6f9ab54c5fcfeed775cdf03d18ee6312cb9427), [`c1f6fce`](https://github.com/sanity-io/sdk/commit/c1f6fce7f64e8f78ce6f53525e07c498703f7cc9), [`2a5c3ba`](https://github.com/sanity-io/sdk/commit/2a5c3badb54f31181d5ccccdd85fcd5b32d71ddc), [`6dce406`](https://github.com/sanity-io/sdk/commit/6dce406127025b649028425b22ac20a8a197ddec)]:
+  - @sanity/sdk@3.8.0
+
 ## 3.7.0
 
 ### Patch Changes
