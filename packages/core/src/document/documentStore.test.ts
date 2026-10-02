@@ -34,6 +34,7 @@ import {
 } from 'rxjs'
 import {afterEach, beforeEach, expect, it, vi} from 'vitest'
 
+import {setAuthToken} from '../auth/authStore'
 import {getClientState} from '../client/clientStore'
 import {createDocumentHandle} from '../config/handles'
 import {type DocumentHandle} from '../config/sanityConfig'
@@ -2232,8 +2233,6 @@ it('resubmits held text edits as soon as the credentials change, in order and on
   // written with operation-preserving diffMatchPatch edits (what
   // @portabletext/plugin-sdk-value sends), every write on the old token
   // rejected with a 401, then a new token from logging in again in another tab
-  const client$ = (getClientState as () => StateSource<SanityClient>)()
-    .observable as ReplaySubject<SanityClient>
   const actualAction = vi.mocked(client.action).getMockImplementation()!
   let sessionValid = true
   let rejectedAttempts = 0
@@ -2246,16 +2245,6 @@ it('resubmits held text edits as soon as the credentials change, in order and on
       body: {statusCode: 401, error: 'Unauthorized', message: 'Session not found'},
     })
   })
-  // the client store builds a new client when the token changes; it carries
-  // the renewed token, so the server accepts its writes
-  const renewedClient = {
-    ...client,
-    observable: {
-      ...client.observable,
-      action: (...args: Parameters<typeof actualAction>) => from(actualAction(...args)),
-    },
-  } as SanityClient
-
   const reverted: TransactionRevertedEvent[] = []
   const unsubscribeEvents = subscribeDocumentEvents(instance, {
     resource,
@@ -2308,11 +2297,12 @@ it('resubmits held text edits as soon as the credentials change, in order and on
 
     // logging in again: the held write and the queued ones land long before
     // the backoff would have elapsed
-    client$.next(renewedClient)
+    sessionValid = true
+    setAuthToken(instance, 'renewed-token')
     await Promise.race([
       Promise.all(results.map((r) => r.then((x) => x.submitted()))),
       new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('edits were not resubmitted on the new client')), 2000),
+        setTimeout(() => reject(new Error('edits were not resubmitted with the new token')), 2000),
       ),
     ])
 

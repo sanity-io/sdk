@@ -1,5 +1,5 @@
-import {Subject} from 'rxjs'
-import {beforeEach, describe, expect, it, vi} from 'vitest'
+import {BehaviorSubject, Subject} from 'rxjs'
+import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {type SanityInstance} from '../../store/createSanityInstance'
 import {type StoreContext} from '../../store/defineStore'
@@ -9,13 +9,13 @@ import {type AuthStrategyOptions} from '../authStrategy'
 import {subscribeToStateAndFetchCurrentUser} from '../subscribeToStateAndFetchCurrentUser'
 import {getStorageEvents} from '../utils'
 import {
-  deserializeTokens,
   getOauthInitialState,
   initializeOauthAuth,
   OAUTH_TOKENS_KEY,
+  scheduleOAuthTokenRefresh,
   subscribeToOAuthStorageEvents,
 } from './oauthAuth'
-import {serializeTokens} from './oauthClient'
+import {deserializeTokens, serializeTokens} from './oauthClient'
 import {runOAuthTokenRefresh} from './oauthRefresh'
 import {type OAuthTokens} from './types'
 
@@ -239,8 +239,9 @@ describe('initializeOauthAuth', () => {
     },
   ): {context: StoreContext<AuthStoreState>; set: ReturnType<typeof vi.fn>} {
     const set = vi.fn()
+    const state$ = new BehaviorSubject({...initial, options: {storageArea}})
     const context = {
-      state: {get: () => ({...initial, options: {storageArea}}), set},
+      state: {get: () => state$.value, set, observable: state$},
       instance: {config: {}} as SanityInstance,
       key: null,
     } as unknown as StoreContext<AuthStoreState>
@@ -285,5 +286,106 @@ describe('initializeOauthAuth', () => {
         authState: {type: AuthStateType.ERROR, error},
       }),
     )
+  })
+})
+
+describe('scheduleOAuthTokenRefresh', () => {
+  const NOW = new Date('2030-01-01T00:00:00.000Z').getTime()
+  const freshTokens = (accessToken: string): OAuthTokens => ({
+    ...tokens,
+    accessToken,
+    expiresIn: 3600,
+    expiresAt: new Date(Date.now() + 3600_000),
+  })
+
+  beforeEach(() => {
+    vi.useFakeTimers({
+      toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'],
+    })
+    vi.setSystemTime(NOW)
+    vi.mocked(runOAuthTokenRefresh).mockReset().mockResolvedValue(null)
+  })
+  afterEach(() => vi.useRealTimers())
+
+  function makeContext(oauthTokens: OAuthTokens | undefined) {
+    const state$ = new BehaviorSubject({oauthTokens} as AuthStoreState)
+    const context = {
+      state: {get: () => state$.value, set: vi.fn(), observable: state$},
+      instance: {config: {}} as SanityInstance,
+      key: null,
+    } as unknown as StoreContext<AuthStoreState>
+    return {context, state$}
+  }
+
+  it('refreshes one minute before the access token expires', async () => {
+    const {context} = makeContext(freshTokens('access-1'))
+    const subscription = scheduleOAuthTokenRefresh(context)
+
+    await vi.advanceTimersByTimeAsync(3540_000 - 1)
+    expect(runOAuthTokenRefresh).not.toHaveBeenCalled()
+    await vi.advanceTimersByTimeAsync(1)
+    expect(runOAuthTokenRefresh).toHaveBeenCalledTimes(1)
+    subscription.unsubscribe()
+  })
+
+  it('refreshes at half the lifetime when the token lives under two minutes', async () => {
+    const {context} = makeContext({
+      ...freshTokens('a'),
+      expiresIn: 60,
+      expiresAt: new Date(NOW + 60_000),
+    })
+    const subscription = scheduleOAuthTokenRefresh(context)
+
+    await vi.advanceTimersByTimeAsync(30_000)
+    expect(runOAuthTokenRefresh).toHaveBeenCalledTimes(1)
+    subscription.unsubscribe()
+  })
+
+  it('reschedules from the new expiry when the tokens change', async () => {
+    const {context, state$} = makeContext(freshTokens('access-1'))
+    const subscription = scheduleOAuthTokenRefresh(context)
+
+    await vi.advanceTimersByTimeAsync(1800_000)
+    state$.next({oauthTokens: freshTokens('access-2')} as AuthStoreState)
+    await vi.advanceTimersByTimeAsync(1800_000)
+    expect(runOAuthTokenRefresh).not.toHaveBeenCalled()
+    await vi.advanceTimersByTimeAsync(1740_000)
+    expect(runOAuthTokenRefresh).toHaveBeenCalledTimes(1)
+    subscription.unsubscribe()
+  })
+
+  it('does not schedule a refresh without a refresh token', async () => {
+    const {refreshToken: _, ...withoutRefresh} = freshTokens('access-1')
+    const subscription = scheduleOAuthTokenRefresh(makeContext(withoutRefresh).context)
+
+    await vi.advanceTimersByTimeAsync(3600_000)
+    expect(runOAuthTokenRefresh).not.toHaveBeenCalled()
+    subscription.unsubscribe()
+  })
+
+  it('retries a transient failure with backoff', async () => {
+    vi.mocked(runOAuthTokenRefresh)
+      .mockRejectedValueOnce(new Error('network down'))
+      .mockResolvedValueOnce(null)
+    const subscription = scheduleOAuthTokenRefresh(makeContext(freshTokens('access-1')).context)
+
+    await vi.advanceTimersByTimeAsync(3540_000)
+    expect(runOAuthTokenRefresh).toHaveBeenCalledTimes(1)
+    await vi.advanceTimersByTimeAsync(2000)
+    expect(runOAuthTokenRefresh).toHaveBeenCalledTimes(2)
+    subscription.unsubscribe()
+  })
+
+  it('stops retrying once a failed refresh has logged the user out', async () => {
+    const {context, state$} = makeContext(freshTokens('access-1'))
+    vi.mocked(runOAuthTokenRefresh).mockImplementation(async () => {
+      state$.next({oauthTokens: undefined} as AuthStoreState)
+      throw new Error('invalid_grant')
+    })
+    const subscription = scheduleOAuthTokenRefresh(context)
+
+    await vi.advanceTimersByTimeAsync(3540_000 + 60_000)
+    expect(runOAuthTokenRefresh).toHaveBeenCalledTimes(1)
+    subscription.unsubscribe()
   })
 })

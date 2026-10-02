@@ -4,8 +4,22 @@ import {
   DisconnectError,
   type LiveEventMessage,
 } from '@sanity/client'
-import {catchError, defer, EMPTY, filter, type Observable, retry, switchMap} from 'rxjs'
+import {
+  catchError,
+  combineLatest,
+  defer,
+  distinctUntilChanged,
+  EMPTY,
+  filter,
+  map,
+  type Observable,
+  retry,
+  skip,
+  switchMap,
+  take,
+} from 'rxjs'
 
+import {getAuthMethodState, getClientAuthState, getTokenState} from '../auth/authStore'
 import {type DocumentResource} from '../config/sanityConfig'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {getClientState} from './clientStore'
@@ -38,9 +52,8 @@ export interface ObserveLiveEventsOptions {
   resource?: DocumentResource
   /**
    * Called when the connection fails due to a CORS misconfiguration. The
-   * error is swallowed (the stream never errors; it idles until a new client
-   * is emitted) so consumers can surface it as store state instead of a
-   * stream error.
+   * error is swallowed (the stream never errors; it idles) so consumers can
+   * surface it as store state instead of a stream error.
    */
   onCorsError: (error: unknown) => void
 }
@@ -60,15 +73,26 @@ export function observeLiveEvents(
   instance: SanityInstance,
   {resource, onCorsError}: ObserveLiveEventsOptions,
 ): Observable<LiveEventMessage> {
-  return getClientState(instance, {
+  // Drafts need a token. Reconnect only when one appears or disappears: the
+  // client re-authenticates the stream itself when a token is refreshed.
+  const includeDrafts$ = combineLatest([
+    getTokenState(instance).observable,
+    getAuthMethodState(instance).observable,
+  ]).pipe(
+    map(([token, authMethod]) => Boolean(token) && authMethod !== 'cookie'),
+    distinctUntilChanged(),
+  )
+  const client$ = getClientState(instance, {
     apiVersion: LIVE_EVENTS_API_VERSION,
     resource,
-  }).observable.pipe(
-    switchMap((client) =>
-      defer(() =>
-        client.live.events({includeDrafts: !!client.config().token, tag: 'live-events'}),
-      ).pipe(
-        catchError((error) => {
+  }).observable
+
+  const credentialChanged$ = getClientAuthState(instance).observable.pipe(skip(1), take(1))
+
+  return combineLatest([client$, includeDrafts$]).pipe(
+    switchMap(([client, includeDrafts]) =>
+      defer(() => client.live.events({includeDrafts, tag: 'live-events'})).pipe(
+        catchError((error, caught) => {
           if (error instanceof CorsOriginError) {
             // Swallow CORS errors without bubbling up so that they can be
             // handled by the consumer (e.g. shown via the Cors Error component)
@@ -88,11 +112,12 @@ export function observeLiveEvents(
             error.status < 500
           ) {
             // The server rejected the connection with a 4xx (e.g. a 401 from
-            // an expired token) — it will keep rejecting, so retrying would
-            // reconnect once per second forever. End live updates like a
-            // DisconnectError. A ConnectionFailedError without a status stays
-            // retryable: it may be a transient network failure.
-            return EMPTY
+            // an expired token) — it will keep rejecting the same credential,
+            // so retrying on a timer would reconnect once per second forever.
+            // Reconnect once the credential changes instead. A
+            // ConnectionFailedError without a status stays retryable: it may
+            // be a transient network failure.
+            return credentialChanged$.pipe(switchMap(() => caught))
           }
           throw error
         }),

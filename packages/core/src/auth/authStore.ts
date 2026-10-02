@@ -1,5 +1,11 @@
-import {type ClientConfig, createClient, type SanityClient} from '@sanity/client'
+import {
+  type AuthState as ClientAuthState,
+  type ClientConfig,
+  createClient,
+  type SanityClient,
+} from '@sanity/client'
 import {type CurrentUser} from '@sanity/types'
+import {createSelector} from 'reselect'
 
 import {type AuthConfig, type AuthProvider} from '../config/authConfig'
 import {bindActionGlobally} from '../store/createActionBinder'
@@ -15,7 +21,7 @@ import {getOauthInitialState, initializeOauthAuth} from './oauth/oauthAuth'
 import {type OAuthTokens} from './oauth/types'
 import {getStandaloneInitialState, initializeStandaloneAuth} from './standaloneAuth'
 import {getStudioInitialState, initializeStudioAuth} from './studioAuth'
-import {createLoggedInAuthState, getCleanedUrl, getDefaultLocation} from './utils'
+import {createLoggedInAuthState, getCleanedUrl, getDefaultLocation, toCredential} from './utils'
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -97,6 +103,11 @@ export interface AuthStoreState {
   }
   dashboardContext?: DashboardContext
   oauthTokens?: OAuthTokens
+  /**
+   * Set while a token refresh is in flight; resolves to the credential once it
+   * settles, so clients hold requests instead of sending the outgoing token.
+   */
+  pendingCredential?: Promise<ClientAuthState>
 }
 
 // ---------------------------------------------------------------------------
@@ -257,6 +268,31 @@ export const getTokenState = bindActionGlobally(
   createStateSourceAction(({state: {authState}}) =>
     authState.type === AuthStateType.LOGGED_IN ? authState.token : null,
   ),
+)
+
+const selectToken = (s: AuthStoreState) =>
+  s.authState.type === AuthStateType.LOGGED_IN ? s.authState.token : null
+
+// Keyed on primitives so a `currentUser` fetch, which replaces `authState`,
+// does not emit a new credential and make clients reconnect their streams.
+const selectClientAuth = createSelector(
+  [
+    selectToken,
+    (s: AuthStoreState) => s.options.authMethod,
+    (s: AuthStoreState) => s.pendingCredential,
+  ],
+  (token, authMethod, pending) => pending ?? Promise.resolve(toCredential(token, authMethod)),
+)
+
+/**
+ * The `auth` stream handed to every `@sanity/client` instance: a promise of
+ * the current credential, re-emitted when it changes or a refresh starts.
+ *
+ * @internal
+ */
+export const getClientAuthState = bindActionGlobally(
+  authStore,
+  createStateSourceAction(({state}) => selectClientAuth(state)),
 )
 
 /**
