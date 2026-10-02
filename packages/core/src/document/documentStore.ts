@@ -33,10 +33,9 @@ import {
   throttle,
   throwError,
   timer,
-  withLatestFrom,
 } from 'rxjs'
 
-import {getCurrentUserState} from '../auth/authStore'
+import {getClientAuthState, getCurrentUserState} from '../auth/authStore'
 import {type ClientOptions, getClientState} from '../client/clientStore'
 import {
   type DocumentHandle,
@@ -460,6 +459,7 @@ const subscribeToAppliedAndSubmitNextTransaction = ({
 }: StoreContext<DocumentStoreState, BoundResourceKey>) => {
   const {events} = state.get()
   const clients$ = getClientState(instance, {apiVersion: API_VERSION, resource}).observable
+  const credential = getClientAuthState(instance)
 
   return state.observable
     .pipe(
@@ -478,20 +478,18 @@ const subscribeToAppliedAndSubmitNextTransaction = ({
       tap((next) => state.set('transitionAppliedTransactionsToOutgoing', next)),
       map((s) => s.outgoing),
       distinctUntilChanged(),
-      withLatestFrom(clients$),
-      concatMap(([outgoing, initialClient]) => {
+      concatMap((outgoing) => {
         if (!outgoing) return EMPTY
 
-        // the client that made the latest attempt. the client store rebuilds
-        // its clients when the token changes, so a different client means
-        // different credentials and a retry after a 401 can go right away
-        let attemptClient: SanityClient | undefined
+        // the credential the latest attempt went out with. once it changes, a
+        // retry after a 401 can go right away instead of waiting out the backoff
+        let attemptCredential: unknown
 
-        return defer(() => (attemptClient ? clients$.pipe(first()) : of(initialClient))).pipe(
-          concatMap((client) => {
-            attemptClient = client
-            return submitOutgoingTransaction(client, outgoing)
-          }),
+        return defer(() => {
+          attemptCredential = credential.getCurrent()
+          return clients$.pipe(first())
+        }).pipe(
+          concatMap((client) => submitOutgoingTransaction(client, outgoing)),
           retry({
             delay: (error: unknown, retryCount) => {
               if (classifySubmissionError(error) !== 'retry') return throwError(() => error)
@@ -512,7 +510,7 @@ const subscribeToAppliedAndSubmitNextTransaction = ({
               )
               return race(
                 timer(backoff),
-                clients$.pipe(first((client) => client !== attemptClient)),
+                credential.observable.pipe(first((current) => current !== attemptCredential)),
               )
             },
           }),

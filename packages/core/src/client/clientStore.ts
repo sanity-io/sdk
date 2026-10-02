@@ -1,6 +1,12 @@
-import {type ClientConfig, createClient, type SanityClient} from '@sanity/client'
+import {
+  type AuthState as ClientAuthState,
+  type ClientConfig,
+  createClient,
+  type SanityClient,
+} from '@sanity/client'
+import {type Observable} from 'rxjs'
 
-import {getAuthMethodState, getTokenState} from '../auth/authStore'
+import {getClientAuthState} from '../auth/authStore'
 import {
   type DocumentResource,
   isCanvasResource,
@@ -9,7 +15,7 @@ import {
 } from '../config/sanityConfig'
 import {bindActionGlobally} from '../store/createActionBinder'
 import {createStateSourceAction} from '../store/createStateSourceAction'
-import {defineStore, type StoreContext} from '../store/defineStore'
+import {defineStore} from '../store/defineStore'
 import {getStagingApiHost} from '../utils/getStagingApiHost'
 import {pickProperties} from '../utils/object'
 
@@ -61,9 +67,9 @@ const DEFAULT_CLIENT_CONFIG: ClientConfig = {
  * @public
  */
 export interface ClientStoreState {
-  token: string | null
   clients: {[TKey in string]?: SanityClient}
-  authMethod?: 'localstorage' | 'cookie'
+  /** Credential stream shared by every client this store creates. */
+  auth: Observable<Promise<ClientAuthState>>
 }
 
 /**
@@ -104,36 +110,13 @@ export interface ClientOptions extends Pick<ClientConfig, AllowedClientConfigKey
 const clientStore = defineStore<ClientStoreState>({
   name: 'clientStore',
 
+  // Clients read their credential from `auth` on every request, so they are
+  // created once and a token change no longer tears down their listeners.
   getInitialState: (instance) => ({
     clients: {},
-    token: getTokenState(instance).getCurrent(),
+    auth: getClientAuthState(instance).observable,
   }),
-
-  initialize(context) {
-    const subscription = listenToToken(context)
-    const authMethodSubscription = listenToAuthMethod(context)
-    return () => {
-      subscription.unsubscribe()
-      authMethodSubscription.unsubscribe()
-    }
-  },
 })
-
-/**
- * Updates the client store state when a token is received.
- * @internal
- */
-const listenToToken = ({instance, state}: StoreContext<ClientStoreState>) => {
-  return getTokenState(instance).observable.subscribe((token) => {
-    state.set('setTokenAndResetClients', {token, clients: {}})
-  })
-}
-
-const listenToAuthMethod = ({instance, state}: StoreContext<ClientStoreState>) => {
-  return getAuthMethodState(instance).observable.subscribe((authMethod) => {
-    state.set('setAuthMethod', {authMethod})
-  })
-}
 
 type ClientInstanceCacheKeyInput = ClientConfig &
   Partial<Pick<ClientOptions, 'scope'>> & {
@@ -176,8 +159,7 @@ export const getClient = bindActionGlobally(
       )
     }
 
-    const tokenFromState = state.get().token
-    const {clients, authMethod} = state.get()
+    const {clients, auth} = state.get()
     let projectId = options.projectId ?? instance.config.projectId
     let dataset = options.dataset ?? instance.config.dataset
 
@@ -200,7 +182,6 @@ export const getClient = bindActionGlobally(
     const effectiveOptions: ClientConfig & {apiVersion: string} = {
       ...DEFAULT_CLIENT_CONFIG,
       ...((options.scope === 'global' || !projectId || resource) && {useProjectHostname: false}),
-      token: authMethod === 'cookie' ? undefined : (tokenFromState ?? undefined),
       ...options,
       ...(projectId && {projectId}),
       ...(dataset && {dataset}),
@@ -216,20 +197,13 @@ export const getClient = bindActionGlobally(
       delete effectiveOptions.dataset
     }
 
-    if (effectiveOptions.token === null || typeof effectiveOptions.token === 'undefined') {
-      delete effectiveOptions.token
-      if (authMethod === 'cookie') {
-        effectiveOptions.withCredentials = true
-      }
-    } else {
-      delete effectiveOptions.withCredentials
-    }
-
     const key = getClientConfigKey(effectiveOptions)
 
     if (clients[key]) return clients[key]
 
-    const client = createClient(effectiveOptions)
+    // A caller-supplied credential is static; the client rejects it alongside `auth`.
+    const hasOwnCredential = Boolean(options.token) || options.withCredentials !== undefined
+    const client = createClient(hasOwnCredential ? effectiveOptions : {...effectiveOptions, auth})
     state.set('addClient', (prev) => ({clients: {...prev.clients, [key]: client}}))
 
     return client

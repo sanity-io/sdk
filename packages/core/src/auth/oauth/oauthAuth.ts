@@ -1,4 +1,17 @@
-import {defer, distinctUntilChanged, filter, map, type Subscription} from 'rxjs'
+import {
+  catchError,
+  defer,
+  distinctUntilChanged,
+  EMPTY,
+  exhaustMap,
+  filter,
+  map,
+  retry,
+  type Subscription,
+  switchMap,
+  throwError,
+  timer,
+} from 'rxjs'
 
 import {type StoreContext} from '../../store/defineStore'
 import {DEFAULT_BASE} from '../authConstants'
@@ -7,53 +20,12 @@ import {type AuthStoreState} from '../authStore'
 import {type AuthStrategyOptions, type AuthStrategyResult} from '../authStrategy'
 import {subscribeToStateAndFetchCurrentUser} from '../subscribeToStateAndFetchCurrentUser'
 import {createLoggedInAuthState, getDefaultStorage, getStorageEvents} from '../utils'
+import {deserializeTokens} from './oauthClient'
 import {runOAuthTokenRefresh} from './oauthRefresh'
 import {type OAuthTokens} from './types'
 
 /** localStorage (or configured `storageArea`) key for persisted OAuth tokens. */
 export const OAUTH_TOKENS_KEY = '__sanity_oauth_tokens'
-
-/** The persisted JSON shape of {@link OAuthTokens}, `expiresAt` as an ISO string. */
-interface SerializedOAuthTokens extends Omit<OAuthTokens, 'expiresAt'> {
-  expiresAt: string
-}
-
-/**
- * Parses persisted token JSON back into {@link OAuthTokens}. Returns `null`
- * when the value is missing or malformed, including an `expiresAt` that does
- * not parse to a valid date (an `Invalid Date` would otherwise read as never
- * expiring, since `NaN <= now` is always `false`).
- *
- * @internal
- */
-export function deserializeTokens(raw: string | null): OAuthTokens | null {
-  if (!raw) return null
-  try {
-    const parsed: unknown = JSON.parse(raw)
-    if (
-      typeof parsed !== 'object' ||
-      parsed === null ||
-      !('accessToken' in parsed) ||
-      typeof (parsed as SerializedOAuthTokens).accessToken !== 'string' ||
-      !('expiresAt' in parsed) ||
-      typeof (parsed as SerializedOAuthTokens).expiresAt !== 'string'
-    ) {
-      return null
-    }
-    const value = parsed as SerializedOAuthTokens
-    const expiresAt = new Date(value.expiresAt)
-    if (Number.isNaN(expiresAt.getTime())) return null
-    return {
-      accessToken: value.accessToken,
-      tokenType: 'bearer',
-      expiresIn: value.expiresIn,
-      expiresAt,
-      ...(value.refreshToken !== undefined && {refreshToken: value.refreshToken}),
-    }
-  } catch {
-    return null
-  }
-}
 
 /**
  * Reads the persisted tokens, discarding entries that can never lead to a
@@ -164,6 +136,46 @@ export function subscribeToOAuthStorageEvents({state}: StoreContext<AuthStoreSta
   })
 }
 
+/** How long before expiry to refresh, capped at half the token's lifetime. */
+const REFRESH_LEAD_MS = 60_000
+const REFRESH_RETRIES = 3
+
+/**
+ * Refreshes the access token shortly before it expires, rescheduling whenever
+ * the tokens change (a refresh, a login, or another tab's storage event).
+ * Transient failures retry with backoff; past that the token is left to
+ * expire, and the next refresh attempt is the caller's.
+ *
+ * @internal
+ */
+export function scheduleOAuthTokenRefresh(context: StoreContext<AuthStoreState>): Subscription {
+  return context.state.observable
+    .pipe(
+      map((s) => s.oauthTokens),
+      distinctUntilChanged(),
+      switchMap((tokens) => {
+        if (!tokens?.refreshToken) return EMPTY
+        const halfLifetime = (tokens.expiresIn * 1000) / 2
+        const lead = halfLifetime > 0 ? Math.min(REFRESH_LEAD_MS, halfLifetime) : REFRESH_LEAD_MS
+        return timer(new Date(tokens.expiresAt.getTime() - lead))
+      }),
+      exhaustMap(() =>
+        defer(() => runOAuthTokenRefresh(context)).pipe(
+          retry({
+            count: REFRESH_RETRIES,
+            // An unrecoverable failure has already logged out; stop retrying.
+            delay: (error, attempt) =>
+              context.state.get().oauthTokens
+                ? timer(1000 * 2 ** attempt)
+                : throwError(() => error),
+          }),
+          catchError(() => EMPTY),
+        ),
+      ),
+    )
+    .subscribe()
+}
+
 /**
  * Initialize OAuth auth subscriptions:
  * - Refresh persisted tokens that expired while the app was closed
@@ -193,6 +205,7 @@ export function initializeOauthAuth(context: StoreContext<AuthStoreState>): {
     })
   }
 
+  subscriptions.push(scheduleOAuthTokenRefresh(context))
   subscriptions.push(subscribeToStateAndFetchCurrentUser(context, {useProjectHostname: false}))
 
   const storageArea = options?.storageArea

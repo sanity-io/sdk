@@ -4,10 +4,12 @@ import {type StoreContext} from '../../store/defineStore'
 import {getAuthLogger} from '../authLogger'
 import {AuthStateType} from '../authStateType'
 import {type AuthStoreState} from '../authStore'
-import {createLoggedInAuthState} from '../utils'
+import {createLoggedInAuthState, getCredential} from '../utils'
 import {
   appendResourceIndicator,
+  type ConfiguredOAuthOptions,
   createOAuthClient,
+  deserializeTokens,
   getOAuthOptions,
   postTokenRequest,
   serializeTokens,
@@ -33,7 +35,9 @@ let refreshInFlight: Promise<Omit<OAuthTokens, 'refreshToken'> | null> | null = 
 
 /**
  * Refreshes the OAuth tokens using the `refresh_token` grant. Concurrent
- * callers share a single in-flight request. An unrecoverable failure (a 4xx
+ * callers share a single in-flight request, and tabs on the same origin take
+ * turns through a Web Lock: a tab that waited adopts the tokens the other
+ * tab stored instead of spending a refresh token that has been rotated. An unrecoverable failure (a 4xx
  * rejecting the refresh token) clears the tokens and transitions to
  * `LOGGED_OUT`; transient failures (network, 5xx, rate limits) leave the
  * session intact and rethrow so the caller can retry. The resolved tokens omit
@@ -48,18 +52,80 @@ export function runOAuthTokenRefresh(
   context: StoreContext<AuthStoreState>,
 ): Promise<Omit<OAuthTokens, 'refreshToken'> | null> {
   if (refreshInFlight) return refreshInFlight
-  refreshInFlight = doRefreshOAuthTokens(context).finally(() => {
+  const {state} = context
+  const refresh = doRefreshOAuthTokens(context).finally(() => {
     refreshInFlight = null
+    state.set('oauthRefreshSettled', {pendingCredential: undefined})
   })
-  return refreshInFlight
+  refreshInFlight = refresh
+  // Clients hold requests until the refresh settles, then send whatever it
+  // left behind: the new token, the old one after a transient failure, or
+  // nothing after a logout.
+  state.set('oauthRefreshStarted', {
+    pendingCredential: refresh.then(
+      () => getCredential(state.get()),
+      () => getCredential(state.get()),
+    ),
+  })
+  return refresh
 }
 
-async function doRefreshOAuthTokens({
-  state,
-  instance,
-}: StoreContext<AuthStoreState>): Promise<Omit<OAuthTokens, 'refreshToken'> | null> {
+/** How long to wait for another tab's refresh before giving up as a transient failure. */
+const REFRESH_LOCK_TIMEOUT_MS = 30_000
+
+/**
+ * Runs `fn` holding a Web Lock shared by every tab on this origin, so only one
+ * tab spends a refresh token at a time. Falls back to running `fn` directly
+ * where Web Locks are unavailable (server, insecure contexts).
+ */
+function withRefreshLock<T>(clientId: string, fn: () => Promise<T>): Promise<T> {
+  if (typeof navigator === 'undefined' || !navigator.locks) return fn()
+  return navigator.locks.request(
+    `sanity-oauth-refresh:${clientId}`,
+    {signal: AbortSignal.timeout(REFRESH_LOCK_TIMEOUT_MS)},
+    fn,
+  )
+}
+
+function doRefreshOAuthTokens(
+  context: StoreContext<AuthStoreState>,
+): Promise<Omit<OAuthTokens, 'refreshToken'> | null> {
+  const {oauth} = getOAuthOptions(context.state.get())
+  return withRefreshLock(oauth.clientId, () => refreshHoldingLock(context))
+}
+
+/**
+ * Another tab may have refreshed while this one waited for the lock, before
+ * its `storage` event arrived here. Its refresh rotated the refresh token this
+ * tab holds, so storage has the only tokens still worth using. Returns them
+ * when they are still valid; otherwise the caller refreshes with them.
+ */
+function adoptTokensFromOtherTab(
+  {state}: StoreContext<AuthStoreState>,
+  options: ConfiguredOAuthOptions,
+): OAuthTokens | null {
+  const stored = deserializeTokens(options.storageArea?.getItem(options.storageKey) ?? null)
+  if (!stored || stored.accessToken === state.get().oauthTokens?.accessToken) return null
+  state.set('oauthTokensFromOtherTab', {
+    authState: createLoggedInAuthState(stored.accessToken, null),
+    oauthTokens: stored,
+  })
+  return stored.expiresAt.getTime() > Date.now() ? stored : null
+}
+
+async function refreshHoldingLock(
+  context: StoreContext<AuthStoreState>,
+): Promise<Omit<OAuthTokens, 'refreshToken'> | null> {
+  const {state, instance} = context
   const logger = getAuthLogger(instance)
   const options = getOAuthOptions(state.get())
+
+  const adopted = adoptTokensFromOtherTab(context, options)
+  if (adopted) {
+    logger.info('OAuth tokens already refreshed by another tab')
+    const {refreshToken: _refreshToken, ...publicTokens} = adopted
+    return publicTokens
+  }
 
   const current = state.get().oauthTokens
   if (!current?.refreshToken) {

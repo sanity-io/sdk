@@ -9,6 +9,7 @@ import {
 import {of, Subject} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
+import {setAuthToken} from '../auth/authStore'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {type StateSource} from '../store/createStateSourceAction'
 import {getClientState} from './clientStore'
@@ -57,44 +58,51 @@ describe('observeLiveEvents', () => {
     subscription.unsubscribe()
   })
 
-  it('reports CORS errors through onCorsError and completes without erroring', () => {
+  it('reconnects to include drafts when a token appears, but not when it is refreshed', () => {
+    const subscription = observeLiveEvents(instance, {onCorsError: vi.fn()}).subscribe()
+    expect(events).toHaveBeenLastCalledWith(expect.objectContaining({includeDrafts: false}))
+
+    setAuthToken(instance, 'token-1')
+    expect(events).toHaveBeenLastCalledWith(expect.objectContaining({includeDrafts: true}))
+
+    setAuthToken(instance, 'token-2')
+    expect(events).toHaveBeenCalledTimes(2)
+    subscription.unsubscribe()
+  })
+
+  it('reports CORS errors through onCorsError without erroring', () => {
     const onCorsError = vi.fn()
     const error = vi.fn()
-    const complete = vi.fn()
-    observeLiveEvents(instance, {onCorsError}).subscribe({error, complete})
+    observeLiveEvents(instance, {onCorsError}).subscribe({error})
 
     const corsError = new CorsOriginError({projectId: 'test'})
     liveEventSubjects[0].error(corsError)
 
     expect(onCorsError).toHaveBeenCalledWith(corsError)
     expect(error).not.toHaveBeenCalled()
-    expect(complete).toHaveBeenCalled()
   })
 
-  it('completes without retrying on DisconnectError', async () => {
+  it('stops without retrying on DisconnectError', async () => {
     vi.useFakeTimers()
     try {
       const error = vi.fn()
-      const complete = vi.fn()
-      observeLiveEvents(instance, {onCorsError: vi.fn()}).subscribe({error, complete})
+      observeLiveEvents(instance, {onCorsError: vi.fn()}).subscribe({error})
 
       liveEventSubjects[0].error(new DisconnectError('Server disconnected client'))
       await vi.advanceTimersByTimeAsync(LIVE_EVENTS_RETRY_DELAY * 5)
 
       expect(error).not.toHaveBeenCalled()
-      expect(complete).toHaveBeenCalled()
       expect(events).toHaveBeenCalledTimes(1)
     } finally {
       vi.useRealTimers()
     }
   })
 
-  it('completes without retrying on a 4xx connection rejection', async () => {
+  it('stops without retrying on a 4xx connection rejection', async () => {
     vi.useFakeTimers()
     try {
       const error = vi.fn()
-      const complete = vi.fn()
-      observeLiveEvents(instance, {onCorsError: vi.fn()}).subscribe({error, complete})
+      observeLiveEvents(instance, {onCorsError: vi.fn()}).subscribe({error})
 
       // The server rejected the connection with a 401 (e.g. expired token) —
       // it will keep rejecting, so retrying would reconnect once per second
@@ -105,11 +113,27 @@ describe('observeLiveEvents', () => {
       await vi.advanceTimersByTimeAsync(LIVE_EVENTS_RETRY_DELAY * 5)
 
       expect(error).not.toHaveBeenCalled()
-      expect(complete).toHaveBeenCalled()
       expect(events).toHaveBeenCalledTimes(1)
     } finally {
       vi.useRealTimers()
     }
+  })
+
+  it('reconnects after a 4xx rejection once the credential changes', () => {
+    setAuthToken(instance, 'expired-token')
+    const error = vi.fn()
+    const subscription = observeLiveEvents(instance, {onCorsError: vi.fn()}).subscribe({error})
+    liveEventSubjects[0].error(
+      new ConnectionFailedError('EventSource connection failed', {status: 401}),
+    )
+    expect(events).toHaveBeenCalledTimes(1)
+
+    setAuthToken(instance, 'renewed-token')
+
+    expect(events).toHaveBeenCalledTimes(2)
+    expect(events).toHaveBeenLastCalledWith(expect.objectContaining({includeDrafts: true}))
+    expect(error).not.toHaveBeenCalled()
+    subscription.unsubscribe()
   })
 
   it('retries a connection failure without a status (transient network failure)', async () => {

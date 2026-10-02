@@ -212,7 +212,9 @@ export const handleOAuthCallback = bindActionGlobally(
 
 /**
  * Refreshes the OAuth tokens using the `refresh_token` grant. Concurrent
- * callers share a single in-flight request. An unrecoverable failure (a 4xx
+ * callers share a single in-flight request, and tabs on the same origin take
+ * turns through a Web Lock: a tab that waited adopts the tokens the other
+ * tab stored instead of spending a refresh token that has been rotated. An unrecoverable failure (a 4xx
  * rejecting the refresh token) clears the tokens and transitions to
  * `LOGGED_OUT`; transient failures (network, 5xx, rate limits) leave the
  * session intact and rethrow so the caller can retry. The resolved tokens omit
