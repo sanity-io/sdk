@@ -22,6 +22,10 @@ export interface UsersResult {
    */
   data: SanityUser[]
   /**
+   * How many users the resource has, including those not fetched yet.
+   */
+  totalCount: number
+  /**
    * Whether there are more users to fetch.
    */
   hasMore: boolean
@@ -61,11 +65,11 @@ function withResolvedProjectId(
  *
  * @category Users
  * @param params - The resource type, project ID, and the limit of users to fetch
- * @returns A list of users, a boolean indicating whether there are more users to fetch, and a function to load more users
+ * @returns A list of users, how many users the resource has in total, a boolean indicating whether there are more users to fetch, and a function to load more users
  *
  * @example
  * ```
- * const { data, hasMore, loadMore, isPending } = useUsers({
+ * const { data, totalCount, hasMore, loadMore, isPending } = useUsers({
  *   resourceType: 'organization',
  *   organizationId: 'my-org-id',
  *   batchSize: 10,
@@ -80,6 +84,7 @@ function withResolvedProjectId(
  *         <address>{user.profile.email}</address>
  *       </figure>
  *     ))}
+ *     <p>Showing {data.length} of {totalCount}</p>
  *     {hasMore && <button onClick={loadMore}>{isPending ? 'Loading...' : 'Load More'}</button>}
  *   </div>
  * )
@@ -143,11 +148,11 @@ export function useUsers(options?: GetUsersOptions): UsersResult {
 
   // Subscribe to updates and get the current data
   // useSyncExternalStore ensures the component re-renders when the data changes
-  const {data, hasMore} = useSyncExternalStore(subscribe, getCurrent)!
+  const {data, totalCount, hasMore} = useSyncExternalStore(subscribe, getCurrent)!
 
   const loadMore = useCallback(() => {
     loadMoreUsers(instance, effectiveOptions)
   }, [instance, effectiveOptions])
 
-  return {data, hasMore, isPending, loadMore}
+  return {data, totalCount, hasMore, isPending, loadMore}
 }
