@@ -6,6 +6,7 @@ import {useApplicationConfigs} from './useApplicationConfigs'
 /**
  * Selects an application configuration by application id or application type.
  * @public
+ * @category Types
  */
 export type ApplicationConfigSelector =
   | {appId: Application['id']; appType?: never}
@@ -30,6 +31,7 @@ export type ApplicationConfigSelector =
  * ```
  *
  * @public
+ * @category Dashboard
  */
 export function useApplicationConfig(
   selector: ApplicationConfigSelector,

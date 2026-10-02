@@ -7,6 +7,7 @@ import {createContext} from 'react'
  * dependency on the `sanity` package is required.
  *
  * @public
+ * @category Types
  */
 export interface StudioWorkspaceHandle {
   /** The Sanity project ID for this workspace. */
@@ -66,6 +67,7 @@ export interface StudioWorkspaceHandle {
  * ```
  *
  * @public
+ * @category Components
  */
 export const SDKStudioContext = createContext<StudioWorkspaceHandle | null>(null)
 SDKStudioContext.displayName = 'SDKStudioContext'

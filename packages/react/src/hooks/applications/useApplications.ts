@@ -17,6 +17,7 @@ import {createFetcherHook, type FetcherHookResult} from '../helpers/createFetche
  * @public
  * @param options - Filter and include options for the applications list.
  * @returns The result envelope `{data, isFetching, error, refetch}`.
+ * @category Applications
  */
 export const useApplications = createFetcherHook(applications) as <
   Include extends ApplicationInclude = never,

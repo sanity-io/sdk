@@ -10,6 +10,7 @@ import {useSanityInstance} from '../context/useSanityInstance'
  * state around a core mutation action.
  *
  * @public
+ * @category Types
  */
 export interface MutationHookResult<TInput, TResult> {
   /**

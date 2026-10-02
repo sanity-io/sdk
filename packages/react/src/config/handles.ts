@@ -14,6 +14,7 @@ import {
  * for backward compatibility.
  *
  * @public
+ * @category Types
  */
 export interface ResourceHandle<
   TDataset extends string = string,
@@ -29,6 +30,7 @@ export interface ResourceHandle<
 /**
  * React SDK document-type handle. Adds `resourceName` to the core `DocumentTypeHandle`.
  * @public
+ * @category Types
  */
 export interface DocumentTypeHandle<
   TDocumentType extends string = string,
@@ -45,6 +47,7 @@ export interface DocumentTypeHandle<
  * for hooks — this version understands `resourceName` resolution.
  *
  * @public
+ * @category Types
  */
 export interface DocumentHandle<
   TDocumentType extends string = string,

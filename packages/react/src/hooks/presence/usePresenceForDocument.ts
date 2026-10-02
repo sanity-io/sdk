@@ -7,7 +7,10 @@ import {useSanityInstance} from '../context/useSanityInstance'
 import {useNormalizedResourceOptions} from '../helpers/useNormalizedResourceOptions'
 import {trackHookUsage} from '../helpers/useTrackHookUsage'
 
-/** @beta */
+/**
+ * @beta
+ * @category Types
+ */
 export interface UsePresenceForDocumentOptions extends DocumentHandle {
   /**
    * Narrows to participants at or below this field path, which is what a field
@@ -55,6 +58,7 @@ export interface UsePresenceForDocumentOptions extends DocumentHandle {
  * ```
  *
  * @beta
+ * @category Presence
  */
 export function usePresenceForDocument(options: UsePresenceForDocumentOptions): {
   presence: DocumentPresence[]

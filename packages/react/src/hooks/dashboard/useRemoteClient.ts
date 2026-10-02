@@ -6,5 +6,6 @@ import {createStateSourceHook} from '../helpers/createStateSourceHook'
  * Returns a remote client shared by hooks using the same Sanity instance.
  * The first call creates the client; later calls reuse it.
  * @public
+ * @category Dashboard
  */
 export const useRemoteClient: () => RemoteInstance = createStateSourceHook(getRemoteClientState)

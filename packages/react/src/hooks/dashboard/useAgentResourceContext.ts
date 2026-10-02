@@ -10,6 +10,7 @@ import {useApplicationContext} from './useApplicationContext'
 
 /**
  * @public
+ * @category Types
  */
 export interface AgentResourceContextOptions {
   /**
@@ -37,7 +38,7 @@ export interface AgentResourceContextOptions {
  * - In a federated app (message bus), it publishes {@link useApplicationContext}'s
  *   `applications.context.update` topic. Reach for `useApplicationContext` directly in new code.
  *
- * @category Agent
+ * @category Agent Actions
  * @param options - The resource context options containing projectId, dataset, and optional documentId
  *
  * @example

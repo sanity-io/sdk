@@ -13,6 +13,7 @@ import {createFetcherHook, type FetcherHookResult} from '../helpers/createFetche
  * @param applicationId - The application id.
  * @param options - Optional `include` list to expand related resources.
  * @returns The result envelope `{data, isFetching, error, refetch}`.
+ * @category Applications
  */
 export const useApplication = createFetcherHook(application) as <
   Include extends ApplicationInclude = never,

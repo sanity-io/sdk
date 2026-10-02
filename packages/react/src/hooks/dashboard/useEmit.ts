@@ -13,6 +13,7 @@ import {useSanityInstance} from '../context/useSanityInstance'
 /**
  * Emits a dashboard event topic, typed to the topic's payload and reply.
  * @public
+ * @category Types
  */
 export type TopicEmitter<K extends EventTopic> = (
   ...args: PayloadOf<K> extends void
@@ -67,6 +68,7 @@ export type TopicEmitter<K extends EventTopic> = (
  * ```
  *
  * @public
+ * @category Dashboard
  */
 export function useEmit<K extends EventTopic>(topic: K): TopicEmitter<K> {
   const instance = useSanityInstance()

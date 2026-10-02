@@ -25,7 +25,10 @@ const FOCUS_THROTTLE_MS = 1000
  */
 const SELECTION_THROTTLE_MS = 250
 
-/** @beta */
+/**
+ * @beta
+ * @category Types
+ */
 export interface UseReportPresenceOptions extends DocumentHandle {
   /**
    * The focused field path. Omit it for document-level presence. Keyed and numeric
@@ -92,6 +95,7 @@ export interface UseReportPresenceOptions extends DocumentHandle {
  * ```
  *
  * @beta
+ * @category Presence
  */
 export function useReportPresence(options: UseReportPresenceOptions): void {
   const {path, selection, throttleMs, ...handle} = options

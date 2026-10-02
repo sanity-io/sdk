@@ -8,6 +8,7 @@ import {useSanityInstance} from '../context/useSanityInstance'
  * first fetch succeeds, so `data` is always present once your component renders.
  *
  * @public
+ * @category Types
  */
 export interface FetcherHookResult<TData> {
   /** The resolved data. Guaranteed present — the hook suspends until the first fetch succeeds. */

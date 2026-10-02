@@ -9,6 +9,7 @@ type MakeOptional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>
 
 /**
  * @public
+ * @category Remote Modules
  */
 export type FederationRemote = {
   name: string
@@ -25,6 +26,7 @@ function withManifest<T extends {entry: string}>(remote: T): T {
 
 /**
  * @public
+ * @category Remote Modules
  */
 export type CreateRemoteInstanceOptions = MakeOptional<
   Pick<UserOptions, 'name' | 'remotes' | 'shared' | 'plugins'>,
@@ -33,6 +35,7 @@ export type CreateRemoteInstanceOptions = MakeOptional<
 
 /**
  * @public
+ * @category Remote Modules
  */
 export interface RemoteInstance {
   registerRemotes(remotes: FederationRemote[]): void
@@ -45,6 +48,7 @@ export interface RemoteInstance {
 /**
  * Creates a client for registering, loading, and preloading federated modules.
  * @public
+ * @category Remote Modules
  */
 export function createRemoteInstance(options: CreateRemoteInstanceOptions): RemoteInstance {
   const logger = createLogger(options.name)

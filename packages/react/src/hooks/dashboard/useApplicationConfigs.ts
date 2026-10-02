@@ -20,6 +20,7 @@ const NO_CONFIGS: readonly ApplicationConfig[] = Object.freeze([])
  * ```
  *
  * @public
+ * @category Dashboard
  */
 export function useApplicationConfigs(): readonly ApplicationConfig[] {
   return useTopic('applications.config') ?? NO_CONFIGS

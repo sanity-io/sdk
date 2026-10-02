@@ -33,6 +33,7 @@ import {
 /**
  * A message bus protocol error code.
  * @public
+ * @category Message Bus
  */
 export type MessageBusErrorCode =
   | 'NO_RESPONDER'
@@ -47,6 +48,7 @@ export type MessageBusErrorCode =
 /**
  * An error raised by the message bus protocol.
  * @public
+ * @category Message Bus
  */
 export class MessageBusError extends Error {
   /** The machine-readable protocol error code. */
@@ -63,6 +65,7 @@ export class MessageBusError extends Error {
 /**
  * Metadata that travels with each message bus event.
  * @public
+ * @category Message Bus
  */
 export interface MessageBusMeta {
   /** The application that produced the message. */
@@ -80,6 +83,7 @@ export interface MessageBusMeta {
 /**
  * A message delivered to an event topic responder.
  * @public
+ * @category Message Bus
  */
 export interface MessageBusMessage<T, R = never, K extends PropertyKey = TopicName> {
   /** The topic that carries the message. */
@@ -103,6 +107,7 @@ export interface MessageBusMessage<T, R = never, K extends PropertyKey = TopicNa
 /**
  * An observable state topic with access to its current and first values.
  * @public
+ * @category Message Bus
  */
 export interface MessageBusStateSource<T> extends Observable<T> {
   /** Returns the current value, or `undefined` before the first value is published. */
@@ -114,6 +119,7 @@ export interface MessageBusStateSource<T> extends Observable<T> {
 /**
  * Options for aborting a message bus operation.
  * @public
+ * @category Message Bus
  */
 export interface MessageBusAbortOptions {
   /** Aborts the operation when signaled. */
@@ -123,6 +129,7 @@ export interface MessageBusAbortOptions {
 /**
  * Options for reading a state topic.
  * @public
+ * @category Message Bus
  */
 export interface MessageBusQueryOptions extends MessageBusAbortOptions {
   /** Wait timeout in milliseconds. Defaults to 5 seconds; `null` disables it. */
@@ -132,6 +139,7 @@ export interface MessageBusQueryOptions extends MessageBusAbortOptions {
 /**
  * Options for emitting an event topic.
  * @public
+ * @category Message Bus
  */
 export interface MessageBusEmitOptions extends MessageBusAbortOptions {
   /** Reply timeout in milliseconds. Defaults to 5 seconds; `null` disables it. */
@@ -141,6 +149,7 @@ export interface MessageBusEmitOptions extends MessageBusAbortOptions {
 /**
  * A lazily awaited event reply.
  * @public
+ * @category Message Bus
  */
 export interface MessageBusEmitResult<R> extends PromiseLike<R> {
   /** Handles a rejected event reply. */
@@ -156,6 +165,7 @@ export interface MessageBusEmitResult<R> extends PromiseLike<R> {
  * State topics are written by the host to each connection separately through
  * {@link MessageBusClient.emit}; a connection only ever reads its own values.
  * @public
+ * @category Message Bus
  */
 export interface MessageBus<TTopics = MessageBusTopics> {
   /** Emits an event topic and provides its reply when awaited. */
@@ -191,6 +201,7 @@ export interface MessageBus<TTopics = MessageBusTopics> {
 /**
  * A message bus connection that can be torn down independently of its siblings.
  * @public
+ * @category Message Bus
  */
 export interface MessageBusConnection<TTopics = MessageBusTopics> extends MessageBus<TTopics> {
   /** The application this connection belongs to. */
@@ -206,6 +217,7 @@ export interface MessageBusConnection<TTopics = MessageBusTopics> extends Messag
 /**
  * The host's handle to one connection: who it is, when it closes, and where to write its state.
  * @public
+ * @category Message Bus
  */
 export interface MessageBusClient {
   /** The application the connection belongs to. */
@@ -240,6 +252,7 @@ export interface MessageBusClient {
  * new connection the current values is done when it appears there, as an SSE server writes
  * a snapshot to each new client.
  * @public
+ * @category Message Bus
  */
 export interface MessageBusHost<TTopics = MessageBusTopics> extends MessageBusConnection<TTopics> {
   /**
@@ -1245,6 +1258,7 @@ export function isMessageBusEnvironment(): boolean {
 /**
  * Options for connecting to an installed message bus.
  * @public
+ * @category Message Bus
  */
 export interface ConnectMessageBusOptions {
   /** The application ID. Defaults to the ID embedded by the Sanity CLI. */
@@ -1256,6 +1270,7 @@ export interface ConnectMessageBusOptions {
 /**
  * Connects to the installed message bus, or returns `undefined` when no compatible connection exists.
  * @public
+ * @category Message Bus
  */
 export function connectMessageBus(
   options: ConnectMessageBusOptions = {},

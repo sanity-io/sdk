@@ -92,6 +92,7 @@ function DashboardTokenRefresh({
  * ```
  *
  * @public
+ * @category Dashboard
  */
 export const DashboardTokenRefreshProvider: React.FC<PropsWithChildren> = ({children}) => {
   const instance = useSanityInstance()

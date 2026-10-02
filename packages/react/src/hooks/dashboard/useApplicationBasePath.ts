@@ -17,6 +17,7 @@ import {useTopic} from './useTopic'
  * ```
  *
  * @public
+ * @category Dashboard
  */
 export function useApplicationBasePath(): TopicData<'applications.base-path'> {
   return useTopic('applications.base-path')

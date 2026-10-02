@@ -16,6 +16,7 @@ import {useTopic} from './useTopic'
  * ```
  *
  * @public
+ * @category Dashboard
  */
 export function useCurrentUser(): CurrentUser | null {
   return useTopic('users.current')
