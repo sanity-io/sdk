@@ -64,8 +64,8 @@ describe('useUsers', () => {
   it('should render users data immediately when available', () => {
     const getCurrent = vi.fn().mockReturnValue({
       data: mockUsers,
-      hasMore: false,
-      totalCount: 2,
+      hasMore: true,
+      totalCount: 7,
     })
 
     // Type assertion to fix the StateSource type issue
@@ -80,14 +80,14 @@ describe('useUsers', () => {
     >)
 
     function TestComponent() {
-      const {data, hasMore, isPending} = useUsers({
+      const {data, totalCount, hasMore, isPending} = useUsers({
         resourceType: 'organization',
         organizationId: 'test-org',
         batchSize: 10,
       })
       return (
         <div data-testid="output">
-          {data.length} users - {hasMore ? 'has more' : 'no more'} -{' '}
+          {data.length} of {totalCount} users - {hasMore ? 'has more' : 'no more'} -{' '}
           {isPending ? 'pending' : 'not pending'}
         </div>
       )
@@ -100,8 +100,8 @@ describe('useUsers', () => {
     )
 
     // Verify that the output contains the data and that isPending is false
-    expect(screen.getByTestId('output').textContent).toContain('2 users')
-    expect(screen.getByTestId('output').textContent).toContain('no more')
+    expect(screen.getByTestId('output').textContent).toContain('2 of 7 users')
+    expect(screen.getByTestId('output').textContent).toContain('has more')
     expect(screen.getByTestId('output').textContent).toContain('not pending')
   })
 
