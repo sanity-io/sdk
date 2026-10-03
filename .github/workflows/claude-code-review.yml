@@ -50,7 +50,7 @@ jobs:
           !(github.event.pull_request.head.repo.full_name == github.repository &&
           startsWith(github.event.pull_request.head.ref, 'renovate/'))
         id: claude-review
-        uses: anthropics/claude-code-action@6b082c41935b4c8a3b8b0ef85ba4ba4d9eeb8975 # v1
+        uses: anthropics/claude-code-action@ed670b4cf9de2a5a570d130d2f6197b9e543cd64 # v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           track_progress: true
@@ -69,7 +69,7 @@ jobs:
           github.event.pull_request.head.repo.full_name == github.repository &&
           startsWith(github.event.pull_request.head.ref, 'renovate/')
         id: claude-review-renovate
-        uses: anthropics/claude-code-action@6b082c41935b4c8a3b8b0ef85ba4ba4d9eeb8975 # v1
+        uses: anthropics/claude-code-action@ed670b4cf9de2a5a570d130d2f6197b9e543cd64 # v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           track_progress: true
