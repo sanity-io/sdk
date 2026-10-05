@@ -85,5 +85,21 @@ export type ResolveProjectionResult<
   ? // `Extract<..., object>` keeps this assignable to the `object` bound that
     // `ProjectionValuePending` places on a projection result. A projection always selects
     // fields into an object, so nothing is lost.
-    Extract<At<At<SanityProjectionsByResource[TSchemaId], TDocumentType>, TProjection>, object>
+    Extract<
+      ProjectionForDocumentType<SanityProjectionsByResource[TSchemaId], TDocumentType, TProjection>,
+      object
+    >
   : SanityProjectionResult<TProjection, TDocumentType, TSchemaId>
+
+/**
+ * Looks up a projection under one document type. A handle whose document type is only known as
+ * `string`, as with handles from a document list, gets the union of the projection's result
+ * across every document type it was generated for.
+ */
+type ProjectionForDocumentType<
+  TProjections,
+  TDocumentType extends string,
+  TProjection extends string,
+> = string extends TDocumentType
+  ? {[K in keyof TProjections]: At<TProjections[K], TProjection>}[keyof TProjections]
+  : At<At<TProjections, TDocumentType>, TProjection>

@@ -30,6 +30,7 @@ type Slug = {_type: 'slug'; current: string}
 type TestPostsResult = {_id: string; title: string}[]
 type ProductionPostsResult = {_id: string; title: number}[]
 type TestTitleProjection = {title: string}
+type AuthorTitleProjection = {title: null}
 
 // Registered the way generated files do: as globals, which the interfaces `@sanity/client`
 // exports extend. Every file in this package's type-check program sees these registrations, not
@@ -44,7 +45,10 @@ declare global {
     'resolve2.production': {'*[_type == "post"]': ProductionPostsResult}
   }
   interface SanityProjectionsByResource {
-    'resolve1.test': {post: {'{title}': TestTitleProjection}}
+    'resolve1.test': {
+      author: {'{name}': {name: string}; '{title}': AuthorTitleProjection}
+      post: {'{title}': TestTitleProjection}
+    }
   }
 }
 
@@ -96,6 +100,18 @@ test('a projection resolves by resource and document type', () => {
   expectTypeOf<
     ResolveProjectionResult<'{title}', 'post', 'resolve1.test'>
   >().toEqualTypeOf<TestTitleProjection>()
+})
+
+test('a handle with a widened document type gets the projection across document types', () => {
+  expectTypeOf<ResolveProjectionResult<'{title}', string, 'resolve1.test'>>().toEqualTypeOf<
+    TestTitleProjection | AuthorTitleProjection
+  >()
+  expectTypeOf<ResolveProjectionResult<'{name}', string, 'resolve1.test'>>().toEqualTypeOf<{
+    name: string
+  }>()
+  expectTypeOf<
+    ResolveProjectionResult<'{missing}', string, 'resolve1.test'>
+  >().toEqualTypeOf<never>()
 })
 
 test('a projection on a document type with no registrations is never', () => {
