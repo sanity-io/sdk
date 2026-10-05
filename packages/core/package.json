@@ -95,7 +95,7 @@
     "@sanity/types": "catalog:",
     "groq": "catalog:",
     "groq-js": "catalog:",
-    "reselect": "^5.1.1",
+    "reselect": "^5.3.0",
     "rxjs": "catalog:",
     "zustand": "^5.0.15"
   },
