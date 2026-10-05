@@ -43,6 +43,7 @@
   "devDependencies": {
     "@playwright/test": "catalog:",
     "@repo/config-eslint": "workspace:*",
+    "@repo/dev-aliases": "workspace:*",
     "@repo/e2e": "workspace:*",
     "@repo/tsconfig": "workspace:*",
     "@sanity/codegen": "3.88.1-typegen-experimental.0",

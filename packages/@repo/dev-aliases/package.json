@@ -5,8 +5,7 @@
   "type": "module",
   "main": "./dev-aliases.mjs",
   "exports": {
-    ".": "./dev-aliases.mjs",
-    "./vitest": "./vitest.mjs"
+    ".": "./dev-aliases.mjs"
   },
   "scripts": {
     "lint": "eslint ."

@@ -1,5 +1,6 @@
 import {resolve} from 'node:path'
 
+import {devAliases} from '@repo/dev-aliases'
 import {defineCliConfig} from 'sanity/cli'
 
 // Point the Portable Text packages at a local build of the portabletext/editor
@@ -39,11 +40,11 @@ export default defineCliConfig({
     resolve: {
       ...prev.resolve,
       alias: [
-        ...Object.entries({
-          ...prev.resolve?.alias,
-          '@sanity/sdk': resolve(import.meta.dirname, '../../packages/core/src/_exports'),
-          '@sanity/sdk-react': resolve(import.meta.dirname, '../../packages/react/src/_exports'),
-        }).map(([find, replacement]) => ({find, replacement: replacement as string})),
+        ...Object.entries({...prev.resolve?.alias}).map(([find, replacement]) => ({
+          find,
+          replacement: replacement as string,
+        })),
+        ...devAliases,
         // Regex finds with $ anchors so subpath exports resolve precisely
         // (a string find would rewrite `@portabletext/editor/selectors` into
         // a path inside lib/index.js).
