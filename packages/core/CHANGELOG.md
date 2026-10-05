@@ -1,5 +1,23 @@
 # Changelog
 
+## 3.8.0
+
+### Minor Changes
+
+- [#1347](https://github.com/sanity-io/sdk/pull/1347) [`8f6f9ab`](https://github.com/sanity-io/sdk/commit/8f6f9ab54c5fcfeed775cdf03d18ee6312cb9427) Thanks [@gu-stav](https://github.com/gu-stav)! - Add the `already-has-access` reason to the `access.request` reply, for a resource the user already has access to.
+
+### Patch Changes
+
+- [#1350](https://github.com/sanity-io/sdk/pull/1350) [`c1f6fce`](https://github.com/sanity-io/sdk/commit/c1f6fce7f64e8f78ce6f53525e07c498703f7cc9) Thanks [@gu-stav](https://github.com/gu-stav)! - Use dashboard auth for apps on a message bus another app installed, so they don't read or write the host's localStorage token.
+
+- [#1357](https://github.com/sanity-io/sdk/pull/1357) [`2a5c3ba`](https://github.com/sanity-io/sdk/commit/2a5c3badb54f31181d5ccccdd85fcd5b32d71ddc) Thanks [@gu-stav](https://github.com/gu-stav)! - Read the dashboard organization ID from the message bus when one is installed.
+
+- [#1367](https://github.com/sanity-io/sdk/pull/1367) [`f0dc3d6`](https://github.com/sanity-io/sdk/commit/f0dc3d69cea192585681ba0d4f5946fa60f75dc7) Thanks [@squiggler-app](https://github.com/apps/squiggler-app)! - Update dependencies: `@module-federation/runtime@2.9.2`
+
+- [#1372](https://github.com/sanity-io/sdk/pull/1372) [`1d9cc7d`](https://github.com/sanity-io/sdk/commit/1d9cc7d8d7ad0cc3fc837937b0b8f03b336bd1a7) Thanks [@squiggler-app](https://github.com/apps/squiggler-app)! - Update dependencies: `reselect@5.3.0`
+
+- [#1346](https://github.com/sanity-io/sdk/pull/1346) [`6dce406`](https://github.com/sanity-io/sdk/commit/6dce406127025b649028425b22ac20a8a197ddec) Thanks [@squiggler-app](https://github.com/apps/squiggler-app)! - Update dependencies: `@sanity/client@8.9.0`, `@sanity/diff-match-patch@3.2.1`, `@sanity/pkg-utils@13.0.4`, `@sanity/types@6.17.0`
+
 ## 3.7.0
 
 ### Minor Changes
