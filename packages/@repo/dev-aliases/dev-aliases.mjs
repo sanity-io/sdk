@@ -1,15 +1,29 @@
+// @ts-check
+import {readFileSync} from 'node:fs'
+import {resolve} from 'node:path'
+
+const PACKAGES_PATH = resolve(import.meta.dirname, '..', '..')
+
 /**
- * The path mappings/aliases used by various tools in the monorepo to map imported modules to
- * source files in order to speed up rebuilding and avoid having a separate watcher process to build
- * from `src` to `lib`.
- *
- * This file is currently read by:
- * - Vite when running the dev server (only when running in the kitchensink)
- * - Vitest when running test suite
- *
- * @type Record<string, string>
+ * @param {string} dir
+ * @returns {{find: RegExp, replacement: string}[]}
  */
-export const devAliases = {
-  '@sanity/sdk': 'core/src/_exports',
-  '@sanity/sdk-react': 'react/src/_exports',
+function aliasesFromExports(dir) {
+  const {name, exports} = JSON.parse(
+    readFileSync(resolve(PACKAGES_PATH, dir, 'package.json'), 'utf8'),
+  )
+  return Object.entries(exports).map(([subpath, target]) => ({
+    find: new RegExp(`^${(name + subpath.slice(1)).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`),
+    replacement: resolve(PACKAGES_PATH, dir, typeof target === 'string' ? target : target.source),
+  }))
 }
+
+/**
+ * Aliases mapping every subpath export of the SDK packages to its source file, so Vite and Vitest
+ * run against `src` without a separate build step.
+ *
+ * Read by:
+ * - Vitest via `@repo/config-test`
+ * - Vite in `apps/kitchensink-react` and `apps/standalone-react`
+ */
+export const devAliases = [...aliasesFromExports('core'), ...aliasesFromExports('react')]

@@ -1,5 +1,5 @@
 // @ts-check
-import {getVitestAliases} from '@repo/dev-aliases/vitest'
+import {devAliases} from '@repo/dev-aliases'
 // eslint-disable-next-line no-restricted-imports
 import * as vitest from 'vitest/config'
 
@@ -13,7 +13,7 @@ export function defineConfig(config) {
     ...config,
     test: {
       ...config?.test,
-      alias: {...config?.test?.alias, ...getVitestAliases()},
+      alias: devAliases,
       typecheck: {
         ...config?.test?.typecheck,
         exclude: [

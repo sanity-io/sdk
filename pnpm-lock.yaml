@@ -434,6 +434,9 @@ importers:
       '@repo/config-eslint':
         specifier: workspace:*
         version: link:../../packages/@repo/config-eslint
+      '@repo/dev-aliases':
+        specifier: workspace:*
+        version: link:../../packages/@repo/dev-aliases
       '@repo/e2e':
         specifier: workspace:*
         version: link:../../packages/@repo/e2e
@@ -489,6 +492,9 @@ importers:
       '@repo/config-eslint':
         specifier: workspace:*
         version: link:../../packages/@repo/config-eslint
+      '@repo/dev-aliases':
+        specifier: workspace:*
+        version: link:../../packages/@repo/dev-aliases
       '@repo/tsconfig':
         specifier: workspace:*
         version: link:../../packages/@repo/tsconfig
