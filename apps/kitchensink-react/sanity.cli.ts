@@ -2,6 +2,8 @@ import {resolve} from 'node:path'
 
 import {defineCliConfig} from 'sanity/cli'
 
+import {datasetResources} from './src/resources'
+
 // Point the Portable Text packages at a local build of the portabletext/editor
 // monorepo instead of the published npm versions:
 //   PTE_LOCAL_PKGS=/path/to/editor/packages pnpm dev
@@ -27,6 +29,24 @@ export default defineCliConfig({
   // react-compiler-runtime (a dependency of this app). The App SDK owns the
   // React plugin and applies this for both `sanity dev` and `sanity build`.
   reactCompiler: {target: '19'},
+  // One generated file per dataset, from the schemas `schema:extract` writes for each workspace in
+  // sanity.config.ts. Both datasets read the same source files, because some routes use both.
+  typegen: {
+    resources: [
+      {
+        ...datasetResources.default,
+        schema: './schema.ppsg7ml5.test.json',
+        path: './src/**/*.{ts,tsx}',
+        generates: './sanity.types.ppsg7ml5.test.ts',
+      },
+      {
+        ...datasetResources.secondary,
+        schema: './schema.vo1ysemo.production.json',
+        path: './src/**/*.{ts,tsx}',
+        generates: './sanity.types.vo1ysemo.production.ts',
+      },
+    ],
+  },
   // Extend the App SDK's internal Vite config to resolve the SDK to local source.
   // The SANITY_APP_E2E_* env vars the app reads are auto-exposed on
   // import.meta.env by the App SDK (SANITY_APP_ prefix) — no manual define needed.

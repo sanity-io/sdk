@@ -14,6 +14,8 @@ import {type JSX, type ReactNode, type RefObject, Suspense, useRef} from 'react'
 import {useSearchParams} from 'react-router'
 import {Box, Card, Flex, Text, VStack} from 'ui5'
 
+import {type MultiResourceAuthorProjectionResult} from '../../sanity.types.ppsg7ml5.test'
+import {type MultiResourceMovieProjectionResult} from '../../sanity.types.vo1ysemo.production'
 import {PageLayout} from '../components/PageLayout'
 import {devResources, e2eResources, isE2E} from '../sanityConfigs'
 
@@ -34,34 +36,24 @@ interface DemoCardProps {
   forwardedRef?: RefObject<HTMLDivElement | null>
 }
 
-const multiResourceAuthorProjection = defineProjection(`{
+const multiResourceAuthorProjection = defineProjection(
+  'author',
+  `{
   name,
   role,
   "awardCount": count(awards),
   "firstAward": awards[0]
-}`)
+}`,
+)
 
-const multiResourceMovieProjection = defineProjection(`{
+const multiResourceMovieProjection = defineProjection(
+  'movie',
+  `{
   title,
   release_date,
   "hasPoster": defined(hosted_poster_path)
-  }`)
-
-// Hand-written because TypeGen cannot see these projections yet: its scanner recognizes
-// `defineProjection` imported from `groq`, and this app imports it from `@sanity/sdk`.
-// Delete both types once the scanner learns the SDK import, and let inference take over.
-type AuthorProjectionResult = {
-  name: string | null
-  role: 'designer' | 'developer' | 'ops' | null
-  awardCount: number | null
-  firstAward: string | null
-}
-
-type MovieProjectionResult = {
-  title: string | null
-  release_date: string | null
-  hasPoster: boolean
-}
+  }`,
+)
 
 interface ProjectionCardProps<TData = unknown> {
   docHandle: DocumentHandle
@@ -250,7 +242,7 @@ function MovieEditor({docHandle}: {docHandle: DocumentHandle<'movie'>}) {
 
 function AuthorProjection({docHandle}: {docHandle: DocumentHandle<'author'>}) {
   return (
-    <ProjectionCard<AuthorProjectionResult>
+    <ProjectionCard<MultiResourceAuthorProjectionResult>
       docHandle={docHandle}
       projection={multiResourceAuthorProjection}
       title="Author Projection"
@@ -278,7 +270,7 @@ function AuthorProjection({docHandle}: {docHandle: DocumentHandle<'author'>}) {
 
 function MovieProjection({docHandle}: {docHandle: DocumentHandle<'movie'>}) {
   return (
-    <ProjectionCard<MovieProjectionResult>
+    <ProjectionCard<MultiResourceMovieProjectionResult>
       docHandle={docHandle}
       projection={multiResourceMovieProjection}
       title="Movie Projection"
