@@ -1,3 +1,4 @@
+import {type SanityDocument} from 'groq'
 import {expectTypeOf, test} from 'vitest'
 
 import {type ActionsResult} from '../document/applyDocumentActions'
@@ -81,6 +82,36 @@ test('an unregistered resource falls back to the legacy lookup', () => {
   // is what keeps saved experimental output working.
   expectTypeOf<ResolveDocument<string, 'unregistered.dataset'>['_id']>().toEqualTypeOf<string>()
   expectTypeOf<ResolveDocument<'post', 'unregistered.dataset'>>().toEqualTypeOf<never>()
+})
+
+test('a widened resource key gets the union across the registered resources it matches', () => {
+  // What a `DocumentHandle<'post'>` prop or a resource chosen at runtime carries.
+  expectTypeOf<ResolveDocument<'post', `${string}.${string}`>>().toEqualTypeOf<
+    TestPost | ProductionPost
+  >()
+  expectTypeOf<ResolveDocument<'post', `${string}.production`>>().toEqualTypeOf<ProductionPost>()
+  expectTypeOf<ResolveQueryResult<'*[_type == "post"]', `${string}.${string}`>>().toEqualTypeOf<
+    TestPostsResult | ProductionPostsResult
+  >()
+  expectTypeOf<
+    ResolveProjectionResult<'{title}', 'post', `${string}.${string}`>
+  >().toEqualTypeOf<TestTitleProjection>()
+})
+
+test('a widened resource key that matches no registration uses the legacy lookup', () => {
+  expectTypeOf<ResolveDocument<'post', `${string}.staging`>>().toEqualTypeOf<never>()
+})
+
+test('a widened resource key without a document type keeps the legacy generic document', () => {
+  // The SDK's default generics produce this form for any document or action, so it must stay
+  // as loose as before, index signature included.
+  expectTypeOf<ResolveDocument<string, `${string}.${string}`>>().toEqualTypeOf<
+    SanityDocument<string, `${string}.${string}`>
+  >()
+})
+
+test('plain string keeps the legacy generic document the SDK uses for any document', () => {
+  expectTypeOf<ResolveDocument>().toEqualTypeOf<SanityDocument<string, string>>()
 })
 
 test('the same query text resolves to a different type per resource', () => {

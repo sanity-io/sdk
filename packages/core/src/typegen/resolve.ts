@@ -35,52 +35,49 @@ interface DocumentFields {
 type DocumentRecord<T> = {[K in keyof T]: T[K]}
 
 /**
- * Resolves a document type for one resource.
- *
- * A resource registered in `SanitySchemasByResource` is answered from there and only there:
- * a document type absent from a registered resource is `never`, never the legacy union,
- * because an unrelated union looks precise while describing the wrong dataset. A resource
- * with no registration falls back to the experimental Typegen declarations, which is what
- * keeps saved generated files working.
- *
- * @beta
+ * The registered keys that a resource key known only as a pattern can stand for. A handle typed
+ * without its project and dataset carries `${string}.${string}`, which matches every registered
+ * key; `${string}.production` matches only production datasets; an unregistered literal key
+ * matches none.
  */
-export type ResolveDocument<
-  TDocumentType extends string = string,
-  TSchemaId extends string = string,
+type MatchingKeys<TRegistry, TSchemaId extends string> = Extract<keyof TRegistry, TSchemaId>
+
+/**
+ * True when a lookup should use the legacy path instead of a union across registered resources:
+ * when the resource key matches no registration, or when the key or the thing looked up (the
+ * document type, query or projection) is only `string`. The SDK's own default generics produce
+ * that unspecific form to mean any document or action, so it must not narrow to the app's
+ * registered types.
+ */
+type UsesLegacyLookup<
+  TSchemaId extends string,
+  TRegistry,
+  TLookup extends string,
+> = string extends TSchemaId
+  ? true
+  : string extends TLookup
+    ? true
+    : [MatchingKeys<TRegistry, TSchemaId>] extends [never]
+      ? true
+      : false
+
+type DocumentIn<
+  TSchemaId,
+  TDocumentType extends string,
 > = TSchemaId extends keyof SanitySchemasByResource
   ? DocumentRecord<
       Extract<Extract<SanitySchemasByResource[TSchemaId], DocumentFields>, {_type: TDocumentType}>
     >
-  : SanityDocument<TDocumentType, TSchemaId>
+  : never
 
-/**
- * Resolves a query result for one resource, selected by the exact query text.
- *
- * Falls back to the experimental Typegen declarations for an unregistered resource. See
- * {@link ResolveDocument} for why a registered resource does not fall through.
- *
- * @beta
- */
-export type ResolveQueryResult<
-  TQuery extends string = string,
-  TSchemaId extends string = string,
-> = TSchemaId extends keyof SanityQueriesByResource
+type QueryIn<TSchemaId, TQuery extends string> = TSchemaId extends keyof SanityQueriesByResource
   ? At<SanityQueriesByResource[TSchemaId], TQuery>
-  : SanityQueryResult<TQuery, TSchemaId>
+  : never
 
-/**
- * Resolves a projection result for one resource and document type.
- *
- * A projection runs against the document its handle names, so the same projection text
- * resolves differently per document type as well as per resource.
- *
- * @beta
- */
-export type ResolveProjectionResult<
-  TProjection extends string = string,
-  TDocumentType extends string = string,
-  TSchemaId extends string = string,
+type ProjectionIn<
+  TSchemaId,
+  TDocumentType extends string,
+  TProjection extends string,
 > = TSchemaId extends keyof SanityProjectionsByResource
   ? // `Extract<..., object>` keeps this assignable to the `object` bound that
     // `ProjectionValuePending` places on a projection result. A projection always selects
@@ -89,7 +86,71 @@ export type ResolveProjectionResult<
       ProjectionForDocumentType<SanityProjectionsByResource[TSchemaId], TDocumentType, TProjection>,
       object
     >
-  : SanityProjectionResult<TProjection, TDocumentType, TSchemaId>
+  : never
+
+/**
+ * Resolves a document type for one resource.
+ *
+ * A resource registered in `SanitySchemasByResource` is answered from there and only there:
+ * a document type absent from a registered resource is `never`, never the legacy union,
+ * because an unrelated union looks precise while describing the wrong dataset.
+ *
+ * A key known only as a pattern, such as `${string}.${string}` from a `DocumentHandle<'post'>`
+ * prop or a resource chosen at runtime, resolves to the union of the document type across the
+ * registered resources it can match: the document is one of those. A key that matches no
+ * registration, or a lookup whose document type is also only `string`, uses the experimental
+ * Typegen declarations as before, which is what keeps saved generated files working.
+ *
+ * @beta
+ */
+export type ResolveDocument<
+  TDocumentType extends string = string,
+  TSchemaId extends string = string,
+> = TSchemaId extends keyof SanitySchemasByResource
+  ? DocumentIn<TSchemaId, TDocumentType>
+  : UsesLegacyLookup<TSchemaId, SanitySchemasByResource, TDocumentType> extends true
+    ? SanityDocument<TDocumentType, TSchemaId>
+    : // Also any saved experimental registrations of the same document type.
+      | DocumentIn<MatchingKeys<SanitySchemasByResource, TSchemaId>, TDocumentType>
+      | SanityDocument<TDocumentType, TSchemaId>
+
+/**
+ * Resolves a query result for one resource, selected by the exact query text.
+ *
+ * A key known only as a pattern gets the union of the query's result across the registered
+ * resources it can match. See {@link ResolveDocument} for why a registered resource does not
+ * fall through, and when the experimental Typegen declarations apply.
+ *
+ * @beta
+ */
+export type ResolveQueryResult<
+  TQuery extends string = string,
+  TSchemaId extends string = string,
+> = TSchemaId extends keyof SanityQueriesByResource
+  ? QueryIn<TSchemaId, TQuery>
+  : UsesLegacyLookup<TSchemaId, SanityQueriesByResource, TQuery> extends true
+    ? SanityQueryResult<TQuery, TSchemaId>
+    : QueryIn<MatchingKeys<SanityQueriesByResource, TSchemaId>, TQuery>
+
+/**
+ * Resolves a projection result for one resource and document type.
+ *
+ * A projection runs against the document its handle names, so the same projection text
+ * resolves differently per document type as well as per resource. A resource key known only as
+ * a pattern gets the union across the registered resources it can match, as in
+ * {@link ResolveDocument}.
+ *
+ * @beta
+ */
+export type ResolveProjectionResult<
+  TProjection extends string = string,
+  TDocumentType extends string = string,
+  TSchemaId extends string = string,
+> = TSchemaId extends keyof SanityProjectionsByResource
+  ? ProjectionIn<TSchemaId, TDocumentType, TProjection>
+  : UsesLegacyLookup<TSchemaId, SanityProjectionsByResource, TProjection> extends true
+    ? SanityProjectionResult<TProjection, TDocumentType, TSchemaId>
+    : ProjectionIn<MatchingKeys<SanityProjectionsByResource, TSchemaId>, TDocumentType, TProjection>
 
 /**
  * Looks up a projection under one document type. A handle whose document type is only known as
