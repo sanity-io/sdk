@@ -100,6 +100,12 @@ test('a widened resource key gets the union across the registered resources it m
 
 test('a widened resource key that matches no registration uses the legacy lookup', () => {
   expectTypeOf<ResolveDocument<'post', `${string}.staging`>>().toEqualTypeOf<never>()
+  expectTypeOf<
+    ResolveQueryResult<'*[_type == "post"]', `${string}.staging`>
+  >().toEqualTypeOf<never>()
+  expectTypeOf<
+    ResolveProjectionResult<'{title}', 'post', `${string}.staging`>
+  >().toEqualTypeOf<never>()
 })
 
 test('a widened resource key without a document type keeps the legacy generic document', () => {
@@ -143,6 +149,13 @@ test('a handle with a widened document type gets the projection across document 
   expectTypeOf<
     ResolveProjectionResult<'{missing}', string, 'resolve1.test'>
   >().toEqualTypeOf<never>()
+})
+
+test('a handle with a widened document type and resource key gets the projection across both', () => {
+  // What a `DocumentHandle` prop holding a `useDocuments` handle carries.
+  expectTypeOf<ResolveProjectionResult<'{title}', string, `${string}.${string}`>>().toEqualTypeOf<
+    TestTitleProjection | AuthorTitleProjection
+  >()
 })
 
 test('a projection on a document type with no registrations is never', () => {
