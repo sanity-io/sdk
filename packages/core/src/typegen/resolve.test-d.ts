@@ -31,7 +31,10 @@ type TestPostsResult = {_id: string; title: string}[]
 type ProductionPostsResult = {_id: string; title: number}[]
 type TestTitleProjection = {title: string}
 
-declare module '@sanity/client' {
+// Registered the way generated files do: as globals, which the interfaces `@sanity/client`
+// exports extend. Every file in this package's type-check program sees these registrations, not
+// only this test, so their keys must stay unique across the package's tests.
+declare global {
   interface SanitySchemasByResource {
     'resolve1.test': TestPost | Slug
     'resolve2.production': ProductionPost

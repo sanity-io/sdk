@@ -23,7 +23,10 @@ interface ProductionPost extends Omit<HookPost, 'title'> {
   title: number
 }
 
-declare module '@sanity/client' {
+// Registered the way generated files do: as globals, which the interfaces `@sanity/client`
+// exports extend. Every file in this package's type-check program sees these registrations, not
+// only this test, so their keys must stay unique across the package's tests.
+declare global {
   interface SanitySchemasByResource {
     'hook1.test': HookPost
     'hook2.production': ProductionPost
