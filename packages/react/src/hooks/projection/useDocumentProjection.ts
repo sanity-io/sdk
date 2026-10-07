@@ -20,7 +20,7 @@ export interface useDocumentProjectionOptions<
 > extends DocumentHandle<TDocumentType, TDataset, TProjectId> {
   /** The GROQ projection string */
   projection: TProjection
-  /** Optional parameters for the projection query */
+  /** Retained for compatibility. Projection queries do not use this option. */
   params?: Record<string, unknown>
   /** Optional ref to track viewport intersection for lazy loading */
   ref?: React.RefObject<unknown>
@@ -52,7 +52,7 @@ export interface useDocumentProjectionResults<TData> {
  * - Using Typegen: Infers the return type based on the `documentType`, `dataset`, `projectId`, and `projection`.
  * - Using explicit type parameter: Allows specifying a custom return type `TData`.
  *
- * @param options - An object containing the `DocumentHandle` properties (`documentId`, `documentType`, etc.), the `projection` string, optional `params`, and an optional `ref`.
+ * @param options - An object containing the `DocumentHandle` properties (`documentId`, `documentType`, etc.), the `projection` string, and an optional `ref`. The `params` option is ignored.
  * @returns An object containing the projection results (`data`) and a boolean indicating whether the resolution is pending (`isPending`). Note: Suspense handles initial loading states; `data` being `undefined` after initial loading means the document doesn't exist or the projection yielded no result.
  */
 
@@ -189,21 +189,39 @@ export function useDocumentProjection<TData extends object>({
   const normalizedProjection = useMemo(() => projection.trim(), [projection])
 
   // Normalize options: resolve resourceName to resource and strip resourceName
-  const normalizedDocHandle = useNormalizedResourceOptions(docHandle)
+  const {documentId, documentType, resource, perspective} = useNormalizedResourceOptions(docHandle)
 
-  // Memoize stateSource based on normalized projection and docHandle properties
-  // This prevents creating a new StateSource on every render when projection content is the same
+  // Pick known fields in a fixed order. Handles may contain unrelated document data,
+  // and equivalent handles or resources may have different property insertion order.
+  // A stable key keeps list refetches from resubscribing every projection row.
+  // Reading and suspending share these parsed options so both use the same store entry.
+  const normalizedDocHandle = {
+    documentId,
+    documentType,
+    resource:
+      resource &&
+      ('mediaLibraryId' in resource
+        ? {mediaLibraryId: resource.mediaLibraryId}
+        : 'canvasId' in resource
+          ? {canvasId: resource.canvasId}
+          : {projectId: resource.projectId, dataset: resource.dataset}),
+    perspective,
+  }
+  const docHandleKey = JSON.stringify(normalizedDocHandle)
+  const projectionOptions = useMemo(
+    () => ({
+      ...(JSON.parse(docHandleKey) as typeof normalizedDocHandle),
+      projection: normalizedProjection,
+    }),
+    [docHandleKey, normalizedProjection],
+  )
   const stateSource = useMemo(
-    () =>
-      getProjectionState<TData>(instance, {
-        ...normalizedDocHandle,
-        projection: normalizedProjection,
-      }),
-    [instance, normalizedDocHandle, normalizedProjection],
+    () => getProjectionState<TData>(instance, projectionOptions),
+    [instance, projectionOptions],
   )
 
   if (stateSource.getCurrent()?.data === null) {
-    throw resolveProjection(instance, {...normalizedDocHandle, projection: normalizedProjection})
+    throw resolveProjection(instance, projectionOptions)
   }
 
   // Create subscribe function for useSyncExternalStore
