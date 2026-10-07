@@ -5,7 +5,13 @@ import {
   type SanityQueriesByResource,
   type SanitySchemasByResource,
 } from '@sanity/client'
-import {type SanityDocument, type SanityProjectionResult, type SanityQueryResult} from 'groq'
+import {
+  type SanityDocument,
+  type SanityProjectionResult,
+  type SanityProjections,
+  type SanityQueries,
+  type SanityQueryResult,
+} from 'groq'
 
 /**
  * Indexes `T` by `K`, or `never` when `K` is not a key of `T`.
@@ -89,6 +95,25 @@ type ProjectionIn<
   : never
 
 /**
+ * The saved experimental result for exactly this query text, or `never`. The legacy lookup
+ * itself answers a missing query with the union of every saved result, which would add
+ * unrelated results to a union across resources.
+ */
+type LegacyQueryIn<
+  TSchemaId extends string,
+  TQuery extends string,
+> = TQuery extends keyof SanityQueries ? SanityQueryResult<TQuery, TSchemaId> : never
+
+/** The saved experimental result for exactly this projection text, or `never`. */
+type LegacyProjectionIn<
+  TSchemaId extends string,
+  TDocumentType extends string,
+  TProjection extends string,
+> = TProjection extends keyof SanityProjections
+  ? SanityProjectionResult<TProjection, TDocumentType, TSchemaId>
+  : never
+
+/**
  * Resolves a document type for one resource.
  *
  * A resource registered in `SanitySchemasByResource` is answered from there and only there:
@@ -118,8 +143,9 @@ export type ResolveDocument<
  * Resolves a query result for one resource, selected by the exact query text.
  *
  * A key known only as a pattern gets the union of the query's result across the registered
- * resources it can match. See {@link ResolveDocument} for why a registered resource does not
- * fall through, and when the experimental Typegen declarations apply.
+ * resources it can match, plus the result saved by experimental Typegen for the same query
+ * text, if any. See {@link ResolveDocument} for why a registered resource does not fall
+ * through, and when the experimental Typegen declarations apply.
  *
  * @beta
  */
@@ -130,15 +156,17 @@ export type ResolveQueryResult<
   ? QueryIn<TSchemaId, TQuery>
   : UsesLegacyLookup<TSchemaId, SanityQueriesByResource, TQuery> extends true
     ? SanityQueryResult<TQuery, TSchemaId>
-    : QueryIn<MatchingKeys<SanityQueriesByResource, TSchemaId>, TQuery>
+    :
+        | QueryIn<MatchingKeys<SanityQueriesByResource, TSchemaId>, TQuery>
+        | LegacyQueryIn<TSchemaId, TQuery>
 
 /**
  * Resolves a projection result for one resource and document type.
  *
  * A projection runs against the document its handle names, so the same projection text
  * resolves differently per document type as well as per resource. A resource key known only as
- * a pattern gets the union across the registered resources it can match, as in
- * {@link ResolveDocument}.
+ * a pattern gets the union across the registered resources it can match, plus the result saved
+ * by experimental Typegen for the same projection text, as in {@link ResolveDocument}.
  *
  * @beta
  */
@@ -150,7 +178,13 @@ export type ResolveProjectionResult<
   ? ProjectionIn<TSchemaId, TDocumentType, TProjection>
   : UsesLegacyLookup<TSchemaId, SanityProjectionsByResource, TProjection> extends true
     ? SanityProjectionResult<TProjection, TDocumentType, TSchemaId>
-    : ProjectionIn<MatchingKeys<SanityProjectionsByResource, TSchemaId>, TDocumentType, TProjection>
+    :
+        | ProjectionIn<
+            MatchingKeys<SanityProjectionsByResource, TSchemaId>,
+            TDocumentType,
+            TProjection
+          >
+        | LegacyProjectionIn<TSchemaId, TDocumentType, TProjection>
 
 /**
  * Looks up a projection under one document type. A handle whose document type is only known as

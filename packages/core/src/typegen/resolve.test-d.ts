@@ -99,6 +99,8 @@ test('a widened resource key gets the union across the registered resources it m
 })
 
 test('a widened resource key that matches no registration uses the legacy lookup', () => {
+  // This program has no saved experimental registrations, so the legacy lookup also gives
+  // never. `scripts/fixtures/typegen/mixed-consumer.ts.txt` checks it with saved output.
   expectTypeOf<ResolveDocument<'post', `${string}.staging`>>().toEqualTypeOf<never>()
   expectTypeOf<
     ResolveQueryResult<'*[_type == "post"]', `${string}.staging`>

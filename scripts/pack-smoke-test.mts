@@ -126,15 +126,21 @@ try {
     }
     if (parsed > 0) console.log(`  ✓ ${parsed}/${jsFiles.length} dist files parse as plain JS`)
   }
-  for (const filename of ['consumer.ts', 'legacy.types.ts', 'resource-consumer.ts']) {
+  for (const filename of [
+    'consumer.ts',
+    'legacy.types.ts',
+    'mixed-consumer.ts',
+    'resource-consumer.ts',
+  ]) {
     copyFileSync(
       path.join(BASE_PATH, 'scripts/fixtures/typegen', `${filename}.txt`),
       path.join(tempDir, filename),
     )
   }
   writeFileSync(path.join(tempDir, 'package.json'), '{"type":"module"}')
-  // Separate programs keep legacy and resource registrations from affecting each other.
-  for (const consumer of ['consumer.ts', 'resource-consumer.ts']) {
+  // Separate programs keep legacy and resource registrations from affecting each other, except
+  // in the mixed consumer, which checks an app that has both.
+  for (const consumer of ['consumer.ts', 'mixed-consumer.ts', 'resource-consumer.ts']) {
     execFileSync(
       process.execPath,
       [
