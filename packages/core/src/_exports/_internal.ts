@@ -4,6 +4,7 @@ export {
   type ApiErrorBody,
   getClientErrorApiBody,
   getClientErrorApiDescription,
+  getClientErrorApiProjectId,
   getClientErrorApiType,
   isProjectUserNotFoundClientError,
 } from '../auth/utils'

@@ -3,6 +3,7 @@ import {AuthStateType} from '@sanity/sdk'
 import {
   getClientErrorApiBody,
   getClientErrorApiDescription,
+  getClientErrorApiProjectId,
   isDashboardEnvironment,
   isProjectUserNotFoundClientError,
 } from '@sanity/sdk/_internal'
@@ -60,13 +61,15 @@ export function LoginError({error, resetErrorBoundary}: LoginErrorProps): React.
   const isProjectUserNotFound =
     !!clientError && clientError.statusCode === 401 && isProjectUserNotFoundClientError(clientError)
 
+  const accessProjectId = clientError && getClientErrorApiProjectId(clientError)
+
   // The dashboard access request flow relies on a comlink connection to the
   // parent window. In standalone apps that connection never materializes, so
   // we must skip it entirely to avoid suspending forever on the parent's
-  // Suspense boundary. Resolving to the projectId (or null) here lets the JSX
+  // Suspense boundary. Resolving to a project ID (or null) here lets the JSX
   // render the child with a single non-null guard.
   const dashboardAccessProjectId =
-    isProjectUserNotFound && projectId && isInDashboard ? projectId : null
+    isProjectUserNotFound && isInDashboard ? accessProjectId || projectId || null : null
 
   const handleRetry = useCallback(async () => {
     await logout()
