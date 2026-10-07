@@ -30,10 +30,8 @@ import {
   Subject,
   switchMap,
   tap,
-  throttle,
   throwError,
   timer,
-  withLatestFrom,
 } from 'rxjs'
 
 import {getCurrentUserState} from '../auth/authStore'
@@ -59,7 +57,6 @@ import {
   ACL_RETRY_BASE_DELAY,
   ACL_RETRY_MAX_DELAY,
   API_VERSION,
-  INITIAL_OUTGOING_THROTTLE_TIME,
   OUT_OF_SYNC_RETRY_BASE_DELAY,
   OUT_OF_SYNC_RETRY_COUNT,
   OUT_OF_SYNC_RETRY_MAX_DELAY,
@@ -93,9 +90,9 @@ import {
   type QueuedTransaction,
   removeQueuedTransaction,
   revertOutgoingTransaction,
-  transitionAppliedTransactionsToOutgoing,
   type UnverifiedDocumentRevision,
 } from './reducers'
+import {scheduleOutgoingTransactions} from './scheduleOutgoingTransactions'
 import {createFetchDocument, createSharedListener, type SharedListener} from './sharedListener'
 import {classifySubmissionError} from './submissionErrors'
 
@@ -461,27 +458,17 @@ const subscribeToAppliedAndSubmitNextTransaction = ({
   const {events} = state.get()
   const clients$ = getClientState(instance, {apiVersion: API_VERSION, resource}).observable
 
-  return state.observable
+  return scheduleOutgoingTransactions(state)
     .pipe(
-      throttle(
-        (s) =>
-          // if there is no outgoing transaction, we can throttle by the
-          // initial outgoing throttle time…
-          !s.outgoing
-            ? timer(INITIAL_OUTGOING_THROTTLE_TIME)
-            : // …otherwise, wait until the outgoing has been cleared
-              state.observable.pipe(first(({outgoing}) => !outgoing)),
-        {leading: false, trailing: true},
+      // The scheduler has already moved this transaction to `outgoing`. Wait for a client
+      // instead of dropping the transaction, which would leave the queue blocked for good.
+      concatMap((outgoing) =>
+        clients$.pipe(
+          first(),
+          map((client) => [outgoing, client] as const),
+        ),
       ),
-      map(transitionAppliedTransactionsToOutgoing),
-      distinctUntilChanged((a, b) => a.outgoing?.transactionId === b.outgoing?.transactionId),
-      tap((next) => state.set('transitionAppliedTransactionsToOutgoing', next)),
-      map((s) => s.outgoing),
-      distinctUntilChanged(),
-      withLatestFrom(clients$),
       concatMap(([outgoing, initialClient]) => {
-        if (!outgoing) return EMPTY
-
         // the client that made the latest attempt. the client store rebuilds
         // its clients when the token changes, so a different client means
         // different credentials and a retry after a 401 can go right away

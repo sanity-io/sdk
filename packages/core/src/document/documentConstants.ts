@@ -6,7 +6,8 @@
  * different views quickly.
  */
 export const DOCUMENT_STATE_CLEAR_DELAY = 1000
-export const INITIAL_OUTGOING_THROTTLE_TIME = 1000
+/** Minimum interval between batches of edits. Non-batchable transactions flush immediately. */
+export const EDIT_BATCH_INTERVAL = 1000
 export const API_VERSION = 'v2025-05-06'
 
 /**
