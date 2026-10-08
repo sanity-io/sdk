@@ -77,7 +77,8 @@ export interface useDocumentProjectionResults<TData> {
  * }
  *
  * // Keep the projection string identical to its entry in the existing generated file.
- * // Current Typegen does not scan defineProjection imported from the SDK.
+ * // Typegen also scans defineProjection imported from the SDK. See defineProjection for
+ * // passing the document type first.
  * const myProjection = defineProjection(`{
  *   title,
  *   'coverImage': cover.asset->url,

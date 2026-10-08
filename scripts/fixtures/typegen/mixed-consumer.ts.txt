@@ -1,0 +1,61 @@
+// An app part-way through migrating: `example.migrated` is registered the way the supported
+// command generates it, while `legacy.types.ts` still holds the saved experimental output for
+// `example.primary` and `example.secondary`.
+import './legacy.types.js'
+
+import type {ResolveDocument, ResolveProjectionResult, ResolveQueryResult} from '@sanity/sdk'
+
+import type {PostsResult, PreviewProjectionResult} from './legacy.types.js'
+
+type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2
+  ? true
+  : false
+type Assert<T extends true> = T
+
+type MigratedPost = {
+  _id: string
+  _type: 'post'
+  _createdAt: string
+  _updatedAt: string
+  _rev: string
+  title: boolean
+}
+
+declare global {
+  interface SanitySchemasByResource {
+    'example.migrated': MigratedPost
+  }
+  interface SanityQueriesByResource {
+    'example.migrated': {'*[_type == "post"]{_id}': {_id: string}[]}
+  }
+  interface SanityProjectionsByResource {
+    'example.migrated': {post: {'{_id}': {_id: string}}}
+  }
+}
+
+/** What a `DocumentHandle<'post'>` prop or a resource chosen at runtime carries. */
+type AnyResource = `${string}.${string}`
+
+export type Checks = [
+  // Saved experimental output still answers for its own query and projection text.
+  Assert<Equal<ResolveQueryResult<'*[_type == "post"]{title}', AnyResource>, PostsResult>>,
+  Assert<
+    Equal<ResolveProjectionResult<'{title}', 'post', AnyResource>, PreviewProjectionResult>
+  >,
+  // Registered text resolves from the registry, without unrelated saved results.
+  Assert<Equal<ResolveQueryResult<'*[_type == "post"]{_id}', AnyResource>, {_id: string}[]>>,
+  Assert<Equal<ResolveProjectionResult<'{_id}', 'post', AnyResource>, {_id: string}>>,
+  // Text registered nowhere is never, not the union of every saved result.
+  Assert<Equal<ResolveQueryResult<'*[_type == "movie"]', AnyResource>, never>>,
+  Assert<Equal<ResolveProjectionResult<'{name}', 'post', AnyResource>, never>>,
+  // Documents combine the migrated and saved types.
+  Assert<Equal<ResolveDocument<'post', AnyResource>['title'], boolean | string | number>>,
+  // A pattern that matches no registered resource takes the legacy path, which an exact
+  // registry lookup would answer with never.
+  Assert<
+    Equal<ResolveQueryResult<'*[_type == "post"]{title}', `${string}.secondary`>[number]['title'], number>
+  >,
+  Assert<
+    Equal<ResolveProjectionResult<'{title}', 'post', `${string}.secondary`>['title'], number>
+  >,
+]

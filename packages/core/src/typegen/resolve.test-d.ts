@@ -1,3 +1,4 @@
+import {type SanityDocument} from 'groq'
 import {expectTypeOf, test} from 'vitest'
 
 import {type ActionsResult} from '../document/applyDocumentActions'
@@ -30,6 +31,7 @@ type Slug = {_type: 'slug'; current: string}
 type TestPostsResult = {_id: string; title: string}[]
 type ProductionPostsResult = {_id: string; title: number}[]
 type TestTitleProjection = {title: string}
+type AuthorTitleProjection = {title: null}
 
 // Registered the way generated files do: as globals, which the interfaces `@sanity/client`
 // exports extend. Every file in this package's type-check program sees these registrations, not
@@ -44,7 +46,10 @@ declare global {
     'resolve2.production': {'*[_type == "post"]': ProductionPostsResult}
   }
   interface SanityProjectionsByResource {
-    'resolve1.test': {post: {'{title}': TestTitleProjection}}
+    'resolve1.test': {
+      author: {'{name}': {name: string}; '{title}': AuthorTitleProjection}
+      post: {'{title}': TestTitleProjection}
+    }
   }
 }
 
@@ -79,6 +84,44 @@ test('an unregistered resource falls back to the legacy lookup', () => {
   expectTypeOf<ResolveDocument<'post', 'unregistered.dataset'>>().toEqualTypeOf<never>()
 })
 
+test('a widened resource key gets the union across the registered resources it matches', () => {
+  // What a `DocumentHandle<'post'>` prop or a resource chosen at runtime carries.
+  expectTypeOf<ResolveDocument<'post', `${string}.${string}`>>().toEqualTypeOf<
+    TestPost | ProductionPost
+  >()
+  expectTypeOf<ResolveDocument<'post', `${string}.production`>>().toEqualTypeOf<ProductionPost>()
+  expectTypeOf<ResolveQueryResult<'*[_type == "post"]', `${string}.${string}`>>().toEqualTypeOf<
+    TestPostsResult | ProductionPostsResult
+  >()
+  expectTypeOf<
+    ResolveProjectionResult<'{title}', 'post', `${string}.${string}`>
+  >().toEqualTypeOf<TestTitleProjection>()
+})
+
+test('a widened resource key that matches no registration uses the legacy lookup', () => {
+  // This program has no saved experimental registrations, so the legacy lookup also gives
+  // never. `scripts/fixtures/typegen/mixed-consumer.ts.txt` checks it with saved output.
+  expectTypeOf<ResolveDocument<'post', `${string}.staging`>>().toEqualTypeOf<never>()
+  expectTypeOf<
+    ResolveQueryResult<'*[_type == "post"]', `${string}.staging`>
+  >().toEqualTypeOf<never>()
+  expectTypeOf<
+    ResolveProjectionResult<'{title}', 'post', `${string}.staging`>
+  >().toEqualTypeOf<never>()
+})
+
+test('a widened resource key without a document type keeps the legacy generic document', () => {
+  // The SDK's default generics produce this form for any document or action, so it must stay
+  // as loose as before, index signature included.
+  expectTypeOf<ResolveDocument<string, `${string}.${string}`>>().toEqualTypeOf<
+    SanityDocument<string, `${string}.${string}`>
+  >()
+})
+
+test('plain string keeps the legacy generic document the SDK uses for any document', () => {
+  expectTypeOf<ResolveDocument>().toEqualTypeOf<SanityDocument<string, string>>()
+})
+
 test('the same query text resolves to a different type per resource', () => {
   expectTypeOf<
     ResolveQueryResult<'*[_type == "post"]', 'resolve1.test'>
@@ -96,6 +139,25 @@ test('a projection resolves by resource and document type', () => {
   expectTypeOf<
     ResolveProjectionResult<'{title}', 'post', 'resolve1.test'>
   >().toEqualTypeOf<TestTitleProjection>()
+})
+
+test('a handle with a widened document type gets the projection across document types', () => {
+  expectTypeOf<ResolveProjectionResult<'{title}', string, 'resolve1.test'>>().toEqualTypeOf<
+    TestTitleProjection | AuthorTitleProjection
+  >()
+  expectTypeOf<ResolveProjectionResult<'{name}', string, 'resolve1.test'>>().toEqualTypeOf<{
+    name: string
+  }>()
+  expectTypeOf<
+    ResolveProjectionResult<'{missing}', string, 'resolve1.test'>
+  >().toEqualTypeOf<never>()
+})
+
+test('a handle with a widened document type and resource key gets the projection across both', () => {
+  // What a `DocumentHandle` prop holding a `useDocuments` handle carries.
+  expectTypeOf<ResolveProjectionResult<'{title}', string, `${string}.${string}`>>().toEqualTypeOf<
+    TestTitleProjection | AuthorTitleProjection
+  >()
 })
 
 test('a projection on a document type with no registrations is never', () => {
