@@ -2,6 +2,7 @@ import {type ResponseQueryOptions} from '@sanity/client'
 import {
   catchError,
   combineLatest,
+  defer,
   distinctUntilChanged,
   EMPTY,
   filter,
@@ -15,15 +16,16 @@ import {
   of,
   pairwise,
   race,
-  share,
   startWith,
+  Subscription,
   switchMap,
   tap,
 } from 'rxjs'
+import {exhaustMapWithTrailing} from 'rxjs-exhaustmap-with-trailing'
 
 import {getClientState} from '../client/clientStore'
-import {observeLiveEvents} from '../client/liveEvents'
-import {type DatasetHandle} from '../config/sanityConfig'
+import {observeQueryChanges} from '../client/observeQueryChanges'
+import {type DatasetHandle, isDatasetResource} from '../config/sanityConfig'
 import {getPerspectiveState} from '../releases/getPerspectiveState'
 import {isReleasePerspective} from '../releases/utils/isReleasePerspective'
 import {bindActionByResource, type BoundResourceKey} from '../store/createActionBinder'
@@ -47,7 +49,6 @@ import {
   addSubscriber,
   type QueryStoreState,
   removeSubscriber,
-  setLastLiveEventId,
   setQueryData,
   setQueryError,
 } from './reducers'
@@ -61,8 +62,14 @@ export interface QueryOptions<
   TProjectId extends string = string,
 >
   extends
-    Pick<ResponseQueryOptions, 'useCdn' | 'cache' | 'next' | 'cacheMode' | 'tag'>,
+    Pick<ResponseQueryOptions, 'cache' | 'next' | 'cacheMode' | 'tag'>,
     DatasetHandle<TDataset, TProjectId> {
+  /**
+   * Retained for compatibility. SDK queries always bypass the CDN because listener
+   * notifications cannot invalidate cached query responses.
+   * @deprecated SDK queries always bypass the CDN.
+   */
+  useCdn?: boolean
   query: TQuery
   params?: Record<string, unknown>
 }
@@ -78,34 +85,40 @@ export interface ResolveQueryOptions<
   signal?: AbortSignal
 }
 
-const EMPTY_ARRAY: never[] = []
-
 /** @internal */
 export const getQueryKey = (instance: SanityInstance, options: QueryOptions): string =>
-  JSON.stringify(normalizeOptionsWithPerspective(instance, options))
+  JSON.stringify(normalizeQueryOptions(instance, options))
 /** @internal */
 export const parseQueryKey = (key: string): QueryOptions => JSON.parse(key)
 
-/**
- * Ensures the query key includes an effective perspective so that
- * implicit differences (e.g. different instance.config.perspective)
- * don't collide in the dataset-scoped store.
- *
- * Since perspectives are unique, we can depend on the release stacks
- * to be correct when we retrieve the results.
- *
- */
-function normalizeOptionsWithPerspective(
-  instance: SanityInstance,
-  options: QueryOptions,
-): QueryOptions {
-  if (options.perspective !== undefined) return options
-  const instancePerspective = instance.config.perspective
+/** Normalize the query target before binding its store and building its cache key. */
+function normalizeQueryOptions(instance: SanityInstance, options: QueryOptions): QueryOptions {
+  const {useCdn: _useCdn, projectId, dataset, ...rest} = options
+  const hasDatasetOverride = projectId !== undefined || dataset !== undefined
+  const resource =
+    rest.resource ??
+    (hasDatasetOverride
+      ? resolveDatasetOverride(instance, {projectId, dataset})
+      : instance.config.resource)
   return {
-    ...options,
-    perspective:
-      instancePerspective !== undefined ? instancePerspective : QUERY_STORE_DEFAULT_PERSPECTIVE,
+    ...rest,
+    ...(resource && {resource}),
+    perspective: rest.perspective ?? instance.config.perspective ?? QUERY_STORE_DEFAULT_PERSPECTIVE,
   }
+}
+
+function resolveDatasetOverride(
+  instance: SanityInstance,
+  {projectId, dataset}: Pick<QueryOptions, 'projectId' | 'dataset'>,
+) {
+  const resource = instance.config.resource
+  const fallback = resource && isDatasetResource(resource) ? resource : instance.config
+  const targetProject = projectId ?? fallback.projectId
+  const targetDataset = dataset ?? fallback.dataset
+  if (!targetProject || !targetDataset) {
+    throw new Error('Query dataset overrides require both a projectId and dataset.')
+  }
+  return {projectId: targetProject, dataset: targetDataset}
 }
 
 const queryStore = defineStore<QueryStoreState, BoundResourceKey>({
@@ -115,14 +128,17 @@ const queryStore = defineStore<QueryStoreState, BoundResourceKey>({
     const subscription = listenForNewSubscribersAndFetch(context)
     return () => subscription.unsubscribe()
   },
-  upstream: (context) => listenToLiveClientAndSetLastLiveEventIds(context),
+  upstream: (context) => listenForQueryChanges(context),
 })
 
 const errorHandler = (state: StoreState<{error?: unknown}>) => {
   return (error: unknown): void => state.set('setError', {error})
 }
 
-const listenForNewSubscribersAndFetch = ({state, instance}: StoreContext<QueryStoreState>) => {
+const listenForNewSubscribersAndFetch = ({
+  state,
+  instance,
+}: StoreContext<QueryStoreState, BoundResourceKey>) => {
   return state.observable
     .pipe(
       map((s) => new Set(Object.keys(s.queries))),
@@ -147,15 +163,13 @@ const listenForNewSubscribersAndFetch = ({state, instance}: StoreContext<QuerySt
           switchMap((e) => {
             if (!e.added) return EMPTY
 
-            const lastLiveEventId$ = state.observable.pipe(
-              map((s) => s.queries[group$.key]?.lastLiveEventId),
+            const changes$ = state.observable.pipe(
+              map((s) => s.refreshVersion ?? 0),
               distinctUntilChanged(),
             )
             const {
               query,
               params,
-              projectId,
-              dataset,
               tag,
               resource,
               perspective: perspectiveFromOptions,
@@ -173,28 +187,41 @@ const listenForNewSubscribersAndFetch = ({state, instance}: StoreContext<QuerySt
 
             const client$ = getClientState(instance, {
               apiVersion: QUERY_STORE_API_VERSION,
-              projectId,
-              dataset,
               resource,
             }).observable
 
-            return combineLatest({
-              lastLiveEventId: lastLiveEventId$,
-              client: client$,
-              perspective: perspective$,
-            }).pipe(
-              switchMap(({lastLiveEventId, client, perspective}) =>
-                client.observable.fetch(query, params, {
-                  ...restOptions,
-                  perspective,
-                  filterResponse: false,
-                  returnQuery: false,
-                  lastLiveEventId,
-                  tag,
-                }),
-              ),
-              tap(({result, syncTags}) => {
-                state.set('setQueryData', setQueryData(group$.key, result, syncTags))
+            return combineLatest({client: client$, perspective: perspective$}).pipe(
+              // Client and perspective changes cancel obsolete requests. Mutation
+              // notifications finish the current fetch before one trailing refetch.
+              switchMap(({client, perspective}) => {
+                let hasCurrentResult = false
+                return changes$.pipe(
+                  exhaustMapWithTrailing(() =>
+                    defer(() =>
+                      client.observable.fetch(query, params, {
+                        ...restOptions,
+                        useCdn: false,
+                        perspective,
+                        filterResponse: false,
+                        returnQuery: false,
+                        tag: tag ?? 'query.fetch',
+                      }),
+                    ).pipe(
+                      tap(({result}) => {
+                        hasCurrentResult = true
+                        state.set('setQueryData', setQueryData(group$.key, result))
+                      }),
+                      // A failed refresh must not terminate this query's subscription.
+                      // Keep results only after this client and perspective fetched successfully.
+                      catchError((error: unknown) => {
+                        if (!hasCurrentResult) {
+                          state.set('setQueryError', setQueryError(group$.key, error))
+                        }
+                        return EMPTY
+                      }),
+                    ),
+                  ),
+                )
               }),
               // Catch inside the per-event stream: erroring the group pipe would
               // complete the group's subscription, and since `groupBy` above never
@@ -212,40 +239,38 @@ const listenForNewSubscribersAndFetch = ({state, instance}: StoreContext<QuerySt
     .subscribe({error: errorHandler(state)})
 }
 
-const listenToLiveClientAndSetLastLiveEventIds = ({
+const listenForQueryChanges = ({
   state,
   instance,
   key: {resource},
 }: StoreContext<QueryStoreState, BoundResourceKey>) => {
-  const liveMessages$ = observeLiveEvents(instance, {
-    resource,
-    // Surface CORS errors as store state (handled by the Cors Error
-    // component) instead of erroring the stream: a stream error here would
-    // reach the outer subscription's errorHandler, set the store-wide
-    // `state.error`, and permanently brick every query selector.
-    onCorsError: (error) => state.set('setError', {error}),
-  }).pipe(share())
-
-  return state.observable
-    .pipe(
-      mergeMap((s) => Object.entries(s.queries)),
-      groupBy(([key]) => key),
-      mergeMap((group$) => {
-        const syncTags$ = group$.pipe(
-          map(([, queryState]) => queryState),
-          map((i) => i?.syncTags ?? EMPTY_ARRAY),
-          distinctUntilChanged(),
-        )
-
-        return combineLatest([liveMessages$, syncTags$]).pipe(
-          filter(([message, syncTags]) => message.tags.some((tag) => syncTags.includes(tag))),
-          tap(([message]) => {
-            state.set('setLastLiveEventId', setLastLiveEventId(group$.key, message.id))
-          }),
-        )
-      }),
-    )
-    .subscribe({error: errorHandler(state)})
+  // A stored error must not stop the next mount before it can reopen upstream.
+  // Retain it until demand closes, like createStoreInstance's upstream errors.
+  const subscription = new Subscription(() => state.set('clearError', {error: undefined}))
+  subscription.add(
+    getClientState(instance, {apiVersion: QUERY_STORE_API_VERSION, resource})
+      .observable.pipe(
+        switchMap((client) =>
+          observeQueryChanges(client, {tag: 'query.listen'}).pipe(
+            tap(() =>
+              state.set('invalidateQueries', (prev) => ({
+                ...prev,
+                error: undefined,
+                refreshVersion: (prev.refreshVersion ?? 0) + 1,
+              })),
+            ),
+            // The client reconnects transient failures. Keep observing client changes
+            // after a terminal error so refreshed credentials can open a new listener.
+            catchError((error: unknown) => {
+              state.set('setError', {error})
+              return EMPTY
+            }),
+          ),
+        ),
+      )
+      .subscribe({error: errorHandler(state)}),
+  )
+  return subscription
 }
 
 /**
@@ -253,7 +278,9 @@ const listenToLiveClientAndSetLastLiveEventIds = ({
  *
  * This function returns a state source that represents the current result of a GROQ query.
  * Subscribing to the state source will instruct the SDK to fetch the query (if not already fetched)
- * and will keep the query live using the Live content API (considering sync tags) to provide up-to-date results.
+ * and refetch it on dataset mutations through a shared listener. Queries bypass the CDN.
+ * Every active query is invalidated, including queries that join changed documents.
+ * Listener visibility is best-effort; this does not provide a query consistency cursor.
  * When the last subscriber is removed, the query state is automatically cleaned up from the store.
  *
  * Note: This functionality is for advanced users who want to build their own framework integrations.
@@ -289,7 +316,8 @@ export function getQueryState(
 export function getQueryState(
   ...args: Parameters<typeof _getQueryState>
 ): ReturnType<typeof _getQueryState> {
-  return _getQueryState(...args)
+  const [instance, options] = args
+  return _getQueryState(instance, normalizeQueryOptions(instance, options))
 }
 const _getQueryState = bindActionByResource(
   queryStore,
@@ -349,12 +377,16 @@ export function resolveQuery<TData>(
 ): Promise<TData>
 /** @beta */
 export function resolveQuery(...args: Parameters<typeof _resolveQuery>): Promise<unknown> {
-  return _resolveQuery(...args)
+  const [instance, options] = args
+  return _resolveQuery(instance, {
+    ...normalizeQueryOptions(instance, options),
+    signal: options.signal,
+  })
 }
 const _resolveQuery = bindActionByResource(
   queryStore,
   ({state, instance}, {signal, ...options}: ResolveQueryOptions) => {
-    const normalized = normalizeOptionsWithPerspective(instance, options)
+    const normalized = normalizeQueryOptions(instance, options)
     const {getCurrent} = getQueryState(instance, normalized)
     const key = getQueryKey(instance, normalized)
 
