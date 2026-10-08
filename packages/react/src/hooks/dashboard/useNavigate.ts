@@ -15,6 +15,8 @@ import {useSanityInstance} from '../context/useSanityInstance'
 
 type UpdateURLMessage = Bridge.Listeners.History.UpdateURLMessage
 
+const ignoreInbound = () => {}
+
 /**
  * A navigation the Dashboard asks the app to perform, or that the app reports to the Dashboard.
  * `path` is relative to the app's own route, with no leading slash (`'documents/abc'`), and may
@@ -69,6 +71,10 @@ export type NavigateToDashboardPath = (options: {
  * @param navigateFn - Function to handle navigation; should accept:
  * - `path`: a string, which will be a relative path (for example, 'my-route')
  * - `type`: 'push', 'replace', or 'pop', which will be the type of navigation to perform
+ *
+ * Optional. Omit it when the app only sends the user somewhere and has no router of its own;
+ * inbound navigations are then ignored. An app with its own router must pass it, or the router
+ * stops following the Dashboard's back and forward navigation and links into the app.
  * @returns A function the app calls to report its own in-app navigations to the Dashboard.
  *
  * @example
@@ -92,7 +98,7 @@ export type NavigateToDashboardPath = (options: {
  * @category Dashboard
  */
 export function useNavigate(
-  navigateFn: (options: DashboardNavigation) => void,
+  navigateFn: (options: DashboardNavigation) => void = ignoreInbound,
 ): NavigateToDashboardPath {
   // The branch is stable: the transport is fixed for the page lifetime, so one set of hooks
   // always runs and the other never does.
