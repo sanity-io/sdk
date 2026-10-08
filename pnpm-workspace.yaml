@@ -66,11 +66,3 @@ catalog:
   typescript: '^6.0.3'
   vite: '^8.3.2'
   vitest: '^5.0.3'
-
-# Temporary: preview builds of sanity-io/cli#1952 (typegen.resources) and sanity-io/codegen#171
-# (projection output), until both are released. Replace with version bumps before merge.
-# The previews depend on each other by URL, which blockExoticSubdeps refuses.
-blockExoticSubdeps: false
-overrides:
-  '@sanity/cli': 'https://pkg.pr.new/@sanity/cli@c75954a'
-  '@sanity/codegen': 'https://pkg.pr.new/@sanity/codegen@cba159c'
