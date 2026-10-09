@@ -63,6 +63,12 @@ test('interface registrations remain usable in document action results', () => {
   expectTypeOf<NonNullable<Result['documents'][string]>>().toEqualTypeOf<ProductionPost>()
 })
 
+test('alias registrations remain usable in document action results', () => {
+  // The shape Typegen generates. It reaches `ActionsResult` as itself, not wrapped.
+  type Result = ActionsResult<ResolveDocument<'post', 'resolve1.test'>>
+  expectTypeOf<NonNullable<Result['documents'][string]>>().toEqualTypeOf<TestPost>()
+})
+
 test('a document type absent from a registered resource is never', () => {
   // Not the legacy union. Falling through would describe the wrong dataset while looking
   // precise.
