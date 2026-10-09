@@ -22,6 +22,13 @@ dataset's schema from Sanity uses an experimental API.
 | `@sanity/sdk-react` and `@sanity/sdk` | 3.9.0 or later                                                    |
 | `groq`                                | 6.12.0 or later, if your code imports `defineQuery`               |
 
+Apps created with `npx sanity@latest init --template app-quickstart` do not include
+`groq`. Install it before using `defineQuery`:
+
+```bash
+pnpm add groq
+```
+
 The `sanity` package depends on `@sanity/cli`, but your lockfile can still resolve an
 older version. Check which version runs:
 
