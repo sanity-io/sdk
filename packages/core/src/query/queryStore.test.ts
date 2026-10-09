@@ -1,4 +1,5 @@
 import {
+  ClientError,
   ConnectionFailedError,
   CorsOriginError,
   DisconnectError,
@@ -337,6 +338,46 @@ describe('queryStore', () => {
 
     // Verify error is thrown when accessing state
     expect(() => state.getCurrent()).toThrow(errorMessage)
+
+    unsubscribe()
+  })
+
+  it('rewrites a projectUserNotFoundError message before hooks throw it', async () => {
+    vi.mocked(fetch).mockReturnValueOnce(
+      new Observable((observer) => {
+        observer.error(
+          new ClientError({
+            statusCode: 401,
+            headers: {},
+            body: {
+              error: {
+                type: 'projectUserNotFoundError',
+                description: 'project user not found for user ID "gUser123" in project "test"',
+                projectID: 'test',
+                userID: 'gUser123',
+              },
+            },
+            url: 'https://test.api.sanity.io/v2025-01-01/data/query/test',
+            method: 'GET',
+          } as ConstructorParameters<typeof ClientError>[0]),
+        )
+      }),
+    )
+
+    const state = getQueryState(instance, {query: '*[_type == "movie"]'})
+    const unsubscribe = state.subscribe()
+
+    let thrown: unknown
+    try {
+      state.getCurrent()
+    } catch (error) {
+      thrown = error
+    }
+    expect(thrown).toBeInstanceOf(ClientError)
+    expect((thrown as ClientError).statusCode).toBe(401)
+    expect((thrown as ClientError).message).toMatch(
+      /^Your Sanity account isn't a member of project test\. Each sign-in method/,
+    )
 
     unsubscribe()
   })

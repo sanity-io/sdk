@@ -2,12 +2,10 @@ import {ClientError} from '@sanity/client'
 import {AuthStateType} from '@sanity/sdk'
 import {
   getClientErrorApiBody,
-  getClientErrorApiDescription,
-  getClientErrorApiProjectId,
+  getProjectAccessErrorDetails,
   isDashboardEnvironment,
-  isProjectUserNotFoundClientError,
 } from '@sanity/sdk/_internal'
-import {Suspense, useCallback, useEffect, useMemo, useRef} from 'react'
+import {useCallback, useEffect, useRef} from 'react'
 import {type FallbackProps} from 'react-error-boundary'
 
 import {useAuthState} from '../../hooks/auth/useAuthState'
@@ -16,7 +14,7 @@ import {useSanityInstance} from '../../hooks/context/useSanityInstance'
 import {Error} from '../errors/Error'
 import {AuthError} from './AuthError'
 import {ConfigurationError} from './ConfigurationError'
-import {DashboardAccessRequest} from './DashboardAccessRequest'
+import {ProjectAccessError} from './ProjectAccessError'
 /**
  * @alpha
  */
@@ -38,12 +36,44 @@ export function LoginError({error, resetErrorBoundary}: LoginErrorProps): React.
   )
     throw error
 
+  // The signed-in account isn't a member of the project. Retrying or the
+  // automatic sign-out below can't fix that, so it gets its own screen.
+  const projectAccess = getProjectAccessErrorDetails(error)
+  if (projectAccess) {
+    return <ProjectAccessError details={projectAccess} resetErrorBoundary={resetErrorBoundary} />
+  }
+
+  return <AuthErrorScreen error={error} resetErrorBoundary={resetErrorBoundary} />
+}
+
+const DEFAULT_MESSAGE = 'Please try again or contact support if the problem persists.'
+
+function getClientErrorMessage(clientError: ClientError, isInDashboard: boolean): string {
+  if (clientError.statusCode === 401) {
+    // Dashboard 401: leave the current UI in place and let
+    // ComlinkTokenRefreshProvider request a fresh token from the parent
+    // window. The Retry button remains as a manual fallback.
+    return isInDashboard ? DEFAULT_MESSAGE : 'Signing you out and returning to login...'
+  }
+  if (clientError.statusCode === 404) {
+    const errorMessage = getClientErrorApiBody(clientError)?.message || ''
+    return errorMessage.startsWith('Session with sid') && errorMessage.endsWith('not found')
+      ? 'The session ID is invalid or expired.'
+      : 'The login link is invalid or expired. Please try again.'
+  }
+  return DEFAULT_MESSAGE
+}
+
+function AuthErrorScreen({
+  error,
+  resetErrorBoundary,
+}: {
+  error: AuthError | ConfigurationError | ClientError
+  resetErrorBoundary: () => void
+}): React.ReactNode {
   const logout = useLogOut()
   const authState = useAuthState()
   const instance = useSanityInstance()
-  const {
-    config: {projectId},
-  } = instance
 
   // Errors surfaced through `AuthBoundary` arrive wrapped in `AuthError`, with
   // the original `ClientError` tucked under `.cause`. Unwrapping it here lets
@@ -58,19 +88,6 @@ export function LoginError({error, resetErrorBoundary}: LoginErrorProps): React.
 
   const isInDashboard = isDashboardEnvironment(instance)
 
-  const isProjectUserNotFound =
-    !!clientError && clientError.statusCode === 401 && isProjectUserNotFoundClientError(clientError)
-
-  const accessProjectId = clientError && getClientErrorApiProjectId(clientError)
-
-  // The dashboard access request flow relies on a comlink connection to the
-  // parent window. In standalone apps that connection never materializes, so
-  // we must skip it entirely to avoid suspending forever on the parent's
-  // Suspense boundary. Resolving to a project ID (or null) here lets the JSX
-  // render the child with a single non-null guard.
-  const dashboardAccessProjectId =
-    isProjectUserNotFound && isInDashboard ? accessProjectId || projectId || null : null
-
   const handleRetry = useCallback(async () => {
     await logout()
     resetErrorBoundary()
@@ -78,38 +95,12 @@ export function LoginError({error, resetErrorBoundary}: LoginErrorProps): React.
 
   // Display state is fully derived from the inputs above, so we don't need
   // to mirror it through useState/useEffect.
-  const {authErrorMessage, showRetryCta} = useMemo(() => {
-    let message = 'Please try again or contact support if the problem persists.'
-    let retry = true
-
-    if (clientError) {
-      if (clientError.statusCode === 401) {
-        if (isProjectUserNotFound) {
-          const description = getClientErrorApiDescription(clientError)
-          if (description) message = description
-          retry = false
-        } else if (!isInDashboard) {
-          message = 'Signing you out and returning to login...'
-          retry = true
-        }
-        // Dashboard non-projectUserNotFound 401: leave the current UI in place
-        // and let ComlinkTokenRefreshProvider request a fresh token from the
-        // parent window. The Retry button remains as a manual fallback.
-      } else if (clientError.statusCode === 404) {
-        const errorMessage = getClientErrorApiBody(clientError)?.message || ''
-        message =
-          errorMessage.startsWith('Session with sid') && errorMessage.endsWith('not found')
-            ? 'The session ID is invalid or expired.'
-            : 'The login link is invalid or expired. Please try again.'
-        retry = true
-      }
-    }
-    if (authState.type !== AuthStateType.ERROR && error instanceof ConfigurationError) {
-      message = error.message
-      retry = true
-    }
-    return {authErrorMessage: message, showRetryCta: retry}
-  }, [authState, clientError, error, isInDashboard, isProjectUserNotFound])
+  const authErrorMessage =
+    authState.type !== AuthStateType.ERROR && error instanceof ConfigurationError
+      ? error.message
+      : clientError
+        ? getClientErrorMessage(clientError, isInDashboard)
+        : DEFAULT_MESSAGE
 
   // Guards against re-entering the standalone auto-logout branch below. Once
   // `logout()` flips the auth store to LOGGED_OUT, `useAuthState` emits a new
@@ -125,36 +116,19 @@ export function LoginError({error, resetErrorBoundary}: LoginErrorProps): React.
     if (
       clientError &&
       clientError.statusCode === 401 &&
-      !isProjectUserNotFound &&
       !isInDashboard &&
       !hasAutoLoggedOutRef.current
     ) {
       hasAutoLoggedOutRef.current = true
       handleRetry()
     }
-  }, [clientError, handleRetry, isInDashboard, isProjectUserNotFound])
+  }, [clientError, handleRetry, isInDashboard])
 
   return (
-    <>
-      {dashboardAccessProjectId && (
-        <Suspense fallback={null}>
-          <DashboardAccessRequest projectId={dashboardAccessProjectId} />
-        </Suspense>
-      )}
-      <Error
-        heading={
-          error instanceof ConfigurationError ? 'Configuration Error' : 'Authentication Error'
-        }
-        description={authErrorMessage}
-        cta={
-          showRetryCta
-            ? {
-                text: 'Retry',
-                onClick: handleRetry,
-              }
-            : undefined
-        }
-      />
-    </>
+    <Error
+      heading={error instanceof ConfigurationError ? 'Configuration Error' : 'Authentication Error'}
+      description={authErrorMessage}
+      cta={{text: 'Retry', onClick: handleRetry}}
+    />
   )
 }

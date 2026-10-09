@@ -21,6 +21,7 @@ import {
   tap,
 } from 'rxjs'
 
+import {withProjectAccessMessage} from '../auth/projectAccessError'
 import {getClientState} from '../client/clientStore'
 import {observeLiveEvents} from '../client/liveEvents'
 import {type DatasetHandle} from '../config/sanityConfig'
@@ -201,7 +202,10 @@ const listenForNewSubscribersAndFetch = ({state, instance}: StoreContext<QuerySt
               // removes its group subjects, re-adding the key would emit into a
               // subject with no subscribers — the key could never be fetched again.
               catchError((error) => {
-                state.set('setQueryError', setQueryError(group$.key, error))
+                state.set(
+                  'setQueryError',
+                  setQueryError(group$.key, withProjectAccessMessage(instance, error)),
+                )
                 return EMPTY
               }),
             )
