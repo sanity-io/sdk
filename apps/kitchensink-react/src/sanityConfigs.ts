@@ -1,5 +1,7 @@
 import {type AuthConfig, type DocumentResource} from '@sanity/sdk'
 
+import {datasetResources} from './resources'
+
 // True when running against the e2e environment. The SANITY_APP_E2E_* vars are
 // auto-exposed on import.meta.env by the App SDK's Vite config (SANITY_APP_ prefix).
 export const isE2E = !!import.meta.env['SANITY_APP_E2E_MODE']
@@ -23,16 +25,7 @@ export const devAuth: AuthConfig = oauthClientId
     }
   : {}
 
-export const devResources: Record<string, DocumentResource> = {
-  default: {
-    projectId: 'ppsg7ml5',
-    dataset: 'test',
-  },
-  secondary: {
-    projectId: 'vo1ysemo',
-    dataset: 'production',
-  },
-}
+export const devResources: Record<string, DocumentResource> = datasetResources
 
 export const e2eResources: Record<string, DocumentResource> = {
   default: {
