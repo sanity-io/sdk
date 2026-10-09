@@ -1,5 +1,56 @@
 # Changelog
 
+## 3.9.0
+
+### Minor Changes
+
+- [#1377](https://github.com/sanity-io/sdk/pull/1377) [`78858a0`](https://github.com/sanity-io/sdk/commit/78858a0c69814402bfcf4c3a32a8671c9c53c1c5) Thanks [@ryanbonial](https://github.com/ryanbonial)! - `defineProjection` accepts the document type as an optional first argument, as in
+  `defineProjection('book', '{title}')`, and still returns the projection string unchanged.
+  Typegen evaluates a projection that names its document type for that type only, instead of for
+  every document type in the schema. `useDocumentProjection` with a handle whose document type is
+  only known as `string`, such as one from `useDocuments` called without a literal document type,
+  now resolves to the projection's result across the document types it was generated for, instead
+  of `never`.
+
+- [#1384](https://github.com/sanity-io/sdk/pull/1384) [`091a5aa`](https://github.com/sanity-io/sdk/commit/091a5aa4659de48c1e789c7578fc0382d49975e1) Thanks [@ryanbonial](https://github.com/ryanbonial)! - `createDocumentHandle`, `createDocumentTypeHandle`, and `createDatasetHandle` return `projectId`
+  and `dataset` as required when both are passed as strings. Reading
+  `createDocumentHandle({projectId: 'abc123', dataset: 'production', ...}).projectId` is now typed
+  `'abc123'` instead of `'abc123' | undefined`. Handles that omit either field, or pass one typed
+  `string | undefined`, return the same type as before.
+  
+  A variable, `useState` value, or React context whose type is inferred from one of these handles
+  now requires both fields. Assigning, comparing, or providing a handle whose `projectId` and
+  `dataset` are optional, such as a `DocumentHandle` prop or a `useDocuments` result, no longer
+  compiles, and neither does setting either field to `undefined`. Annotate the type with the
+  project and dataset to accept those handles and keep Typegen inference, for example
+  `useState<DocumentHandle<'author', 'production', 'abc123'>>(createDocumentHandle(...))`.
+
+- [#1391](https://github.com/sanity-io/sdk/pull/1391) [`85e0390`](https://github.com/sanity-io/sdk/commit/85e0390f72203035ff76e46f552e9a8c92d8da95) Thanks [@ryanbonial](https://github.com/ryanbonial)! - Explain what to do when the signed-in account isn't a member of the project a request was made
+  against. `useQuery`, `useDocuments`, and `usePaginatedDocuments` now throw this
+  `projectUserNotFoundError` with a message that names the sign-in method, such as Google or SSO,
+  and tells the user to sign in with the account that has access. It replaces the API's
+  `project user not found for user ID ...` message, so error boundaries that render
+  `error.message` show the explanation. When no app error boundary catches the error, the SDK's
+  error screen shows the signed-in account, explains that each sign-in method is a separate
+  account, and offers to sign out and switch accounts in standalone apps.
+  
+  Call `getProjectAccessErrorProjectId(error)` in an app error boundary to read the ID of the
+  project that rejected the request, and rethrow the error when the app can't work without that
+  project to show the SDK's error screen instead.
+
+- [#1282](https://github.com/sanity-io/sdk/pull/1282) [`8c9a88b`](https://github.com/sanity-io/sdk/commit/8c9a88b1bb7372552bcf03c023c982880fe15d72) Thanks [@ryanbonial](https://github.com/ryanbonial)! - Resolve document, query, and projection types from the client's resource registries.
+  Keep project and dataset types when `useDocument` selects a field, and support document
+  registrations declared as interfaces or type aliases. Saved experimental Typegen output
+  continues to use the legacy resolvers for resources without a new registration.
+
+### Patch Changes
+
+- [#1358](https://github.com/sanity-io/sdk/pull/1358) [`555f489`](https://github.com/sanity-io/sdk/commit/555f48995bed8fcf4e866c1cae1e5dd04f7e20e1) Thanks [@gu-stav](https://github.com/gu-stav)! - Ask the dashboard for access to the project that rejected the request, so apps configured with `resources` get the access prompt too.
+
+- [#1387](https://github.com/sanity-io/sdk/pull/1387) [`4c85aed`](https://github.com/sanity-io/sdk/commit/4c85aedddef2d03c26d9ff69537db85902a71b6b) Thanks [@joshuaellis](https://github.com/joshuaellis)! - `useNavigate` from `@sanity/sdk-react/dashboard` no longer needs a callback. Call `useNavigate()` when your app only sends the user somewhere, and pass a callback when your app has its own router that must follow navigations from the Dashboard.
+- Updated dependencies [[`78858a0`](https://github.com/sanity-io/sdk/commit/78858a0c69814402bfcf4c3a32a8671c9c53c1c5), [`091a5aa`](https://github.com/sanity-io/sdk/commit/091a5aa4659de48c1e789c7578fc0382d49975e1), [`85e0390`](https://github.com/sanity-io/sdk/commit/85e0390f72203035ff76e46f552e9a8c92d8da95), [`8c9a88b`](https://github.com/sanity-io/sdk/commit/8c9a88b1bb7372552bcf03c023c982880fe15d72)]:
+  - @sanity/sdk@3.9.0
+
 ## 3.8.0
 
 ### Minor Changes
