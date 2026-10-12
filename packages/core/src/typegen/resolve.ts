@@ -41,6 +41,13 @@ interface DocumentFields {
 type DocumentRecord<T> = {[K in keyof T]: T[K]}
 
 /**
+ * A registered document as it is when it already satisfies those constraints, as the type
+ * aliases Typegen generates do, so editors show the generated name, such as `Movie`. Only an
+ * interface registration, which lacks the index signature, goes through {@link DocumentRecord}.
+ */
+type RegisteredDocument<T> = T extends {[key: string]: unknown} ? T : DocumentRecord<T>
+
+/**
  * The registered keys that a resource key known only as a pattern can stand for. A handle typed
  * without its project and dataset carries `${string}.${string}`, which matches every registered
  * key; `${string}.production` matches only production datasets; an unregistered literal key
@@ -71,7 +78,7 @@ type DocumentIn<
   TSchemaId,
   TDocumentType extends string,
 > = TSchemaId extends keyof SanitySchemasByResource
-  ? DocumentRecord<
+  ? RegisteredDocument<
       Extract<Extract<SanitySchemasByResource[TSchemaId], DocumentFields>, {_type: TDocumentType}>
     >
   : never
