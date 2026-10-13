@@ -1,4 +1,10 @@
-import {getProjectionState, resolveProjection, type ResolveProjectionResult} from '@sanity/sdk'
+import {
+  getProjectionState,
+  isDatasetResource,
+  isMediaLibraryResource,
+  resolveProjection,
+  type ResolveProjectionResult,
+} from '@sanity/sdk'
 import {useCallback, useMemo, useSyncExternalStore} from 'react'
 import {distinctUntilChanged, EMPTY, Observable, startWith, switchMap} from 'rxjs'
 
@@ -20,7 +26,7 @@ export interface useDocumentProjectionOptions<
 > extends DocumentHandle<TDocumentType, TDataset, TProjectId> {
   /** The GROQ projection string */
   projection: TProjection
-  /** Retained for compatibility. Projection queries do not use this option. */
+  /** Optional parameters for the projection query */
   params?: Record<string, unknown>
   /** Optional ref to track viewport intersection for lazy loading */
   ref?: React.RefObject<unknown>
@@ -52,7 +58,7 @@ export interface useDocumentProjectionResults<TData> {
  * - Using Typegen: Infers the return type based on the `documentType`, `dataset`, `projectId`, and `projection`.
  * - Using explicit type parameter: Allows specifying a custom return type `TData`.
  *
- * @param options - An object containing the `DocumentHandle` properties (`documentId`, `documentType`, etc.), the `projection` string, and an optional `ref`. The `params` option is ignored.
+ * @param options - An object containing the `DocumentHandle` properties (`documentId`, `documentType`, etc.), the `projection` string, optional `params`, and an optional `ref`.
  * @returns An object containing the projection results (`data`) and a boolean indicating whether the resolution is pending (`isPending`). Note: Suspense handles initial loading states; `data` being `undefined` after initial loading means the document doesn't exist or the projection yielded no result.
  */
 
@@ -192,20 +198,19 @@ export function useDocumentProjection<TData extends object>({
   // Normalize options: resolve resourceName to resource and strip resourceName
   const {documentId, documentType, resource, perspective} = useNormalizedResourceOptions(docHandle)
 
-  // Pick known fields in a fixed order. Handles may contain unrelated document data,
-  // and equivalent handles or resources may have different property insertion order.
-  // A stable key keeps list refetches from resubscribing every projection row.
-  // Reading and suspending share these parsed options so both use the same store entry.
+  // Resource normalization resolves aliases and context, but preserves property order.
+  // Serialize only handle identity fields in a fixed order so equivalent handles
+  // retain their subscription. Reading and suspending share the parsed options.
   const normalizedDocHandle = {
     documentId,
     documentType,
     resource:
       resource &&
-      ('mediaLibraryId' in resource
-        ? {mediaLibraryId: resource.mediaLibraryId}
-        : 'canvasId' in resource
-          ? {canvasId: resource.canvasId}
-          : {projectId: resource.projectId, dataset: resource.dataset}),
+      (isDatasetResource(resource)
+        ? {projectId: resource.projectId, dataset: resource.dataset}
+        : isMediaLibraryResource(resource)
+          ? {mediaLibraryId: resource.mediaLibraryId}
+          : {canvasId: resource.canvasId}),
     perspective,
   }
   const docHandleKey = JSON.stringify(normalizedDocHandle)

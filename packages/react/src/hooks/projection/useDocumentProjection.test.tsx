@@ -310,6 +310,53 @@ describe('useDocumentProjection', () => {
     },
   )
 
+  test.each([
+    {resource: {projectId: 'other', dataset: 'test'}},
+    {resource: {projectId: 'test', dataset: 'other'}},
+    {resource: {mediaLibraryId: 'library'}},
+    {resource: {canvasId: 'canvas'}},
+    {perspective: 'published' as const},
+  ])(
+    'it replaces the subscription when the resource or perspective changes: %j',
+    async (change) => {
+      getCurrent.mockReturnValue({
+        data: {title: 'Title', description: 'Description'},
+        isPending: false,
+      })
+      const unsubscribe = vi.fn()
+      subscribe.mockReturnValue(unsubscribe)
+      vi.mocked(getProjectionState).mockImplementation(() => ({
+        getCurrent,
+        subscribe: (...args) => subscribe(...args),
+        observable: NEVER,
+      }))
+      const {rerender} = render(
+        <ResourceProvider fallback={<div>Loading...</div>}>
+          <TestComponent document={mockDocument} projection="{title, description}" />
+        </ResourceProvider>,
+      )
+      await act(async () => {
+        intersectionObserverCallback([{isIntersecting: true} as IntersectionObserverEntry])
+      })
+      expect(subscribe).toHaveBeenCalledTimes(1)
+      rerender(
+        <ResourceProvider fallback={<div>Loading...</div>}>
+          <TestComponent
+            document={{...mockDocument, ...change}}
+            projection="{title, description}"
+          />
+        </ResourceProvider>,
+      )
+      expect(getProjectionState).toHaveBeenCalledTimes(2)
+      expect(unsubscribe).toHaveBeenCalledTimes(1)
+      expect(vi.mocked(getProjectionState).mock.calls[1][1]).toMatchObject(change)
+      await act(async () => {
+        intersectionObserverCallback([{isIntersecting: true} as IntersectionObserverEntry])
+      })
+      expect(subscribe).toHaveBeenCalledTimes(2)
+    },
+  )
+
   test('it excludes unused params and extra document properties from the serialized handle', () => {
     getCurrent.mockReturnValue({
       data: {title: 'Title', description: 'Description'},
