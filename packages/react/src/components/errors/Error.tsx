@@ -9,9 +9,11 @@ type ErrorProps = {
     href?: string
     onClick?: () => void
   }
+  /** Extra content rendered after `description`. Use it for text that must not be parsed as HTML. */
+  children?: React.ReactNode
 }
 
-export function Error({heading, description, code, cta}: ErrorProps): React.ReactNode {
+export function Error({heading, description, code, cta, children}: ErrorProps): React.ReactNode {
   return (
     <div style={styles['container']}>
       <h1 style={styles['heading']}>{heading}</h1>
@@ -19,6 +21,8 @@ export function Error({heading, description, code, cta}: ErrorProps): React.Reac
       {description && (
         <p style={styles['paragraph']} dangerouslySetInnerHTML={{__html: description}} />
       )}
+
+      {children}
 
       {code && <code style={styles['code']}>{code}</code>}
 

@@ -15,6 +15,7 @@ const DEFAULT_BATCH_SIZE = 25
  *
  * @public
  * @category Types
+ * @category Documents
  */
 export interface DocumentsOptions<
   TDocumentType extends string = string,
@@ -50,6 +51,7 @@ export interface DocumentsOptions<
  *
  * @public
  * @category Types
+ * @category Documents
  */
 export interface DocumentsResponse<
   TDocumentType extends string = string,

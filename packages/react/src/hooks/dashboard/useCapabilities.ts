@@ -21,6 +21,7 @@ import {useTopic} from './useTopic'
  * ```
  *
  * @public
+ * @category Dashboard
  */
 export function useCapabilities(): TopicData<'applications.capabilities'> {
   return useTopic('applications.capabilities')

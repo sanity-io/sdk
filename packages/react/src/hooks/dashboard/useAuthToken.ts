@@ -14,6 +14,7 @@ import {useTopic} from './useTopic'
  * ```
  *
  * @public
+ * @category Dashboard
  */
 export function useAuthToken(): string | null {
   return useTopic('auth.token')

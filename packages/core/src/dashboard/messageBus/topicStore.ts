@@ -1,15 +1,19 @@
-import {createActionBinder} from '../../store/createActionBinder'
+import {distinctUntilChanged, map, skip} from 'rxjs'
+
+import {authStore} from '../../auth/authStore'
+import {bindActionGlobally, createActionBinder} from '../../store/createActionBinder'
 import {type SanityInstance} from '../../store/createSanityInstance'
-import {createStateSourceAction} from '../../store/createStateSourceAction'
+import {createStateSourceAction, type StateSource} from '../../store/createStateSourceAction'
 import {defineStore} from '../../store/defineStore'
 import {setCleanupTimeout} from '../../utils/setCleanupTimeout'
 import {type MessageBus, type MessageBusStateSource} from './bus'
-import {requireDashboardMessageBus} from './store'
+import {getDashboardMessageBus, requireDashboardMessageBus} from './store'
 import {type StateTopic, type ValueOf} from './topics'
 
 /**
  * An error raised when a dashboard state topic reports failure.
  * @public
+ * @category Message Bus
  */
 export class TopicError extends Error {
   /** The topic that failed. */
@@ -26,6 +30,7 @@ export class TopicError extends Error {
 /**
  * The value of a state topic, with `TopicResult` wrappers unwrapped to their success value.
  * @public
+ * @category Message Bus
  */
 export type TopicData<K extends StateTopic> =
   ValueOf<K> extends infer Value
@@ -182,3 +187,37 @@ export const resolveTopic = bindActionByInstance(
     return pending
   },
 )
+
+const getComlinkOrganizationId = bindActionGlobally(
+  authStore,
+  createStateSourceAction(({state: {dashboardContext}}) => dashboardContext?.orgId),
+)
+
+type CurrentOrganization = TopicData<'organizations.current'> | undefined
+
+/**
+ * Returns the organization the dashboard has selected: the `organizations.current` topic on a
+ * message bus, or the `_context` URL param in a Comlink dashboard.
+ * @public
+ */
+export function getDashboardOrganizationId(
+  instance: SanityInstance,
+): StateSource<string | undefined> {
+  if (!getDashboardMessageBus(instance)) return getComlinkOrganizationId(instance)
+  const organization = getTopicState(instance, 'organizations.current')
+  const observable = organization.observable.pipe(
+    map((value) => (value as CurrentOrganization)?.id),
+    distinctUntilChanged(),
+  )
+  return {
+    subscribe: (onStoreChanged) => {
+      const subscription = observable.pipe(skip(1)).subscribe({
+        next: () => onStoreChanged?.(),
+        error: () => onStoreChanged?.(),
+      })
+      return () => subscription.unsubscribe()
+    },
+    getCurrent: () => (organization.getCurrent() as CurrentOrganization)?.id,
+    observable,
+  }
+}

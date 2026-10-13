@@ -8,7 +8,7 @@ import {
   type StudioResource,
 } from '@sanity/message-protocol'
 import {type DocumentHandle} from '@sanity/sdk'
-import {isDashboardEnvironment} from '@sanity/sdk/_internal'
+import {isMessageBusEnvironment} from '@sanity/sdk/_internal'
 import {type FrameMessage} from '@sanity/sdk/comlink'
 import {useCallback} from 'react'
 
@@ -97,7 +97,7 @@ export function useRecordDocumentHistoryEvent(
   // The branch is stable: the transport is fixed for the page lifetime, so one set of hooks
   // always runs and the other never does.
   // eslint-disable-next-line react-hooks/rules-of-hooks -- transport is fixed for the page lifetime
-  if (isDashboardEnvironment()) return useBusRecordDocumentHistoryEvent(props)
+  if (isMessageBusEnvironment()) return useBusRecordDocumentHistoryEvent(props)
   // eslint-disable-next-line react-hooks/rules-of-hooks -- transport is fixed for the page lifetime
   return useComlinkRecordDocumentHistoryEvent(props)
 }

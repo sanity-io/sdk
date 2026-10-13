@@ -1,3 +1,4 @@
+import {getIsInDashboardState} from '../../auth/authStore'
 import {createActionBinder} from '../../store/createActionBinder'
 import {type SanityInstance} from '../../store/createSanityInstance'
 import {defineStore} from '../../store/defineStore'
@@ -61,7 +62,7 @@ export function requireDashboardMessageBus(
 }
 
 /**
- * Returns whether a dashboard host has installed a message bus.
+ * Returns whether a dashboard hosts the instance, over Comlink or an installed message bus.
  *
  * @remarks
  * Answers "does a host own this session", not "has this instance connected yet". Callers
@@ -69,6 +70,6 @@ export function requireDashboardMessageBus(
  * the instance, so this must not depend on the connection state.
  * @internal
  */
-export function isDashboardEnvironment(): boolean {
-  return isMessageBusInstalled()
+export function isDashboardEnvironment(instance: SanityInstance): boolean {
+  return getIsInDashboardState(instance).getCurrent() || isMessageBusInstalled()
 }

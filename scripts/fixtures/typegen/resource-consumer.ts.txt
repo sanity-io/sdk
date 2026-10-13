@@ -1,0 +1,70 @@
+import type {} from '@sanity/client'
+import {
+  createDocumentHandle,
+  useDocument,
+  useDocumentProjection,
+  useQuery,
+} from '@sanity/sdk-react'
+import {defineQuery} from 'groq'
+
+type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2
+  ? true
+  : false
+type Assert<T extends true> = T
+
+type Post = {
+  _id: string
+  _type: 'post'
+  _createdAt: string
+  _updatedAt: string
+  _rev: string
+  title: string
+}
+interface ProductionPost extends Omit<Post, 'title'> {
+  title: number
+}
+
+// Handwritten contract fixture until codegen emits resource registrations.
+declare global {
+  interface SanitySchemasByResource {
+    'example.test': Post
+    'example.production': ProductionPost
+  }
+  interface SanityQueriesByResource {
+    'example.test': {'*[_type == "post"]{title}': {title: string}[]}
+    'example.production': {'*[_type == "post"]{title}': {title: number}[]}
+  }
+  interface SanityProjectionsByResource {
+    'example.test': {post: {'{title}': {title: string}}}
+    'example.production': {post: {'{title}': {title: number}}}
+  }
+}
+
+const testHandle = createDocumentHandle({
+  projectId: 'example',
+  dataset: 'test',
+  documentId: 'post-1',
+  documentType: 'post',
+})
+const productionHandle = createDocumentHandle({...testHandle, dataset: 'production'})
+const query = defineQuery('*[_type == "post"]{title}')
+const projection = '{title}'
+const testDocument = useDocument(testHandle).data
+const productionDocument = useDocument(productionHandle).data
+const testTitle = useDocument({...testHandle, path: 'title'}).data
+const productionTitle = useDocument({...productionHandle, path: 'title'}).data
+const testPosts = useQuery({...testHandle, query}).data
+const productionPosts = useQuery({...productionHandle, query}).data
+const testPreview = useDocumentProjection({...testHandle, projection}).data
+const productionPreview = useDocumentProjection({...productionHandle, projection}).data
+
+export type Checks = [
+  Assert<Equal<typeof testDocument, Post | null>>,
+  Assert<Equal<typeof productionDocument, ProductionPost | null>>,
+  Assert<Equal<typeof testTitle, string | undefined>>,
+  Assert<Equal<typeof productionTitle, number | undefined>>,
+  Assert<Equal<typeof testPosts, {title: string}[]>>,
+  Assert<Equal<typeof productionPosts, {title: number}[]>>,
+  Assert<Equal<typeof testPreview, {title: string}>>,
+  Assert<Equal<typeof productionPreview, {title: number}>>,
+]

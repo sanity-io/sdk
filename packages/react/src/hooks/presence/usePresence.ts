@@ -22,6 +22,7 @@ import {trackHookUsage} from '../helpers/useTrackHookUsage'
  * signed in to your organization.
  *
  * @public
+ * @category Presence
  */
 export function usePresence(options: ResourceHandle = {}): {
   locations: UserPresence[]

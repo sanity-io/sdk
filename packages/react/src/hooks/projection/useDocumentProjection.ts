@@ -10,6 +10,7 @@ import {trackHookUsage} from '../helpers/useTrackHookUsage'
 /**
  * @public
  * @category Types
+ * @category Documents
  */
 export interface useDocumentProjectionOptions<
   TProjection extends string = string,
@@ -28,6 +29,7 @@ export interface useDocumentProjectionOptions<
 /**
  * @public
  * @category Types
+ * @category Documents
  */
 export interface useDocumentProjectionResults<TData> {
   /** The projected data */
@@ -75,7 +77,8 @@ export interface useDocumentProjectionResults<TData> {
  * }
  *
  * // Keep the projection string identical to its entry in the existing generated file.
- * // Current Typegen does not scan defineProjection imported from the SDK.
+ * // Typegen also scans defineProjection imported from the SDK. See defineProjection for
+ * // passing the document type first.
  * const myProjection = defineProjection(`{
  *   title,
  *   'coverImage': cover.asset->url,

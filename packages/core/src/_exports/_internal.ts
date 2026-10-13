@@ -1,16 +1,16 @@
 export {getApplicationOrigin} from '../applications/applicationOrigin'
 export {isStudioConfig} from '../auth/authMode'
 export {
-  type ApiErrorBody,
-  getClientErrorApiBody,
-  getClientErrorApiDescription,
-  getClientErrorApiType,
-  isProjectUserNotFoundClientError,
-} from '../auth/utils'
+  getProjectAccessErrorDetails,
+  getSignInMethodLabel,
+  type ProjectAccessErrorDetails,
+} from '../auth/projectAccessError'
+export {type ApiErrorBody, getClientErrorApiBody} from '../auth/utils'
 export {getCommentsOptionsKey, parseCommentsOptionsKey} from '../comments/commentsStore' // only used for memoizing in React, not needed for actual functionality
 export {
   installMessageBus,
   type InstallMessageBusOptions,
+  isMessageBusEnvironment,
   resetMessageBus,
 } from '../dashboard/messageBus/bus'
 export {

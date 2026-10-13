@@ -190,7 +190,7 @@ function AuthSwitch({
   const [authorizeError, setAuthorizeError] = useState<{error: unknown} | null>(null)
 
   useEffect(() => {
-    if (isLoggedOut && !isInIframe() && !isStudio && !isDashboardEnvironment()) {
+    if (isLoggedOut && !isInIframe() && !isStudio && !isDashboardEnvironment(instance)) {
       // We don't want to redirect to login if we're in the Dashboard, in studio
       // mode, or in the workbench (the OS owns the session and mints the token)
       if (isOAuth) {
@@ -201,7 +201,7 @@ function AuthSwitch({
         window.location.href = loginUrl
       }
     }
-  }, [isLoggedOut, isOAuth, authorize, loginUrl, isStudio])
+  }, [isLoggedOut, isOAuth, authorize, loginUrl, isStudio, instance])
 
   // Only check the error if verification is enabled
   if (verifyOrganization && orgError) {

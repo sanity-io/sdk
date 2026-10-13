@@ -16,6 +16,7 @@ import {useTopic} from './useTopic'
  * ```
  *
  * @public
+ * @category Dashboard
  */
 export function useApplicationForegroundId(): Application['id'] | null {
   return useTopic('applications.foreground')

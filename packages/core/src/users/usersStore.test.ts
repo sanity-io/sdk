@@ -1,8 +1,10 @@
 import {type SanityClient} from '@sanity/client'
 import {delay, filter, firstValueFrom, Observable, of} from 'rxjs'
-import {beforeEach, describe, expect, it, vi} from 'vitest'
+import {beforeEach, describe, expect, it, onTestFinished, vi} from 'vitest'
 
 import {getClient, getClientState} from '../client/clientStore'
+import {uninstallTestMessageBus} from '../dashboard/messageBus/__fixtures__/uninstallTestMessageBus'
+import {installMessageBus} from '../dashboard/messageBus/bus'
 import {createSanityInstance} from '../store/createSanityInstance'
 import {type StateSource} from '../store/createStateSourceAction'
 import {type GetUsersOptions, type SanityUser, type SanityUserResponse} from './types'
@@ -119,6 +121,29 @@ describe('usersStore', () => {
     expect(state.getCurrent()).toBeUndefined()
 
     instance.dispose()
+  })
+
+  it('scopes organization users to the current organization on the message bus', async () => {
+    vi.stubGlobal('__SANITY_APP_ID__', 'app')
+    const host = installMessageBus({appId: 'dashboard'})
+    const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
+    const state = getUsersState(instance, {resourceType: 'organization'})
+    const unsubscribe = state.subscribe()
+    onTestFinished(() => {
+      unsubscribe()
+      instance.dispose()
+      uninstallTestMessageBus()
+      vi.unstubAllGlobals()
+    })
+
+    host.connections.subscribe((client) =>
+      client.emit('organizations.current', {id: 'oSyH1iET5', name: 'Fernway', slug: 'fernway'}),
+    )
+    await firstValueFrom(state.observable.pipe(filter((i) => i !== undefined)))
+
+    expect(request).toHaveBeenCalledWith(
+      expect.objectContaining({url: 'access/organization/oSyH1iET5/users'}),
+    )
   })
 
   it('maintains state when multiple subscribers exist', async () => {

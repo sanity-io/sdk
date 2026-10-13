@@ -8,6 +8,7 @@ import {trackHookUsage} from '../helpers/useTrackHookUsage'
 /**
  * @public
  * @category Types
+ * @category Users
  */
 export interface UserResult {
   /**

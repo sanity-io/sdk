@@ -1,18 +1,16 @@
 import {FETCH_TIMEOUT_DEFAULT} from '@sanity/comlink'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
+import {uninstallTestMessageBus} from '../dashboard/messageBus/__fixtures__/uninstallTestMessageBus'
 import {
   installMessageBus,
   type MessageBusHost,
   type MessageBusMessage,
-  resetMessageBus,
 } from '../dashboard/messageBus/bus'
 import {type FavoriteDocument, type PayloadOf} from '../dashboard/messageBus/topics'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {getBusFavoriteState, resolveBusFavorite, setBusFavorite} from './busFavorites'
 import {type FavoriteDocumentContext} from './favorites'
-
-const MESSAGE_BUS_KEY = Symbol.for('sanity.os.bus')
 
 let host: MessageBusHost
 let instance: SanityInstance
@@ -25,8 +23,7 @@ beforeEach(() => {
 
 afterEach(() => {
   instance.dispose()
-  resetMessageBus()
-  delete (globalThis as {[MESSAGE_BUS_KEY]?: unknown})[MESSAGE_BUS_KEY]
+  uninstallTestMessageBus()
   vi.unstubAllGlobals()
   vi.useRealTimers()
 })

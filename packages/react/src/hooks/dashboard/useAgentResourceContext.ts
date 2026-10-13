@@ -1,6 +1,6 @@
 /* eslint-disable react-compiler/react-compiler -- the transport branch in `useAgentResourceContext` is a deliberate rules-of-hooks exception; the compiler refuses files that disable it */
 import {type Events, SDK_CHANNEL_NAME, SDK_NODE_NAME} from '@sanity/message-protocol'
-import {isDashboardEnvironment} from '@sanity/sdk/_internal'
+import {isMessageBusEnvironment} from '@sanity/sdk/_internal'
 import {type FrameMessage} from '@sanity/sdk/comlink'
 import {type ApplicationContext} from '@sanity/sdk/dashboard'
 import {useCallback, useEffect, useMemo, useRef} from 'react'
@@ -10,6 +10,8 @@ import {useApplicationContext} from './useApplicationContext'
 
 /**
  * @public
+ * @category Types
+ * @category Agent Actions
  */
 export interface AgentResourceContextOptions {
   /**
@@ -37,7 +39,7 @@ export interface AgentResourceContextOptions {
  * - In a federated app (message bus), it publishes {@link useApplicationContext}'s
  *   `applications.context.update` topic. Reach for `useApplicationContext` directly in new code.
  *
- * @category Agent
+ * @category Agent Actions
  * @param options - The resource context options containing projectId, dataset, and optional documentId
  *
  * @example
@@ -62,7 +64,7 @@ export function useAgentResourceContext(options: AgentResourceContextOptions): v
   // The branch is stable: the transport is fixed for the page lifetime, so one set of hooks
   // always runs and the other never does.
   // eslint-disable-next-line react-hooks/rules-of-hooks -- transport is fixed for the page lifetime
-  if (isDashboardEnvironment()) return useBusAgentResourceContext(options)
+  if (isMessageBusEnvironment()) return useBusAgentResourceContext(options)
   // eslint-disable-next-line react-hooks/rules-of-hooks -- transport is fixed for the page lifetime
   return useComlinkAgentResourceContext(options)
 }

@@ -1,7 +1,7 @@
 import './__fixtures__/test-topics'
 
 import {EmptyError, firstValueFrom} from 'rxjs'
-import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
+import {afterEach, beforeEach, describe, expect, it, onTestFinished, vi} from 'vitest'
 
 import {
   connectApplicationToMessageBus,
@@ -9,6 +9,7 @@ import {
   connectMessageBus,
   createIsolatedMessageBus as createRuntimeMessageBus,
   installMessageBus,
+  isMessageBusHost,
   type MessageBus,
   type MessageBusClient,
   MessageBusError,
@@ -132,6 +133,20 @@ describe('dashboard connection', () => {
     // write to the application.
     expect(seen).toEqual(['dashboard', 'favorites'])
     expect(application.subscribe('auth.token').getCurrent()).toBe('token')
+  })
+
+  it('is the host only in the application that installed the bus', () => {
+    onTestFinished(() => {
+      vi.unstubAllGlobals()
+    })
+    vi.stubGlobal('__SANITY_APP_ID__', 'dashboard')
+    expect(isMessageBusHost()).toBe(false)
+
+    installMessageBus()
+    expect(isMessageBusHost()).toBe(true)
+
+    vi.stubGlobal('__SANITY_APP_ID__', 'favorites')
+    expect(isMessageBusHost()).toBe(false)
   })
 
   it('rejects installing as a different application than the installed host', () => {

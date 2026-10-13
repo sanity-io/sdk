@@ -28,6 +28,7 @@ import {trackHookUsage} from '../helpers/useTrackHookUsage'
 /**
  * @public
  * @category Types
+ * @category Comments
  */
 export interface CommentActions {
   /** Starts a thread on a document, or on one of its fields. */

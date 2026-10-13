@@ -37,7 +37,6 @@ export {
   type ErrorAuthState,
   getAuthState,
   getCurrentUserState,
-  getDashboardOrganizationId,
   getIsInDashboardState,
   getLoginUrlState,
   getTokenState,
@@ -57,6 +56,7 @@ export {
   startOAuthAuthorization,
 } from '../auth/oauth/oauthActions'
 export {type OAuthTokens} from '../auth/oauth/types'
+export {getProjectAccessErrorProjectId} from '../auth/projectAccessError'
 export type {ClientStoreState as ClientState} from '../client/clientStore'
 export {type ClientOptions, getClient, getClientState} from '../client/clientStore'
 export {
@@ -124,6 +124,7 @@ export {
   type StudioConfig,
   type TokenSource,
 } from '../config/sanityConfig'
+export {getDashboardOrganizationId} from '../dashboard/messageBus/topicStore'
 export {datasets} from '../datasets/datasets'
 export {
   type Action,

@@ -5,7 +5,7 @@ import {
   SDK_CHANNEL_NAME,
   SDK_NODE_NAME,
 } from '@sanity/message-protocol'
-import {isDashboardEnvironment, requireDashboardMessageBus} from '@sanity/sdk/_internal'
+import {isMessageBusEnvironment, requireDashboardMessageBus} from '@sanity/sdk/_internal'
 import {type NavigationLocation, TopicError} from '@sanity/sdk/dashboard'
 import {useCallback, useEffect, useEffectEvent, useRef} from 'react'
 import {filter, map, pairwise} from 'rxjs'
@@ -15,11 +15,15 @@ import {useSanityInstance} from '../context/useSanityInstance'
 
 type UpdateURLMessage = Bridge.Listeners.History.UpdateURLMessage
 
+const ignoreInbound = () => {}
+
 /**
  * A navigation the Dashboard asks the app to perform, or that the app reports to the Dashboard.
  * `path` is relative to the app's own route, with no leading slash (`'documents/abc'`), and may
  * carry a query string and hash.
  * @public
+ * @category Types
+ * @category Dashboard
  */
 export type DashboardNavigation = PathChangeMessage['data']
 
@@ -32,6 +36,8 @@ export type DashboardNavigation = PathChangeMessage['data']
  * `'dashboard'`, `path` is a Dashboard URL from {@link urlFor} and is navigated to as-is; only
  * the federated runtime supports it.
  * @public
+ * @category Types
+ * @category Dashboard
  */
 export type NavigateToDashboardPath = (options: {
   path: string
@@ -65,6 +71,10 @@ export type NavigateToDashboardPath = (options: {
  * @param navigateFn - Function to handle navigation; should accept:
  * - `path`: a string, which will be a relative path (for example, 'my-route')
  * - `type`: 'push', 'replace', or 'pop', which will be the type of navigation to perform
+ *
+ * Optional. Omit it when the app only sends the user somewhere and has no router of its own;
+ * inbound navigations are then ignored. An app with its own router must pass it, or the router
+ * stops following the Dashboard's back and forward navigation and links into the app.
  * @returns A function the app calls to report its own in-app navigations to the Dashboard.
  *
  * @example
@@ -85,14 +95,15 @@ export type NavigateToDashboardPath = (options: {
  *   return null
  * }
  * ```
+ * @category Dashboard
  */
 export function useNavigate(
-  navigateFn: (options: DashboardNavigation) => void,
+  navigateFn: (options: DashboardNavigation) => void = ignoreInbound,
 ): NavigateToDashboardPath {
   // The branch is stable: the transport is fixed for the page lifetime, so one set of hooks
   // always runs and the other never does.
   // eslint-disable-next-line react-hooks/rules-of-hooks -- transport is fixed for the page lifetime
-  if (isDashboardEnvironment()) return useBusNavigate(navigateFn)
+  if (isMessageBusEnvironment()) return useBusNavigate(navigateFn)
   // eslint-disable-next-line react-hooks/rules-of-hooks -- transport is fixed for the page lifetime
   return useComlinkNavigate(navigateFn)
 }

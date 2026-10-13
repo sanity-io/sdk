@@ -12,6 +12,8 @@ const bus = vi.hoisted(() => ({
 vi.mock('./bus', () => ({
   connectMessageBus: bus.connect,
   isMessageBusInstalled: bus.installed,
+  isMessageBusEnvironment: bus.installed,
+  isMessageBusHost: () => false,
 }))
 
 interface FakeConnection extends MessageBusConnection {
@@ -132,11 +134,26 @@ describe('dashboard message bus store', () => {
   })
 
   it('reports the dashboard environment as soon as a host bus is installed', () => {
+    const instance = createSanityInstance(config)
     bus.installed.mockReturnValue(false)
-    expect(isDashboardEnvironment()).toBe(false)
+    expect(isDashboardEnvironment(instance)).toBe(false)
 
     // Before any instance connects: the host owns the session regardless.
     bus.installed.mockReturnValue(true)
-    expect(isDashboardEnvironment()).toBe(true)
+    expect(isDashboardEnvironment(instance)).toBe(true)
+
+    instance.dispose()
+  })
+
+  it('reports the dashboard environment inside a Comlink dashboard', () => {
+    bus.installed.mockReturnValue(false)
+    const context = encodeURIComponent(JSON.stringify({orgId: 'oSyH1iET5'}))
+    const instance = createSanityInstance({
+      ...config,
+      auth: {initialLocationHref: `https://app.test/?_context=${context}`},
+    })
+    expect(isDashboardEnvironment(instance)).toBe(true)
+
+    instance.dispose()
   })
 })

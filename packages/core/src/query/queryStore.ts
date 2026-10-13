@@ -23,6 +23,7 @@ import {
 } from 'rxjs'
 import {exhaustMapWithTrailing} from 'rxjs-exhaustmap-with-trailing'
 
+import {withProjectAccessMessage} from '../auth/projectAccessError'
 import {getClientState} from '../client/clientStore'
 import {observeQueryChanges} from '../client/observeQueryChanges'
 import {type DatasetHandle, isDatasetResource} from '../config/sanityConfig'
@@ -215,7 +216,10 @@ const listenForNewSubscribersAndFetch = ({
                       // Keep results only after this client and perspective fetched successfully.
                       catchError((error: unknown) => {
                         if (!hasCurrentResult) {
-                          state.set('setQueryError', setQueryError(group$.key, error))
+                          state.set(
+                            'setQueryError',
+                            setQueryError(group$.key, withProjectAccessMessage(instance, error)),
+                          )
                         }
                         return EMPTY
                       }),
@@ -228,7 +232,10 @@ const listenForNewSubscribersAndFetch = ({
               // removes its group subjects, re-adding the key would emit into a
               // subject with no subscribers — the key could never be fetched again.
               catchError((error) => {
-                state.set('setQueryError', setQueryError(group$.key, error))
+                state.set(
+                  'setQueryError',
+                  setQueryError(group$.key, withProjectAccessMessage(instance, error)),
+                )
                 return EMPTY
               }),
             )
