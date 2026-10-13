@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.9.1
+
+### Patch Changes
+
+- [#1394](https://github.com/sanity-io/sdk/pull/1394) [`3423b24`](https://github.com/sanity-io/sdk/commit/3423b243b0c923a317230f5b43e0a4796f86c9a3) Thanks [@ryanbonial](https://github.com/ryanbonial)! - `createDocumentHandle`, `createDocumentTypeHandle`, and `createDatasetHandle` keep `projectId` and `dataset` as literal types when called inline where a typed handle is expected, such as a prop typed `DocumentHandle<'movie', 'production', 'abc123'>`, a variable annotated with that type, or `useState<DocumentHandle<…>>(createDocumentHandle(…))`. In 3.9.0 these inferred `string` and failed to compile.
+
 ## 3.9.0
 
 ### Minor Changes
