@@ -13,15 +13,18 @@ import {
  * returned handle keeps both fields required and typed as the values passed, so
  * `createDocumentHandle({projectId: 'abc123', dataset: 'production', ...}).projectId` is typed
  * `'abc123'` instead of `'abc123' | undefined`. A field typed `string | undefined`, such as one
- * spread from a `SanityConfig`, uses the next signature and stays optional.
+ * spread from a `SanityConfig`, uses the next signature and stays optional. `TDataset` and
+ * `TProjectId` are `const` so a call written where a typed handle is expected, such as an
+ * annotated variable or a prop typed `DocumentHandle<'book', 'production', 'abc123'>`, keeps the
+ * literals instead of inferring `string`.
  * @param handle - The object containing document identification properties.
  * @returns The validated `DocumentHandle` object, with `projectId` and `dataset` required.
  * @public
  */
 export function createDocumentHandle<
   TDocumentType extends string = string,
-  TDataset extends string = string,
-  TProjectId extends string = string,
+  const TDataset extends string = string,
+  const TProjectId extends string = string,
 >(
   handle: DocumentHandle<TDocumentType, TDataset, TProjectId> & {
     dataset: TDataset
@@ -61,8 +64,8 @@ export function createDocumentHandle(handle: DocumentHandle): DocumentHandle {
  */
 export function createDocumentTypeHandle<
   TDocumentType extends string = string,
-  TDataset extends string = string,
-  TProjectId extends string = string,
+  const TDataset extends string = string,
+  const TProjectId extends string = string,
 >(
   handle: DocumentTypeHandle<TDocumentType, TDataset, TProjectId> & {
     dataset: TDataset
@@ -117,8 +120,8 @@ export function createProjectHandle<TProjectId extends string = string>(
  * @public
  */
 export function createDatasetHandle<
-  TDataset extends string = string,
-  TProjectId extends string = string,
+  const TDataset extends string = string,
+  const TProjectId extends string = string,
 >(
   handle: DatasetHandle<TDataset, TProjectId> & {dataset: TDataset; projectId: TProjectId},
 ): DatasetHandle<TDataset, TProjectId> & {dataset: TDataset; projectId: TProjectId}
