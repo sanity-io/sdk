@@ -39,6 +39,7 @@
     "format:check": "oxfmt --check",
     "lint": "turbo run lint -- --fix && eslint . --fix",
     "prepare": "husky",
+    "release:publish": "tsx scripts/publish-packages.mts",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:coverage:open": "open coverage/index.html",
