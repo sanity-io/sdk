@@ -2,7 +2,13 @@ import {type ClientPerspective} from '@sanity/client'
 import {describe, expectTypeOf, test} from 'vitest'
 
 import {createDatasetHandle, createDocumentHandle, createDocumentTypeHandle} from '../handles'
-import {type DocumentHandle, type ReleasePerspective, type SanityConfig} from '../sanityConfig'
+import {
+  type DatasetHandle,
+  type DocumentHandle,
+  type DocumentTypeHandle,
+  type ReleasePerspective,
+  type SanityConfig,
+} from '../sanityConfig'
 
 // `createDocumentHandle` exists to capture the literal types of its input. Its runtime
 // behavior, returning the input unchanged, is covered in `handles.test.ts` and is the
@@ -102,6 +108,38 @@ describe('createDocumentHandle with projectId and dataset', () => {
     setAnnotated(fromProps)
   })
 
+  // Called inline where a type with a literal `projectId` and `dataset` is already expected: an
+  // annotated variable, a parameter or prop typed with them, or annotated state, as recommended
+  // above. 3.9.0 inferred `string` for both fields in these positions, so none of them compiled.
+  test('keeps the literals when called inline where the resource is already typed', () => {
+    const annotated: DocumentHandle<'author', 'test', 'ppsg7ml5'> = createDocumentHandle({
+      projectId: 'ppsg7ml5',
+      dataset: 'test',
+      documentId: 'a',
+      documentType: 'author',
+    })
+    expectTypeOf(annotated).toEqualTypeOf<DocumentHandle<'author', 'test', 'ppsg7ml5'>>()
+
+    const takesHandle = (handle: DocumentHandle<'author', 'test', 'ppsg7ml5'>) => handle
+    takesHandle(
+      createDocumentHandle({
+        projectId: 'ppsg7ml5',
+        dataset: 'test',
+        documentId: 'a',
+        documentType: 'author',
+      }),
+    )
+
+    useState<DocumentHandle<'author', 'test', 'ppsg7ml5'>>(
+      createDocumentHandle({
+        projectId: 'ppsg7ml5',
+        dataset: 'test',
+        documentId: 'a',
+        documentType: 'author',
+      }),
+    )
+  })
+
   test('accepts explicit type arguments', () => {
     const typeOnly = createDocumentHandle<'author'>({
       projectId: 'ppsg7ml5',
@@ -194,6 +232,15 @@ describe('createDocumentTypeHandle', () => {
     expectTypeOf(documentHandle.projectId).toEqualTypeOf<'ppsg7ml5'>()
   })
 
+  test('keeps the literals when called inline where the resource is already typed', () => {
+    const annotated: DocumentTypeHandle<'author', 'test', 'ppsg7ml5'> = createDocumentTypeHandle({
+      projectId: 'ppsg7ml5',
+      dataset: 'test',
+      documentType: 'author',
+    })
+    expectTypeOf(annotated).toEqualTypeOf<DocumentTypeHandle<'author', 'test', 'ppsg7ml5'>>()
+  })
+
   test('keeps projectId optional when it is not passed', () => {
     const handle = createDocumentTypeHandle({dataset: 'test', documentType: 'author'})
     // @ts-expect-error `projectId` was not passed.
@@ -206,6 +253,14 @@ describe('createDatasetHandle', () => {
     const handle = createDatasetHandle({projectId: 'ppsg7ml5', dataset: 'test'})
     expectTypeOf(handle.projectId).toEqualTypeOf<'ppsg7ml5'>()
     expectTypeOf(handle.dataset).toEqualTypeOf<'test'>()
+  })
+
+  test('keeps the literals when called inline where the resource is already typed', () => {
+    const annotated: DatasetHandle<'test', 'ppsg7ml5'> = createDatasetHandle({
+      projectId: 'ppsg7ml5',
+      dataset: 'test',
+    })
+    expectTypeOf(annotated).toEqualTypeOf<DatasetHandle<'test', 'ppsg7ml5'>>()
   })
 
   test('keeps projectId optional when it is not passed', () => {
