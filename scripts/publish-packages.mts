@@ -36,7 +36,7 @@ if (!tag) {
  * A version held for scanning is missing from it until the scan passes.
  */
 async function isInstallable(name: string, version: string): Promise<boolean> {
-  const response = await fetch(`${REGISTRY}/${name.replace('/', '%2f')}`, {
+  const response = await fetch(`${REGISTRY}/${encodeURIComponent(name)}`, {
     headers: {'accept': 'application/vnd.npm.install-v1+json', 'cache-control': 'no-cache'},
   })
   if (response.status === 404) return false
