@@ -1,4 +1,4 @@
-import {defer, distinctUntilChanged, from, map, type Observable, skip, switchMap} from 'rxjs'
+import {distinctUntilChanged, map, skip} from 'rxjs'
 
 import {authStore} from '../../auth/authStore'
 import {bindActionGlobally, createActionBinder} from '../../store/createActionBinder'
@@ -220,31 +220,4 @@ export function getDashboardOrganizationId(
     getCurrent: () => (organization.getCurrent() as CurrentOrganization)?.id,
     observable,
   }
-}
-
-/**
- * The same organization as {@link getDashboardOrganizationId}, but only once it is known.
- *
- * @remarks
- * On a message bus the topic reads `undefined` until the host publishes, which is not the same
- * as the host having no organization. Waiting for that first publish keeps a caller from
- * resolving against a fallback and then changing organization a moment later. Errors with the
- * failure {@link resolveTopic} records when the host does not publish in time, rather than
- * waiting forever. Emits `undefined` outside a dashboard, and when the host has no organization.
- * @internal
- */
-export function observeDashboardOrganizationId(
-  instance: SanityInstance,
-): Observable<string | undefined> {
-  // Deferred because the host installs the bus, which decides which runtime is read, and may
-  // not have run by the time this module is imported.
-  return defer(() => {
-    if (!getDashboardMessageBus(instance)) return getComlinkOrganizationId(instance).observable
-
-    return from(resolveTopic(instance, 'organizations.current')).pipe(
-      switchMap(() => getTopicState(instance, 'organizations.current').observable),
-      map((value) => (value as CurrentOrganization)?.id),
-      distinctUntilChanged(),
-    )
-  })
 }
