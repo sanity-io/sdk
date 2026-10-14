@@ -71,10 +71,11 @@ async function waitUntilInstallable(name: string, version: string): Promise<void
 }
 
 function publish(dir: string): void {
-  // No --provenance: trusted publishing (OIDC) adds it automatically.
+  // Trusted publishing (OIDC) already attaches provenance. --provenance keeps it
+  // if pnpm ever falls back to a token, which otherwise publishes without it.
   const result = spawnSync(
     'pnpm',
-    ['publish', '--access', 'public', '--tag', tag, '--no-git-checks'],
+    ['publish', '--access', 'public', '--tag', tag, '--no-git-checks', '--provenance'],
     {cwd: path.join(BASE_PATH, dir), encoding: 'utf8'},
   )
   if (result.error) throw result.error
