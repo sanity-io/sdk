@@ -40,7 +40,10 @@ jobs:
           # the default branch, which checkout already fetched. On a stacked PR the
           # audit then cannot resolve its base and exits 2, which reads as a lint
           # failure rather than a missing ref.
-          git fetch origin "+$BASE_REF:refs/remotes/origin/$BASE_REF" --depth=1 || true
+          # No --depth: checkout already has full history, and a shallow fetch of a
+          # base that moved since checkout grafts its tip without parents, leaving
+          # no merge base.
+          git fetch origin "+$BASE_REF:refs/remotes/origin/$BASE_REF" || true
           AUDIT_OUTPUT=$(pnpm --silent fallow audit --base "origin/$BASE_REF" --format markdown --quiet) || AUDIT_EXIT=$?
           # Echoed as well as summarised: a failure is otherwise undiagnosable from
           # the job log, since the summary is only rendered in the web UI.

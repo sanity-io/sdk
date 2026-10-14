@@ -80,7 +80,7 @@ jobs:
         run: |
           VERSION=$(node -p "require('./packages/core/package.json').version")
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          # `changeset publish` skips packages already on the registry, so a rerun
+          # The publish step skips packages already on the registry, so a rerun
           # after a partial publish republishes only the missing one. Only treat the
           # version as fully published when BOTH packages are already on the registry.
           # Only E404 means "not published"; any other npm error must fail the job
@@ -104,25 +104,21 @@ jobs:
         if: steps.changesets.outputs['has-changesets'] == 'false' && steps.version.outputs.already-published == 'false'
         run: pnpm test:pack
 
-      # `changeset publish` detects pnpm and shells out to `pnpm publish`, which
-      # rewrites the react `workspace:*` dep to the exact version and runs
-      # prepublishOnly. `--no-git-tag` stops the per-package tags; we cut a single
-      # tag + release below instead.
+      # Publishes @sanity/sdk, waits until npm serves it, then publishes
+      # @sanity/sdk-react and waits again, so the exact sdk version react pins is
+      # always installable first and the tag + release below only go out once
+      # both are. `pnpm publish` rewrites the react `workspace:*` dep to the exact
+      # version and runs prepublishOnly. This step only runs when at least one
+      # package was missing from npm, so a success means this run finished
+      # publishing it.
       # No npm token on purpose: pnpm silently falls back to it and skips provenance
       # when trusted publishing (OIDC) fails.
       - name: Publish to npm
         id: publish
         if: steps.changesets.outputs['has-changesets'] == 'false' && steps.version.outputs.already-published == 'false'
         run: |
-          # changeset publish exits 0 when there is nothing to publish; only cut a tag
-          # and release when it actually published something.
-          set -o pipefail
-          pnpm changeset publish --no-git-tag | tee publish.log
-          if grep -q 'No unpublished projects to publish' publish.log; then
-            echo "published=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "published=true" >> "$GITHUB_OUTPUT"
-          fi
+          pnpm release:publish latest
+          echo "published=true" >> "$GITHUB_OUTPUT"
 
       # Single tag + release the rest of the pipeline keys off (release-notes,
       # upload-docs, Linear, CircleCI). release-notes.yml posts the release body
@@ -213,10 +209,11 @@ jobs:
       - name: Smoke test packed tarballs
         run: pnpm test:pack
 
-      # --tag next keeps the snapshot off `latest`; --no-git-tag because nothing
-      # is committed or pushed from this job.
+      # The `next` tag keeps the snapshot off `latest`. Publishes in dependency
+      # order like the stable publish above, so `@sanity/sdk-react@next` never
+      # points at an sdk snapshot npm is not serving yet.
       - name: Publish snapshot to npm
-        run: pnpm changeset publish --tag next --no-git-tag
+        run: pnpm release:publish next
 
   post-release-steps:
     runs-on: ubuntu-latest
