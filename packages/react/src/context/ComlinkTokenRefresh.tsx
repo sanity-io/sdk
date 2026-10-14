@@ -125,6 +125,7 @@ function DashboardTokenRefresh({children}: PropsWithChildren) {
  * This provider is used to provide the Comlink token refresh feature.
  * It is used to automatically request a new token on 401 error if enabled.
  * @public
+ * @category Components
  */
 export const ComlinkTokenRefreshProvider: React.FC<PropsWithChildren> = ({children}) => {
   const instance = useSanityInstance()

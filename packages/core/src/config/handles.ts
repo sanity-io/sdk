@@ -8,6 +8,33 @@ import {
 /**
  * Creates or validates a `DocumentHandle` object.
  * Ensures the provided object conforms to the `DocumentHandle` interface.
+ *
+ * This signature applies when the handle passes both `projectId` and `dataset` as strings. The
+ * returned handle keeps both fields required and typed as the values passed, so
+ * `createDocumentHandle({projectId: 'abc123', dataset: 'production', ...}).projectId` is typed
+ * `'abc123'` instead of `'abc123' | undefined`. A field typed `string | undefined`, such as one
+ * spread from a `SanityConfig`, uses the next signature and stays optional. `TDataset` and
+ * `TProjectId` are `const` so a call written where a typed handle is expected, such as an
+ * annotated variable or a prop typed `DocumentHandle<'book', 'production', 'abc123'>`, keeps the
+ * literals instead of inferring `string`.
+ * @param handle - The object containing document identification properties.
+ * @returns The validated `DocumentHandle` object, with `projectId` and `dataset` required.
+ * @public
+ */
+export function createDocumentHandle<
+  TDocumentType extends string = string,
+  const TDataset extends string = string,
+  const TProjectId extends string = string,
+>(
+  handle: DocumentHandle<TDocumentType, TDataset, TProjectId> & {
+    dataset: TDataset
+    projectId: TProjectId
+  },
+): DocumentHandle<TDocumentType, TDataset, TProjectId> & {dataset: TDataset; projectId: TProjectId}
+
+/**
+ * Creates or validates a `DocumentHandle` object.
+ * Ensures the provided object conforms to the `DocumentHandle` interface.
  * @param handle - The object containing document identification properties.
  * @returns The validated `DocumentHandle` object.
  * @public
@@ -18,8 +45,35 @@ export function createDocumentHandle<
   TProjectId extends string = string,
 >(
   handle: DocumentHandle<TDocumentType, TDataset, TProjectId>,
-): DocumentHandle<TDocumentType, TDataset, TProjectId> {
+): DocumentHandle<TDocumentType, TDataset, TProjectId>
+
+/** @public */
+export function createDocumentHandle(handle: DocumentHandle): DocumentHandle {
   return handle
+}
+
+/**
+ * Creates or validates a `DocumentTypeHandle` object.
+ * Ensures the provided object conforms to the `DocumentTypeHandle` interface.
+ *
+ * This signature applies when the handle passes both `projectId` and `dataset` as strings. The
+ * returned handle keeps both fields required and typed as the values passed.
+ * @param handle - The object containing document type identification properties.
+ * @returns The validated `DocumentTypeHandle` object, with `projectId` and `dataset` required.
+ * @public
+ */
+export function createDocumentTypeHandle<
+  TDocumentType extends string = string,
+  const TDataset extends string = string,
+  const TProjectId extends string = string,
+>(
+  handle: DocumentTypeHandle<TDocumentType, TDataset, TProjectId> & {
+    dataset: TDataset
+    projectId: TProjectId
+  },
+): DocumentTypeHandle<TDocumentType, TDataset, TProjectId> & {
+  dataset: TDataset
+  projectId: TProjectId
 }
 
 /**
@@ -35,7 +89,10 @@ export function createDocumentTypeHandle<
   TProjectId extends string = string,
 >(
   handle: DocumentTypeHandle<TDocumentType, TDataset, TProjectId>,
-): DocumentTypeHandle<TDocumentType, TDataset, TProjectId> {
+): DocumentTypeHandle<TDocumentType, TDataset, TProjectId>
+
+/** @public */
+export function createDocumentTypeHandle(handle: DocumentTypeHandle): DocumentTypeHandle {
   return handle
 }
 
@@ -55,6 +112,23 @@ export function createProjectHandle<TProjectId extends string = string>(
 /**
  * Creates or validates a `DatasetHandle` object.
  * Ensures the provided object conforms to the `DatasetHandle` interface.
+ *
+ * This signature applies when the handle passes both `projectId` and `dataset` as strings. The
+ * returned handle keeps both fields required and typed as the values passed.
+ * @param handle - The object containing dataset identification properties.
+ * @returns The validated `DatasetHandle` object, with `projectId` and `dataset` required.
+ * @public
+ */
+export function createDatasetHandle<
+  const TDataset extends string = string,
+  const TProjectId extends string = string,
+>(
+  handle: DatasetHandle<TDataset, TProjectId> & {dataset: TDataset; projectId: TProjectId},
+): DatasetHandle<TDataset, TProjectId> & {dataset: TDataset; projectId: TProjectId}
+
+/**
+ * Creates or validates a `DatasetHandle` object.
+ * Ensures the provided object conforms to the `DatasetHandle` interface.
  * @param handle - The object containing dataset identification properties.
  * @returns The validated `DatasetHandle` object.
  * @public
@@ -62,6 +136,9 @@ export function createProjectHandle<TProjectId extends string = string>(
 export function createDatasetHandle<
   TDataset extends string = string,
   TProjectId extends string = string,
->(handle: DatasetHandle<TDataset, TProjectId>): DatasetHandle<TDataset, TProjectId> {
+>(handle: DatasetHandle<TDataset, TProjectId>): DatasetHandle<TDataset, TProjectId>
+
+/** @public */
+export function createDatasetHandle(handle: DatasetHandle): DatasetHandle {
   return handle
 }

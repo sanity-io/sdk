@@ -19,6 +19,7 @@ import {createStateSourceHook} from '../helpers/createStateSourceHook'
  * ```
  *
  * @public
+ * @category Dashboard
  */
 export const useTopic = createStateSourceHook({
   getState: getTopicState,

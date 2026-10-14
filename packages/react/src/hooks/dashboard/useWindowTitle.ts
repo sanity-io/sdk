@@ -69,6 +69,7 @@ function resolveAppTitle(resource: ContextResource): string | undefined {
  * ```
  *
  * @public
+ * @category Dashboard
  */
 export function useWindowTitle(viewTitle?: string): void {
   // The document title is set by the Dashboard host under the message bus, so this hook only

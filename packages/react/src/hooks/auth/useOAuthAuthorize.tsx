@@ -24,5 +24,6 @@ import {createCallbackHook} from '../helpers/createCallbackHook'
  *
  * @returns A function that starts the OAuth flow by navigating to the authorization URL
  * @public
+ * @category Authentication
  */
 export const useOAuthAuthorize = createCallbackHook(startOAuthAuthorization)

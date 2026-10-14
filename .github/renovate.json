@@ -137,11 +137,6 @@
       "semanticCommitScope": "deps"
     },
     {
-      "description": "Keep the kitchensink generator on the experimental release until its migration",
-      "matchDepNames": ["@sanity/codegen"],
-      "enabled": false
-    },
-    {
       "description": "Inline (non-catalog) production deps of the published packages ship a patch release via changeset",
       "matchFileNames": ["packages/core/package.json", "packages/react/package.json"],
       "matchDepTypes": ["dependencies"],

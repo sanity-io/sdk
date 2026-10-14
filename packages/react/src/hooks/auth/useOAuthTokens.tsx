@@ -13,6 +13,8 @@ import {createStateSourceHook} from '../helpers/createStateSourceHook'
  * The current OAuth token state, plus actions to refresh and revoke it.
  *
  * @public
+ * @category Types
+ * @category Authentication
  */
 export interface UseOAuthTokensResult {
   /**
@@ -93,6 +95,7 @@ const useIsOAuthTokenExpired = createCallbackHook((instance: SanityInstance): bo
  * ```
  *
  * @public
+ * @category Authentication
  */
 export function useOAuthTokens(): UseOAuthTokensResult {
   return {

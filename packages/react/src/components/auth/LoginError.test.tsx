@@ -1,7 +1,9 @@
 import {ClientError} from '@sanity/client'
+import {type CurrentUser, getProjectAccessErrorProjectId} from '@sanity/sdk'
 import {installMessageBus, isDashboardEnvironment, resetMessageBus} from '@sanity/sdk/_internal'
 import {type MessageBusHost, type PayloadOf} from '@sanity/sdk/dashboard'
 import {fireEvent, render, screen, waitFor} from '@testing-library/react'
+import {ErrorBoundary, type FallbackProps} from 'react-error-boundary'
 import {afterEach, beforeEach, describe, expect, it, type Mock, vi} from 'vitest'
 
 import {ResourceProvider} from '../../context/ResourceProvider'
@@ -16,6 +18,11 @@ vi.mock('@sanity/sdk/_internal', async () => {
 const mockLogout = vi.fn(async () => {})
 vi.mock('../../hooks/auth/useLogOut', () => ({
   useLogOut: vi.fn(() => mockLogout),
+}))
+
+const mockUseCurrentUser = vi.fn((): CurrentUser | null => null)
+vi.mock('../../hooks/auth/useCurrentUser', () => ({
+  useCurrentUser: () => mockUseCurrentUser(),
 }))
 
 const mockWindowConnectionFetch = vi.fn()
@@ -42,6 +49,7 @@ describe('LoginError', () => {
 
   afterEach(() => {
     vi.clearAllMocks()
+    mockUseCurrentUser.mockReturnValue(null)
   })
 
   it('shows authentication error and retry button', async () => {
@@ -101,12 +109,11 @@ describe('LoginError', () => {
     )
 
     await waitFor(() => {
-      expect(screen.getByText('User is not a member of this project.')).toBeInTheDocument()
+      expect(screen.getByText("You don't have access to this project")).toBeInTheDocument()
     })
-    // ClientError must render under the "Authentication Error" heading; it is
-    // not a ConfigurationError.
-    expect(screen.getByText('Authentication Error')).toBeInTheDocument()
+    expect(screen.queryByText('Authentication Error')).not.toBeInTheDocument()
     expect(screen.queryByText('Configuration Error')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', {name: 'Sign out and switch account'})).toBeInTheDocument()
     expect(screen.queryByText('SUSPENDED')).not.toBeInTheDocument()
     expect(mockWindowConnectionFetch).not.toHaveBeenCalled()
   })
@@ -131,6 +138,70 @@ describe('LoginError', () => {
       expect(mockWindowConnectionFetch).toHaveBeenCalledWith('dashboard/v1/auth/access/request', {
         resourceType: 'project',
         resourceId: 'abc123',
+      })
+    })
+  })
+
+  it('does not request access when neither the error nor the config names a project', async () => {
+    mockIsDashboardEnvironment.mockReturnValue(true)
+    const error = makeClientError(401, {
+      error: {
+        type: 'projectUserNotFoundError',
+        description: 'User is not a member of this project.',
+      },
+    })
+
+    render(
+      <ResourceProvider fallback={<div>SUSPENDED</div>}>
+        <LoginError error={error} resetErrorBoundary={vi.fn()} />
+      </ResourceProvider>,
+    )
+
+    expect(await screen.findByText("You don't have access to this project")).toBeInTheDocument()
+    expect(screen.queryByText('SUSPENDED')).not.toBeInTheDocument()
+    expect(mockWindowConnectionFetch).not.toHaveBeenCalled()
+  })
+
+  it('prefers the project named in the error over the configured projectId', async () => {
+    mockIsDashboardEnvironment.mockReturnValue(true)
+    const error = makeClientError(401, {
+      error: {type: 'projectUserNotFoundError', description: 'No access.', projectID: 'exx11uqh'},
+    })
+
+    render(
+      <ResourceProvider projectId="abc123" dataset="production" fallback={<div>SUSPENDED</div>}>
+        <LoginError error={error} resetErrorBoundary={vi.fn()} />
+      </ResourceProvider>,
+    )
+
+    await waitFor(() => {
+      expect(mockWindowConnectionFetch).toHaveBeenCalledWith('dashboard/v1/auth/access/request', {
+        resourceType: 'project',
+        resourceId: 'exx11uqh',
+      })
+    })
+  })
+
+  it('requests access to the project named in the error without a configured projectId', async () => {
+    mockIsDashboardEnvironment.mockReturnValue(true)
+    const error = makeClientError(401, {
+      error: {
+        type: 'projectUserNotFoundError',
+        description: 'User is not a member of this project.',
+        projectID: 'exx11uqh',
+      },
+    })
+
+    render(
+      <ResourceProvider fallback={<div>SUSPENDED</div>}>
+        <LoginError error={error} resetErrorBoundary={vi.fn()} />
+      </ResourceProvider>,
+    )
+
+    await waitFor(() => {
+      expect(mockWindowConnectionFetch).toHaveBeenCalledWith('dashboard/v1/auth/access/request', {
+        resourceType: 'project',
+        resourceId: 'exx11uqh',
       })
     })
   })
@@ -165,12 +236,15 @@ describe('LoginError', () => {
       })
     })
 
-    expect(screen.getByText('Authentication Error')).toBeInTheDocument()
-    expect(screen.getByText('User is not a member of this project.')).toBeInTheDocument()
+    expect(screen.getByText("You don't have access to this project")).toBeInTheDocument()
     // projectUserNotFound intentionally hides the Retry CTA: the user can't
     // fix it by retrying, only by getting access granted through the
-    // dashboard access request flow above.
+    // dashboard access request flow above. The dashboard owns the session, so
+    // there is no sign-out CTA either.
     expect(screen.queryByRole('button', {name: 'Retry'})).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', {name: 'Sign out and switch account'}),
+    ).not.toBeInTheDocument()
     // Dashboard flow must never auto-log-out; ComlinkTokenRefreshProvider is
     // responsible for any token mutation, not LoginError.
     expect(mockLogout).not.toHaveBeenCalled()
@@ -236,6 +310,225 @@ describe('LoginError', () => {
     expect(mockWindowConnectionFetch).not.toHaveBeenCalled()
   })
 
+  it('explains an expired session ID on a 404', () => {
+    const error = new AuthError(
+      makeClientError(404, {message: 'Session with sid abc123 not found'}),
+    )
+
+    render(
+      <ResourceProvider fallback={null}>
+        <LoginError error={error} resetErrorBoundary={vi.fn()} />
+      </ResourceProvider>,
+    )
+
+    expect(screen.getByText('The session ID is invalid or expired.')).toBeInTheDocument()
+    expect(screen.getByRole('button', {name: 'Retry'})).toBeInTheDocument()
+  })
+
+  it('explains an invalid login link on any other 404', () => {
+    const error = new AuthError(makeClientError(404, {message: 'Not found'}))
+
+    render(
+      <ResourceProvider fallback={null}>
+        <LoginError error={error} resetErrorBoundary={vi.fn()} />
+      </ResourceProvider>,
+    )
+
+    expect(
+      screen.getByText('The login link is invalid or expired. Please try again.'),
+    ).toBeInTheDocument()
+  })
+
+  describe('project access screen', () => {
+    const projectUserNotFound = (headers: Record<string, string> = {}) =>
+      new AuthError(
+        new ClientError({
+          statusCode: 401,
+          headers,
+          body: {
+            error: {
+              type: 'projectUserNotFoundError',
+              description: 'project user not found for user ID "gUser123" in project "other456"',
+              projectID: 'other456',
+              userID: 'gUser123',
+            },
+          },
+          url: 'https://other456.api.sanity.io/v2025-01-01/data/query/production',
+          method: 'GET',
+        } as ConstructorParameters<typeof ClientError>[0]),
+      )
+
+    it('names the signed-in account and its sign-in method', () => {
+      mockUseCurrentUser.mockReturnValue({
+        id: 'gUser123',
+        name: 'Ada Lovelace',
+        email: 'ada@example.com',
+        provider: 'google',
+        role: '',
+        roles: [],
+      })
+
+      render(
+        <ResourceProvider projectId="abc123" dataset="production" fallback={null}>
+          <LoginError error={projectUserNotFound()} resetErrorBoundary={vi.fn()} />
+        </ResourceProvider>,
+      )
+
+      expect(
+        screen.getByText(
+          "You're signed in as Ada Lovelace (ada@example.com) with Google. This account isn't a member of project other456.",
+        ),
+      ).toBeInTheDocument()
+    })
+
+    it('labels SAML providers as SSO', () => {
+      mockUseCurrentUser.mockReturnValue({
+        id: 'gUser123',
+        name: 'Ada Lovelace',
+        email: 'ada@example.com',
+        provider: 'saml-abc',
+        role: '',
+        roles: [],
+      })
+
+      render(
+        <ResourceProvider projectId="abc123" dataset="production" fallback={null}>
+          <LoginError error={projectUserNotFound()} resetErrorBoundary={vi.fn()} />
+        </ResourceProvider>,
+      )
+
+      expect(screen.getByText(/with SSO\./)).toBeInTheDocument()
+    })
+
+    it('shows support details from the API response and never its raw description', () => {
+      render(
+        <ResourceProvider projectId="abc123" dataset="production" fallback={null}>
+          <LoginError
+            error={projectUserNotFound({
+              traceparent: '00-e711e3474d6727051e0912eb9ef7883c-00f067aa0ba902b7-01',
+            })}
+            resetErrorBoundary={vi.fn()}
+          />
+        </ResourceProvider>,
+      )
+
+      expect(
+        screen.getByText("The account you're signed in with isn't a member of project other456."),
+      ).toBeInTheDocument()
+      expect(screen.getByText('other456')).toBeInTheDocument()
+      expect(screen.getByText('gUser123')).toBeInTheDocument()
+      expect(screen.getByText('e711e3474d6727051e0912eb9ef7883c')).toBeInTheDocument()
+      expect(screen.queryByText(/project user not found/)).not.toBeInTheDocument()
+    })
+
+    it('signs out and resets the boundary from the switch account CTA', async () => {
+      const mockReset = vi.fn()
+
+      render(
+        <ResourceProvider projectId="abc123" dataset="production" fallback={null}>
+          <LoginError error={projectUserNotFound()} resetErrorBoundary={mockReset} />
+        </ResourceProvider>,
+      )
+
+      expect(mockLogout).not.toHaveBeenCalled()
+      fireEvent.click(screen.getByRole('button', {name: 'Sign out and switch account'}))
+
+      await waitFor(() => {
+        expect(mockLogout).toHaveBeenCalled()
+        expect(mockReset).toHaveBeenCalled()
+      })
+    })
+
+    it('omits the switch account CTA when the app uses a static token', () => {
+      render(
+        <ResourceProvider
+          projectId="abc123"
+          dataset="production"
+          auth={{token: 'static-token'}}
+          fallback={null}
+        >
+          <LoginError error={projectUserNotFound()} resetErrorBoundary={vi.fn()} />
+        </ResourceProvider>,
+      )
+
+      expect(
+        screen.queryByRole('button', {name: 'Sign out and switch account'}),
+      ).not.toBeInTheDocument()
+      expect(
+        screen.getByText(
+          'To use another account, sign out of Sanity and sign in again with the method that has access.',
+        ),
+      ).toBeInTheDocument()
+    })
+
+    // Mirrors the example on getProjectAccessErrorProjectId: hooks throw the
+    // raw ClientError to the nearest app boundary, which rethrows it only for
+    // the project the whole app needs.
+    describe('behind an app-level error boundary', () => {
+      function ThrowsProjectAccessError(): never {
+        throw projectUserNotFound().cause
+      }
+
+      function renderWithAppBoundary(mainProjectId: string) {
+        function AppFallback({error}: FallbackProps) {
+          const projectId = getProjectAccessErrorProjectId(error)
+          if (projectId === mainProjectId) throw error
+          return <p>App fallback for {projectId}</p>
+        }
+
+        render(
+          <ResourceProvider projectId="abc123" dataset="production" fallback={null}>
+            <ErrorBoundary FallbackComponent={LoginError}>
+              <ErrorBoundary FallbackComponent={AppFallback}>
+                <ThrowsProjectAccessError />
+              </ErrorBoundary>
+            </ErrorBoundary>
+          </ResourceProvider>,
+        )
+      }
+
+      // React logs every caught render error.
+      let consoleErrorSpy: ReturnType<typeof vi.spyOn>
+      beforeEach(() => {
+        consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+      })
+      afterEach(() => {
+        consoleErrorSpy.mockRestore()
+      })
+
+      it('shows the project access screen when the app rethrows for its main project', () => {
+        renderWithAppBoundary('other456')
+
+        expect(screen.getByText("You don't have access to this project")).toBeInTheDocument()
+        expect(screen.queryByText(/App fallback/)).not.toBeInTheDocument()
+      })
+
+      it('keeps the app fallback for any other project', () => {
+        renderWithAppBoundary('abc123')
+
+        expect(screen.getByText('App fallback for other456')).toBeInTheDocument()
+        expect(screen.queryByText("You don't have access to this project")).not.toBeInTheDocument()
+      })
+    })
+
+    it('requests dashboard access for the project named in the API response', async () => {
+      mockIsDashboardEnvironment.mockReturnValue(true)
+
+      render(
+        <ResourceProvider projectId="abc123" dataset="production" fallback={null}>
+          <LoginError error={projectUserNotFound()} resetErrorBoundary={vi.fn()} />
+        </ResourceProvider>,
+      )
+
+      await waitFor(() => {
+        expect(mockWindowConnectionFetch).toHaveBeenCalledWith('dashboard/v1/auth/access/request', {
+          resourceType: 'project',
+          resourceId: 'other456',
+        })
+      })
+    })
+  })
+
   describe('under the message bus', () => {
     const MESSAGE_BUS_KEY = Symbol.for('sanity.os.bus')
     let host: MessageBusHost
@@ -281,6 +574,33 @@ describe('LoginError', () => {
       })
       expect(mockWindowConnectionFetch).not.toHaveBeenCalled()
       expect(mockLogout).not.toHaveBeenCalled()
+    })
+
+    it('requests access over the bus to the project named in the error', async () => {
+      const requests: PayloadOf<'access.request'>[] = []
+      host.subscribe('access.request', (message) => {
+        requests.push(message.payload)
+        message.reply({ok: true})
+      })
+      const error = new AuthError(
+        makeClientError(401, {
+          error: {
+            type: 'projectUserNotFoundError',
+            description: 'No access.',
+            projectID: 'exx11uqh',
+          },
+        }),
+      )
+
+      render(
+        <ResourceProvider fallback={<div>SUSPENDED</div>}>
+          <LoginError error={error} resetErrorBoundary={vi.fn()} />
+        </ResourceProvider>,
+      )
+
+      await waitFor(() => {
+        expect(requests).toEqual([{resourceType: 'project', resourceId: 'exx11uqh'}])
+      })
     })
 
     const projectUserNotFound = () =>
@@ -348,7 +668,7 @@ describe('LoginError', () => {
         </ResourceProvider>,
       )
 
-      expect(await screen.findByText('User is not a member of this project.')).toBeInTheDocument()
+      expect(await screen.findByText("You don't have access to this project")).toBeInTheDocument()
       expect(mockWindowConnectionFetch).toHaveBeenCalledWith('dashboard/v1/auth/access/request', {
         resourceType: 'project',
         resourceId: 'abc123',

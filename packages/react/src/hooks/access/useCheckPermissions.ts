@@ -14,6 +14,7 @@ import {createFetcherHook, type FetcherHookResult} from '../helpers/createFetche
  * @param resourceId - The resource id.
  * @param permissions - The permission names to check.
  * @returns The result envelope `{data, isFetching, error, refetch}`.
+ * @category Permissions
  */
 export const useCheckPermissions = createFetcherHook(checkPermissions) as <
   Permission extends string,

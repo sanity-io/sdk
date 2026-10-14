@@ -2,6 +2,7 @@ import {type PathChangeMessage} from '@sanity/message-protocol'
 import {installMessageBus, resetMessageBus} from '@sanity/sdk/_internal'
 import {type MessageBusHost, type NavigationLocation, type ValueOf} from '@sanity/sdk/dashboard'
 import {renderHook} from '@testing-library/react'
+import {config as rxjsConfig} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, onTestFinished, vi} from 'vitest'
 
 import {act, renderHook as renderHookWithInstance} from '../../../test/test-utils'
@@ -66,6 +67,19 @@ describe('useNavigate', () => {
 
     expect(mockSendMessage).not.toHaveBeenCalled()
     expect(warn).toHaveBeenCalledOnce()
+  })
+
+  it('reports navigations and ignores inbound ones when no navigate function is passed', () => {
+    const {result} = renderHook(() => useNavigate())
+
+    expect(() => mockMessageHandler?.({path: '/test-path', type: 'push'})).not.toThrow()
+
+    result.current({path: 'documents/abc'})
+
+    expect(mockSendMessage).toHaveBeenCalledWith(
+      'dashboard/v1/bridge/listeners/history/update-url',
+      {url: 'http://localhost:3000/documents/abc'},
+    )
   })
 })
 
@@ -470,6 +484,38 @@ describe('useNavigate (message bus)', () => {
     })
 
     expect(navigateFn).not.toHaveBeenCalled()
+  })
+
+  it('navigates and ignores inbound navigations when no navigate function is passed', async () => {
+    const onUnhandledError = vi.fn()
+    rxjsConfig.onUnhandledError = onUnhandledError
+    onTestFinished(() => {
+      rxjsConfig.onUnhandledError = null
+    })
+    publishBasePath()
+    emitLocation({appId: 'dashboard', path: 'dashboard', transition: null})
+
+    const {result} = renderHookWithInstance(() => useNavigate())
+
+    await act(async () => {
+      result.current({path: '/studios/xyz', scope: 'dashboard'})
+    })
+
+    expect(updates).toEqual([{url: '/studios/xyz', history: 'push'}])
+
+    const to = {appId: 'app', path: 'documents/abc'}
+    act(() => {
+      emitLocation({
+        appId: 'dashboard',
+        path: 'dashboard',
+        transition: {navigationType: 'push', to},
+      })
+      emitLocation({appId: 'app', path: 'documents/abc', transition: null})
+    })
+    // rxjs reports an error thrown by a subscriber on a later tick, not from emitLocation.
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(onUnhandledError).not.toHaveBeenCalled()
   })
 
   it('returns a referentially stable function across re-renders', () => {

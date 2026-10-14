@@ -45,5 +45,6 @@ import {createCallbackHook} from '../helpers/createCallbackHook'
  *
  * @returns A callback handler that processes the OAuth redirect
  * @public
+ * @category Authentication
  */
 export const useHandleOAuthCallback = createCallbackHook(handleOAuthCallback)

@@ -1,4 +1,7 @@
-/** @public */
+/**
+ * @public
+ * @category URLs
+ */
 export interface DashboardUrl {
   url(options?: {origin?: string}): string
   toURL(options: {origin: string}): URL
@@ -8,7 +11,10 @@ export interface DashboardUrl {
 // URL requires an origin; public output always strips this parsing base.
 const relativeUrlBase = 'https://dashboard.invalid'
 
-/** @public */
+/**
+ * @public
+ * @category URLs
+ */
 export interface EditIntentParameters {
   id: string
   /** The document schema type, for example `post`. */
@@ -17,18 +23,27 @@ export interface EditIntentParameters {
   mode?: 'structure' | 'presentation' | (string & Record<never, never>)
 }
 
-/** @public */
+/**
+ * @public
+ * @category URLs
+ */
 export interface CreateIntentParameters {
   template: string
   type: string
 }
 
-/** @public */
+/**
+ * @public
+ * @category URLs
+ */
 export interface ReleaseIntentParameters {
   id: string
 }
 
-/** @public */
+/**
+ * @public
+ * @category URLs
+ */
 export interface StudioWorkspaceUrl extends DashboardUrl {
   intent(intent: 'edit', parameters: EditIntentParameters): StudioIntentUrl
   intent(intent: 'create', parameters: CreateIntentParameters): StudioIntentUrl
@@ -37,30 +52,45 @@ export interface StudioWorkspaceUrl extends DashboardUrl {
   task(taskId: string): DashboardUrl
 }
 
-/** @public */
+/**
+ * @public
+ * @category URLs
+ */
 export interface StudioUrl extends StudioWorkspaceUrl {
   workspace(workspace: string): StudioWorkspaceUrl
 }
 
-/** @public */
+/**
+ * @public
+ * @category URLs
+ */
 export interface StudioIntentUrl extends DashboardUrl {
   perspective(perspective: string): StudioIntentUrl
   comment(commentId: string): StudioIntentUrl
   task(taskId: string): DashboardUrl
 }
 
-/** @public */
+/**
+ * @public
+ * @category URLs
+ */
 export interface CoreApplicationUrl extends DashboardUrl {
   path(...path: string[]): DashboardUrl
 }
 
-/** @public */
+/**
+ * @public
+ * @category URLs
+ */
 export interface MediaLibraryUrl extends DashboardUrl {
   asset(assetId: string): DashboardUrl
   collection(collectionId: string): DashboardUrl
 }
 
-/** @public */
+/**
+ * @public
+ * @category URLs
+ */
 export interface CanvasUrl extends DashboardUrl {
   document(documentId: string): DashboardUrl
 }
@@ -135,6 +165,7 @@ const appendSegments = (url: URL, segments: readonly string[]): URL => {
  * Base class for immutable URL grammars.
  *
  * @public
+ * @category URLs
  */
 export class UrlBuilder implements DashboardUrl {
   readonly #url: URL
@@ -372,7 +403,10 @@ class StudioUrlBuilder
   }
 }
 
-/** @public */
+/**
+ * @public
+ * @category URLs
+ */
 export interface Urls {
   studios(): DashboardUrl
   studios(appId: string): StudioUrl
@@ -458,5 +492,8 @@ const createUrls = <const Builders extends BuilderRegistry>(
   return Object.assign(urls, methods) as Urls & BuilderMethods<Builders>
 }
 
-/** @public */
+/**
+ * @public
+ * @category URLs
+ */
 export const urlFor: Urls = createUrls({})

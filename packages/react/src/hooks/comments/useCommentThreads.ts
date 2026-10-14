@@ -14,6 +14,7 @@ import {type CommentListSource, useCommentList} from './useCommentList'
 /**
  * @beta
  * @category Types
+ * @category Comments
  */
 export interface UseCommentThreadsResult {
   /** Matching threads, newest first, each with its replies oldest first. */

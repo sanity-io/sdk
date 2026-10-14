@@ -13,6 +13,7 @@ import {type StateTopic, type ValueOf} from './topics'
 /**
  * An error raised when a dashboard state topic reports failure.
  * @public
+ * @category Message Bus
  */
 export class TopicError extends Error {
   /** The topic that failed. */
@@ -29,6 +30,7 @@ export class TopicError extends Error {
 /**
  * The value of a state topic, with `TopicResult` wrappers unwrapped to their success value.
  * @public
+ * @category Message Bus
  */
 export type TopicData<K extends StateTopic> =
   ValueOf<K> extends infer Value

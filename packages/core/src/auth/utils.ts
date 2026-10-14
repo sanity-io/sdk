@@ -175,7 +175,7 @@ export function getCleanedUrl(locationUrl: string): string {
 
 /** @internal */
 export type ApiErrorBody = {
-  error?: {type?: string; description?: string}
+  error?: {type?: string; description?: string; projectID?: unknown; userID?: unknown}
   type?: string
   description?: string
   message?: string
@@ -193,13 +193,11 @@ export function getClientErrorApiType(error: ClientError): string | undefined {
   return body?.error?.type ?? body?.type
 }
 
-/** @internal Returns the error description string from an API error body, if available. */
-export function getClientErrorApiDescription(error: ClientError): string | undefined {
-  const body = getClientErrorApiBody(error)
-  return body?.error?.description ?? body?.description
-}
-
-/** @internal True if the error represents a projectUserNotFoundError. */
-export function isProjectUserNotFoundClientError(error: ClientError): boolean {
-  return getClientErrorApiType(error) === 'projectUserNotFoundError'
+/**
+ * Returns the project an API error refers to, if available.
+ * @internal
+ */
+export function getClientErrorApiProjectId(error: ClientError): string | undefined {
+  const projectId = getClientErrorApiBody(error)?.error?.projectID
+  return typeof projectId === 'string' && projectId ? projectId : undefined
 }
