@@ -1,46 +1,33 @@
-import {firstValueFrom, of} from 'rxjs'
-import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
+import {firstValueFrom} from 'rxjs'
+import {afterEach, beforeEach, describe, expect, it, onTestFinished, vi} from 'vitest'
 
-import {installMessageBus, resetMessageBus} from '../dashboard/messageBus/bus'
-import {getDashboardOrganizationId} from '../dashboard/messageBus/topicStore'
+import {uninstallTestMessageBus} from '../dashboard/messageBus/__fixtures__/uninstallTestMessageBus'
+import {installMessageBus} from '../dashboard/messageBus/bus'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {observeAppOrganizationId} from './appOrganization'
 
-vi.mock('../dashboard/messageBus/topicStore', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../dashboard/messageBus/topicStore')>()),
-  getDashboardOrganizationId: vi.fn(),
-}))
-
-const MESSAGE_BUS_KEY = Symbol.for('sanity.os.bus')
-
-const mockComlinkOrganization = (organizationId: string | undefined) =>
-  vi.mocked(getDashboardOrganizationId).mockReturnValue({
-    getCurrent: () => organizationId,
-    subscribe: () => () => {},
-    observable: of(organizationId),
-  })
+const dashboardLocationHref = (organizationId: string) =>
+  `https://app.test/?_context=${encodeURIComponent(JSON.stringify({orgId: organizationId}))}`
 
 describe('observeAppOrganizationId', () => {
   let instance: SanityInstance
 
   afterEach(() => {
-    vi.clearAllMocks()
     instance.dispose()
   })
 
   it('takes the organization the Dashboard opened the app in', async () => {
-    mockComlinkOrganization('org-dashboard')
     instance = createSanityInstance({
       projectId: 'p',
       dataset: 'd',
       organizationId: 'org-configured',
+      auth: {initialLocationHref: dashboardLocationHref('org-dashboard')},
     })
 
     await expect(firstValueFrom(observeAppOrganizationId(instance))).resolves.toBe('org-dashboard')
   })
 
   it('falls back to the configured organization outside the Dashboard', async () => {
-    mockComlinkOrganization(undefined)
     instance = createSanityInstance({
       projectId: 'p',
       dataset: 'd',
@@ -51,7 +38,6 @@ describe('observeAppOrganizationId', () => {
   })
 
   it('has no organization when neither source has one', async () => {
-    mockComlinkOrganization(undefined)
     instance = createSanityInstance({projectId: 'p', dataset: 'd'})
 
     await expect(firstValueFrom(observeAppOrganizationId(instance))).resolves.toBeUndefined()
@@ -74,10 +60,8 @@ describe('observeAppOrganizationId (message bus)', () => {
 
   afterEach(() => {
     instance.dispose()
-    resetMessageBus()
-    delete (globalThis as {[MESSAGE_BUS_KEY]?: unknown})[MESSAGE_BUS_KEY]
+    uninstallTestMessageBus()
     vi.unstubAllGlobals()
-    vi.clearAllMocks()
   })
 
   it('takes the organization the host publishes', async () => {
@@ -90,7 +74,7 @@ describe('observeAppOrganizationId (message bus)', () => {
     await expect(organizationId).resolves.toBe('org-bus')
   })
 
-  it('waits for the host rather than resolving against the config first', async () => {
+  it('waits for the host rather than resolving against the config first', () => {
     // Emitting the configured organization and then changing to the host's
     // would point a comment read at one organization and then another.
     let emitted: string | undefined | 'none' = 'none'
@@ -109,5 +93,21 @@ describe('observeAppOrganizationId (message bus)', () => {
     host.connections.subscribe((client) => client.emit('organizations.current', null))
 
     await expect(organizationId).resolves.toBe('org-configured')
+  })
+
+  it('reads _context when the instance cannot connect to the bus', async () => {
+    // A bus the instance has no app id for is not a topic it can read, so the
+    // other runtime has to answer rather than the read throwing.
+    vi.stubGlobal('__SANITY_APP_ID__', undefined)
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    onTestFinished(() => warn.mockRestore())
+    const other = createSanityInstance({
+      projectId: 'p',
+      dataset: 'd',
+      auth: {initialLocationHref: dashboardLocationHref('org-dashboard')},
+    })
+
+    await expect(firstValueFrom(observeAppOrganizationId(other))).resolves.toBe('org-dashboard')
+    other.dispose()
   })
 })

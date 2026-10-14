@@ -16,6 +16,10 @@ import {observeOrganizationVerificationState} from './getOrganizationVerificatio
 vi.mock('../dashboard/messageBus/topicStore', () => ({
   getDashboardOrganizationId: vi.fn(),
 }))
+// No bus connection, so the organization comes from `getDashboardOrganizationId` above
+vi.mock('../dashboard/messageBus/store', () => ({
+  getDashboardMessageBus: vi.fn(),
+}))
 vi.mock('../project/project', () => ({
   project: {getState: vi.fn()},
 }))
