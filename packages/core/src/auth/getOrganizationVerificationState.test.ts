@@ -2,7 +2,7 @@ import {map, type Observable} from 'rxjs'
 import {TestScheduler} from 'rxjs/testing'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
-import {getDashboardOrganizationId} from '../dashboard/messageBus/topicStore'
+import {observeDashboardOrganizationId} from '../dashboard/messageBus/topicStore'
 import {
   compareProjectOrganization,
   type OrgVerificationResult,
@@ -14,7 +14,7 @@ import {observeOrganizationVerificationState} from './getOrganizationVerificatio
 
 // Mock dependencies
 vi.mock('../dashboard/messageBus/topicStore', () => ({
-  getDashboardOrganizationId: vi.fn(),
+  observeDashboardOrganizationId: vi.fn(),
 }))
 vi.mock('../project/project', () => ({
   project: {getState: vi.fn()},
@@ -44,14 +44,12 @@ describe('observeOrganizationVerificationState', () => {
     vi.clearAllMocks()
   })
 
-  // Helper to mock getDashboardOrganizationId
+  // Helper to mock observeDashboardOrganizationId; `null` is how these tests spell "no
+  // organization", which the real source reports as `undefined`
   const mockDashboardOrgId = (observable: Observable<string | null | undefined>) => {
-    vi.mocked(getDashboardOrganizationId).mockReturnValue({
-      observable,
-      getCurrent: () => undefined,
-      subscribe: observable.subscribe.bind(observable),
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } as any) // Cast to any to bypass strict type checking in mock
+    vi.mocked(observeDashboardOrganizationId).mockReturnValue(
+      observable.pipe(map((orgId) => orgId ?? undefined)),
+    )
   }
 
   // Helper to mock the project fetcher's state; wraps plain values in the snapshot envelope
@@ -213,6 +211,30 @@ describe('observeOrganizationVerificationState', () => {
 
       expectObservable(
         observeOrganizationVerificationState(standalone, [standalone.config.projectId!]),
+      ).toBe('--r', {r: comparisonResult})
+    })
+
+    expect(compareProjectOrganization).toHaveBeenCalledWith('proj-1', 'org-proj', 'org-configured')
+  })
+
+  it('checks against the configured organization when the dashboard never names one', () => {
+    // The host failing to publish is not a reason to take the whole app down, so the check
+    // falls back to the configured organization rather than erroring.
+    const configured = {
+      config: {projectId: 'proj-1', dataset: 'd', organizationId: 'org-configured'},
+    } as SanityInstance
+
+    testScheduler.run(({hot, expectObservable}) => {
+      const dashboardOrgId$ = hot<string>('-#')
+      const projectOrgId$ = hot('--b', {b: {organizationId: 'org-proj'}})
+      const comparisonResult = {error: 'Mismatch detected'}
+
+      mockDashboardOrgId(dashboardOrgId$)
+      mockProjectOrgId(projectOrgId$)
+      mockComparisonResult(comparisonResult)
+
+      expectObservable(
+        observeOrganizationVerificationState(configured, [configured.config.projectId!]),
       ).toBe('--r', {r: comparisonResult})
     })
 

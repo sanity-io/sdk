@@ -1,46 +1,33 @@
-import {firstValueFrom, of} from 'rxjs'
+import {firstValueFrom} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
-import {installMessageBus, resetMessageBus} from '../dashboard/messageBus/bus'
-import {getDashboardOrganizationId} from '../dashboard/messageBus/topicStore'
+import {uninstallTestMessageBus} from '../dashboard/messageBus/__fixtures__/uninstallTestMessageBus'
+import {installMessageBus} from '../dashboard/messageBus/bus'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {observeAppOrganizationId} from './appOrganization'
 
-vi.mock('../dashboard/messageBus/topicStore', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../dashboard/messageBus/topicStore')>()),
-  getDashboardOrganizationId: vi.fn(),
-}))
-
-const MESSAGE_BUS_KEY = Symbol.for('sanity.os.bus')
-
-const mockComlinkOrganization = (organizationId: string | undefined) =>
-  vi.mocked(getDashboardOrganizationId).mockReturnValue({
-    getCurrent: () => organizationId,
-    subscribe: () => () => {},
-    observable: of(organizationId),
-  })
+const dashboardLocationHref = (organizationId: string) =>
+  `https://app.test/?_context=${encodeURIComponent(JSON.stringify({orgId: organizationId}))}`
 
 describe('observeAppOrganizationId', () => {
   let instance: SanityInstance
 
   afterEach(() => {
-    vi.clearAllMocks()
     instance.dispose()
   })
 
   it('takes the organization the Dashboard opened the app in', async () => {
-    mockComlinkOrganization('org-dashboard')
     instance = createSanityInstance({
       projectId: 'p',
       dataset: 'd',
       organizationId: 'org-configured',
+      auth: {initialLocationHref: dashboardLocationHref('org-dashboard')},
     })
 
     await expect(firstValueFrom(observeAppOrganizationId(instance))).resolves.toBe('org-dashboard')
   })
 
   it('falls back to the configured organization outside the Dashboard', async () => {
-    mockComlinkOrganization(undefined)
     instance = createSanityInstance({
       projectId: 'p',
       dataset: 'd',
@@ -51,7 +38,6 @@ describe('observeAppOrganizationId', () => {
   })
 
   it('has no organization when neither source has one', async () => {
-    mockComlinkOrganization(undefined)
     instance = createSanityInstance({projectId: 'p', dataset: 'd'})
 
     await expect(firstValueFrom(observeAppOrganizationId(instance))).resolves.toBeUndefined()
@@ -74,10 +60,8 @@ describe('observeAppOrganizationId (message bus)', () => {
 
   afterEach(() => {
     instance.dispose()
-    resetMessageBus()
-    delete (globalThis as {[MESSAGE_BUS_KEY]?: unknown})[MESSAGE_BUS_KEY]
+    uninstallTestMessageBus()
     vi.unstubAllGlobals()
-    vi.clearAllMocks()
   })
 
   it('takes the organization the host publishes', async () => {
@@ -98,8 +82,9 @@ describe('observeAppOrganizationId (message bus)', () => {
       emitted = value
     })
 
-    expect(emitted).toBe('none')
+    await new Promise((resolve) => setTimeout(resolve))
 
+    expect(emitted).toBe('none')
     subscription.unsubscribe()
   })
 

@@ -4,7 +4,13 @@ import {createSanityInstance, type SanityInstance} from '../../store/createSanit
 import {uninstallTestMessageBus} from './__fixtures__/uninstallTestMessageBus'
 import {installMessageBus, type MessageBus, MessageBusError, type MessageBusHost} from './bus'
 import {getDashboardMessageBus} from './store'
-import {getDashboardOrganizationId, getTopicState, resolveTopic, TopicError} from './topicStore'
+import {
+  getDashboardOrganizationId,
+  getTopicState,
+  observeDashboardOrganizationId,
+  resolveTopic,
+  TopicError,
+} from './topicStore'
 
 let host: MessageBusHost
 let instance: SanityInstance
@@ -242,6 +248,74 @@ describe('dashboard topic store', () => {
     it('has no organization id when the host has no active organization', () => {
       publishOrganization(null)
       expect(getDashboardOrganizationId(instance).getCurrent()).toBeUndefined()
+    })
+  })
+
+  describe('observeDashboardOrganizationId', () => {
+    const publishOrganization = (value: {id: string; name: string; slug: string} | null) =>
+      host.connections.subscribe((client) => client.emit('organizations.current', value))
+
+    it('waits for the host to publish before emitting', async () => {
+      const values: (string | undefined)[] = []
+      const subscription = observeDashboardOrganizationId(instance).subscribe((value) =>
+        values.push(value),
+      )
+      await advance(0)
+      expect(values).toEqual([])
+
+      publishOrganization({id: 'oSyH1iET5', name: 'Fernway', slug: 'fernway'})
+      await advance(0)
+
+      expect(values).toEqual(['oSyH1iET5'])
+      subscription.unsubscribe()
+      await advance(1000)
+    })
+
+    it('emits undefined when the host has no active organization', async () => {
+      const values: (string | undefined)[] = []
+      const subscription = observeDashboardOrganizationId(instance).subscribe((value) =>
+        values.push(value),
+      )
+      publishOrganization(null)
+      await advance(0)
+
+      expect(values).toEqual([undefined])
+      subscription.unsubscribe()
+      await advance(1000)
+    })
+
+    it('errors when the host does not publish in time, rather than waiting forever', async () => {
+      const onError = vi.fn()
+      observeDashboardOrganizationId(instance).subscribe({error: onError})
+
+      await advance(5000)
+
+      expect(onError).toHaveBeenCalledWith(
+        expect.objectContaining({code: 'TIMEOUT'}) as MessageBusError,
+      )
+      await advance(1000)
+    })
+
+    it('falls back to the _context organization when the instance cannot connect to the bus', async () => {
+      vi.stubGlobal('__SANITY_APP_ID__', undefined)
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      onTestFinished(() => warn.mockRestore())
+      const context = encodeURIComponent(JSON.stringify({orgId: 'oSyH1iET5'}))
+      const other = createSanityInstance({
+        projectId: 'p',
+        dataset: 'd',
+        auth: {initialLocationHref: `https://app.test/?_context=${context}`},
+      })
+
+      const values: (string | undefined)[] = []
+      const subscription = observeDashboardOrganizationId(other).subscribe((value) =>
+        values.push(value),
+      )
+      await advance(0)
+
+      expect(values).toEqual(['oSyH1iET5'])
+      subscription.unsubscribe()
+      other.dispose()
     })
   })
 })
