@@ -146,8 +146,8 @@ export interface Comment {
    * The exact document id the comment was written against: a published id, a
    * draft id, or a version id.
    *
-   * `documentId` groups a document's variants into one thread list; this tells
-   * them apart, which matters when reading across variants.
+   * `documentId` groups every form of a document into one thread list; this
+   * tells them apart, which matters when reading across more than one.
    */
   sourceDocumentId: string
   documentType: string

@@ -150,7 +150,7 @@ describe('useCommentThreads', () => {
     expect(screen.getByTestId('out').textContent).toBe('1')
   })
 
-  it('passes the field path, status, and variants through to the store', () => {
+  it('passes the field path, status, and scope through to the store', () => {
     const loaded: CommentThread[] = []
     mockSource(() => loaded)
 
@@ -159,7 +159,7 @@ describe('useCommentThreads', () => {
         ...HANDLE,
         fieldPath: ['body', {_key: 'intro'}],
         status: 'resolved',
-        variants: 'all',
+        scope: 'all',
       })
       return null
     }
@@ -172,7 +172,7 @@ describe('useCommentThreads', () => {
         documentId: 'doc-1',
         fieldPath: 'body[_key=="intro"]',
         status: 'resolved',
-        variants: 'all',
+        scope: 'all',
         resource: {projectId: 'p', dataset: 'd'},
       }),
     )
@@ -196,9 +196,9 @@ describe('useCommentThreads', () => {
   })
 
   it('fills in the perspective from context', () => {
-    // The perspective decides which of a document's variants the default
-    // `variants` covers, so dropping it here would quietly read a release's
-    // comments as if they were the draft's.
+    // The perspective decides which comments the default `scope` covers, so
+    // dropping it here would quietly read a release's comments as if they were
+    // the draft's.
     const loaded: CommentThread[] = []
     mockSource(() => loaded)
 

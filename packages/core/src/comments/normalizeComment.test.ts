@@ -42,8 +42,8 @@ describe('normalizeComment', () => {
   })
 
   it('keeps the source document id the comment was written against', () => {
-    // `documentId` groups a document's variants into one thread list, so this is
-    // the only thing that tells a release's comments from a draft's.
+    // `documentId` groups every form of a document into one thread list, so this
+    // is the only thing that tells a release's comments from a draft's.
     const comment = storedComment({
       _id: 'comment-1',
       target: commentTarget({sourceDocumentId: 'versions.summer.doc-1'}),

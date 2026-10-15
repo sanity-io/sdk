@@ -66,16 +66,15 @@ import {type Comment, type CommentThread, type StoredComment} from './types'
 type WithResource<T> = T & {resource: DocumentResource}
 
 /**
- * Which of a document's variants an option set covers.
+ * Which of a document's comments an option set covers.
  *
  * Comments hang off the published id, so pooling draft and published is the
  * default and a release keeps its own list.
  */
 function toCommentsScope(instance: SanityInstance, options: CommentsOptions): CommentsScope {
-  const variants = options.variants ?? 'perspective'
-  if (variants === 'all') return {type: 'any'}
-  if (variants === 'drafts') return {type: 'no-versions'}
-  if (variants === 'exact') return {type: 'exact', sourceDocumentId: options.documentId}
+  const scope = options.scope ?? 'perspective'
+  if (scope === 'all') return {type: 'any'}
+  if (scope === 'exact') return {type: 'exact', sourceDocumentId: options.documentId}
 
   const documentId = DocumentId(options.documentId)
   const perspective = options.perspective ?? instance.config.perspective
@@ -87,11 +86,11 @@ function toCommentsScope(instance: SanityInstance, options: CommentsOptions): Co
     }
   }
 
-  // A version id names a release on its own, with or without a perspective
-  // saying so.
+  // A version id names a release or a content variant on its own, with or
+  // without a perspective saying so.
   if (isVersionId(documentId)) return {type: 'exact', sourceDocumentId: documentId}
 
-  return {type: 'no-versions'}
+  return {type: 'draft-and-published'}
 }
 
 /**
@@ -120,9 +119,9 @@ function toEntryKey(targetRef: string, scope: CommentsScope): string {
  * Every entry a document read could be holding a newly written comment under.
  *
  * A create shows before the server confirms it, and which lists it belongs in is
- * decided by the `variants` each reader asked for rather than by anything the
+ * decided by the `scope` each reader asked for rather than by anything the
  * writer said. They all key off the comment's own target, so they can be
- * enumerated, which is what lets a reader watching one variant see a new comment
+ * enumerated, which is what lets a reader watching one scope see a new comment
  * at the same moment as a reader watching another.
  *
  * GROQ reads are deliberately not covered: an arbitrary filter cannot be
@@ -137,8 +136,9 @@ export function toWrittenCommentKeys(comment: StoredComment): string[] {
     {type: 'any'},
     {type: 'exact', sourceDocumentId},
     // A draft or published id belongs in the pooled list as well. A version id
-    // does not, which is what keeps a release's comments out of it.
-    ...(isVersionId(DocumentId(sourceDocumentId)) ? [] : [{type: 'no-versions' as const}]),
+    // does not, which is what keeps a release's and a variant's comments out of
+    // it.
+    ...(isVersionId(DocumentId(sourceDocumentId)) ? [] : [{type: 'draft-and-published' as const}]),
   ]
 
   return scopes.map((scope) => toEntryKey(comment.target.document._ref, scope))

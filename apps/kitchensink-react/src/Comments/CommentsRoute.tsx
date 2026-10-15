@@ -3,9 +3,9 @@ import {
   type Comment,
   type CommentAnchor,
   type CommentReactionShortName,
+  type CommentsReadScope,
   type CommentStatus,
   type CommentThread,
-  type CommentVariants,
   useCommentActions,
   useCommentThreads,
 } from '@sanity/sdk-react/collaboration'
@@ -345,21 +345,21 @@ function ThreadList({
   perspective,
   fieldPath,
   status,
-  variants,
+  scope,
   onSelect,
 }: {
   documentId: string
   perspective: Perspective
   fieldPath: string | undefined
   status: StatusFilter
-  variants: CommentVariants
+  scope: CommentsReadScope
   onSelect: (comment: Comment) => void
 }): JSX.Element {
   const {threads, isPending} = useCommentThreads({
     documentId,
     documentType: DOCUMENT_TYPE,
     perspective,
-    variants,
+    scope,
     ...(fieldPath === undefined ? {} : {fieldPath}),
     ...(status === 'all' ? {} : {status}),
   })
@@ -395,8 +395,8 @@ function Toolbar({
   onFieldPathChange,
   status,
   onStatusChange,
-  variants,
-  onVariantsChange,
+  scope,
+  onScopeChange,
 }: {
   perspective: Perspective
   onPerspectiveChange: (next: Perspective) => void
@@ -404,8 +404,8 @@ function Toolbar({
   onFieldPathChange: (next: string | undefined) => void
   status: StatusFilter
   onStatusChange: (next: StatusFilter) => void
-  variants: CommentVariants
-  onVariantsChange: (next: CommentVariants) => void
+  scope: CommentsReadScope
+  onScopeChange: (next: CommentsReadScope) => void
 }): JSX.Element {
   return (
     <Flex flexWrap="wrap" gap={3}>
@@ -421,14 +421,13 @@ function Toolbar({
       </Select>
 
       <Select
-        data-testid="comments-variants"
-        value={variants}
-        onChange={(event) => onVariantsChange(event.currentTarget.value as CommentVariants)}
+        data-testid="comments-scope"
+        value={scope}
+        onChange={(event) => onScopeChange(event.currentTarget.value as CommentsReadScope)}
       >
-        <option value="perspective">Variants: perspective</option>
-        <option value="drafts">Variants: drafts</option>
-        <option value="exact">Variants: exact</option>
-        <option value="all">Variants: all</option>
+        <option value="perspective">Scope: perspective</option>
+        <option value="exact">Scope: exact</option>
+        <option value="all">Scope: all</option>
       </Select>
 
       <Select
@@ -607,7 +606,7 @@ function CommentsDemo({documentId}: {documentId: string}): JSX.Element {
   const [perspective, setPerspective] = useState<Perspective>('drafts')
   const [fieldPath, setFieldPath] = useState<string | undefined>(undefined)
   const [status, setStatus] = useState<StatusFilter>('all')
-  const [variants, setVariants] = useState<CommentVariants>('perspective')
+  const [scope, setScope] = useState<CommentsReadScope>('perspective')
   const [selected, setSelected] = useState<Comment | undefined>(undefined)
 
   const studioBase = searchParams.get('studio') ?? DEFAULT_STUDIO_BASE_URL
@@ -633,8 +632,8 @@ function CommentsDemo({documentId}: {documentId: string}): JSX.Element {
         onFieldPathChange={setFieldPath}
         status={status}
         onStatusChange={setStatus}
-        variants={variants}
-        onVariantsChange={setVariants}
+        scope={scope}
+        onScopeChange={setScope}
       />
 
       <NewThreadPanel documentId={documentId} perspective={perspective} />
@@ -648,7 +647,7 @@ function CommentsDemo({documentId}: {documentId: string}): JSX.Element {
           perspective={perspective}
           fieldPath={fieldPath}
           status={status}
-          variants={variants}
+          scope={scope}
           onSelect={setSelected}
         />
       </Suspense>

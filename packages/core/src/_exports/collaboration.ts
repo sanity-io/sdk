@@ -26,7 +26,7 @@ export {
 export {
   type CommentsOptions,
   type CommentsQueryOptions,
-  type CommentVariants,
+  type CommentsReadScope,
   type ResolveCommentsOptions,
   type ResolveCommentsQueryOptions,
 } from '../comments/commentsOptions'

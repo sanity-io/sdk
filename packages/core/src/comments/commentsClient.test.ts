@@ -134,7 +134,7 @@ describe('getCommentsClient', () => {
     })
 
     // Draft and version ids normalise to the published one, which is what makes
-    // a single reference span every variant of a document.
+    // a single reference span every form of a document.
     expect(client.collaboration.comments.getTargetDocumentRef('doc-1')).toBe('dataset:p.d:doc-1')
     expect(client.collaboration.comments.getTargetDocumentRef('drafts.doc-1')).toBe(
       'dataset:p.d:doc-1',
@@ -150,10 +150,19 @@ describe('getCommentsClient', () => {
 describe('toTargetDocumentRef', () => {
   const RESOURCE = {projectId: 'p', dataset: 'd'}
 
-  it('names the published document, whichever variant it is given', () => {
+  it('names the published document, whichever form it is given', () => {
     expect(toTargetDocumentRef(RESOURCE, 'doc-1')).toBe('dataset:p.d:doc-1')
     expect(toTargetDocumentRef(RESOURCE, 'drafts.doc-1')).toBe('dataset:p.d:doc-1')
     expect(toTargetDocumentRef(RESOURCE, 'versions.summer.doc-1')).toBe('dataset:p.d:doc-1')
+  })
+
+  it('names the published document for a content variant', () => {
+    // A variant document is `versions.{scopeId}.{groupId}`, where `scopeId` is a
+    // hash rather than a release name, so it reduces to the published id the
+    // same way a release version does and shares the base document's reference.
+    expect(toTargetDocumentRef(RESOURCE, 'versions.aB3xY9zQ1mN7pR2s.doc-1')).toBe(
+      'dataset:p.d:doc-1',
+    )
   })
 
   it('keeps the dots a document id is allowed to carry', () => {
@@ -167,30 +176,16 @@ describe('toTargetDocumentRef', () => {
     )
   })
 
-  it('agrees with the client for every id shape', () => {
-    // This is a local copy of a format the comment API owns, kept so that the
-    // entry keys can be computed without asking the client store for a client.
-    // Drop it, and this test, once `getCommentTargetDocumentRef` ships.
-    const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
-    const {comments} = getCommentsClient(instance, {
-      resource: RESOURCE,
-      organizationId: ORGANIZATION_ID,
-    }).collaboration
-
-    for (const documentId of [
-      'doc-1',
-      'drafts.doc-1',
-      'versions.summer.doc-1',
-      'foo.doc-1',
-      'drafts.foo.doc-1',
-      'versions.summer.foo.doc-1',
-    ]) {
-      expect(toTargetDocumentRef(RESOURCE, documentId)).toBe(
-        comments.getTargetDocumentRef(documentId),
-      )
-    }
-
-    instance.dispose()
+  it('refuses a malformed document id', () => {
+    // The client's builder only refuses an empty string, so without a check of
+    // our own each of these would become a reference no comment can match.
+    expect(() => toTargetDocumentRef(RESOURCE, '')).toThrow()
+    expect(() => toTargetDocumentRef(RESOURCE, 'doc 1')).toThrow()
+    expect(() => toTargetDocumentRef(RESOURCE, 'doc@1')).toThrow()
+    // A prefix with nothing after it names no document: the published id it
+    // reduces to is empty.
+    expect(() => toTargetDocumentRef(RESOURCE, 'drafts.')).toThrow()
+    expect(() => toTargetDocumentRef(RESOURCE, 'versions.summer.')).toThrow()
   })
 })
 

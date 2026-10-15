@@ -56,20 +56,21 @@ function OpenTitleThreads({documentId}: {documentId: string}) {
 }
 ```
 
-| Option      | Description                                                          |
-| ----------- | -------------------------------------------------------------------- |
-| `fieldPath` | Narrow to one field. Omit for every comment on the document.         |
-| `status`    | `'open'` or `'resolved'`. Omit for both.                             |
-| `variants`  | Which versions of the document to pool. Defaults to `'perspective'`. |
+| Option      | Description                                                             |
+| ----------- | ----------------------------------------------------------------------- |
+| `fieldPath` | Narrow to one field. Omit for every comment on the document.            |
+| `status`    | `'open'` or `'resolved'`. Omit for both.                                |
+| `scope`     | Which of the document's comments to cover. Defaults to `'perspective'`. |
 
 `status` and `fieldPath` mean slightly different things to the two hooks. Read as threads they select whole threads, so a resolved parent brings its replies with it. Read flat there is nothing to bring along, and each comment is judged on its own.
 
-`variants` decides which document ids the comments are gathered from:
+`scope` decides which document ids the comments are gathered from:
 
 - `'perspective'` follows what you are viewing: a release shows that release's comments, anything else pools draft and published
-- `'drafts'` pools draft and published and ignores releases
 - `'exact'` matches only the document id you passed
 - `'all'` returns every comment on the document
+
+To read the pooled draft and published list while a release is in view, pass a non-release `perspective` alongside, such as `perspective: 'drafts'`. A content variant is stored as a version document, so under `'perspective'` its comments form a list of their own the way a release's do, and its draft and published comments stay separate.
 
 The hook suspends until the comments have loaded, so wrap it in a Suspense boundary like any other data hook. Switching document or filter happens in a transition instead: the list already on screen stays put and `isPending` goes true.
 
@@ -292,5 +293,5 @@ Exported from `@sanity/sdk-react/collaboration` and `@sanity/sdk/collaboration`:
 | `CommentFieldValue`        | Portable Text a `CommentAnchor` is resolved against.                                                                                       |
 | `CommentReaction`          | One reaction on a comment.                                                                                                                 |
 | `CommentReactionShortName` | An emoji short name such as `':+1:'`. The set is closed, and the API rejects anything else.                                                |
-| `CommentVariants`          | Which versions of a document to read comments from.                                                                                        |
+| `CommentsReadScope`        | Which of a document's comments a read covers.                                                                                              |
 | `CommentLocalState`        | Why a comment is not yet on the server.                                                                                                    |

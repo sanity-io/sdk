@@ -31,11 +31,11 @@ export const LISTEN_OPTIONS: CollaborationCommentsListenOptions = {
 const TYPE_FILTER = '_type == "sanity.comment"'
 
 /**
- * Comments on a document, whichever variant of it they were written against.
+ * Comments on a document, whichever version of it they were written against.
  *
  * `target.document._ref` is a global document reference built from the published
- * id, so it is the one filter that spans a document's draft, published, and
- * release variants.
+ * id, so it is the one filter that spans a document's draft, published, release,
+ * and content variant forms.
  */
 const TARGET_FILTER = 'target.document._ref == $targetRef'
 
@@ -43,8 +43,12 @@ const TARGET_FILTER = 'target.document._ref == $targetRef'
 const SOURCE_FILTER = 'target.sourceDocumentId == $sourceDocumentId'
 
 /**
- * Everything that is not a release: a draft id and a published id both fail the
- * prefix test, which is what pools them into one list.
+ * Everything stored without a `versions.` prefix: a draft id and a published id
+ * both fail the prefix test, which is what pools them into one list.
+ *
+ * Content variants are stored as version documents too — `versions.{scopeId}`,
+ * where the scope is a hash rather than a release name — so this leaves their
+ * comments out along with a release's.
  */
 const NO_VERSION_FILTER = '!string::startsWith(target.sourceDocumentId, "versions.")'
 
@@ -55,16 +59,16 @@ export interface CommentsQuery {
 }
 
 /**
- * Which of a document's variants a query covers, once a caller's `variants`
+ * Which of a document's comments a query covers, once a caller's `scope`
  * choice has been read against the perspective and document id in play.
  *
  * @internal
  */
 export type CommentsScope =
-  /** Only comments written against this exact id, release or otherwise. */
+  /** Only comments written against this exact id, version or otherwise. */
   | {type: 'exact'; sourceDocumentId: string}
-  /** Draft and published pooled together, releases left out. */
-  | {type: 'no-versions'}
+  /** Draft and published pooled together, version documents left out. */
+  | {type: 'draft-and-published'}
   /** Every comment on the document. */
   | {type: 'any'}
 
@@ -82,7 +86,7 @@ export function buildDocumentCommentsQuery(targetRef: string, scope: CommentsSco
   }
 
   const filters = [TYPE_FILTER, TARGET_FILTER]
-  if (scope.type === 'no-versions') filters.push(NO_VERSION_FILTER)
+  if (scope.type === 'draft-and-published') filters.push(NO_VERSION_FILTER)
 
   return {filter: filters.join(' && '), params: {targetRef}}
 }

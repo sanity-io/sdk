@@ -259,8 +259,8 @@ function buildOptimisticComment(options: {
  * retry with the same id rather than silently losing what someone typed.
  *
  * Applied to every list the comment belongs in rather than just the one matching
- * the writer's own perspective, so a reader watching a different set of variants
- * does not have to wait for the listener to catch up.
+ * the writer's own perspective, so a reader watching a different scope does not
+ * have to wait for the listener to catch up.
  */
 async function postComment(
   context: StoreContext<CommentsStoreState, BoundResourceKey>,

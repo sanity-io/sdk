@@ -23,6 +23,7 @@ import {
   resolveComments,
   resolveCommentsQuery,
   resolveCommentThreads,
+  toDocumentCommentsKey,
 } from './commentsStore'
 import {setPendingTransaction} from './reducers'
 import {type StoredComment} from './types'
@@ -110,7 +111,7 @@ describe('getDocumentCommentsOptionsKey', () => {
       perspective: {releaseName: 'summer'},
       fieldPath: 'title',
       status: 'resolved' as const,
-      variants: 'all' as const,
+      scope: 'all' as const,
     }
 
     expect(parseDocumentCommentsOptionsKey(getDocumentCommentsOptionsKey(options))).toEqual(options)
@@ -129,7 +130,7 @@ describe('getDocumentCommentsOptionsKey', () => {
       getDocumentCommentsOptionsKey({...HANDLE, fieldPath: 'title'}),
       getDocumentCommentsOptionsKey({...HANDLE, status: 'open'}),
       getDocumentCommentsOptionsKey({...HANDLE, documentId: 'doc-2'}),
-      getDocumentCommentsOptionsKey({...HANDLE, variants: 'all'}),
+      getDocumentCommentsOptionsKey({...HANDLE, scope: 'all'}),
     ])
 
     expect(keys.size).toBe(6)
@@ -213,7 +214,7 @@ describe('getCommentThreadsState', () => {
     ])
   })
 
-  it('reads the document by its global reference, whichever variant was asked for', () => {
+  it('reads the document by its global reference, whichever form was asked for', () => {
     getCommentThreadsState(instance, HANDLE).subscribe()
 
     expect(client.observable.collaboration.comments.listen).toHaveBeenCalledWith(
@@ -302,8 +303,8 @@ describe('getCommentThreadsState', () => {
   })
 })
 
-describe('variants', () => {
-  it('pools draft and published by default, excluding releases', () => {
+describe('scope', () => {
+  it('pools draft and published by default, excluding version documents', () => {
     getCommentThreadsState(instance, HANDLE).subscribe()
 
     expect(client.observable.collaboration.comments.listen).toHaveBeenCalledWith(
@@ -351,14 +352,33 @@ describe('variants', () => {
     expect(release.getCurrent()!.map((thread) => thread.parentComment.id)).toEqual(['b'])
   })
 
+  it('keeps a content variant’s comments to themselves', () => {
+    // A variant document is `versions.{scopeId}.{groupId}`, where the scope is a
+    // hash rather than a release name, so it reads as a version id and gets a
+    // list of its own the way a release does.
+    getCommentThreadsState(instance, {
+      ...HANDLE,
+      documentId: 'versions.aB3xY9zQ1mN7pR2s.doc-1',
+    }).subscribe()
+
+    expect(client.observable.collaboration.comments.listen).toHaveBeenCalledWith(
+      expect.stringContaining('target.sourceDocumentId == $sourceDocumentId'),
+      {
+        targetRef: 'dataset:p.d:doc-1',
+        sourceDocumentId: 'versions.aB3xY9zQ1mN7pR2s.doc-1',
+      },
+      expect.anything(),
+    )
+  })
+
   it('pins to the exact id passed when asked for', () => {
     getCommentThreadsState(instance, {
       ...HANDLE,
       documentId: 'drafts.doc-1',
-      variants: 'exact',
+      scope: 'exact',
     }).subscribe()
 
-    // The draft id, not the published one: `exact` is the variant for "only what
+    // The draft id, not the published one: `exact` is the scope for "only what
     // was written against precisely this".
     expect(client.observable.collaboration.comments.listen).toHaveBeenCalledWith(
       expect.stringContaining('target.sourceDocumentId == $sourceDocumentId'),
@@ -367,27 +387,50 @@ describe('variants', () => {
     )
   })
 
-  it('ignores the perspective when asked for drafts', () => {
-    getCommentThreadsState(instance, {
-      ...HANDLE,
+  it('pools draft and published under a non-release perspective override', () => {
+    // The pooled list is what a caller viewing a release reaches for by naming a
+    // perspective of their own; there is no separate scope value for it.
+    const released = createSanityInstance({
+      projectId: 'p',
+      dataset: 'd',
       perspective: {releaseName: 'summer'},
-      variants: 'drafts',
-    }).subscribe()
+    })
+
+    getCommentThreadsState(released, {...HANDLE, perspective: 'drafts'}).subscribe()
 
     expect(client.observable.collaboration.comments.listen).toHaveBeenCalledWith(
       expect.stringContaining('!string::startsWith(target.sourceDocumentId, "versions.")'),
       {targetRef: 'dataset:p.d:doc-1'},
       expect.anything(),
     )
+
+    released.dispose()
   })
 
   it('filters on the document alone when asked for all of them', () => {
-    getCommentThreadsState(instance, {...HANDLE, variants: 'all'}).subscribe()
+    getCommentThreadsState(instance, {...HANDLE, scope: 'all'}).subscribe()
 
     const [query, params] = vi.mocked(client.observable.collaboration.comments.listen).mock.calls[0]
 
     expect(query).not.toContain('sourceDocumentId')
     expect(params).toEqual({targetRef: 'dataset:p.d:doc-1'})
+  })
+
+  it('refuses a malformed document id whatever the scope', () => {
+    // `'all'` and `'exact'` resolve without needing the id parsed, so the
+    // reference is the only thing that looks at it on those paths. Left
+    // unchecked they would open a listener on a filter nothing can match and
+    // report an empty list instead of the mistake.
+    for (const scope of ['perspective', 'exact', 'all'] as const) {
+      expect(() =>
+        toDocumentCommentsKey(instance, {
+          ...HANDLE,
+          documentId: 'doc 1',
+          scope,
+          resource: {projectId: 'p', dataset: 'd'},
+        }),
+      ).toThrow()
+    }
   })
 })
 

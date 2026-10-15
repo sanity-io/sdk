@@ -20,7 +20,7 @@ import {
   updateCommentAnchor,
 } from './commentActions'
 import {observeCommentsClientForResource} from './commentsClient'
-import {type CommentVariants} from './commentsOptions'
+import {type CommentsReadScope} from './commentsOptions'
 import {commentsStore, getCommentThreadsState, toDocumentCommentsKey} from './commentsStore'
 import {addSubscriber, setComments} from './reducers'
 import {type StoredComment} from './types'
@@ -65,8 +65,8 @@ const seedComments = bindActionByResource(
     options: {
       resource?: DocumentResource
       documentId?: string
-      /** Which variant list to seed. Defaults to the one a plain read addresses. */
-      variants?: CommentVariants
+      /** Which list to seed. Defaults to the one a plain read addresses. */
+      scope?: CommentsReadScope
       perspective?: PerspectiveHandle['perspective']
       comments: StoredComment[]
     },
@@ -74,7 +74,7 @@ const seedComments = bindActionByResource(
     const commentsKey = toDocumentCommentsKey(sanityInstance, {
       ...HANDLE,
       documentId: options.documentId ?? HANDLE.documentId,
-      ...(options.variants ? {variants: options.variants} : {}),
+      ...(options.scope ? {scope: options.scope} : {}),
       ...(options.perspective ? {perspective: options.perspective} : {}),
       resource: key.resource,
     })
@@ -163,7 +163,7 @@ describe('createComment', () => {
 
   it('sends the id it was given, draft or otherwise', async () => {
     // The API derives the published document the comment hangs off; what it
-    // needs from us is which variant was being looked at.
+    // needs from us is which form of it was being looked at.
     await createComment(instance, {...CREATE, documentId: 'drafts.doc-1', message: MESSAGE})
 
     expect(comments.create.mock.calls[0][0].target.documentId).toBe('drafts.doc-1')
@@ -332,11 +332,11 @@ describe('createComment', () => {
 })
 
 describe('the lists a new comment shows up in', () => {
-  /** A reader watching one set of variants, with an empty list to start from. */
-  function reading(variants: CommentVariants) {
-    const source = getCommentThreadsState(instance, {...HANDLE, variants})
+  /** A reader watching one scope, with an empty list to start from. */
+  function reading(scope?: CommentsReadScope) {
+    const source = getCommentThreadsState(instance, {...HANDLE, ...(scope ? {scope} : {})})
     source.subscribe()
-    seedComments(instance, {variants, comments: []})
+    seedComments(instance, {...(scope ? {scope} : {}), comments: []})
     return source
   }
 
@@ -349,10 +349,10 @@ describe('the lists a new comment shows up in', () => {
     return {promise, settle: () => resolveCreate(comment({_id: 'c1'}))}
   }
 
-  it('shows it to a reader watching every variant', async () => {
+  it('shows it to a reader watching every comment on the document', async () => {
     // Which lists a comment belongs in is the readers' choice, not the writer's.
     // Applying the create to the writer's list alone left a reader on a
-    // different `variants` waiting for the listener to catch up.
+    // different `scope` waiting for the listener to catch up.
     const all = reading('all')
     const {promise, settle} = pendingCreate()
 
@@ -395,7 +395,7 @@ describe('the lists a new comment shows up in', () => {
     // Subscribed but unseeded: the listener is open and the snapshot has not
     // landed. Filling that list in with just this comment would resolve whoever
     // is suspended on it with a list of one, only to replace it a moment later.
-    const loading = getCommentThreadsState(instance, {...HANDLE, variants: 'all'})
+    const loading = getCommentThreadsState(instance, {...HANDLE, scope: 'all'})
     loading.subscribe()
 
     const {promise, settle} = pendingCreate()
@@ -406,12 +406,12 @@ describe('the lists a new comment shows up in', () => {
     expect(loading.getCurrent()).toBeUndefined()
 
     // The snapshot is what loads it, carrying the comment the same as any other.
-    seedComments(instance, {variants: 'all', comments: [comment({_id: 'c1'})]})
+    seedComments(instance, {scope: 'all', comments: [comment({_id: 'c1'})]})
     expect(loading.getCurrent()!.map((thread) => thread.parentComment.id)).toEqual(['c1'])
   })
 
   it('keeps a comment written on a release out of the pooled draft list', async () => {
-    const drafts = reading('drafts')
+    const pooled = reading()
 
     await createComment(instance, {
       ...CREATE,
@@ -422,7 +422,7 @@ describe('the lists a new comment shows up in', () => {
 
     // The pooled list is draft and published only. A release's comments showing
     // there would misreport what is being discussed on the document itself.
-    expect(drafts.getCurrent()).toEqual([])
+    expect(pooled.getCurrent()).toEqual([])
   })
 
   it('shows it to a reader looking at the release it was written on', async () => {

@@ -21,18 +21,19 @@ describe('buildDocumentCommentsQuery', () => {
     expect(params).toEqual({targetRef: TARGET_REF, sourceDocumentId: 'versions.summer.doc-1'})
   })
 
-  it('excludes releases when pooling draft and published', () => {
-    const {filter, params} = buildDocumentCommentsQuery(TARGET_REF, {type: 'no-versions'})
+  it('excludes version documents when pooling draft and published', () => {
+    const {filter, params} = buildDocumentCommentsQuery(TARGET_REF, {type: 'draft-and-published'})
 
     // A draft id and a published id both fail the prefix test, which is what
-    // pools them; a version id is the only thing this leaves out.
+    // pools them; a version id — a release or a content variant — is the only
+    // thing this leaves out.
     expect(filter).toBe(
       '_type == "sanity.comment" && target.document._ref == $targetRef && !string::startsWith(target.sourceDocumentId, "versions.")',
     )
     expect(params).toEqual({targetRef: TARGET_REF})
   })
 
-  it('filters on the document alone when every variant is wanted', () => {
+  it('filters on the document alone when every comment is wanted', () => {
     const {filter, params} = buildDocumentCommentsQuery(TARGET_REF, {type: 'any'})
 
     expect(filter).toBe('_type == "sanity.comment" && target.document._ref == $targetRef')

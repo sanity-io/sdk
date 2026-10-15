@@ -1,4 +1,5 @@
 import {type SanityClient} from '@sanity/client'
+import {getCommentTargetDocumentRef} from '@sanity/client/collaboration'
 import {DocumentId, getPublishedId} from '@sanity/id-utils'
 import {
   defer,
@@ -99,14 +100,19 @@ export function observeCommentsOrganizationId(
  * effects: `getClient` writes the client it builds back into the client store.
  * The entry keys are computed inside a selector, which runs on every store
  * change and during render, so the ref has to come from the resource alone.
+ * This adapts the resource shape the SDK holds to the one the client's
+ * standalone builder takes.
  *
  * Draft and version ids reduce to the published one, which is what makes a
- * single reference span every variant of a document.
+ * single reference span every form of a document.
  *
- * TODO: replace with `getCommentTargetDocumentRef` from `@sanity/client` once
- * the release carrying sanity-io/client#1343 is in the catalog. Until then the
- * parity test in `commentsClient.test.ts` is what keeps the two formats from
- * drifting.
+ * The reduction happens here rather than in the client's builder, which does
+ * the same thing but refuses only an empty id. `DocumentId` rejects an id no
+ * document could have, and `getPublishedId` rejects a draft or version prefix
+ * with nothing after it. Left to the builder, either would become a filter
+ * parameter that can never match, and a read would report an empty list rather
+ * than the mistake. Every read and write path builds a reference, so this is
+ * the one place that sees them all.
  *
  * @internal
  */
@@ -115,7 +121,10 @@ export function toTargetDocumentRef(
   documentId: string,
 ): StoredComment['target']['document']['_ref'] {
   const {projectId, dataset} = assertDatasetResource(resource)
-  return `dataset:${projectId}.${dataset}:${getPublishedId(DocumentId(documentId))}`
+  return getCommentTargetDocumentRef(
+    {type: 'dataset', id: `${projectId}.${dataset}`},
+    getPublishedId(DocumentId(documentId)),
+  )
 }
 
 /**

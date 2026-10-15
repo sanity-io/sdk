@@ -119,7 +119,7 @@ describe('useComments', () => {
     expect(screen.getByTestId('out').textContent).toBe('1')
   })
 
-  it('passes the field path, status, and variants through to the store', () => {
+  it('passes the field path, status, and scope through to the store', () => {
     const loaded: Comment[] = []
     mockSource(() => loaded)
 
@@ -128,7 +128,7 @@ describe('useComments', () => {
         ...HANDLE,
         fieldPath: ['body', {_key: 'intro'}],
         status: 'resolved',
-        variants: 'all',
+        scope: 'all',
       })
       return null
     }
@@ -141,7 +141,7 @@ describe('useComments', () => {
         documentId: 'doc-1',
         fieldPath: 'body[_key=="intro"]',
         status: 'resolved',
-        variants: 'all',
+        scope: 'all',
         resource: {projectId: 'p', dataset: 'd'},
       }),
     )

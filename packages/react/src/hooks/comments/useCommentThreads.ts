@@ -42,8 +42,8 @@ const SOURCE: CommentListSource<CommentsOptions, CommentThread[]> = {
  *
  * A thread carries its first comment plus its replies, and `status` and
  * `fieldPath` come from that first comment, so filtering by either selects
- * whole threads. Use {@link useComments} to read the same list flat, `variants`
- * to say which versions of the document to pool — by default it follows the
+ * whole threads. Use {@link useComments} to read the same list flat, `scope` to
+ * say which of the document's comments to cover — by default it follows the
  * perspective in view — and {@link useCommentsQuery} when the question is not
  * "comments on this document".
  *
@@ -53,7 +53,7 @@ const SOURCE: CommentListSource<CommentsOptions, CommentThread[]> = {
  *
  * @category Comments
  * @function
- * @param options - The document to read, optionally narrowed by `fieldPath`, `status`, or `variants`
+ * @param options - The document to read, optionally narrowed by `fieldPath`, `status`, or `scope`
  * @returns The matching threads, and whether a switch is in flight
  *
  * @example Count the open threads on a field

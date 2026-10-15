@@ -6,11 +6,11 @@ import {toCommentFieldPath} from './commentFieldPath'
 import {type CommentStatus} from './types'
 
 /**
- * Which variants of a document to read comments from.
+ * Which of a document's comments a read covers.
  *
  * @beta
  */
-export type CommentVariants = 'perspective' | 'drafts' | 'exact' | 'all'
+export type CommentsReadScope = 'perspective' | 'exact' | 'all'
 
 /**
  * Which of a document's comments to read.
@@ -22,23 +22,28 @@ export interface CommentsOptions extends DocumentHandle {
   /** Narrow to open or resolved threads. Omit for both. */
   status?: CommentStatus
   /**
-   * Which variants of the document to read comments from.
+   * Which of the document's comments to read.
    *
    * - `'perspective'` follows what you are viewing: a release shows that
    *   release's comments, anything else pools draft and published.
-   * - `'drafts'` pools draft and published and ignores releases.
    * - `'exact'` matches only the precise document id passed.
    * - `'all'` returns every comment on the document.
    *
    * `'perspective'` recognises a release from the `{releaseName}` form. A
    * stacked `ClientPerspective` array names several layers at once, with no
    * single release to read comments from, so it pools draft and published as
-   * any other non-release perspective does. Pass a version id as the
-   * `documentId`, or `variants: 'exact'`, to name a release yourself.
+   * any other non-release perspective does. To read the pooled list while a
+   * release is in view, pass a non-release `perspective` alongside; to name a
+   * release yourself, pass a version id as the `documentId`.
+   *
+   * A content variant is stored as a version document, so under
+   * `'perspective'` its comments form a list of their own, the way a release's
+   * do. A variant's draft and published comments are separate lists: pairing
+   * them needs the variant's name, which its document id does not carry.
    *
    * @defaultValue 'perspective'
    */
-  variants?: CommentVariants
+  scope?: CommentsReadScope
 }
 
 /** @beta */
@@ -101,7 +106,7 @@ export function getDocumentCommentsOptionsKey(options: CommentsOptions): string 
     perspective: options.perspective,
     fieldPath: options.fieldPath === undefined ? undefined : toCommentFieldPath(options.fieldPath),
     status: options.status,
-    variants: options.variants,
+    scope: options.scope,
     // The `Record` half makes a new field on `CommentsOptions` a compile
     // error here unless it is listed above or named as irrelevant. Left to
     // `satisfies CommentsOptions` alone, a forgotten field would just be

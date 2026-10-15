@@ -50,7 +50,7 @@ export interface CommentsStoreState {
  * What an entry holds comments for: one GROQ filter.
  *
  * Both read paths reduce to this. A document read derives the filter from the
- * document and the variants asked for; a query read is handed one.
+ * document and the scope asked for; a query read is handed one.
  *
  * The organization is deliberately absent. It is resolved asynchronously, and
  * a key has to be computable inside a selector, so keying on it would force

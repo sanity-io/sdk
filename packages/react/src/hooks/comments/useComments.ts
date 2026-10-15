@@ -54,7 +54,7 @@ const SOURCE: CommentListSource<CommentsOptions, Comment[]> = {
  *
  * @category Comments
  * @function
- * @param options - The document to read, optionally narrowed by `fieldPath`, `status`, or `variants`
+ * @param options - The document to read, optionally narrowed by `fieldPath`, `status`, or `scope`
  * @returns The matching comments, and whether a switch is in flight
  *
  * @example Count the open comments on a field
