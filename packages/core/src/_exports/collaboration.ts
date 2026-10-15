@@ -2,9 +2,9 @@
 //
 // The subpath exists so these can ship beside the deprecated add-on dataset
 // comment APIs on the package root, which carry the same names. In the next
-// major those go away and these become the root exports, with
-// `@sanity/sdk/collaboration` kept as an alias so imports written now keep
-// working.
+// major those go away and these become the root exports;
+// `@sanity/sdk/collaboration` keeps re-exporting them in that major, marked
+// `@deprecated`, and is removed in the major after.
 
 export {
   addReaction,

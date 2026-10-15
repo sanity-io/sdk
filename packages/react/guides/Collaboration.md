@@ -8,7 +8,7 @@ Collaboration features let your app take part in the same workflows people alrea
 
 The SDK reads and writes the same comments the studio shows. A comment hangs off a field of a document, comments with the same `threadId` form a thread, and everything is live: a comment written in the studio appears in your app without a refetch, and the other way around.
 
-This API is in beta. The hooks and types are exported from `@sanity/sdk-react/collaboration`, and the framework-agnostic half from `@sanity/sdk/collaboration`. The subpath is temporary: these APIs move to the package roots in the next major, once the deprecated add-on dataset ones are out of the way, and `/collaboration` stays as an alias so your imports do not have to change again.
+This API is in beta. The hooks and types are exported from `@sanity/sdk-react/collaboration`, and the framework-agnostic half from `@sanity/sdk/collaboration`. These APIs move to the package roots in the next major, once the deprecated add-on dataset ones are out of the way. `/collaboration` keeps re-exporting them in that major, marked `@deprecated`, and is removed in the major after.
 
 Still on the comment hooks exported from the `@sanity/sdk-react` root? Those are deprecated. They are named the same as the ones here, so the move is a change of import. The [Migration guide](./0-Migration-Guide.md) covers it.
 

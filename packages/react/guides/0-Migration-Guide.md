@@ -16,7 +16,7 @@ The replacement ships alongside them, under a subpath, with the same names:
 import {useCommentActions, useComments, useCommentThreads} from '@sanity/sdk-react/collaboration'
 ```
 
-The subpath exists only so both sets can ship at once. In the next major these become the root exports and `/collaboration` stays as an alias, so an import written today keeps working either way.
+The subpath exists only so both sets can ship at once. In the next major these become the root exports, and `/collaboration` keeps re-exporting them marked `@deprecated` until the major after, so an import written today keeps working through that release.
 
 Do not switch until the Studio serving your project reads the Comments API and your existing comments have been migrated into the organization store, or your app and your Studio will be looking at different sets of comments. Upgrading the SDK itself is safe at any time.
 
