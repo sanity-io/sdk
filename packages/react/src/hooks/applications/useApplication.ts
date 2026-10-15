@@ -10,7 +10,7 @@ import {createFetcherHook, type FetcherHookResult} from '../helpers/createFetche
  * field, and omitted ones are absent from the type.
  *
  * @public
- * @param applicationId - The application id, or its slug.
+ * @param applicationIdOrSlug - The application id, or its slug.
  * @param options - Optional `include` list to expand related resources, and the
  * `organizationId` to look a slug up in, since a slug is only unique within an
  * organization.
@@ -20,6 +20,6 @@ import {createFetcherHook, type FetcherHookResult} from '../helpers/createFetche
 export const useApplication = createFetcherHook(application) as <
   Include extends ApplicationInclude = never,
 >(
-  applicationId: string,
+  applicationIdOrSlug: string,
   options?: {include?: Include[]; organizationId?: string},
 ) => FetcherHookResult<Application<Include>>
