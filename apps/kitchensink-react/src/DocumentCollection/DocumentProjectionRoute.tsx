@@ -21,6 +21,16 @@ interface PossibleAuthorProjections {
   hasBooks?: boolean
 }
 
+// Typegen only scans `defineProjection` calls assigned to a variable.
+const bestFriendProjection = defineProjection(
+  'author',
+  `{
+    name,
+    'bestFriendName': bestFriend->{name}.name,
+    role
+  }`,
+)
+
 // Component for displaying projection data with proper error handling
 function ProjectionData({
   docHandle,
@@ -34,11 +44,7 @@ function ProjectionData({
     name,
     "favoriteBookTitles": favoriteBooks[]->{title}.title
   }`,
-    bestFriend: defineProjection(`{
-    name,
-    'bestFriendName': bestFriend->{name}.name,
-    role
-  }`),
+    bestFriend: bestFriendProjection,
     groqHelper: groq`{
     name,
     "bookCount": count(favoriteBooks),
