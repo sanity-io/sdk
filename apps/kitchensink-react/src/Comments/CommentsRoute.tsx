@@ -1,4 +1,4 @@
-import {useCurrentUser} from '@sanity/sdk-react'
+import {useActiveReleases, useCurrentUser, useQuery} from '@sanity/sdk-react'
 import {
   type Comment,
   type CommentAnchor,
@@ -47,7 +47,6 @@ const FIELDS = [
 /** Enough to see a count go up and back down again. */
 const REACTIONS: CommentReactionShortName[] = [':+1:', ':eyes:']
 
-type Perspective = 'drafts' | 'published'
 type StatusFilter = CommentStatus | 'all'
 
 /** How a thread reads in each state, picked once instead of per prop. */
@@ -276,11 +275,9 @@ function CommentRow({
 
 function ThreadCard({
   thread,
-  perspective,
   onSelect,
 }: {
   thread: CommentThread
-  perspective: Perspective
   onSelect: (comment: Comment) => void
 }): JSX.Element {
   const {replyToComment, setCommentStatus} = useCommentActions()
@@ -329,7 +326,6 @@ function ThreadCard({
           testId="thread-reply"
           onSubmit={(text) =>
             replyToComment({
-              perspective,
               parentCommentId: thread.parentComment.id,
               message: toMessage(text),
             })
@@ -342,14 +338,12 @@ function ThreadCard({
 
 function ThreadList({
   documentId,
-  perspective,
   fieldPath,
   status,
   scope,
   onSelect,
 }: {
   documentId: string
-  perspective: Perspective
   fieldPath: string | undefined
   status: StatusFilter
   scope: CommentsReadScope
@@ -358,7 +352,6 @@ function ThreadList({
   const {threads, isPending} = useCommentThreads({
     documentId,
     documentType: DOCUMENT_TYPE,
-    perspective,
     scope,
     ...(fieldPath === undefined ? {} : {fieldPath}),
     ...(status === 'all' ? {} : {status}),
@@ -377,20 +370,125 @@ function ThreadList({
   return (
     <VStack gap={3} data-testid="threads" data-count={threads.length} data-pending={isPending}>
       {threads.map((thread) => (
-        <ThreadCard
-          key={thread.threadId}
-          thread={thread}
-          perspective={perspective}
-          onSelect={onSelect}
-        />
+        <ThreadCard key={thread.threadId} thread={thread} onSelect={onSelect} />
       ))}
     </VStack>
   )
 }
 
+const DOCUMENTS_QUERY = '*[_type == $type] | order(_createdAt desc)[0...50]{_id, name}'
+
+/**
+ * Which `author` document the page works on, written back to `?documentId=` so
+ * the Studio link, the header card and a reload all follow along.
+ */
+function DocumentSelect({documentId}: {documentId: string}): JSX.Element {
+  const [, setSearchParams] = useSearchParams()
+  const {data} = useQuery<{_id: string; name: string | null}[]>({
+    query: DOCUMENTS_QUERY,
+    params: {type: DOCUMENT_TYPE},
+  })
+
+  // An id from `?documentId=` can sit outside the slice above, and a select
+  // with no matching option silently shows the first one instead.
+  const documents = data.some((doc) => doc._id === documentId)
+    ? data
+    : [{_id: documentId, name: null}, ...data]
+
+  return (
+    <Select
+      data-testid="comments-document"
+      value={documentId}
+      onChange={(event) => {
+        const next = event.currentTarget.value
+        setSearchParams((previous) => {
+          previous.set('documentId', next)
+          return previous
+        })
+      }}
+    >
+      {documents.map((doc) => (
+        <option key={doc._id} value={doc._id}>
+          {`${doc.name ?? 'Untitled'} · ${doc._id}`}
+        </option>
+      ))}
+    </Select>
+  )
+}
+
+/**
+ * Which of the candidate ids the dataset actually holds a document under. The
+ * `raw` perspective is the only one that returns a version document as itself
+ * rather than folding it into the document it is a version of.
+ */
+const DOCUMENT_IDS_QUERY = '*[_id in $ids]._id'
+
+/**
+ * The id comments are read and written against.
+ *
+ * Passing a draft or a version id is what makes the scopes diverge: `exact`
+ * narrows to that id alone, while `perspective` pools a draft with its
+ * published document and keeps a version to itself.
+ *
+ * Every id is offered whether or not a document exists under it, since a comment
+ * can be written against any of them. The ones that do exist come first and the
+ * rest say so, so picking a release that has no version of this document is a
+ * deliberate choice rather than a hunt.
+ */
+function TargetIdSelect({
+  publishedId,
+  value,
+  onChange,
+}: {
+  publishedId: string
+  value: string
+  onChange: (next: string) => void
+}): JSX.Element {
+  const releases = useActiveReleases()
+
+  const candidates = [
+    {id: publishedId, label: 'published'},
+    {id: `drafts.${publishedId}`, label: 'draft'},
+    ...releases.map((release) => ({
+      id: `versions.${release.name}.${publishedId}`,
+      label: `version ${release.metadata?.title ?? release.name}`,
+    })),
+  ]
+
+  const {data} = useQuery<string[]>({
+    query: DOCUMENT_IDS_QUERY,
+    params: {ids: candidates.map((candidate) => candidate.id)},
+    perspective: 'raw',
+  })
+
+  // Ids with a document first, so a release that actually has a version of this
+  // document is at the top rather than somewhere among the releases that do not.
+  const exists = (candidate: {id: string}) => data.includes(candidate.id)
+  const options = [...candidates.filter(exists), ...candidates.filter((c) => !exists(c))].map(
+    (candidate) => ({
+      id: candidate.id,
+      label: exists(candidate)
+        ? `${candidate.label} · ${candidate.id}`
+        : `${candidate.label} · ${candidate.id} (no document)`,
+    }),
+  )
+
+  return (
+    <Select
+      data-testid="comments-target"
+      value={value}
+      onChange={(event) => onChange(event.currentTarget.value)}
+    >
+      {options.map((option) => (
+        <option key={option.id} value={option.id}>
+          {option.label}
+        </option>
+      ))}
+    </Select>
+  )
+}
+
 function Toolbar({
-  perspective,
-  onPerspectiveChange,
   fieldPath,
   onFieldPathChange,
   status,
@@ -398,8 +496,6 @@ function Toolbar({
   scope,
   onScopeChange,
 }: {
-  perspective: Perspective
-  onPerspectiveChange: (next: Perspective) => void
   fieldPath: string | undefined
   onFieldPathChange: (next: string | undefined) => void
   status: StatusFilter
@@ -409,17 +505,6 @@ function Toolbar({
 }): JSX.Element {
   return (
     <Flex flexWrap="wrap" gap={3}>
-      <Select
-        data-testid="comments-perspective"
-        value={perspective}
-        onChange={(event) =>
-          onPerspectiveChange(event.currentTarget.value === 'published' ? 'published' : 'drafts')
-        }
-      >
-        <option value="drafts">drafts</option>
-        <option value="published">published</option>
-      </Select>
-
       <Select
         data-testid="comments-scope"
         value={scope}
@@ -540,13 +625,7 @@ function AnchorFields({
  * field", a sensible default for reading, silently became "attach to nothing"
  * when writing.
  */
-function NewThreadPanel({
-  documentId,
-  perspective,
-}: {
-  documentId: string
-  perspective: Perspective
-}): JSX.Element {
+function NewThreadPanel({documentId}: {documentId: string}): JSX.Element {
   const {createComment} = useCommentActions()
   const [fieldPath, setFieldPath] = useState<string>(FIELDS[0].value)
   const [anchor, setAnchor] = useState<CommentAnchor>({
@@ -590,7 +669,6 @@ function NewThreadPanel({
           createComment({
             documentId,
             documentType: DOCUMENT_TYPE,
-            perspective,
             fieldPath,
             message: toMessage(text),
             ...(isPortableTextField ? {anchor} : {}),
@@ -603,11 +681,19 @@ function NewThreadPanel({
 
 function CommentsDemo({documentId}: {documentId: string}): JSX.Element {
   const [searchParams] = useSearchParams()
-  const [perspective, setPerspective] = useState<Perspective>('drafts')
   const [fieldPath, setFieldPath] = useState<string | undefined>(undefined)
   const [status, setStatus] = useState<StatusFilter>('all')
   const [scope, setScope] = useState<CommentsReadScope>('perspective')
   const [selected, setSelected] = useState<Comment | undefined>(undefined)
+  const [targetId, setTargetId] = useState(documentId)
+
+  // Another document's ids are not this one's, so the target goes back to the
+  // published id whenever the document changes under it.
+  const [previousDocumentId, setPreviousDocumentId] = useState(documentId)
+  if (previousDocumentId !== documentId) {
+    setPreviousDocumentId(documentId)
+    setTargetId(documentId)
+  }
 
   const studioBase = searchParams.get('studio') ?? DEFAULT_STUDIO_BASE_URL
   const studioUrl = `${studioBase}/intent/edit/id=${encodeURIComponent(documentId)};type=${DOCUMENT_TYPE}`
@@ -623,11 +709,25 @@ function CommentsDemo({documentId}: {documentId: string}): JSX.Element {
         documentType={DOCUMENT_TYPE}
         studioUrl={studioUrl}
         testIdPrefix="comments"
-      />
+      >
+        <Flex alignItems="center" flexWrap="wrap" gap={2}>
+          {/* Both selects read the dataset, so neither is there on first paint. */}
+          <Suspense fallback={<Spinner />}>
+            <DocumentSelect documentId={documentId} />
+          </Suspense>
+          <Suspense fallback={<Spinner />}>
+            <TargetIdSelect publishedId={documentId} value={targetId} onChange={setTargetId} />
+          </Suspense>
+          <Text size={1} muted>
+            Commenting on
+          </Text>
+          <Code size={0} data-testid="comments-target-id">
+            {targetId}
+          </Code>
+        </Flex>
+      </DocumentHeaderCard>
 
       <Toolbar
-        perspective={perspective}
-        onPerspectiveChange={setPerspective}
         fieldPath={fieldPath}
         onFieldPathChange={setFieldPath}
         status={status}
@@ -636,15 +736,14 @@ function CommentsDemo({documentId}: {documentId: string}): JSX.Element {
         onScopeChange={setScope}
       />
 
-      <NewThreadPanel documentId={documentId} perspective={perspective} />
+      <NewThreadPanel documentId={targetId} />
 
       {/* `useCommentThreads` suspends until the list loads. Without a boundary
           here the nearest one is `SanityApp`'s, which would blank the page —
           and everything above is usable while the comments are still coming. */}
       <Suspense fallback={<Spinner />}>
         <ThreadList
-          documentId={documentId}
-          perspective={perspective}
+          documentId={targetId}
           fieldPath={fieldPath}
           status={status}
           scope={scope}
