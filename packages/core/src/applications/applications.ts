@@ -272,25 +272,33 @@ export const applications = defineFetcher<
 
 /**
  * Fetcher for a single application (`GET /applications/:id`), on the shared
- * fetcher cache. No pre-seeding from {@link applications}: its list keys
+ * fetcher cache. `applicationIdOrSlug` may be an id or a slug; pass
+ * `organizationId` with a slug, since a slug is only unique within an
+ * organization. No pre-seeding from {@link applications}: its list keys
  * include the organization, which this fetcher's params can't reconstruct.
  *
  * @see https://www.sanity.io/docs/http-reference/applications-api
  * @internal
  */
 export const application = defineFetcher<
-  [applicationId: string, options?: {include?: ApplicationInclude[]}],
+  [
+    applicationIdOrSlug: string,
+    options?: {include?: ApplicationInclude[]; organizationId?: string},
+  ],
   Application<ApplicationInclude>
 >({
   name: 'application',
-  getKey: (_instance, applicationId, options) =>
-    `${applicationId}:${serializeInclude(options?.include) ?? ''}`,
-  fetch: (instance) => (applicationId, options) =>
+  getKey: (_instance, applicationIdOrSlug, options) =>
+    `${applicationIdOrSlug}:${serializeInclude(options?.include) ?? ''}:${options?.organizationId ?? ''}`,
+  fetch: (instance) => (applicationIdOrSlug, options) =>
     getClientState(instance, {apiVersion: API_VERSION, scope: 'global'}).observable.pipe(
       switchMap((client) =>
         client.observable.request<Application<ApplicationInclude>>({
-          url: `/applications/${applicationId}`,
-          query: buildQuery({include: serializeInclude(options?.include)}),
+          url: `/applications/${applicationIdOrSlug}`,
+          query: buildQuery({
+            include: serializeInclude(options?.include),
+            organizationId: options?.organizationId,
+          }),
           tag: 'applications.get',
         }),
       ),

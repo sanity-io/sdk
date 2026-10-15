@@ -3,21 +3,23 @@ import {type Application, application, type ApplicationInclude} from '@sanity/sd
 import {createFetcherHook, type FetcherHookResult} from '../helpers/createFetcherHook'
 
 /**
- * Returns a single application by id.
+ * Returns a single application by id or slug.
  *
  * The hook suspends until the first fetch succeeds, so `data` is always present.
  * The `include` tokens you pass shape `data`: each requested token adds its
  * field, and omitted ones are absent from the type.
  *
  * @public
- * @param applicationId - The application id.
- * @param options - Optional `include` list to expand related resources.
+ * @param applicationIdOrSlug - The application id, or its slug.
+ * @param options - Optional `include` list to expand related resources, and the
+ * `organizationId` to look a slug up in, since a slug is only unique within an
+ * organization.
  * @returns The result envelope `{data, isFetching, error, refetch}`.
  * @category Applications
  */
 export const useApplication = createFetcherHook(application) as <
   Include extends ApplicationInclude = never,
 >(
-  applicationId: string,
-  options?: {include?: Include[]},
+  applicationIdOrSlug: string,
+  options?: {include?: Include[]; organizationId?: string},
 ) => FetcherHookResult<Application<Include>>

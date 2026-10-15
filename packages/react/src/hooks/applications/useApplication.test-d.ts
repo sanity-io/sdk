@@ -22,6 +22,14 @@ test('useApplication — config.studio include adds config.studio', () => {
   expectTypeOf(result.data.config.studio).toEqualTypeOf<ApplicationStudioConfig | undefined>()
 })
 
+test('useApplication — a slug with organizationId still shapes data by include', () => {
+  const result = useApplication('my-studio', {
+    include: ['config.studio'],
+    organizationId: 'org_1',
+  })
+  expectTypeOf(result.data).toEqualTypeOf<Application<'config.studio'>>()
+})
+
 test('useApplication — a deployment-child include forces the deployment in', () => {
   const result = useApplication('app_1', {include: ['activeDeployment']})
   expectTypeOf(
