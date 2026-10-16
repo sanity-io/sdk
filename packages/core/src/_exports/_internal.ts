@@ -6,7 +6,15 @@ export {
   type ProjectAccessErrorDetails,
 } from '../auth/projectAccessError'
 export {type ApiErrorBody, getClientErrorApiBody} from '../auth/utils'
-export {getCommentsOptionsKey, parseCommentsOptionsKey} from '../comments/commentsStore' // only used for memoizing in React, not needed for actual functionality
+// only used for memoizing in React, not needed for actual functionality
+export {
+  getCommentsQueryOptionsKey,
+  getDocumentCommentsOptionsKey,
+  parseCommentsQueryOptionsKey,
+  parseDocumentCommentsOptionsKey,
+} from '../comments/commentsOptions'
+// only used for memoizing in React, not needed for actual functionality
+export {getCommentsOptionsKey, parseCommentsOptionsKey} from '../comments/legacy/commentsOptions'
 export {
   installMessageBus,
   type InstallMessageBusOptions,

@@ -1,4 +1,31 @@
-import {type Comment, type CommentThread} from './types'
+import {type CommentStatus} from './types'
+
+/**
+ * What threading needs off a comment: its identity and parentage, plus the
+ * fields a thread takes from its first comment.
+ *
+ * Structural rather than {@link Comment}, so the deprecated add-on dataset
+ * store can thread its own comment shape through the same function.
+ */
+interface ThreadableComment {
+  id: string
+  createdAt: string
+  threadId: string
+  fieldPath: string
+  status: CommentStatus
+  parentCommentId?: string
+}
+
+/** A thread over whichever comment shape was threaded. */
+interface ThreadOf<TComment> {
+  threadId: string
+  fieldPath: string
+  parentComment: TComment
+  replies: TComment[]
+  commentsCount: number
+  status: CommentStatus
+  lastActivityAt: string
+}
 
 /**
  * Groups a flat comment list into threads.
@@ -14,8 +41,10 @@ import {type Comment, type CommentThread} from './types'
  *
  * @internal
  */
-export function buildCommentThreads(comments: Comment[]): CommentThread[] {
-  const repliesByParent = new Map<string, Comment[]>()
+export function buildCommentThreads<TComment extends ThreadableComment>(
+  comments: TComment[],
+): ThreadOf<TComment>[] {
+  const repliesByParent = new Map<string, TComment[]>()
 
   for (const comment of comments) {
     if (!comment.parentCommentId) continue
@@ -27,7 +56,7 @@ export function buildCommentThreads(comments: Comment[]): CommentThread[] {
     }
   }
 
-  const threads: CommentThread[] = []
+  const threads: ThreadOf<TComment>[] = []
 
   for (const parentComment of comments) {
     if (parentComment.parentCommentId) continue

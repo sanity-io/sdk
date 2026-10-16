@@ -7,11 +7,12 @@ function comment(overrides: Partial<Comment> & Pick<Comment, 'id'>): Comment {
   return {
     createdAt: '2026-01-01T00:00:00Z',
     authorId: 'user-1',
-    message: null,
+    message: [{_type: 'block', _key: 'b1', children: [{_type: 'span', text: 'hello'}]}],
     threadId: 'thread-1',
     status: 'open',
     reactions: [],
     documentId: 'doc-1',
+    sourceDocumentId: 'doc-1',
     documentType: 'author',
     fieldPath: '',
     ...overrides,

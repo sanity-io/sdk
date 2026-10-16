@@ -8,7 +8,6 @@ import {
   resolveDocument,
 } from '@sanity/sdk'
 import {isDeepEqual} from '@sanity/sdk/_internal'
-
 import {useCallback} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
