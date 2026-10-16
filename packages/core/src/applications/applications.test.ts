@@ -63,18 +63,18 @@ describe('applications', () => {
   })
 
   it('fetches an application by slug within an organization, cached apart from other organizations', async () => {
-    request.mockImplementation(({query}) => of({id: `studio-in-${query.organizationId}`}))
+    request.mockImplementation(({url}) => of({id: url}))
 
     const [inOrg1, inOrg2] = await Promise.all([
       application.resolveState(instance, 'studio', {organizationId: 'org1'}),
       application.resolveState(instance, 'studio', {organizationId: 'org2'}),
     ])
 
-    expect(inOrg1).toEqual({id: 'studio-in-org1'})
-    expect(inOrg2).toEqual({id: 'studio-in-org2'})
+    expect(inOrg1).toEqual({id: '/organizations/org1/applications/studio'})
+    expect(inOrg2).toEqual({id: '/organizations/org2/applications/studio'})
     expect(request).toHaveBeenCalledWith({
-      url: '/applications/studio',
-      query: {organizationId: 'org1'},
+      url: '/organizations/org1/applications/studio',
+      query: {},
       tag: 'applications.get',
     })
   })
