@@ -25,7 +25,6 @@ export type Organizations<
   | 'id'
   | 'name'
   | 'slug'
-  | 'logoUrl'
   | 'createdAt'
   | 'updatedAt'
   | 'defaultRoleName'
