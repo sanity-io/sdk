@@ -19,6 +19,15 @@ export const API_VERSION = 'v2025-05-06'
 export const UNVERIFIED_REVISION_RETENTION_TIME = 30_000
 
 /**
+ * Base delay (ms) before retrying a read after a transient failure. Backoff
+ * doubles on each successive retry, capped at {@link OUT_OF_SYNC_RETRY_MAX_DELAY},
+ * and the failure surfaces after {@link OUT_OF_SYNC_RETRY_COUNT} retries.
+ */
+export const OUT_OF_SYNC_RETRY_BASE_DELAY = 500
+export const OUT_OF_SYNC_RETRY_MAX_DELAY = 10_000
+export const OUT_OF_SYNC_RETRY_COUNT = 5
+
+/**
  * Base delay (ms) before resubmitting an outgoing transaction whose submission
  * failed with a retryable error (a network error, a 5xx, 408 or 429 response,
  * a 401 from an expired session, or a 409 `transactionConflictError` from

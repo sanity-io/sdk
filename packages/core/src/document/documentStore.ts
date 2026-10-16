@@ -31,7 +31,7 @@ import {
 
 import {getCurrentUserState} from '../auth/authStore'
 import {type ClientOptions, getClientState} from '../client/clientStore'
-import {retryRead} from '../client/readRetry'
+import {retryRead} from '../client/retry'
 import {
   type DocumentHandle,
   type DocumentResource,
