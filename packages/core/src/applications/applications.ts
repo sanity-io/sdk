@@ -272,9 +272,10 @@ export const applications = defineFetcher<
 
 /**
  * Fetcher for a single application (`GET /applications/:id`), on the shared
- * fetcher cache. `applicationIdOrSlug` may be an id or a slug; pass
- * `organizationId` with a slug, since a slug is only unique within an
- * organization. No pre-seeding from {@link applications}: its list keys
+ * fetcher cache. With `organizationId` it calls
+ * `GET /organizations/:organizationId/applications/:idOrSlug` instead, which
+ * also takes a slug, since a slug is only unique within an organization.
+ * No pre-seeding from {@link applications}: its list keys
  * include the organization, which this fetcher's params can't reconstruct.
  *
  * @see https://www.sanity.io/docs/http-reference/applications-api
@@ -294,11 +295,10 @@ export const application = defineFetcher<
     getClientState(instance, {apiVersion: API_VERSION, scope: 'global'}).observable.pipe(
       switchMap((client) =>
         client.observable.request<Application<ApplicationInclude>>({
-          url: `/applications/${applicationIdOrSlug}`,
-          query: buildQuery({
-            include: serializeInclude(options?.include),
-            organizationId: options?.organizationId,
-          }),
+          url: options?.organizationId
+            ? `/organizations/${options.organizationId}/applications/${applicationIdOrSlug}`
+            : `/applications/${applicationIdOrSlug}`,
+          query: buildQuery({include: serializeInclude(options?.include)}),
           tag: 'applications.get',
         }),
       ),
