@@ -17,6 +17,7 @@ import {
   tap,
 } from 'rxjs'
 
+import {getCurrentUserState} from '../auth/authStore'
 import {type DocumentHandle, type DocumentResource} from '../config/sanityConfig'
 import {isReleasePerspective} from '../releases/utils/isReleasePerspective'
 import {bindActionByResource, type BoundResourceKey} from '../store/createActionBinder'
@@ -39,6 +40,7 @@ import {
   COMMENTS_STATE_CLEAR_DELAY,
   type CommentsScope,
 } from './commentsConstants'
+import {compileCommentsFilter} from './commentsFilterMatcher'
 import {
   type CommentsOptions,
   type CommentsQueryOptions,
@@ -60,6 +62,7 @@ import {
   setComments,
   setCommentsError,
 } from './reducers'
+import {getDedicatedCommentsListener, getSharedCommentsListener} from './sharedCommentsListener'
 import {type Comment, type CommentThread, type StoredComment} from './types'
 
 /** Read options with the resource they address already resolved. */
@@ -116,32 +119,34 @@ function toEntryKey(targetRef: string, scope: CommentsScope): string {
 }
 
 /**
- * Every entry a document read could be holding a newly written comment under.
+ * Every loaded list a comment belongs in.
  *
- * A create shows before the server confirms it, and which lists it belongs in is
- * decided by the `scope` each reader asked for rather than by anything the
- * writer said. They all key off the comment's own target, so they can be
- * enumerated, which is what lets a reader watching one scope see a new comment
- * at the same moment as a reader watching another.
+ * A create shows before the server confirms it, so which lists it belongs in
+ * has to be answered here rather than left to the echo to say. Every entry is a
+ * filter, which makes this the same question the listener routing asks of every
+ * comment it carries, answered by the same evaluator.
  *
- * GROQ reads are deliberately not covered: an arbitrary filter cannot be
- * evaluated locally, so those lists follow when the listener echoes the comment.
+ * A list whose filter cannot be answered locally is left out. It follows when
+ * the listener echoes the comment, which is where every list stood before.
  *
  * @internal
  */
-export function toWrittenCommentKeys(comment: StoredComment): string[] {
-  const {sourceDocumentId} = comment.target
+export function toMatchingCommentKeys(
+  instance: SanityInstance,
+  state: StoreState<CommentsStoreState>,
+  comment: StoredComment,
+): string[] {
+  const identity = getCurrentUserState(instance).getCurrent()?.id
 
-  const scopes: CommentsScope[] = [
-    {type: 'any'},
-    {type: 'exact', sourceDocumentId},
-    // A draft or published id belongs in the pooled list as well. A version id
-    // does not, which is what keeps a release's and a variant's comments out of
-    // it.
-    ...(isVersionId(DocumentId(sourceDocumentId)) ? [] : [{type: 'draft-and-published' as const}]),
-  ]
-
-  return scopes.map((scope) => toEntryKey(comment.target.document._ref, scope))
+  return Object.entries(state.get().entries)
+    .filter(([key, entry]) => {
+      // A list still waiting for its first snapshot is one that suspends its
+      // readers, and a single comment is not an answer to that.
+      if (!entry?.comments) return false
+      const {filter, params} = parseCommentsKey(key)
+      return compileCommentsFilter(filter)?.(comment, params, identity) ?? false
+    })
+    .map(([key]) => key)
 }
 
 /** Which entry a GROQ read addresses. */
@@ -219,10 +224,29 @@ const watchSubscribedQueries = ({
             if (!event.added) return EMPTY
 
             const {filter, params} = parseCommentsKey(group$.key)
+            const matcher = compileCommentsFilter(filter)
+            // Held rather than looked up per comment: the listener carries the
+            // whole organization's, and every one of them is tested here. Read
+            // on each, so that signing in does not leave a stale identity.
+            const currentUser = getCurrentUserState(instance)
 
             return observeCommentsClientForResource(instance, key.resource).pipe(
               switchMap((client) =>
-                observeComments({client, filter, params}).pipe(
+                observeComments({
+                  client,
+                  // Sharing the organization's listener means answering locally
+                  // which of its comments belong here. A filter the evaluator
+                  // cannot answer for keeps a listener of its own, where the
+                  // server has already answered it.
+                  events$: matcher
+                    ? getSharedCommentsListener(instance, key.resource)
+                    : getDedicatedCommentsListener(client, filter, params),
+                  filter,
+                  params,
+                  matches: matcher
+                    ? (comment) => matcher(comment, params, currentUser.getCurrent()?.id)
+                    : () => true,
+                }).pipe(
                   tap((commentsEvent) => applyEvent(state, group$.key, commentsEvent)),
                   // Keep following the client after one listener fails. A token
                   // refresh or reconnect can then supply a new one.

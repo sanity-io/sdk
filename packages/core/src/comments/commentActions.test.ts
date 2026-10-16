@@ -8,7 +8,7 @@ import {type DocumentResource, type PerspectiveHandle} from '../config/sanityCon
 import {bindActionByResource} from '../store/createActionBinder'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {type StateSource} from '../store/createStateSourceAction'
-import {commentTarget, storedComment} from './__fixtures__/comments'
+import {commentTarget, storedComment, TARGET_REF} from './__fixtures__/comments'
 import {
   addReaction,
   createComment,
@@ -20,9 +20,15 @@ import {
   updateCommentAnchor,
 } from './commentActions'
 import {observeCommentsClientForResource} from './commentsClient'
+import {buildCommentsQueryFilter} from './commentsConstants'
 import {type CommentsReadScope} from './commentsOptions'
-import {commentsStore, getCommentThreadsState, toDocumentCommentsKey} from './commentsStore'
-import {addSubscriber, setComments} from './reducers'
+import {
+  commentsStore,
+  getCommentsQueryState,
+  getCommentThreadsState,
+  toDocumentCommentsKey,
+} from './commentsStore'
+import {addSubscriber, getCommentsKey, setComments} from './reducers'
 import {type StoredComment} from './types'
 
 vi.mock('../auth/authStore', async (importOriginal) => ({
@@ -83,6 +89,27 @@ const seedComments = bindActionByResource(
   },
 )
 
+/** The same, for a list addressed by a GROQ filter rather than by document. */
+const seedQuery = bindActionByResource(
+  commentsStore,
+  (
+    {state},
+    options: {
+      resource?: DocumentResource
+      filter: string
+      params?: Record<string, unknown>
+      comments: StoredComment[]
+    },
+  ) => {
+    const commentsKey = getCommentsKey({
+      filter: buildCommentsQueryFilter(options.filter),
+      params: options.params ?? {},
+    })
+    state.set('addSubscriber', addSubscriber(commentsKey, 'seed'))
+    state.set('setComments', setComments(commentsKey, options.comments))
+  },
+)
+
 const getCommentsStoreState = bindActionByResource(
   commentsStore,
   ({state}, _options: {resource?: DocumentResource}) => state.get(),
@@ -101,7 +128,15 @@ beforeEach(() => {
   vi.mocked(observeCommentsClientForResource).mockReset()
 
   comments = {
-    create: vi.fn(async (body: {_id: string}) => comment({_id: body._id})),
+    // The API writes the comment against the document the body named, so what
+    // comes back is what says which lists it belongs in. A reply names no
+    // target: the API takes its parent's.
+    create: vi.fn(async (body: {_id: string; target?: {documentId: string}}) =>
+      comment({
+        _id: body._id,
+        ...(body.target ? {target: commentTarget({sourceDocumentId: body.target.documentId})} : {}),
+      }),
+    ),
     update: vi.fn().mockResolvedValue(undefined),
     delete: vi.fn().mockResolvedValue(undefined),
     addReaction: vi.fn().mockResolvedValue(undefined),
@@ -340,6 +375,14 @@ describe('the lists a new comment shows up in', () => {
     return source
   }
 
+  /** The same, for a reader watching a GROQ query. */
+  function readingQuery(filter: string, params?: Record<string, unknown>) {
+    const source = getCommentsQueryState(instance, {filter, ...(params ? {params} : {})})
+    source.subscribe()
+    seedQuery(instance, {filter, params, comments: []})
+    return source
+  }
+
   /** Holds the create open so the optimistic state can be read. */
   function pendingCreate() {
     let resolveCreate: (value: StoredComment) => void = () => {}
@@ -434,6 +477,76 @@ describe('the lists a new comment shows up in', () => {
     await createComment(instance, {...CREATE, perspective, commentId: 'c1', message: MESSAGE})
 
     expect(release.getCurrent()!.map((thread) => thread.parentComment.id)).toEqual(['c1'])
+  })
+
+  it('shows it to a query the comment answers', async () => {
+    const query = readingQuery('target.document._ref in $refs', {
+      refs: ['dataset:p.d:other', TARGET_REF],
+    })
+    const {promise, settle} = pendingCreate()
+
+    // A query is a filter like any other, so it does not have to wait for the
+    // listener to say that a comment matching it has been written.
+    expect(query.getCurrent()!.map((found) => found.id)).toEqual(['c1'])
+
+    settle()
+    await promise
+    expect(query.getCurrent()!.map((found) => found.id)).toEqual(['c1'])
+  })
+
+  it('leaves a query the comment does not answer alone', async () => {
+    const query = readingQuery('status == "resolved"')
+    const {promise, settle} = pendingCreate()
+
+    expect(query.getCurrent()).toEqual([])
+
+    settle()
+    await promise
+    expect(query.getCurrent()).toEqual([])
+  })
+
+  it('carries a failed create into a query, to be retried from there', async () => {
+    const query = readingQuery('status == "open"')
+    comments.create.mockRejectedValue(new Error('nope'))
+
+    await expect(
+      createComment(instance, {...CREATE, commentId: 'c1', message: MESSAGE}),
+    ).rejects.toThrow('nope')
+
+    expect(query.getCurrent()![0].state).toEqual({type: 'createError', error: expect.any(Error)})
+
+    // Retrying with the same id replaces it rather than writing a second one.
+    comments.create.mockImplementation(async () => comment({_id: 'c1'}))
+    await createComment(instance, {...CREATE, commentId: 'c1', message: MESSAGE})
+
+    expect(query.getCurrent()!.map((found) => found.id)).toEqual(['c1'])
+    expect(query.getCurrent()![0].state).toBeUndefined()
+  })
+
+  it('takes it back out of a list the comment the server wrote does not belong in', async () => {
+    // The API owns part of the comment, so the one that comes back can answer a
+    // filter differently from the one shown while the write was in flight.
+    const query = readingQuery('status == "open"')
+    comments.create.mockImplementation(async () =>
+      comment({_id: 'c1', status: 'resolved' as const}),
+    )
+
+    await createComment(instance, {...CREATE, commentId: 'c1', message: MESSAGE})
+
+    expect(query.getCurrent()).toEqual([])
+  })
+
+  it('leaves a query it cannot match locally to the listener', async () => {
+    // A dereference cannot be answered against the comment on its own, so this
+    // list stays where every list stood before: following the server.
+    const query = readingQuery('target.document->._id == "doc-1"')
+    const {promise, settle} = pendingCreate()
+
+    expect(query.getCurrent()).toEqual([])
+
+    settle()
+    await promise
+    expect(query.getCurrent()).toEqual([])
   })
 })
 
