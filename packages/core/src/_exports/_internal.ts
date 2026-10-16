@@ -12,6 +12,7 @@ export {
   type InstallMessageBusOptions,
   isMessageBusEnvironment,
   resetMessageBus,
+  workerMessages,
 } from '../dashboard/messageBus/bus'
 export {
   getDashboardMessageBus,

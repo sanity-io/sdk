@@ -306,6 +306,17 @@ export interface DashboardTopics {
   'preferences.dock-locked': StateTopicDef<boolean>
   /** The signed-in user, or `null` while signed out. */
   'users.current': StateTopicDef<CurrentUser | null>
+  /**
+   * A worker messages its own application's views. Only that application's views receive it;
+   * they read it with `useWorker`.
+   */
+  'workers.message': EventTopicDef<unknown>
+  /**
+   * A view posts to one of its own application's workers by service name. The dashboard passes
+   * the payload to that worker and returns its reply, or refuses with `NO_RESPONDER` when the
+   * worker isn't running. Views send it with `useWorker`.
+   */
+  'workers.post': EventTopicDef<{name: string; payload: unknown}, unknown>
 }
 
 /**
@@ -385,6 +396,8 @@ export const DASHBOARD_TOPIC_MANIFEST: DashboardTopicManifest = {
   'preferences.color-scheme': stateTopic(undefined),
   'preferences.dock-locked': stateTopic(undefined),
   'users.current': stateTopic(undefined),
+  'workers.message': dashboardEvent,
+  'workers.post': dashboardEvent,
 }
 
 /**
