@@ -1,6 +1,7 @@
 import {type ListenEvent, type SanityDocument} from '@sanity/client'
 import {createDocumentLoaderFromClient} from '@sanity/mutate/_unstable_store'
 import {
+  EMPTY,
   first,
   map,
   merge,
@@ -14,6 +15,7 @@ import {
 } from 'rxjs'
 
 import {getClientState} from '../client/clientStore'
+import {hasCredentials} from '../client/readRetry'
 import {type DocumentResource} from '../config/sanityConfig'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {UPSTREAM_CLOSE_DELAY_MS} from '../store/createStoreInstance'
@@ -36,11 +38,13 @@ export function createSharedListener(
     apiVersion: API_VERSION,
     resource,
   }).observable.pipe(
-    switchMap((client) =>
+    switchMap((client) => {
+      if (!hasCredentials(client)) return EMPTY
+
       // TODO: it seems like the client.listen method is not emitting disconnected
       // events. this is important to ensure we have an up to date version of the
       // doc. probably should introduce our own events for when the user goes offline
-      client.listen(
+      return client.listen(
         '*',
         {},
         {
@@ -59,8 +63,8 @@ export function createSharedListener(
           // includeMutations: false,
           // effectFormat: 'mendoza',
         },
-      ),
-    ),
+      )
+    }),
     // resumed events are delivered at-least-once, so drop replayed duplicates
     dedupeListenerEvents(),
     // hold multi-document transactions (e.g. publish) until complete so
@@ -97,6 +101,7 @@ export function createFetchDocument(instance: SanityInstance, resource?: Documen
       resource,
     }).observable.pipe(
       switchMap((client) => {
+        if (!hasCredentials(client)) return EMPTY
         // creates a observable request to the /doc/{documentId} endpoint for a given document id
         // should work across all kinds of document IDs (drafts.**, version.**., etc.)
         const loadDocument = createDocumentLoaderFromClient(client)
@@ -105,7 +110,11 @@ export function createFetchDocument(instance: SanityInstance, resource?: Documen
       map((result) => {
         if (!result.accessible) {
           if (result.reason === 'existence') return null
-          throw new Error(`Document with ID \`${documentId}\` is inaccessible due to permissions.`)
+          // the status makes `retryRead` wait for new credentials instead of a timer
+          throw Object.assign(
+            new Error(`Document with ID \`${documentId}\` is inaccessible due to permissions.`),
+            {statusCode: 403},
+          )
         }
         return result.document as SanityDocument
       }),
