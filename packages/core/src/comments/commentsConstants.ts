@@ -27,8 +27,16 @@ export const LISTEN_OPTIONS: CollaborationCommentsListenOptions = {
   tag: 'comments.listen',
 }
 
-/** The comment store holds more than comments, so every query says so. */
-const TYPE_FILTER = '_type == "sanity.comment"'
+/**
+ * The comment store holds more than comments, so every query says so.
+ *
+ * On its own it is also the shared listener's whole filter: which comments
+ * belong in which list is decided per list, against the comment the listener
+ * carried.
+ *
+ * @internal
+ */
+export const TYPE_FILTER = '_type == "sanity.comment"'
 
 /**
  * Comments on a document, whichever version of it they were written against.

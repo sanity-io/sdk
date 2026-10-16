@@ -53,6 +53,12 @@ const SOURCE: CommentListSource<CommentsQueryOptions, Comment[]> = {
  * the previous list stays on screen and `isPending` goes true rather than the
  * component suspending again.
  *
+ * Writes show here before the server confirms them, the same as they do on a
+ * document's comments, because the filter is matched against the written
+ * comment locally. A filter that cannot be answered that way — one that
+ * dereferences, or runs a `*[...]` of its own — still works, but only follows
+ * the server, and costs a connection of its own rather than sharing one.
+ *
  * @category Comments
  * @function
  * @param options - The GROQ `filter` to match, and any `params` it reads

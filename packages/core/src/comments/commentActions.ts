@@ -16,7 +16,7 @@ import {randomUuid} from '../utils/ids'
 import {toCommentFieldPath} from './commentFieldPath'
 import {toStoredMessage} from './commentMessage'
 import {observeCommentsClientForResource, toTargetDocumentRef} from './commentsClient'
-import {commentsStore, toSourceDocumentId, toWrittenCommentKeys} from './commentsStore'
+import {commentsStore, toMatchingCommentKeys, toSourceDocumentId} from './commentsStore'
 import {normalizeComment} from './normalizeComment'
 import {
   addComment,
@@ -26,6 +26,7 @@ import {
   type CommentsStoreState,
   receiveComment,
   removeCommentById,
+  removeCommentFromEntry,
   restoreComments,
   rollbackCommentUpdate,
   setCommentCreateError,
@@ -259,19 +260,19 @@ function buildOptimisticComment(options: {
  * retry with the same id rather than silently losing what someone typed.
  *
  * Applied to every list the comment belongs in rather than just the one matching
- * the writer's own perspective, so a reader watching a different scope does not
- * have to wait for the listener to catch up.
+ * the writer's own perspective, so a reader watching a different scope, or a
+ * query the comment answers, does not have to wait for the listener to catch up.
  */
 async function postComment(
   context: StoreContext<CommentsStoreState, BoundResourceKey>,
-  commentsKeys: string[],
   optimistic: StoredComment,
   body: CollaborationCommentCreate,
   client: Promise<SanityClient>,
 ): Promise<Comment> {
-  const {state} = context
+  const {instance, state} = context
+  const optimisticKeys = toMatchingCommentKeys(instance, state, optimistic)
 
-  for (const commentsKey of commentsKeys) {
+  for (const commentsKey of optimisticKeys) {
     state.set('addComment', addComment(commentsKey, optimistic))
   }
 
@@ -281,9 +282,19 @@ async function postComment(
     ).collaboration.comments.create(body, {
       tag: 'comments.create',
     })
-    for (const commentsKey of commentsKeys) {
+
+    // The API fills in what it owns — the timestamps, the revision, an inline
+    // comment's resolved selection — so where the comment belongs is worth
+    // asking again of the comment that came back.
+    const matching = new Set(toMatchingCommentKeys(instance, state, created))
+    for (const commentsKey of matching) {
       state.set('receiveComment', receiveComment(commentsKey, created))
     }
+    for (const commentsKey of optimisticKeys) {
+      if (matching.has(commentsKey)) continue
+      state.set('removeComment', removeCommentFromEntry(commentsKey, created._id))
+    }
+
     return normalizeComment(created)
   } catch (error) {
     state.set(
@@ -341,7 +352,6 @@ export const createComment: (
 
     return postComment(
       context,
-      toWrittenCommentKeys(optimistic),
       optimistic,
       {
         _id: commentId,
@@ -411,7 +421,6 @@ export const replyToComment: (
 
     return postComment(
       context,
-      toWrittenCommentKeys(optimistic),
       optimistic,
       {
         _id: commentId,

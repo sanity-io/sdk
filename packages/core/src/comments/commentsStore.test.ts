@@ -1,13 +1,14 @@
 import {type ListenEvent, type SanityClient} from '@sanity/client'
-import {BehaviorSubject, Subject} from 'rxjs'
+import {BehaviorSubject, of, Subject} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {type DocumentResource} from '../config/sanityConfig'
 import {bindActionByResource} from '../store/createActionBinder'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
-import {commentTarget, storedComment} from './__fixtures__/comments'
+import {commentTarget, ORGANIZATION_ID, storedComment} from './__fixtures__/comments'
 import {updateComment} from './commentActions'
 import {observeCommentsClientForResource} from './commentsClient'
+import {buildListenQuery, TYPE_FILTER} from './commentsConstants'
 import {
   getCommentsQueryOptionsKey,
   getDocumentCommentsOptionsKey,
@@ -17,6 +18,7 @@ import {
 import {
   commentsStore,
   getCommentsErrorState,
+  getCommentsQueryErrorState,
   getCommentsQueryState,
   getCommentsState,
   getCommentThreadsState,
@@ -31,6 +33,8 @@ import {type StoredComment} from './types'
 vi.mock('./commentsClient', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./commentsClient')>()),
   observeCommentsClientForResource: vi.fn(() => client$),
+  observeCommentsClient: vi.fn(() => client$),
+  observeCommentsOrganizationId: vi.fn(() => of(ORGANIZATION_ID)),
 }))
 
 const WELCOME = {type: 'welcome'} as ListenEvent<StoredComment>
@@ -56,8 +60,9 @@ let client: SanityClient
 let writes: {update: ReturnType<typeof vi.fn>}
 
 /**
- * Keyed on query *and* params: the target reference travels as a parameter, so
- * two documents share one query string but must not share a listener.
+ * Keyed on query *and* params, so that a list opening a listener of its own is
+ * visible as one. Every list that can be matched locally shares the one keyed
+ * on the organization-wide filter.
  */
 function listenerFor(query: string, params: Record<string, unknown>) {
   const key = `${query}|${JSON.stringify(params)}`
@@ -66,6 +71,11 @@ function listenerFor(query: string, params: Record<string, unknown>) {
   const subject = new Subject<ListenEvent<StoredComment>>()
   listeners.set(key, subject)
   return subject
+}
+
+/** The listener every locally matchable list reads from. */
+function sharedListener() {
+  return listenerFor(buildListenQuery(TYPE_FILTER), {})
 }
 
 beforeEach(() => {
@@ -98,9 +108,23 @@ afterEach(() => {
   instance.dispose()
 })
 
-/** Feeds a snapshot into the only listener a test has opened. */
+/**
+ * Connects the listener, which is what sets every list fetching.
+ *
+ * Once per listener: a second welcome is a reconnect, and would have every list
+ * already reading throw its fetch away and start another.
+ */
+const welcomed = new WeakSet<Subject<ListenEvent<StoredComment>>>()
+function connect() {
+  const listener = sharedListener()
+  if (welcomed.has(listener)) return
+  welcomed.add(listener)
+  listener.next(WELCOME)
+}
+
+/** Feeds a snapshot to one of the lists reading, in the order they started. */
 function snapshot(comments: StoredComment[], index = 0) {
-  Array.from(listeners.values())[index]!.next(WELCOME)
+  connect()
   fetches[index].next(comments)
 }
 
@@ -187,11 +211,12 @@ describe('getCommentsState', () => {
     expect(source.getCurrent()!.map((comment) => comment.id)).toEqual(['a'])
   })
 
-  it('shares one listener with the thread read of the same document', () => {
+  it('shares one list with the thread read of the same document', () => {
     getCommentsState(instance, HANDLE).subscribe()
     getCommentThreadsState(instance, HANDLE).subscribe()
+    connect()
 
-    expect(listeners.size).toBe(1)
+    expect(fetches).toHaveLength(1)
   })
 })
 
@@ -216,12 +241,62 @@ describe('getCommentThreadsState', () => {
 
   it('reads the document by its global reference, whichever form was asked for', () => {
     getCommentThreadsState(instance, HANDLE).subscribe()
+    connect()
 
-    expect(client.observable.collaboration.comments.listen).toHaveBeenCalledWith(
+    expect(client.observable.collaboration.comments.fetch).toHaveBeenCalledWith(
       expect.stringContaining('target.document._ref == $targetRef'),
       {targetRef: 'dataset:p.d:doc-1'},
+      expect.objectContaining({tag: 'comments.list'}),
+    )
+  })
+
+  it('opens one listener for the organization rather than one per list', () => {
+    getCommentThreadsState(instance, HANDLE).subscribe()
+    getCommentThreadsState(instance, {...HANDLE, documentId: 'doc-2'}).subscribe()
+    getCommentsQueryState(instance, {filter: 'status == "open"'}).subscribe()
+    connect()
+
+    expect(client.observable.collaboration.comments.listen).toHaveBeenCalledTimes(1)
+    expect(client.observable.collaboration.comments.listen).toHaveBeenCalledWith(
+      '*[_type == "sanity.comment"]',
+      {},
       expect.objectContaining({tag: 'comments.listen'}),
     )
+    // Which comments belong where is still a question per list.
+    expect(fetches).toHaveLength(3)
+  })
+
+  it('keeps a listener of its own for a filter it cannot match locally', () => {
+    // A dereference cannot be answered against the one comment an event
+    // carries, so this list stays on a listener the server filters.
+    getCommentsQueryState(instance, {filter: 'target.document->._id == "doc-1"'}).subscribe()
+
+    expect(client.observable.collaboration.comments.listen).toHaveBeenCalledWith(
+      expect.stringContaining('target.document->._id'),
+      {},
+      expect.anything(),
+    )
+  })
+
+  it('follows the server for a list on a listener of its own', () => {
+    const source = getCommentsQueryState(instance, {filter: 'target.document->._id == "doc-1"'})
+    source.subscribe()
+
+    const dedicated = Array.from(listeners.values())[0]!
+    dedicated.next(WELCOME)
+    fetches[0].next([storedComment({_id: 'a'})])
+
+    // The server decided what belongs here, so what it sends is taken at its
+    // word rather than put to a filter this side cannot answer.
+    dedicated.next({
+      type: 'mutation',
+      transition: 'appear',
+      documentId: 'b',
+      result: storedComment({_id: 'b'}),
+      transactionId: 'tx-1',
+    } as ListenEvent<StoredComment>)
+
+    expect(source.getCurrent()!.map((comment) => comment.id)).toEqual(['a', 'b'])
   })
 
   it('sorts newest thread first', () => {
@@ -306,8 +381,9 @@ describe('getCommentThreadsState', () => {
 describe('scope', () => {
   it('pools draft and published by default, excluding version documents', () => {
     getCommentThreadsState(instance, HANDLE).subscribe()
+    connect()
 
-    expect(client.observable.collaboration.comments.listen).toHaveBeenCalledWith(
+    expect(client.observable.collaboration.comments.fetch).toHaveBeenCalledWith(
       expect.stringContaining('!string::startsWith(target.sourceDocumentId, "versions.")'),
       {targetRef: 'dataset:p.d:doc-1'},
       expect.anything(),
@@ -317,8 +393,9 @@ describe('scope', () => {
   it('shares one list between a draft and its published document', () => {
     getCommentThreadsState(instance, HANDLE).subscribe()
     getCommentThreadsState(instance, {...HANDLE, documentId: 'drafts.doc-1'}).subscribe()
+    connect()
 
-    expect(listeners.size).toBe(1)
+    expect(fetches).toHaveLength(1)
   })
 
   it('pins to the release version under a release perspective', () => {
@@ -326,8 +403,9 @@ describe('scope', () => {
       ...HANDLE,
       perspective: {releaseName: 'summer'},
     }).subscribe()
+    connect()
 
-    expect(client.observable.collaboration.comments.listen).toHaveBeenCalledWith(
+    expect(client.observable.collaboration.comments.fetch).toHaveBeenCalledWith(
       expect.stringContaining('target.sourceDocumentId == $sourceDocumentId'),
       {targetRef: 'dataset:p.d:doc-1', sourceDocumentId: 'versions.summer.doc-1'},
       expect.anything(),
@@ -342,8 +420,9 @@ describe('scope', () => {
     })
     base.subscribe()
     release.subscribe()
+    connect()
 
-    expect(listeners.size).toBe(2)
+    expect(fetches).toHaveLength(2)
 
     snapshot([storedComment({_id: 'a'})])
     snapshot([storedComment({_id: 'b'})], 1)
@@ -360,8 +439,9 @@ describe('scope', () => {
       ...HANDLE,
       documentId: 'versions.aB3xY9zQ1mN7pR2s.doc-1',
     }).subscribe()
+    connect()
 
-    expect(client.observable.collaboration.comments.listen).toHaveBeenCalledWith(
+    expect(client.observable.collaboration.comments.fetch).toHaveBeenCalledWith(
       expect.stringContaining('target.sourceDocumentId == $sourceDocumentId'),
       {
         targetRef: 'dataset:p.d:doc-1',
@@ -377,10 +457,11 @@ describe('scope', () => {
       documentId: 'drafts.doc-1',
       scope: 'exact',
     }).subscribe()
+    connect()
 
     // The draft id, not the published one: `exact` is the scope for "only what
     // was written against precisely this".
-    expect(client.observable.collaboration.comments.listen).toHaveBeenCalledWith(
+    expect(client.observable.collaboration.comments.fetch).toHaveBeenCalledWith(
       expect.stringContaining('target.sourceDocumentId == $sourceDocumentId'),
       {targetRef: 'dataset:p.d:doc-1', sourceDocumentId: 'drafts.doc-1'},
       expect.anything(),
@@ -397,8 +478,9 @@ describe('scope', () => {
     })
 
     getCommentThreadsState(released, {...HANDLE, perspective: 'drafts'}).subscribe()
+    connect()
 
-    expect(client.observable.collaboration.comments.listen).toHaveBeenCalledWith(
+    expect(client.observable.collaboration.comments.fetch).toHaveBeenCalledWith(
       expect.stringContaining('!string::startsWith(target.sourceDocumentId, "versions.")'),
       {targetRef: 'dataset:p.d:doc-1'},
       expect.anything(),
@@ -409,8 +491,9 @@ describe('scope', () => {
 
   it('filters on the document alone when asked for all of them', () => {
     getCommentThreadsState(instance, {...HANDLE, scope: 'all'}).subscribe()
+    connect()
 
-    const [query, params] = vi.mocked(client.observable.collaboration.comments.listen).mock.calls[0]
+    const [query, params] = vi.mocked(client.observable.collaboration.comments.fetch).mock.calls[0]
 
     expect(query).not.toContain('sourceDocumentId')
     expect(params).toEqual({targetRef: 'dataset:p.d:doc-1'})
@@ -447,8 +530,8 @@ describe('getCommentsQueryState', () => {
     // Flat: replies are comments too, and an arbitrary filter has no reason to
     // return whole threads.
     expect(source.getCurrent()!.map((comment) => comment.id)).toEqual(['a', 'b'])
-    expect(client.observable.collaboration.comments.listen).toHaveBeenCalledWith(
-      '*[_type == "sanity.comment" && (authorId == $userId)]',
+    expect(client.observable.collaboration.comments.fetch).toHaveBeenCalledWith(
+      '*[_type == "sanity.comment" && (authorId == $userId)] | order(_createdAt desc)',
       {userId: 'user-1'},
       expect.anything(),
     )
@@ -463,8 +546,9 @@ describe('getCommentsQueryState', () => {
       filter: 'a == $one && b == $two',
       params: {two: '2', one: '1'},
     }).subscribe()
+    connect()
 
-    expect(listeners.size).toBe(1)
+    expect(fetches).toHaveLength(1)
   })
 
   it('reads through a client for the resource it is bound to', () => {
@@ -501,7 +585,7 @@ describe('transaction reconciliation', () => {
     const source = loaded()
     markPending(instance, {commentId: 'a', transactionId: 'tx-2'})
 
-    listeners.values().next().value!.next(updateEvent('tx-1', 'resolved'))
+    sharedListener().next(updateEvent('tx-1', 'resolved'))
 
     expect(source.getCurrent()![0].status).toBe('open')
   })
@@ -510,7 +594,7 @@ describe('transaction reconciliation', () => {
     const source = loaded()
     markPending(instance, {commentId: 'a', transactionId: 'tx-2'})
 
-    listeners.values().next().value!.next(updateEvent('tx-2', 'resolved'))
+    sharedListener().next(updateEvent('tx-2', 'resolved'))
 
     expect(source.getCurrent()![0].status).toBe('resolved')
   })
@@ -518,7 +602,7 @@ describe('transaction reconciliation', () => {
   it('applies updates from other clients when nothing is pending', () => {
     const source = loaded()
 
-    listeners.values().next().value!.next(updateEvent('tx-elsewhere', 'resolved'))
+    sharedListener().next(updateEvent('tx-elsewhere', 'resolved'))
 
     expect(source.getCurrent()![0].status).toBe('resolved')
   })
@@ -537,7 +621,7 @@ describe('transaction reconciliation', () => {
 
     // Someone else resolves the thread while our edit is in flight. Applying
     // their echo now would undo our edit on screen, so it is held back.
-    listeners.values().next().value!.next(updateEvent('tx-elsewhere', 'resolved'))
+    sharedListener().next(updateEvent('tx-elsewhere', 'resolved'))
     expect(source.getCurrent()![0].status).toBe('open')
 
     rejectWrite(new Error('nope'))
@@ -552,11 +636,22 @@ describe('transaction reconciliation', () => {
 describe('a comment leaving one list', () => {
   const THREAD = [storedComment({_id: 'a'}), storedComment({_id: 'b', parentCommentId: 'a'})]
 
-  function disappear(index: number, commentId: string) {
-    Array.from(listeners.values())[index]!.next({
+  function disappear(commentId: string) {
+    sharedListener().next({
       type: 'mutation',
       transition: 'disappear',
       documentId: commentId,
+    } as ListenEvent<StoredComment>)
+  }
+
+  /** Resolves a comment, which is what takes it out of an open-only list. */
+  function resolve(commentId: string) {
+    sharedListener().next({
+      type: 'mutation',
+      transition: 'update',
+      documentId: commentId,
+      result: storedComment({_id: commentId, status: 'resolved'}),
+      transactionId: 'tx-1',
     } as ListenEvent<StoredComment>)
   }
 
@@ -576,10 +671,9 @@ describe('a comment leaving one list', () => {
   it('leaves the lists that still match it alone', () => {
     const {document, query} = twoLists()
 
-    // Resolving the thread takes its parent out of an open-only query. The
-    // document's own list is unfiltered, so the comment has not gone anywhere as
-    // far as that list is concerned.
-    disappear(1, 'a')
+    // One event, read against each list's own filter: the comment has left the
+    // open-only query, and merely changed in the document's unfiltered list.
+    resolve('a')
 
     expect(query.getCurrent()!.map((comment) => comment.id)).toEqual(['b'])
     expect(document.getCurrent()).toMatchObject([{parentComment: {id: 'a'}, replies: [{id: 'b'}]}])
@@ -590,7 +684,16 @@ describe('a comment leaving one list', () => {
     // them here would lose them until the next reconnect.
     const {query} = twoLists()
 
-    disappear(1, 'a')
+    resolve('a')
+
+    expect(query.getCurrent()!.map((comment) => comment.id)).toEqual(['b'])
+  })
+
+  it('does not report the same departure twice', () => {
+    const {query} = twoLists()
+
+    resolve('a')
+    resolve('a')
 
     expect(query.getCurrent()!.map((comment) => comment.id)).toEqual(['b'])
   })
@@ -598,19 +701,26 @@ describe('a comment leaving one list', () => {
   it('empties the list when a deleted thread disappears comment by comment', () => {
     const {document} = twoLists()
 
-    disappear(0, 'a')
-    disappear(0, 'b')
+    disappear('a')
+    disappear('b')
 
     expect(document.getCurrent()).toEqual([])
   })
 })
 
+/** Waits for the list to start reading, then answers its snapshot. */
+async function loadSnapshot(comments: StoredComment[]) {
+  await vi.waitFor(() => expect(listeners.size).toBe(1))
+  connect()
+  await vi.waitFor(() => expect(fetches).toHaveLength(1))
+  fetches[0].next(comments)
+}
+
 describe('resolveComments', () => {
   it('starts loading and resolves with the comments', async () => {
     const promise = resolveComments(instance, HANDLE)
 
-    await vi.waitFor(() => expect(listeners.size).toBe(1))
-    snapshot([storedComment({_id: 'a'})])
+    await loadSnapshot([storedComment({_id: 'a'})])
 
     await expect(promise).resolves.toMatchObject([{id: 'a'}])
   })
@@ -620,8 +730,7 @@ describe('resolveCommentThreads', () => {
   it('starts loading and resolves with the threads', async () => {
     const promise = resolveCommentThreads(instance, HANDLE)
 
-    await vi.waitFor(() => expect(listeners.size).toBe(1))
-    snapshot([storedComment({_id: 'a'})])
+    await loadSnapshot([storedComment({_id: 'a'})])
 
     await expect(promise).resolves.toMatchObject([{parentComment: {id: 'a'}}])
   })
@@ -635,15 +744,19 @@ describe('resolveCommentThreads', () => {
     await expect(promise).rejects.toThrow(/aborted/)
   })
 
-  it('tears the listener down when an abort leaves no readers', async () => {
+  it('stops reading when an abort leaves no readers', async () => {
     const controller = new AbortController()
     const promise = resolveCommentThreads(instance, {...HANDLE, signal: controller.signal})
     await vi.waitFor(() => expect(listeners.size).toBe(1))
+    connect()
+    await vi.waitFor(() => expect(fetches).toHaveLength(1))
 
     controller.abort()
     await expect(promise).rejects.toThrow()
 
-    expect(listeners.values().next().value!.observed).toBe(false)
+    // The shared listener outlives this list by design; what has to go is this
+    // list's own reading of it.
+    expect(fetches[0].observed).toBe(false)
   })
 })
 
@@ -651,8 +764,7 @@ describe('resolveCommentsQuery', () => {
   it('starts loading and resolves with the comments', async () => {
     const promise = resolveCommentsQuery(instance, {filter: 'status == "open"'})
 
-    await vi.waitFor(() => expect(listeners.size).toBe(1))
-    snapshot([storedComment({_id: 'a'})])
+    await loadSnapshot([storedComment({_id: 'a'})])
 
     await expect(promise).resolves.toMatchObject([{id: 'a'}])
   })
@@ -664,7 +776,7 @@ describe('listener recovery', () => {
     source.subscribe()
     snapshot([storedComment({_id: 'a'})])
 
-    listeners.values().next().value!.error(new Error('connection failed'))
+    sharedListener().error(new Error('connection failed'))
 
     // Stale beats gone. Replacing a list someone is reading with an error
     // boundary loses comments that are still perfectly good to show; they just
@@ -676,7 +788,7 @@ describe('listener recovery', () => {
     const source = getCommentThreadsState(instance, HANDLE)
     source.subscribe()
 
-    listeners.values().next().value!.error(new Error('connection failed'))
+    sharedListener().error(new Error('connection failed'))
 
     // Nothing to fall back on here, and a reader left suspended forever would
     // say less than the failure does.
@@ -686,13 +798,28 @@ describe('listener recovery', () => {
   it('starts listening again when the client changes after a listener error', () => {
     getCommentThreadsState(instance, HANDLE).subscribe()
 
-    const failedListener = listeners.values().next().value!
-    failedListener.error(new Error('connection failed'))
+    sharedListener().error(new Error('connection failed'))
     listeners.clear()
 
     client$.next(client)
 
     expect(listeners.size).toBe(1)
+  })
+
+  it('reports the failure to every list that was reading the listener', () => {
+    const document = getCommentThreadsState(instance, HANDLE)
+    const documentError = getCommentsErrorState(instance, HANDLE)
+    const query = getCommentsQueryState(instance, {filter: 'status == "open"'})
+    const queryError = getCommentsQueryErrorState(instance, {filter: 'status == "open"'})
+    document.subscribe()
+    query.subscribe()
+    snapshot([storedComment({_id: 'a'})])
+    snapshot([storedComment({_id: 'a'})], 1)
+
+    sharedListener().error(new Error('connection failed'))
+
+    expect(documentError.getCurrent()).toEqual(new Error('connection failed'))
+    expect(queryError.getCurrent()).toEqual(new Error('connection failed'))
   })
 
   it('reports why a loaded list stopped following the server', () => {
@@ -704,7 +831,7 @@ describe('listener recovery', () => {
     // Serving a stale list silently would leave an app with no way to say so.
     expect(errorSource.getCurrent()).toBeUndefined()
 
-    listeners.values().next().value!.error(new Error('connection failed'))
+    sharedListener().error(new Error('connection failed'))
 
     expect(errorSource.getCurrent()).toEqual(new Error('connection failed'))
   })
@@ -715,7 +842,7 @@ describe('listener recovery', () => {
     source.subscribe()
     snapshot([storedComment({_id: 'a'})])
 
-    listeners.values().next().value!.error(new Error('connection failed'))
+    sharedListener().error(new Error('connection failed'))
     listeners.clear()
     fetches.length = 0
     client$.next(client)
@@ -729,7 +856,7 @@ describe('listener recovery', () => {
     const errorSource = getCommentsErrorState(instance, HANDLE)
     source.subscribe()
 
-    listeners.values().next().value!.error(new Error('connection failed'))
+    sharedListener().error(new Error('connection failed'))
 
     // There is no list to be stale here, so this is a failed read rather than
     // one that has stopped updating.

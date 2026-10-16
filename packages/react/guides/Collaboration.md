@@ -120,6 +120,8 @@ function Mentions({userId}: {userId: string}) {
 
 Suspense, `isPending`, and `error` work the same as in `useCommentThreads`.
 
+Writes show here before the server confirms them, the same as they do on a document's comments: the filter is matched against the written comment locally, so a new comment that answers it appears straight away. Two kinds of filter cannot be answered that way — one that dereferences with `->`, and one that runs a `*[...]` of its own, since neither can be evaluated against a single comment. Those still work and still stay up to date, but only once the server says so, and they cost a connection of their own rather than sharing the one every other list reads from.
+
 ## Writing comments
 
 `useCommentActions` returns the write actions, bound to the current instance.
@@ -149,7 +151,7 @@ function ResolveButton({commentId}: {commentId: string}) {
 
 ### Optimistic writes and failed creates
 
-Every action writes optimistically: the change shows immediately and rolls back if the server rejects it, so you can render straight from `useCommentThreads` without tracking pending state.
+Every action writes optimistically: the change shows immediately and rolls back if the server rejects it, so you can render straight from `useCommentThreads` without tracking pending state. A write reaches every list the comment belongs in, whichever one you wrote it from, so a document's comments and a query that matches them stay in step.
 
 Creating is the exception, and `replyToComment` counts as creating. A comment that fails to post stays on screen carrying `state.createError` rather than disappearing, so nobody loses what they typed. Passing the same `commentId` again retries it:
 
