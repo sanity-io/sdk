@@ -10,10 +10,11 @@ import {createFetcherHook, type FetcherHookResult} from '../helpers/createFetche
  * field, and omitted ones are absent from the type.
  *
  * @public
- * @param applicationIdOrSlug - The application id, or its slug.
+ * @param applicationIdOrSlug - The application id, or its slug when
+ * `organizationId` is set.
  * @param options - Optional `include` list to expand related resources, and the
- * `organizationId` to look a slug up in, since a slug is only unique within an
- * organization.
+ * `organizationId` the application belongs to. A slug needs it, since a slug is
+ * only unique within an organization.
  * @returns The result envelope `{data, isFetching, error, refetch}`.
  * @category Applications
  */
