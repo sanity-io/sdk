@@ -1,5 +1,21 @@
 # Changelog
 
+## 3.10.0
+
+### Minor Changes
+
+- [#1413](https://github.com/sanity-io/sdk/pull/1413) [`8fab095`](https://github.com/sanity-io/sdk/commit/8fab095b9ccfde6cdc19e59f32ffc20780b73887) Thanks [@gu-stav](https://github.com/gu-stav)! - `createRemoteInstance`'s `registerRemotes` accepts `{force: true}` to replace a registered remote, so a host can load an application's latest code without reloading the page.
+
+- [#1406](https://github.com/sanity-io/sdk/pull/1406) [`4f6e947`](https://github.com/sanity-io/sdk/commit/4f6e9473e73f0aec7365233d1175d6e1b2bf9756) Thanks [@joshuaellis](https://github.com/joshuaellis)! - The `application` fetcher and `useApplication` accept an `organizationId`, so an application can be looked up by its slug, which is only unique within an organization.
+
+- [#1416](https://github.com/sanity-io/sdk/pull/1416) [`dd2a1ae`](https://github.com/sanity-io/sdk/commit/dd2a1ae6a6e49a321f3b06e0bc066f6d4b06365f) Thanks [@joshuaellis](https://github.com/joshuaellis)! - A dashboard view can post to its application's workers and listen to their messages with `useWorker`. On a topic only the dashboard can answer, an application now receives only its own application's events.
+
+### Patch Changes
+
+- [#1305](https://github.com/sanity-io/sdk/pull/1305) [`560e927`](https://github.com/sanity-io/sdk/commit/560e9278702259b481f5ca26d5207ccc8a671b74) Thanks [@ryanbonial](https://github.com/ryanbonial)! - `useDocumentProjection` keeps its subscription when a component re-renders with a handle that has the same values, such as handles from a refetched `useDocuments` list.
+- Updated dependencies [[`7c3bf20`](https://github.com/sanity-io/sdk/commit/7c3bf206667386a21943088c749aabe2938dd359), [`4f6e947`](https://github.com/sanity-io/sdk/commit/4f6e9473e73f0aec7365233d1175d6e1b2bf9756), [`dd2a1ae`](https://github.com/sanity-io/sdk/commit/dd2a1ae6a6e49a321f3b06e0bc066f6d4b06365f)]:
+  - @sanity/sdk@3.10.0
+
 ## 3.9.1
 
 ### Patch Changes
