@@ -68,10 +68,14 @@ vi.mock('./documentConstants.ts', async (importOriginal) => {
     ...original,
     INITIAL_OUTGOING_THROTTLE_TIME: 0,
     DOCUMENT_STATE_CLEAR_DELAY: 25,
-    OUT_OF_SYNC_RETRY_BASE_DELAY: 0,
-    OUT_OF_SYNC_RETRY_MAX_DELAY: 0,
   }
 })
+
+vi.mock('../client/readRetryConstants.ts', () => ({
+  READ_RETRY_BASE_DELAY: 0,
+  READ_RETRY_MAX_DELAY: 0,
+  READ_RETRY_COUNT: 5,
+}))
 
 interface Span {
   _key: string

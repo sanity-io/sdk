@@ -5,13 +5,24 @@ import {
   DisconnectError,
   type LiveEvent,
   type SanityClient,
+  ServerError,
   type SyncTag,
 } from '@sanity/client'
-import {delay, filter, firstValueFrom, Observable, of, Subject} from 'rxjs'
+import {
+  BehaviorSubject,
+  delay,
+  filter,
+  firstValueFrom,
+  Observable,
+  of,
+  Subject,
+  throwError,
+} from 'rxjs'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {getClientState} from '../client/clientStore'
 import {LIVE_EVENTS_RETRY_DELAY} from '../client/liveEvents'
+import {READ_RETRY_MAX_DELAY} from '../client/readRetryConstants'
 import {isCanvasResource} from '../config/sanityConfig'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {type StateSource} from '../store/createStateSourceAction'
@@ -53,6 +64,7 @@ describe('queryStore', () => {
   let liveEvents: Subject<LiveEvent>
   let fetch: SanityClient['observable']['fetch']
   let listen: SanityClient['observable']['listen']
+  let clients: BehaviorSubject<SanityClient>
   // Mock data for testing
   const mockData = {
     movies: [
@@ -79,14 +91,23 @@ describe('queryStore', () => {
 
     const config = vi.fn().mockReturnValue({token: 'token'}) as SanityClient['config']
 
+    clients = new BehaviorSubject({
+      config,
+      live: {events},
+      observable: {fetch, listen},
+    } as SanityClient)
     vi.mocked(getClientState).mockReturnValue({
-      observable: of({
-        config,
-        live: {events},
-        observable: {fetch, listen},
-      } as SanityClient),
+      observable: clients.asObservable(),
     } as StateSource<SanityClient>)
   })
+
+  // a rejected query: retrying it with the same credentials fails the same way
+  const queryFailed = () =>
+    new ClientError({
+      statusCode: 400,
+      headers: {},
+      body: {error: 'Bad Request', message: 'Query failed'},
+    })
 
   afterEach(() => {
     vi.mocked(getClientState).mockClear()
@@ -323,21 +344,58 @@ describe('queryStore', () => {
   })
 
   it('handles errors in query fetching', async () => {
-    const errorMessage = 'Query failed'
-
-    // Override fetch to simulate error
-    vi.mocked(fetch).mockReturnValueOnce(
-      new Observable((observer) => {
-        observer.error(new Error(errorMessage))
-      }),
-    )
+    vi.mocked(fetch).mockReturnValueOnce(throwError(queryFailed))
 
     const query = '*[_type == "movie"]'
     const state = getQueryState(instance, {query})
     const unsubscribe = state.subscribe()
 
-    // Verify error is thrown when accessing state
-    expect(() => state.getCurrent()).toThrow(errorMessage)
+    expect(() => state.getCurrent()).toThrow('Query failed')
+
+    unsubscribe()
+  })
+
+  it('retries a transient failure without surfacing it', async () => {
+    vi.mocked(fetch).mockReturnValueOnce(
+      throwError(() => new ServerError({statusCode: 503, headers: {}, body: {}})),
+    )
+
+    const state = getQueryState(instance, {query: '*[_type == "movie"]'})
+    const unsubscribe = state.subscribe()
+    expect(state.getCurrent()).toBeUndefined()
+
+    const result = await advanceAndAwait(
+      firstValueFrom(state.observable.pipe(filter((i) => i !== undefined))),
+      READ_RETRY_MAX_DELAY,
+    )
+    expect(result).toEqual(mockData.movies)
+
+    unsubscribe()
+  })
+
+  it('refetches a query that failed with a 401 once the token changes', async () => {
+    const sessionExpired = new ClientError({
+      statusCode: 401,
+      headers: {},
+      body: {error: 'Unauthorized', message: 'Session not found'},
+    })
+    vi.mocked(fetch).mockReturnValueOnce(throwError(() => sessionExpired))
+
+    const state = getQueryState(instance, {query: '*[_type == "movie"]'})
+    const unsubscribe = state.subscribe()
+    expect(() => state.getCurrent()).toThrow('Session not found')
+
+    // nothing is retried on a timer; stay under the clear delay, after which the
+    // errored key is dropped because the thrown error ended its subscriber
+    await vi.advanceTimersByTimeAsync(QUERY_STATE_CLEAR_DELAY - 1)
+    expect(fetch).toHaveBeenCalledTimes(1)
+
+    // the client store rebuilds its clients when the token changes
+    clients.next({...clients.getValue()} as SanityClient)
+    await vi.advanceTimersByTimeAsync(0)
+
+    expect(fetch).toHaveBeenCalledTimes(2)
+    expect(state.getCurrent()).toEqual(mockData.movies)
 
     unsubscribe()
   })
@@ -383,17 +441,12 @@ describe('queryStore', () => {
   })
 
   it('refetches when a query key is re-added after an error', async () => {
-    // First fetch fails (e.g. transient network failure)
-    vi.mocked(fetch).mockReturnValueOnce(
-      new Observable((observer) => {
-        observer.error(new Error('transient network failure'))
-      }),
-    )
+    vi.mocked(fetch).mockReturnValueOnce(throwError(queryFailed))
 
     const query = '*[_type == "movie"]'
     const state1 = getQueryState(instance, {query})
     const unsub1 = state1.subscribe()
-    expect(() => state1.getCurrent()).toThrow('transient network failure')
+    expect(() => state1.getCurrent()).toThrow('Query failed')
     unsub1()
 
     // Wait for the clear delay so the key is fully removed from state
@@ -414,20 +467,16 @@ describe('queryStore', () => {
   })
 
   it('releases an errored key created by resolveQuery so a retry can refetch', async () => {
-    vi.mocked(fetch).mockReturnValueOnce(
-      new Observable((observer) => {
-        observer.error(new Error('network down'))
-      }),
-    )
+    vi.mocked(fetch).mockReturnValueOnce(throwError(queryFailed))
 
     const query = '*[_type == "movie"]'
     // This is how React drives a suspended query: resolveQuery creates the
     // key without any subscriber (the component never commits when it throws)
-    await expect(resolveQuery(instance, {query})).rejects.toThrow('network down')
+    await expect(resolveQuery(instance, {query})).rejects.toThrow('Query failed')
 
     // While the errored key exists, the error surfaces to error boundaries
     const state = getQueryState(instance, {query})
-    expect(() => state.getCurrent()).toThrow('network down')
+    expect(() => state.getCurrent()).toThrow('Query failed')
 
     // After the clear delay, the errored key must be released — otherwise it
     // has no subscribers, nothing ever removes it, and every future mount

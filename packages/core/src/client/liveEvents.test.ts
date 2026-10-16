@@ -44,6 +44,22 @@ describe('observeLiveEvents', () => {
     instance.dispose()
   })
 
+  it('connects only once the client has credentials', () => {
+    const clients = new Subject<SanityClient>()
+    vi.mocked(getClientState).mockReturnValue({
+      observable: clients.asObservable(),
+    } as StateSource<SanityClient>)
+    const subscription = observeLiveEvents(instance, {onCorsError: vi.fn()}).subscribe()
+
+    clients.next({config: () => ({}), live: {events}} as unknown as SanityClient)
+    expect(events).not.toHaveBeenCalled()
+
+    clients.next({config: () => ({token: 'token'}), live: {events}} as unknown as SanityClient)
+    expect(events).toHaveBeenCalledTimes(1)
+
+    subscription.unsubscribe()
+  })
+
   it('emits only message events', () => {
     const messages: LiveEventMessage[] = []
     const subscription = observeLiveEvents(instance, {onCorsError: vi.fn()}).subscribe((message) =>

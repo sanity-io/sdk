@@ -24,6 +24,7 @@ import {
 import {withProjectAccessMessage} from '../auth/projectAccessError'
 import {getClientState} from '../client/clientStore'
 import {observeLiveEvents} from '../client/liveEvents'
+import {retryRead} from '../client/readRetry'
 import {type DatasetHandle} from '../config/sanityConfig'
 import {getPerspectiveState} from '../releases/getPerspectiveState'
 import {isReleasePerspective} from '../releases/utils/isReleasePerspective'
@@ -194,19 +195,18 @@ const listenForNewSubscribersAndFetch = ({state, instance}: StoreContext<QuerySt
                   tag,
                 }),
               ),
-              tap(({result, syncTags}) => {
-                state.set('setQueryData', setQueryData(group$.key, result, syncTags))
-              }),
-              // Catch inside the per-event stream: erroring the group pipe would
+              // Retry inside the per-event stream: erroring the group pipe would
               // complete the group's subscription, and since `groupBy` above never
               // removes its group subjects, re-adding the key would emit into a
               // subject with no subscribers — the key could never be fetched again.
-              catchError((error) => {
+              retryRead(client$, (error) =>
                 state.set(
                   'setQueryError',
                   setQueryError(group$.key, withProjectAccessMessage(instance, error)),
-                )
-                return EMPTY
+                ),
+              ),
+              tap(({result, syncTags}) => {
+                state.set('setQueryData', setQueryData(group$.key, result, syncTags))
               }),
             )
           }),
