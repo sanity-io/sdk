@@ -10,17 +10,7 @@ import {
   useDocuments,
   usePerspective,
 } from '@sanity/sdk-react'
-import {
-  Box,
-  Button,
-  Card as PaperCard,
-  Dialog,
-  Flex,
-  Spinner,
-  Stack,
-  Text,
-  TextInput,
-} from '@sanity/ui'
+import {Box, Button, Dialog, Flex, Spinner, Stack, Text, TextInput} from '@sanity/ui'
 import {Code} from '@sanity/ui/code'
 import {type JSX, Suspense, useEffect, useMemo, useState} from 'react'
 import {Card} from 'ui5'
@@ -31,15 +21,9 @@ import {JsonDocumentEditor} from '../../components/JsonDocumentEditor'
 import {PageLayout} from '../../components/PageLayout'
 import {DocumentPreview} from '../../DocumentCollection/DocumentPreview'
 import {isE2E} from '../../sanityConfigs'
+import {PerspectiveSelector} from './PerspectiveSelector'
 import {ReleaseActionsDialog} from './ReleaseActionsDialog'
-import {ReleasesAutocomplete} from './ReleasesAutocomplete'
 import {isReleasePerspective} from './util'
-
-const DEFAULT_PERSPECTIVES = [
-  {name: 'raw', title: 'Raw', description: 'View all document versions'},
-  {name: 'published', title: 'Published', description: 'View published content'},
-  {name: 'drafts', title: 'Drafts', description: 'View draft content'},
-] as const
 
 function DocumentListContent({
   perspective,
@@ -85,41 +69,6 @@ function DocumentList({
     <Suspense fallback={<Spinner />}>
       <DocumentListContent perspective={perspective} onSelectDocument={onSelectDocument} />
     </Suspense>
-  )
-}
-
-function DefaultPerspectiveCard({
-  perspective,
-  isSelected,
-  onClick,
-}: {
-  perspective: (typeof DEFAULT_PERSPECTIVES)[number]
-  isSelected: boolean
-  onClick: () => void
-}) {
-  return (
-    <PaperCard
-      padding={3}
-      radius={2}
-      shadow={1}
-      tone="default"
-      style={{cursor: 'pointer'}}
-      onClick={onClick}
-      border={isSelected}
-    >
-      <Flex align="center" gap={3}>
-        <Box flex={1}>
-          <Text size={1} weight="semibold">
-            {perspective.title}
-          </Text>
-          <Box paddingTop={1}>
-            <Text size={1} muted>
-              {perspective.description}
-            </Text>
-          </Box>
-        </Box>
-      </Flex>
-    </PaperCard>
   )
 }
 
@@ -217,48 +166,19 @@ function ReleasesContent({
 
   return (
     <>
-      <Stack gap={2}>
-        <Text size={1} weight="semibold">
-          Default Perspectives
-        </Text>
-        <Stack gap={2}>
-          {DEFAULT_PERSPECTIVES.map((perspective) => (
-            <DefaultPerspectiveCard
-              key={perspective.name}
-              perspective={perspective}
-              isSelected={
-                !isReleasePerspective(selectedPerspective.perspective) &&
-                selectedPerspective.perspective === perspective.name
-              }
-              onClick={() => onPerspectiveSelect({perspective: perspective.name})}
-            />
-          ))}
-        </Stack>
-      </Stack>
-
-      <Stack gap={2}>
-        <Flex align="center" justify="space-between">
-          <Text size={1} weight="semibold">
-            Releases
-          </Text>
+      <PerspectiveSelector
+        selectedPerspective={selectedPerspective}
+        onPerspectiveSelect={onPerspectiveSelect}
+        activeReleases={activeReleases}
+        releasesAction={
           <Button
             text="Create release"
             tone="positive"
             fontSize={1}
             onClick={() => setReleaseDialog({mode: 'create'})}
           />
-        </Flex>
-        <ReleasesAutocomplete
-          activeReleases={activeReleases}
-          selectedPerspective={selectedPerspective}
-          onSelectRelease={(releaseName) => {
-            const release = activeReleases.find((r) => r.name === releaseName)
-            if (release) {
-              onPerspectiveSelect({perspective: {releaseName: release.name}})
-            }
-          }}
-        />
-      </Stack>
+        }
+      />
 
       {selectedPerspective && (
         <Stack gap={2}>
