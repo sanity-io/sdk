@@ -9,7 +9,7 @@ import {catchError, defer, EMPTY, filter, type Observable, retry, switchMap} fro
 import {type DocumentResource} from '../config/sanityConfig'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {getClientState} from './clientStore'
-import {hasCredentials} from './readRetry'
+import {hasCredentials} from './retry'
 
 /**
  * All live-events subscriptions must use identical connection options

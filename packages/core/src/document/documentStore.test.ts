@@ -35,7 +35,6 @@ import {
 import {afterEach, beforeEach, expect, it, vi} from 'vitest'
 
 import {getClientState} from '../client/clientStore'
-import {READ_RETRY_COUNT} from '../client/readRetryConstants'
 import {createDocumentHandle} from '../config/handles'
 import {type DocumentHandle} from '../config/sanityConfig'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
@@ -52,6 +51,7 @@ import {
   unpublishDocument,
 } from './actions'
 import {applyDocumentActions} from './applyDocumentActions'
+import {OUT_OF_SYNC_RETRY_COUNT} from './documentConstants'
 import {
   getDocumentState,
   getDocumentSyncStatus,
@@ -1102,7 +1102,6 @@ it('surfaces a dataset ACL 403 and refetches the ACL once the token changes', as
   })
   expect(aclAttempts).toBe(1)
 
-  // the client store builds a new client when the token changes
   hasAccess = true
   const client$ = (getClientState as () => StateSource<SanityClient>)()
     .observable as ReplaySubject<SanityClient>
@@ -1465,6 +1464,9 @@ vi.mock('./documentConstants.ts', async (importOriginal) => {
     ...original,
     INITIAL_OUTGOING_THROTTLE_TIME: 0,
     DOCUMENT_STATE_CLEAR_DELAY: 25,
+    OUT_OF_SYNC_RETRY_BASE_DELAY: 0,
+    OUT_OF_SYNC_RETRY_MAX_DELAY: 0,
+    OUT_OF_SYNC_RETRY_COUNT: 2,
     get SUBMISSION_RETRY_BASE_DELAY() {
       return submissionRetryDelay.ms
     },
@@ -1474,22 +1476,7 @@ vi.mock('./documentConstants.ts', async (importOriginal) => {
   }
 })
 
-vi.mock('../client/readRetryConstants.ts', () => ({
-  READ_RETRY_BASE_DELAY: 0,
-  READ_RETRY_MAX_DELAY: 0,
-  READ_RETRY_COUNT: 2,
-}))
-
 let client: SanityClient
-
-// the error `createFetchDocument` throws for a document the user can't read (see sharedListener.test.ts)
-const inaccessibleDocumentError = (documentId: string) =>
-  Object.assign(
-    new Error(`Document with ID \`${documentId}\` is inaccessible due to permissions.`),
-    {
-      statusCode: 403,
-    },
-  )
 
 /** Mock for `client.observable.mutate` (liveEdit submission path); implementation reset in `beforeEach`. */
 const mutateSubmission = vi.fn(
@@ -1899,7 +1886,12 @@ it('resolves a readable document while another in the same dataset is inaccessib
   vi.mocked(createFetchDocument).mockReturnValue(
     vi.fn((id) =>
       (id === blockedId
-        ? throwError(() => inaccessibleDocumentError(blockedId))
+        ? throwError(() =>
+            Object.assign(
+              new Error(`Document with ID \`${blockedId}\` is inaccessible due to permissions.`),
+              {statusCode: 403},
+            ),
+          )
         : of({_id: id, _type: 'article', _rev: 'rev-1'} as SanityDocument)
       ).pipe(delay(0)),
     ),
@@ -1936,7 +1928,7 @@ it('reports an inaccessible draft to the document that reads it', async () => {
   vi.mocked(createFetchDocument).mockReturnValue(
     vi.fn((id) =>
       (id === draftId
-        ? throwError(() => inaccessibleDocumentError(draftId))
+        ? throwError(() => new Error(message))
         : of({_id: id, _type: 'article', _rev: 'rev-1'} as SanityDocument)
       ).pipe(delay(0)),
     ),
@@ -1960,7 +1952,7 @@ it('fails a write to a document it cannot read instead of waiting for it', async
   vi.mocked(createFetchDocument).mockReturnValue(
     vi.fn((id) =>
       (id === draftId
-        ? throwError(() => inaccessibleDocumentError(draftId))
+        ? throwError(() => new Error(message))
         : of({_id: id, _type: 'article', _rev: 'rev-1'} as SanityDocument)
       ).pipe(delay(0)),
     ),
@@ -2007,7 +1999,7 @@ it('fails a release action whose release document cannot be read', async () => {
   vi.mocked(createFetchDocument).mockReturnValue(
     vi.fn((id) =>
       (id === releaseDocumentId
-        ? throwError(() => inaccessibleDocumentError(releaseDocumentId))
+        ? throwError(() => new Error(message))
         : of({_id: id, _type: 'article', _rev: 'rev-1'} as SanityDocument)
       ).pipe(delay(0)),
     ),
@@ -2039,7 +2031,7 @@ it('surfaces a read that keeps failing once its retry budget runs out', async ()
   const doc = createDocumentHandle({documentId, documentType: 'article'})
 
   await expect(resolveDocument(instance, doc)).rejects.toThrow(ServerError)
-  expect(attempts).toBe(READ_RETRY_COUNT + 1)
+  expect(attempts).toBe(3)
 })
 
 it('keeps its retry budget per failure, not per listener', async () => {
@@ -2069,7 +2061,7 @@ it('keeps its retry budget per failure, not per listener', async () => {
     createSharedListener as unknown as () => {events: Subject<ListenEvent<SanityDocument>>}
   )()
   // more failure streaks than the budget, each one recovering in between
-  for (let attempt = 0; attempt < READ_RETRY_COUNT + 2; attempt++) {
+  for (let attempt = 0; attempt < OUT_OF_SYNC_RETRY_COUNT + 2; attempt++) {
     const seen = calls
     sharedListener.events.next({type: 'reset'})
     await vi.waitFor(() => expect(calls).toBeGreaterThan(seen + 1))
