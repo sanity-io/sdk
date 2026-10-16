@@ -1074,18 +1074,36 @@ it('retries transient dataset ACL fetch failures instead of failing fatally', as
   expect(() => documentState.getCurrent()).not.toThrow()
 })
 
-it('does not retry dataset ACL fetch failures caused by 4xx client errors', async () => {
+it('fetches the dataset ACL only once the client has credentials', async () => {
+  const datasetAcl = [{filter: 'true', permissions: ['read', 'update', 'create', 'history']}]
+  client.observable.request = vi.fn().mockReturnValue(of(datasetAcl))
+  const client$ = (getClientState as () => StateSource<SanityClient>)()
+    .observable as ReplaySubject<SanityClient>
+  client$.next({...client, config: () => ({})} as SanityClient)
+
+  const doc = createDocumentHandle({documentId: randomUuid(), documentType: 'article'})
+  const permissions = resolvePermissions(instance, {actions: [createDocument(doc)]})
+  expect(client.observable.request).not.toHaveBeenCalled()
+
+  client$.next(client)
+
+  await expect(permissions).resolves.toEqual({allowed: true})
+})
+
+it('surfaces a dataset ACL 403 and refetches the ACL once the token changes', async () => {
   const forbidden = new ClientError({
     statusCode: 403,
     headers: {},
     body: {error: 'Forbidden', message: 'Session does not have access to this dataset'},
   })
+  const datasetAcl = [{filter: 'true', permissions: ['read', 'update', 'create', 'history']}]
 
+  let hasAccess = false
   let aclAttempts = 0
   client.observable.request = vi.fn().mockReturnValue(
     defer(() => {
       aclAttempts++
-      return throwError(() => forbidden)
+      return hasAccess ? of(datasetAcl) : throwError(() => forbidden)
     }),
   )
 
@@ -1093,13 +1111,20 @@ it('does not retry dataset ACL fetch failures caused by 4xx client errors', asyn
   const documentState = getDocumentState(instance, doc)
   const unsubscribe = documentState.subscribe()
 
-  // the error is fatal: it surfaces through the store instead of being retried
   await vi.waitFor(() => {
     expect(() => documentState.getCurrent()).toThrow(
       'Forbidden - Session does not have access to this dataset',
     )
   })
   expect(aclAttempts).toBe(1)
+
+  hasAccess = true
+  const client$ = (getClientState as () => StateSource<SanityClient>)()
+    .observable as ReplaySubject<SanityClient>
+  client$.next({...client} as SanityClient)
+
+  await vi.waitFor(() => expect(() => documentState.getCurrent()).not.toThrow())
+  expect(aclAttempts).toBe(2)
 
   unsubscribe()
 })
@@ -1458,8 +1483,6 @@ vi.mock('./documentConstants.ts', async (importOriginal) => {
     OUT_OF_SYNC_RETRY_BASE_DELAY: 0,
     OUT_OF_SYNC_RETRY_MAX_DELAY: 0,
     OUT_OF_SYNC_RETRY_COUNT: 2,
-    ACL_RETRY_BASE_DELAY: 0,
-    ACL_RETRY_MAX_DELAY: 0,
     get SUBMISSION_RETRY_BASE_DELAY() {
       return submissionRetryDelay.ms
     },
@@ -1861,6 +1884,7 @@ beforeEach(() => {
     action,
     fetch,
     request,
+    config: () => ({token: 'token'}),
     observable: {
       action: (...args: Parameters<typeof action>) => from(action(...args)),
       fetch: (...args: Parameters<typeof fetch>) => from(fetch(...args)),
@@ -1878,9 +1902,11 @@ it('resolves a readable document while another in the same dataset is inaccessib
   vi.mocked(createFetchDocument).mockReturnValue(
     vi.fn((id) =>
       (id === blockedId
-        ? throwError(
-            () =>
+        ? throwError(() =>
+            Object.assign(
               new Error(`Document with ID \`${blockedId}\` is inaccessible due to permissions.`),
+              {statusCode: 403},
+            ),
           )
         : of({_id: id, _type: 'article', _rev: 'rev-1'} as SanityDocument)
       ).pipe(delay(0)),
@@ -1908,6 +1934,39 @@ it('resolves a readable document while another in the same dataset is inaccessib
 
   unsubscribeReadable()
   unsubscribeBlocked()
+})
+
+it('reloads a document it could not read once the token changes', async () => {
+  const documentId = DocumentId('doc-readable-after-token-change')
+  let canRead = false
+  vi.mocked(createFetchDocument).mockReturnValue(
+    vi.fn((id) =>
+      (canRead
+        ? of({_id: id, _type: 'article', _rev: 'rev-1'} as SanityDocument)
+        : throwError(() =>
+            Object.assign(
+              new Error(`Document with ID \`${id}\` is inaccessible due to permissions.`),
+              {statusCode: 403},
+            ),
+          )
+      ).pipe(delay(0)),
+    ),
+  )
+
+  const doc = createDocumentHandle({documentId, documentType: 'article', liveEdit: true})
+  const documentState = getDocumentState<TestDocument>(instance, doc)
+  await expect(
+    firstValueFrom(documentState.observable.pipe(first((value) => value !== undefined))),
+  ).rejects.toThrow('inaccessible due to permissions')
+
+  canRead = true
+  const client$ = (getClientState as () => StateSource<SanityClient>)()
+    .observable as ReplaySubject<SanityClient>
+  client$.next({...client} as SanityClient)
+
+  await vi.waitFor(() => expect(documentState.getCurrent()).toMatchObject({_id: documentId}), {
+    interval: 1,
+  })
 })
 
 it('reports an inaccessible draft to the document that reads it', async () => {
@@ -2003,7 +2062,7 @@ it('fails a release action whose release document cannot be read', async () => {
   ).rejects.toThrow(message)
 })
 
-it('gives up on a read that keeps failing rather than loading forever', async () => {
+it('surfaces a read that keeps failing once its retry budget runs out', async () => {
   const documentId = DocumentId('doc-with-failing-read')
   const draftId = getDraftId(documentId)
   let attempts = 0
