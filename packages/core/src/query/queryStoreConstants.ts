@@ -11,5 +11,5 @@ import {UPSTREAM_CLOSE_DELAY_MS} from '../store/createStoreInstance'
  * connection reopens, so a result kept past the close would miss live events.
  */
 export const QUERY_STATE_CLEAR_DELAY = UPSTREAM_CLOSE_DELAY_MS
-export const QUERY_STORE_API_VERSION = 'v2025-05-06'
+export const QUERY_STORE_API_VERSION = 'vX'
 export const QUERY_STORE_DEFAULT_PERSPECTIVE = 'drafts'

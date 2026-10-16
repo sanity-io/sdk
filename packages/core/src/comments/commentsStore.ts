@@ -99,6 +99,7 @@ export function getCommentsOptionsKey(options: CommentsOptions): string {
     dataset: options.dataset,
     resource: options.resource,
     perspective: options.perspective,
+    variant: options.variant,
     fieldPath: options.fieldPath === undefined ? undefined : toCommentFieldPath(options.fieldPath),
     status: options.status,
     // The `Record` half makes a new field on `CommentsOptions` a compile

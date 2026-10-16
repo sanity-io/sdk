@@ -123,6 +123,7 @@ export {
   type SanityConfig,
   type StudioConfig,
   type TokenSource,
+  type VariantHandle,
 } from '../config/sanityConfig'
 export {getDashboardOrganizationId} from '../dashboard/messageBus/topicStore'
 export {datasets} from '../datasets/datasets'
@@ -165,6 +166,7 @@ export {
   applyDocumentActions,
   type ApplyDocumentActionsOptions,
 } from '../document/applyDocumentActions'
+export {getDocumentKey, isUnknownDocumentId, type UnknownDocumentId} from '../document/documentKey'
 export {
   type DocumentOptions,
   getDocumentState,
@@ -261,7 +263,12 @@ export {getActiveReleasesState, getAllReleasesState} from '../releases/releasesS
 export {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 export {type Selector, type StateSource} from '../store/createStateSourceAction'
 export {defineProjection} from '../typegen/defineProjection'
-export type {ResolveDocument, ResolveProjectionResult, ResolveQueryResult} from '../typegen/resolve'
+export type {
+  DocumentValue,
+  ResolveDocument,
+  ResolveProjectionResult,
+  ResolveQueryResult,
+} from '../typegen/resolve'
 export {
   type GetUserOptions,
   type GetUsersOptions,

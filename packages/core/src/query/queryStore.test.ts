@@ -16,7 +16,7 @@ import {isCanvasResource} from '../config/sanityConfig'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {type StateSource} from '../store/createStateSourceAction'
 import {UPSTREAM_CLOSE_DELAY_MS} from '../store/createStoreInstance'
-import {getQueryState, resolveQuery} from './queryStore'
+import {getQueryKey, getQueryState, resolveQuery} from './queryStore'
 import {QUERY_STATE_CLEAR_DELAY} from './queryStoreConstants'
 
 vi.mock('../client/clientStore', () => ({
@@ -699,6 +699,65 @@ describe('queryStore', () => {
     unsubPublished()
 
     base.dispose()
+  })
+
+  it('separates cache entries by variant and forwards it to the client', async () => {
+    vi.mocked(fetch).mockImplementation(((_query, _params, options) => {
+      const variant = (options as {variant?: string})?.variant
+      const result = variant ? [{_id: variant}] : [{_id: 'base'}]
+      return of({result, syncTags: []}).pipe(delay(0)) as unknown as ReturnType<
+        SanityClient['observable']['fetch']
+      >
+    }) as SanityClient['observable']['fetch'])
+
+    const base = createSanityInstance({projectId: 'test', dataset: 'test'})
+    const query = '*[_type == "movie"]'
+
+    const baseState = getQueryState<{_id: string}[]>(base, {query})
+    const frenchState = getQueryState<{_id: string}[]>(base, {query, variant: 'french'})
+    const germanState = getQueryState<{_id: string}[]>(base, {query, variant: 'german'})
+
+    const unsubscribes = [baseState.subscribe(), frenchState.subscribe(), germanState.subscribe()]
+
+    const [baseResult, frenchResult, germanResult] = await advanceAndAwait(
+      Promise.all(
+        [baseState, frenchState, germanState].map((queryState) =>
+          firstValueFrom(queryState.observable.pipe(filter((result) => result !== undefined))),
+        ),
+      ),
+    )
+
+    expect(baseResult).toEqual([{_id: 'base'}])
+    expect(frenchResult).toEqual([{_id: 'french'}])
+    expect(germanResult).toEqual([{_id: 'german'}])
+    expect(fetch).toHaveBeenCalledWith(
+      query,
+      undefined,
+      expect.objectContaining({variant: 'french'}),
+    )
+    expect(fetch).toHaveBeenCalledWith(
+      query,
+      undefined,
+      expect.objectContaining({variant: 'german'}),
+    )
+
+    unsubscribes.forEach((unsubscribe) => unsubscribe())
+    base.dispose()
+  })
+
+  it('falls back to the instance variant and omits the key when there is none', () => {
+    const base = createSanityInstance({projectId: 'test', dataset: 'test'})
+    const french = createSanityInstance({projectId: 'test', dataset: 'test', variant: 'french'})
+    const query = '*[_type == "movie"]'
+
+    expect(JSON.parse(getQueryKey(base, {query}))).not.toHaveProperty('variant')
+    expect(JSON.parse(getQueryKey(french, {query}))).toMatchObject({variant: 'french'})
+    expect(JSON.parse(getQueryKey(french, {query, variant: 'german'}))).toMatchObject({
+      variant: 'german',
+    })
+
+    base.dispose()
+    french.dispose()
   })
 
   it('uses resource from params when passed in query options (listenForNewSubscribersAndFetch)', async () => {

@@ -316,7 +316,7 @@ export function usePaginatedDocuments<
         ...(options.resource && isDatasetResource(options.resource)
           ? pickProperties(options.resource, ['projectId', 'dataset'])
           : {}),
-        ...pickProperties(options, ['perspective', 'resource']),
+        ...pickProperties(options, ['perspective', 'variant', 'resource']),
       },
     },
   })

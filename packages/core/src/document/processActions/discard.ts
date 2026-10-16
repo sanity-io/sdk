@@ -11,6 +11,7 @@ import {
   checkGrant,
   PermissionActionError,
 } from './shared'
+import {handleVariantDiscard, isVariantAction} from './variant'
 
 export function handleDiscard(
   action: DiscardDocumentAction,
@@ -18,6 +19,8 @@ export function handleDiscard(
 ): ActionHandlerResult {
   const {transactionId, timestamp, grants, identity, outgoingActions, outgoingMutations} = ctx
   let {base, working} = ctx
+
+  if (isVariantAction(action)) return handleVariantDiscard(action, ctx)
 
   const documentId = getId(action.documentId)
 

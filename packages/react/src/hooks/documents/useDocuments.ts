@@ -22,7 +22,9 @@ export interface DocumentsOptions<
   TDataset extends string = string,
   TProjectId extends string = string,
 >
-  extends ResourceHandle<TDataset, TProjectId>, Pick<QueryOptions, 'perspective' | 'params'> {
+  extends
+    ResourceHandle<TDataset, TProjectId>,
+    Pick<QueryOptions, 'perspective' | 'variant' | 'params'> {
   /**
    * Filter documents by their `_type`. Can be a single type or an array of types.
    */
@@ -288,7 +290,7 @@ export function useDocuments<
         ...(options.resource && isDatasetResource(options.resource)
           ? pickProperties(options.resource, ['projectId', 'dataset'])
           : {}),
-        ...pickProperties(options, ['perspective', 'resource']),
+        ...pickProperties(options, ['perspective', 'variant', 'resource']),
       },
       __types: documentTypes,
     },

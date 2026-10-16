@@ -15,6 +15,7 @@ import {
   PermissionActionError,
   preserveNumericOperations,
 } from './shared'
+import {handleVariantEdit, isVariantAction} from './variant'
 
 export function handleEdit(
   action: EditDocumentAction,
@@ -22,6 +23,8 @@ export function handleEdit(
 ): ActionHandlerResult {
   const {transactionId, timestamp, grants, identity, outgoingActions, outgoingMutations} = ctx
   let {base, working} = ctx
+
+  if (isVariantAction(action)) return handleVariantEdit(action, ctx)
 
   const documentId = getId(action.documentId)
 

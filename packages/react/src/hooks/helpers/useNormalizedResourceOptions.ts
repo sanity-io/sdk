@@ -5,6 +5,7 @@ import {ResourceContext} from '../../context/DefaultResourceContext'
 import {PerspectiveContext} from '../../context/PerspectiveContext'
 import {ResourcesContext} from '../../context/ResourcesContext'
 import {SanityInstanceContext} from '../../context/SanityInstanceContext'
+import {VariantContext} from '../../context/VariantContext'
 
 type NormalizedResourceFields = 'resourceName' | 'projectId' | 'dataset'
 
@@ -36,6 +37,7 @@ export type WithResourceNameSupport<T extends {resource?: DocumentResource}> = T
  * @param resources - Map of resource names to DocumentResource (e.g. from ResourcesContext)
  * @param contextResource - Resource from context (from ResourceContext)
  * @param contextPerspective - Perspective from context (from PerspectiveContext)
+ * @param contextVariant - Variant from context (from VariantContext)
  * @returns Normalized options with `resourceName` removed and `resource` resolved
  * @internal
  */
@@ -46,12 +48,14 @@ export function normalizeResourceOptions<
     projectId?: string
     dataset?: string
     perspective?: unknown
+    variant?: unknown
   },
 >(
   options: T,
   resources: Record<string, DocumentResource>,
   contextResource?: DocumentResource,
   contextPerspective?: PerspectiveHandle['perspective'],
+  contextVariant?: string,
 ): Omit<T, NormalizedResourceFields> {
   const {resourceName, projectId, dataset, ...rest} = options
   const resource = options.resource
@@ -89,15 +93,19 @@ export function normalizeResourceOptions<
     resolvedResource = contextResource
   }
 
-  // Inject perspective from context when not explicitly provided in options
+  // Inject perspective and variant from context when not explicitly provided
+  // in options. An explicit `undefined` counts as provided and suppresses the
+  // context value.
   const resolvedPerspective = Object.hasOwn(options, 'perspective')
     ? options.perspective
     : contextPerspective
+  const resolvedVariant = Object.hasOwn(options, 'variant') ? options.variant : contextVariant
 
   return {
     ...rest,
     ...(resolvedResource !== undefined && {resource: resolvedResource}),
     ...(resolvedPerspective !== undefined && {perspective: resolvedPerspective}),
+    ...(resolvedVariant !== undefined && {variant: resolvedVariant}),
   }
 }
 
@@ -130,9 +138,9 @@ export function useEffectiveContextResource(): DocumentResource | undefined {
  * 3. `ResourceContext` value (set by `ResourceProvider` / `SDKProvider`)
  * 4. Current `SanityInstance` config — falls back to `undefined` for studio configs
  *
- * Resolution priority for perspective:
- * 1. Explicit `perspective` in options
- * 2. `PerspectiveContext` value (set by `ResourceProvider`)
+ * Resolution priority for perspective and variant:
+ * 1. Explicit `perspective` / `variant` in options
+ * 2. `PerspectiveContext` / `VariantContext` value (set by `ResourceProvider`)
  *
  * @internal
  */
@@ -143,16 +151,25 @@ export function useNormalizedResourceOptions<
     projectId?: string
     dataset?: string
     perspective?: PerspectiveHandle['perspective']
+    variant?: string
   },
 >(
   options: T,
 ): Omit<T, NormalizedResourceFields> & {
   resource?: DocumentResource
   perspective?: PerspectiveHandle['perspective']
+  variant?: string
 } {
   const resources = useContext(ResourcesContext)
   const effectiveContextResource = useEffectiveContextResource()
   const contextPerspective = useContext(PerspectiveContext)
+  const contextVariant = useContext(VariantContext)
 
-  return normalizeResourceOptions(options, resources, effectiveContextResource, contextPerspective)
+  return normalizeResourceOptions(
+    options,
+    resources,
+    effectiveContextResource,
+    contextPerspective,
+    contextVariant,
+  )
 }

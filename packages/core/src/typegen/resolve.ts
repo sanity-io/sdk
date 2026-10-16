@@ -147,6 +147,18 @@ export type ResolveDocument<
       | SanityDocument<TDocumentType, TSchemaId>
 
 /**
+ * A document as SDK returns it to consumers. `_id` is optional: a variant
+ * created locally has no id until Content Lake announces it, and SDK does not
+ * otherwise signal that a document is pending creation. Key documents with
+ * `getDocumentKey` rather than `_id`.
+ *
+ * @beta
+ */
+export type DocumentValue<SourceDocument> = SourceDocument extends unknown
+  ? {[Key in keyof SourceDocument as Exclude<Key, '_id'>]: SourceDocument[Key]} & {_id?: string}
+  : never
+
+/**
  * Resolves a query result for one resource, selected by the exact query text.
  *
  * A key known only as a pattern gets the union of the query's result across the registered
