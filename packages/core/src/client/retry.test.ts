@@ -8,13 +8,12 @@ import {
 import {BehaviorSubject, defer, of, throwError} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
-import {hasCredentials, retryRead} from './readRetry'
-import {READ_RETRY_COUNT, READ_RETRY_MAX_DELAY} from './readRetryConstants'
+import {OUT_OF_SYNC_RETRY_COUNT, OUT_OF_SYNC_RETRY_MAX_DELAY} from '../document/documentConstants'
+import {hasCredentials, retryRead} from './retry'
 
 const createClient = (config: object = {token: 'token'}) => ({config: () => config}) as SanityClient
 const clientError = (statusCode: number) => new ClientError({statusCode, headers: {}, body: {}})
 
-// a read that fails with each of `failures` in turn, then succeeds
 function startRead(failures: unknown[]) {
   const clients = new BehaviorSubject(createClient())
   const setError = vi.fn()
@@ -46,7 +45,7 @@ describe('retryRead', () => {
     const read = startRead([error])
     expect(read.values).toEqual([])
 
-    await vi.advanceTimersByTimeAsync(READ_RETRY_MAX_DELAY)
+    await vi.advanceTimersByTimeAsync(OUT_OF_SYNC_RETRY_MAX_DELAY)
 
     expect(read.values).toEqual(['ok'])
     expect(read.setError).not.toHaveBeenCalled()
@@ -62,7 +61,7 @@ describe('retryRead', () => {
     const read = startRead([error])
     expect(read.setError).toHaveBeenCalledWith(error)
 
-    await vi.advanceTimersByTimeAsync(READ_RETRY_MAX_DELAY * 10)
+    await vi.advanceTimersByTimeAsync(OUT_OF_SYNC_RETRY_MAX_DELAY * 10)
     expect(read.attempts()).toBe(1)
 
     read.clients.next(createClient())
@@ -73,9 +72,9 @@ describe('retryRead', () => {
 
   it('reports a transient failure that outlasts its retries, then clears it on recovery', async () => {
     const error = new ServerError({statusCode: 503, headers: {}, body: {}})
-    const read = startRead(Array.from({length: READ_RETRY_COUNT + 1}, () => error))
+    const read = startRead(Array.from({length: OUT_OF_SYNC_RETRY_COUNT + 1}, () => error))
 
-    await vi.advanceTimersByTimeAsync(READ_RETRY_MAX_DELAY * (READ_RETRY_COUNT + 1))
+    await vi.advanceTimersByTimeAsync(OUT_OF_SYNC_RETRY_MAX_DELAY * (OUT_OF_SYNC_RETRY_COUNT + 1))
 
     expect(read.setError.mock.calls).toEqual([[error], [undefined]])
     expect(read.values).toEqual(['ok'])

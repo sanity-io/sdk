@@ -15,7 +15,7 @@ import {
 } from 'rxjs'
 
 import {getClientState} from '../client/clientStore'
-import {hasCredentials} from '../client/readRetry'
+import {hasCredentials} from '../client/retry'
 import {type DocumentResource} from '../config/sanityConfig'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {UPSTREAM_CLOSE_DELAY_MS} from '../store/createStoreInstance'
@@ -110,7 +110,7 @@ export function createFetchDocument(instance: SanityInstance, resource?: Documen
       map((result) => {
         if (!result.accessible) {
           if (result.reason === 'existence') return null
-          // the status makes `retryRead` wait for new credentials instead of a timer
+          // lets `retryRead` wait for new credentials instead of retrying on a timer
           throw Object.assign(
             new Error(`Document with ID \`${documentId}\` is inaccessible due to permissions.`),
             {statusCode: 403},

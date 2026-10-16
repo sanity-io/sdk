@@ -11,7 +11,11 @@ import {
   timer,
 } from 'rxjs'
 
-import {READ_RETRY_BASE_DELAY, READ_RETRY_COUNT, READ_RETRY_MAX_DELAY} from './readRetryConstants'
+import {
+  OUT_OF_SYNC_RETRY_BASE_DELAY,
+  OUT_OF_SYNC_RETRY_COUNT,
+  OUT_OF_SYNC_RETRY_MAX_DELAY,
+} from '../document/documentConstants'
 
 function getStatusCode(error: unknown): number | undefined {
   if (error instanceof ConnectionFailedError) return error.status
@@ -21,8 +25,7 @@ function getStatusCode(error: unknown): number | undefined {
   return undefined
 }
 
-// unknown failures (network errors, timeouts, dropped listeners) count as
-// transient, like in `classifySubmissionError`
+// unknown failures (network errors, timeouts) count as transient, as in `classifySubmissionError`
 function isTransient(error: unknown): boolean {
   if (error instanceof CorsOriginError) return false
   const statusCode = getStatusCode(error)
@@ -30,7 +33,7 @@ function isTransient(error: unknown): boolean {
 }
 
 /**
- * Whether requests made with `client` are authenticated, by token or by cookie.
+ * Whether `client` sends a token or cookie credentials.
  *
  * @internal
  */
@@ -40,19 +43,8 @@ export function hasCredentials(client: SanityClient): boolean {
 }
 
 /**
- * Retries a failed read until it succeeds:
- *
- * - transient failures (network errors, 408, 429, 5xx) retry with backoff
- * - any other failure, such as a 401 or 403, retries once the credentials
- *   change, because the same request with the same token fails the same way
- *
- * Both retry right away when `clients` emits a new client, which the client
- * store does whenever the token changes. `clients` must emit its current
- * client on subscribe, like `getClientState(...).observable`.
- *
- * `setError` receives a failure as soon as it needs a new token, or once
- * transient retries exceed {@link READ_RETRY_COUNT}, and `undefined` when the
- * read recovers.
+ * Retries transient failures after a backoff and any other failure once `clients` emits a new
+ * client. `setError` receives `undefined` once the read recovers.
  *
  * @internal
  */
@@ -75,18 +67,19 @@ export function retryRead<T>(
           delay: (error: unknown, retryCount) => {
             const transient = isTransient(error)
 
-            if (!transient || retryCount > READ_RETRY_COUNT) {
+            if (!transient || retryCount > OUT_OF_SYNC_RETRY_COUNT) {
               failing = true
               setError(error)
             }
 
+            // skips the current client, which `clients` replays on subscribe
             const nextClient = clients.pipe(skip(1), take(1))
 
             if (!transient) return nextClient
 
             const backoff = Math.min(
-              READ_RETRY_BASE_DELAY * 2 ** (retryCount - 1),
-              READ_RETRY_MAX_DELAY,
+              OUT_OF_SYNC_RETRY_BASE_DELAY * 2 ** (retryCount - 1),
+              OUT_OF_SYNC_RETRY_MAX_DELAY,
             )
 
             return race(timer(backoff), nextClient)
