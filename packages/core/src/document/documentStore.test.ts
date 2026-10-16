@@ -1936,6 +1936,39 @@ it('resolves a readable document while another in the same dataset is inaccessib
   unsubscribeBlocked()
 })
 
+it('reloads a document it could not read once the token changes', async () => {
+  const documentId = DocumentId('doc-readable-after-token-change')
+  let canRead = false
+  vi.mocked(createFetchDocument).mockReturnValue(
+    vi.fn((id) =>
+      (canRead
+        ? of({_id: id, _type: 'article', _rev: 'rev-1'} as SanityDocument)
+        : throwError(() =>
+            Object.assign(
+              new Error(`Document with ID \`${id}\` is inaccessible due to permissions.`),
+              {statusCode: 403},
+            ),
+          )
+      ).pipe(delay(0)),
+    ),
+  )
+
+  const doc = createDocumentHandle({documentId, documentType: 'article', liveEdit: true})
+  const documentState = getDocumentState<TestDocument>(instance, doc)
+  await expect(
+    firstValueFrom(documentState.observable.pipe(first((value) => value !== undefined))),
+  ).rejects.toThrow('inaccessible due to permissions')
+
+  canRead = true
+  const client$ = (getClientState as () => StateSource<SanityClient>)()
+    .observable as ReplaySubject<SanityClient>
+  client$.next({...client} as SanityClient)
+
+  await vi.waitFor(() => expect(documentState.getCurrent()).toMatchObject({_id: documentId}), {
+    interval: 1,
+  })
+})
+
 it('reports an inaccessible draft to the document that reads it', async () => {
   const documentId = DocumentId('doc-with-blocked-draft')
   const draftId = getDraftId(documentId)
