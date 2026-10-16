@@ -1,5 +1,15 @@
 # Changelog
 
+## 3.10.0
+
+### Minor Changes
+
+- [#1412](https://github.com/sanity-io/sdk/pull/1412) [`7c3bf20`](https://github.com/sanity-io/sdk/commit/7c3bf206667386a21943088c749aabe2938dd359) Thanks [@gu-stav](https://github.com/gu-stav)! - Add the `applications.reload` dashboard topic, so an application can ask the dashboard to reload it with its latest code without reloading the dashboard.
+
+- [#1406](https://github.com/sanity-io/sdk/pull/1406) [`4f6e947`](https://github.com/sanity-io/sdk/commit/4f6e9473e73f0aec7365233d1175d6e1b2bf9756) Thanks [@joshuaellis](https://github.com/joshuaellis)! - The `application` fetcher and `useApplication` accept an `organizationId`, so an application can be looked up by its slug, which is only unique within an organization.
+
+- [#1416](https://github.com/sanity-io/sdk/pull/1416) [`dd2a1ae`](https://github.com/sanity-io/sdk/commit/dd2a1ae6a6e49a321f3b06e0bc066f6d4b06365f) Thanks [@joshuaellis](https://github.com/joshuaellis)! - A dashboard view can post to its application's workers and listen to their messages with `useWorker`. On a topic only the dashboard can answer, an application now receives only its own application's events.
+
 ## 3.9.1
 
 ### Patch Changes
