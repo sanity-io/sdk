@@ -31,7 +31,6 @@ test('Organizations — list items expose the documented subset of keys', () => 
     | 'id'
     | 'name'
     | 'slug'
-    | 'logoUrl'
     | 'createdAt'
     | 'updatedAt'
     | 'defaultRoleName'
