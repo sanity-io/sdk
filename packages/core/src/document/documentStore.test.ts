@@ -1074,6 +1074,22 @@ it('retries transient dataset ACL fetch failures instead of failing fatally', as
   expect(() => documentState.getCurrent()).not.toThrow()
 })
 
+it('fetches the dataset ACL only once the client has credentials', async () => {
+  const datasetAcl = [{filter: 'true', permissions: ['read', 'update', 'create', 'history']}]
+  client.observable.request = vi.fn().mockReturnValue(of(datasetAcl))
+  const client$ = (getClientState as () => StateSource<SanityClient>)()
+    .observable as ReplaySubject<SanityClient>
+  client$.next({...client, config: () => ({})} as SanityClient)
+
+  const doc = createDocumentHandle({documentId: randomUuid(), documentType: 'article'})
+  const permissions = resolvePermissions(instance, {actions: [createDocument(doc)]})
+  expect(client.observable.request).not.toHaveBeenCalled()
+
+  client$.next(client)
+
+  await expect(permissions).resolves.toEqual({allowed: true})
+})
+
 it('surfaces a dataset ACL 403 and refetches the ACL once the token changes', async () => {
   const forbidden = new ClientError({
     statusCode: 403,
