@@ -247,6 +247,14 @@ export interface DashboardTopics {
   'applications.list': StateTopicDef<TopicResult<
     (Application<ApplicationInclude> | LocalApplication | Installation<InstallationInclude>)[]
   > | null>
+  /**
+   * Asks the dashboard to reload the sending application with its latest code, without reloading
+   * the dashboard. Replies before the application is unmounted.
+   *
+   * `ok: false` reasons:
+   * - `unsupported`: the dashboard can't reload the sending application
+   */
+  'applications.reload': EventTopicDef<void, {ok: true} | {ok: false; reason: 'unsupported'}>
   'applications.status.update': EventTopicDef<ApplicationStatusUpdate>
   /**
    * The session token for the reading connection, or `null` while signed out. The host
@@ -363,6 +371,7 @@ export const DASHBOARD_TOPIC_MANIFEST: DashboardTopicManifest = {
   'applications.context.update': dashboardEvent,
   'applications.foreground': stateTopic(undefined),
   'applications.list': stateTopic(undefined),
+  'applications.reload': dashboardEvent,
   'applications.status.update': dashboardEvent,
   'auth.token': stateTopic(undefined),
   'auth.token.refresh': dashboardEvent,
