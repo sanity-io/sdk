@@ -120,7 +120,7 @@ function Mentions({userId}: {userId: string}) {
 
 Suspense, `isPending`, and `error` work the same as in `useCommentThreads`.
 
-Writes show here before the server confirms them, the same as they do on a document's comments: the filter is matched against the written comment locally, so a new comment that answers it appears straight away. Two kinds of filter cannot be answered that way — one that dereferences with `->`, and one that runs a `*[...]` of its own, since neither can be evaluated against a single comment. Those still work and still stay up to date, but only once the server says so, and they cost a connection of their own rather than sharing the one every other list reads from.
+Writes show here before the server confirms them, the same as they do on a document's comments: the filter is matched against the written comment locally, so a new comment that answers it appears straight away. Some filters cannot be answered that way, since they need more than the one comment to evaluate: one that dereferences with `->`, one that runs a `*[...]` of its own, and one that calls a context-dependent function such as `sanity::dataset()`, `releases::all()` or `now()`. Those still work and still stay up to date, but only once the server says so, and they cost a connection of their own rather than sharing the one every other list reads from.
 
 ## Writing comments
 

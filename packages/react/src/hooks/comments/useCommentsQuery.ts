@@ -56,8 +56,9 @@ const SOURCE: CommentListSource<CommentsQueryOptions, Comment[]> = {
  * Writes show here before the server confirms them, the same as they do on a
  * document's comments, because the filter is matched against the written
  * comment locally. A filter that cannot be answered that way — one that
- * dereferences, or runs a `*[...]` of its own — still works, but only follows
- * the server, and costs a connection of its own rather than sharing one.
+ * dereferences, runs a `*[...]` of its own, or calls a context-dependent
+ * function such as `sanity::dataset()` or `now()` — still works, but only
+ * follows the server, and costs a connection of its own rather than sharing one.
  *
  * @category Comments
  * @function
