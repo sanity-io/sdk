@@ -250,7 +250,7 @@ describe('getCommentThreadsState', () => {
     )
   })
 
-  it('opens one listener for the organization rather than one per list', () => {
+  it('opens one listener for the resource rather than one per list', () => {
     getCommentThreadsState(instance, HANDLE).subscribe()
     getCommentThreadsState(instance, {...HANDLE, documentId: 'doc-2'}).subscribe()
     getCommentsQueryState(instance, {filter: 'status == "open"'}).subscribe()
