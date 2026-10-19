@@ -1,9 +1,8 @@
-import {type SanityUser as SanityUserFromClient} from '@sanity/client'
+import {type SanityClient, type SanityUser as SanityUserFromClient} from '@sanity/client'
 import {createSelector} from 'reselect'
 import {
   catchError,
   combineLatest,
-  defer,
   distinctUntilChanged,
   EMPTY,
   filter,
@@ -24,7 +23,7 @@ import {
   withLatestFrom,
 } from 'rxjs'
 
-import {getClient, getClientState} from '../client/clientStore'
+import {getClientState} from '../client/clientStore'
 import {retryRead} from '../client/retry'
 import {getDashboardOrganizationId} from '../dashboard/messageBus/topicStore'
 import {bindActionGlobally} from '../store/createActionBinder'
@@ -130,16 +129,16 @@ const listenForLoadMoreAndFetch = ({state, instance}: StoreContext<UsersStoreSta
                   useProjectHostname: true,
                 }
 
-                return defer(() =>
-                  getClient(
-                    instance,
-                    clientOptions,
-                  ).observable.request<PatchedSanityUserFromClient>({
-                    method: 'GET',
-                    url: `/users/${userId}`,
-                    tag: 'users.get',
-                  }),
-                ).pipe(
+                const client$ = getClientState(instance, clientOptions).observable
+
+                return client$.pipe(
+                  switchMap((client) =>
+                    client.observable.request<PatchedSanityUserFromClient>({
+                      method: 'GET',
+                      url: `/users/${userId}`,
+                      tag: 'users.get',
+                    }),
+                  ),
                   map((user) => {
                     // We need to convert the user to the format we expect
                     const convertedUser: SanityUser = {
@@ -165,14 +164,16 @@ const listenForLoadMoreAndFetch = ({state, instance}: StoreContext<UsersStoreSta
                       nextCursor: null,
                     }
                   }),
-                  retryRead(getClientState(instance, clientOptions).observable, setError),
-                  tap((response) => state.set('setUsersData', setUsersData(group$.key, response))),
+                  retryRead(client$, setError),
+                  tap((response) =>
+                    state.set('setUsersData', setUsersData(group$.key, response, true)),
+                  ),
                 )
               }
 
               // Fetch the user from the global API
               const scope = userId.startsWith('g') ? ('global' as const) : undefined
-              const clientOptions = {scope, apiVersion: API_VERSION}
+              const client$ = getClientState(instance, {scope, apiVersion: API_VERSION}).observable
               const resourceType = options.resourceType || 'project'
               const resourceId =
                 resourceType === 'organization' ? options.organizationId : options.projectId
@@ -181,15 +182,14 @@ const listenForLoadMoreAndFetch = ({state, instance}: StoreContext<UsersStoreSta
                 return EMPTY
               }
 
-              return defer(() =>
-                getClient(instance, clientOptions).observable.request<
-                  SanityUser | SanityUserResponse
-                >({
-                  method: 'GET',
-                  url: `access/${resourceType}/${resourceId}/users/${userId}`,
-                  tag: 'users.get',
-                }),
-              ).pipe(
+              return client$.pipe(
+                switchMap((client) =>
+                  client.observable.request<SanityUser | SanityUserResponse>({
+                    method: 'GET',
+                    url: `access/${resourceType}/${resourceId}/users/${userId}`,
+                    tag: 'users.get',
+                  }),
+                ),
                 map((response) => {
                   // If the response is a single user object (has sanityUserId), wrap it in the expected format
                   if ('sanityUserId' in response) {
@@ -201,8 +201,10 @@ const listenForLoadMoreAndFetch = ({state, instance}: StoreContext<UsersStoreSta
                   }
                   return response as SanityUserResponse
                 }),
-                retryRead(getClientState(instance, clientOptions).observable, setError),
-                tap((response) => state.set('setUsersData', setUsersData(group$.key, response))),
+                retryRead(client$, setError),
+                tap((response) =>
+                  state.set('setUsersData', setUsersData(group$.key, response, true)),
+                ),
               )
             }
             const projectId = options.projectId
@@ -250,20 +252,30 @@ const listenForLoadMoreAndFetch = ({state, instance}: StoreContext<UsersStoreSta
               filter((cursor) => cursor !== null),
             )
 
+            let dataClient: SanityClient | undefined
+
             return combineLatest([resource$, client$, loadMore$]).pipe(
               withLatestFrom(cursor$),
-              switchMap(([[resource, client], cursor]) =>
-                client.observable.request<SanityUserResponse>({
-                  method: 'GET',
-                  url: `access/${resource.type}/${resource.id}/users`,
-                  tag: 'users.list',
-                  query: cursor
-                    ? {nextCursor: cursor, limit: batchSize.toString()}
-                    : {limit: batchSize.toString()},
-                }),
-              ),
+              switchMap(([[resource, client], cursor]) => {
+                const fresh = client !== dataClient
+
+                return client.observable
+                  .request<SanityUserResponse>({
+                    method: 'GET',
+                    url: `access/${resource.type}/${resource.id}/users`,
+                    tag: 'users.list',
+                    query:
+                      cursor && !fresh
+                        ? {nextCursor: cursor, limit: batchSize.toString()}
+                        : {limit: batchSize.toString()},
+                  })
+                  .pipe(map((response) => ({client, fresh, response})))
+              }),
               retryRead(client$, setError),
-              tap((response) => state.set('setUsersData', setUsersData(group$.key, response))),
+              tap(({client, fresh, response}) => {
+                dataClient = client
+                state.set('setUsersData', setUsersData(group$.key, response, fresh))
+              }),
             )
           }),
         ),
