@@ -30,6 +30,11 @@ export type CommentsMatcher = (
   identity: string | undefined,
 ) => CommentsMatch
 
+/**
+ * Functions safe to answer against a single comment. Add only functions whose
+ * result depends solely on their arguments and `@`, never on the dataset, the
+ * clock, releases or any other context the local evaluation does not have.
+ */
 const PURE_FUNCTIONS = new Set([
   'global::coalesce',
   'global::count',

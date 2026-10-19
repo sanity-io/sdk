@@ -79,20 +79,24 @@ export function getSharedCommentsListener(
   const resourceKey = toCommentsResourceKey(resource)
   return observeCommentsOrganizationId(instance, resource).pipe(
     switchMap((organizationId) => {
+      // The organization is part of the key so that a project moving to
+      // another organization opens a listener for it rather than reusing one
+      // opened with the old one.
+      const key = `${resourceKey}|${organizationId}`
       let byResource = listeners.get(instance)
       if (!byResource) {
         byResource = new Map()
         listeners.set(instance, byResource)
       }
 
-      const existing = byResource.get(resourceKey)
+      const existing = byResource.get(key)
       if (existing) return existing
 
       const registry = byResource
       const listener = createListener(instance, resource, organizationId, () =>
-        registry.delete(resourceKey),
+        registry.delete(key),
       )
-      registry.set(resourceKey, listener)
+      registry.set(key, listener)
       return listener
     }),
   )

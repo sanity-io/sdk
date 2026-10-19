@@ -45,6 +45,9 @@ function toCommentsEvent(
   if (match === undefined) {
     // Keep what the server snapshot already classified. In particular, a local
     // evaluation failure must never manufacture a departure from this list.
+    // An unheld comment is dropped rather than guessed at: if it does belong
+    // (say, an identity() filter before auth has loaded), it shows from the
+    // next snapshot. That window is short, and cheaper than resubscribing.
     return held.has(comment._id)
       ? {type: 'update', comment, transactionId: event.transactionId}
       : undefined
