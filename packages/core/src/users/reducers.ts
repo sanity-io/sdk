@@ -52,11 +52,11 @@ export const removeSubscription =
   }
 
 export const setUsersData =
-  (key: string, {data, nextCursor, totalCount}: SanityUserResponse) =>
+  (key: string, {data, nextCursor, totalCount}: SanityUserResponse, replace = false) =>
   (prev: UsersStoreState): UsersStoreState => {
     const group = prev.users[key]
     if (!group) return prev
-    const users = [...(group.users ?? []), ...data]
+    const users = replace ? data : [...(group.users ?? []), ...data]
     return {...prev, users: {...prev.users, [key]: {...group, users, totalCount, nextCursor}}}
   }
 
