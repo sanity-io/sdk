@@ -1944,14 +1944,19 @@ it('reloads a document it could not read once the token changes', async () => {
     firstValueFrom(documentState.observable.pipe(first((value) => value !== undefined))),
   ).rejects.toThrow('inaccessible due to permissions')
 
-  canRead = true
-  const client$ = (getClientState as () => StateSource<SanityClient>)()
-    .observable as ReplaySubject<SanityClient>
-  client$.next({...client} as SanityClient)
+  vi.useFakeTimers()
 
-  await vi.waitFor(() => expect(documentState.getCurrent()).toMatchObject({_id: documentId}), {
-    interval: 1,
-  })
+  try {
+    canRead = true
+    const client$ = (getClientState as () => StateSource<SanityClient>)()
+      .observable as ReplaySubject<SanityClient>
+    client$.next({...client} as SanityClient)
+    await vi.advanceTimersByTimeAsync(0)
+
+    expect(documentState.getCurrent()).toMatchObject({_id: documentId})
+  } finally {
+    vi.useRealTimers()
+  }
 })
 
 it('reports an inaccessible draft to the document that reads it', async () => {
