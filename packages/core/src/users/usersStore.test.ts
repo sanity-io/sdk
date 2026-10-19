@@ -398,6 +398,21 @@ describe('usersStore', () => {
     instance.dispose()
   })
 
+  it('reports a missing resource ID for a single user without breaking other lookups', async () => {
+    const instance = createSanityInstance({})
+
+    const state = getUsersState(instance, {userId: 'gUser1'})
+    const unsubscribe = state.subscribe()
+    expect(() => state.getCurrent()).toThrow('An organizationId or a projectId is required')
+
+    await expect(
+      resolveUsers(instance, {resourceType: 'project', projectId: 'project1'}),
+    ).resolves.toMatchObject({data: mockUsers})
+
+    unsubscribe()
+    instance.dispose()
+  })
+
   it('refetches users that failed with a 401 once the token changes', async () => {
     const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
     const clients = mockClients({observable: {request}} as unknown as SanityClient)
