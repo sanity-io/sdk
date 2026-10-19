@@ -31,7 +31,7 @@ import {
 
 import {getCurrentUserState} from '../auth/authStore'
 import {type ClientOptions, getClientState} from '../client/clientStore'
-import {hasCredentials, retryRead} from '../client/retry'
+import {retryRead} from '../client/retry'
 import {
   type DocumentHandle,
   type DocumentResource,
@@ -629,11 +629,7 @@ const subscribeToClientAndFetchDatasetAcl = ({
 
   return clients$
     .pipe(
-      switchMap((client) =>
-        hasCredentials(client)
-          ? client.observable.request<DatasetAcl>({url, tag: 'acl.get'})
-          : EMPTY,
-      ),
+      switchMap((client) => client.observable.request<DatasetAcl>({url, tag: 'acl.get'})),
       retryRead(clients$, (error) => {
         // on recovery, keep a fatal error another subscription set in the meantime
         if (error !== undefined || state.get().error === aclError) state.set('setError', {error})

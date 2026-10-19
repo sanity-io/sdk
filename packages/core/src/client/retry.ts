@@ -33,16 +33,6 @@ function isTransient(error: unknown): boolean {
 }
 
 /**
- * Whether `client` sends a token or cookie credentials.
- *
- * @internal
- */
-export function hasCredentials(client: SanityClient): boolean {
-  const {token, withCredentials} = client.config()
-  return Boolean(token || withCredentials)
-}
-
-/**
  * Retries transient failures after a backoff and any other failure once `clients` emits a new
  * client. `setError` receives `undefined` once the read recovers.
  *
