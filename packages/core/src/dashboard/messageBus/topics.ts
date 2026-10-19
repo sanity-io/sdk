@@ -106,8 +106,8 @@ export interface FavoriteDocument {
     readonly resource: NonNullable<Events.DashboardDocumentReference['resource']>
   }
   /** Where the document was favorited. */
-  readonly resource:
-    | {readonly type: 'studio'; readonly applicationId: string; readonly workspaceName: string}
+  readonly application:
+    | {readonly type: 'studio'; readonly id: string; readonly workspaceName: string}
     | {readonly type: 'media-library' | 'canvas'; readonly id: string}
   readonly metadata?: {
     /** The application path the document was favorited at. */

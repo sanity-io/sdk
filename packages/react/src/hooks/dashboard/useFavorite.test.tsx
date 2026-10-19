@@ -108,7 +108,11 @@ describe('useFavorite (message bus)', () => {
   const favorite: FavoriteDocument = {
     id: 'favorite',
     document: {id: 'doc', type: 'movie', resource: {id: 'test.test', type: 'studio'}},
-    resource: {type: 'studio', applicationId: 'v27rvqtlp3lmdvcln6ey3lro', workspaceName: 'default'},
+    application: {
+      type: 'studio',
+      id: 'v27rvqtlp3lmdvcln6ey3lro',
+      workspaceName: 'default',
+    },
     createdAt: '2026-10-19T13:28:23Z',
     updatedAt: '2026-10-19T13:28:23Z',
   }

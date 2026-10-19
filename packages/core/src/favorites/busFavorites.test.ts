@@ -39,7 +39,11 @@ describe('getBusFavoriteState', () => {
   const favorite: FavoriteDocument = {
     id: 'favorite',
     document: {id: 'doc', type: 'movie', resource: {id: 'p.d', type: 'studio'}},
-    resource: {type: 'studio', applicationId: 'v27rvqtlp3lmdvcln6ey3lro', workspaceName: 'default'},
+    application: {
+      type: 'studio',
+      id: 'v27rvqtlp3lmdvcln6ey3lro',
+      workspaceName: 'default',
+    },
     createdAt: '2026-10-19T13:28:23Z',
     updatedAt: '2026-10-19T13:28:23Z',
   }
@@ -116,12 +120,12 @@ describe('getBusFavoriteState', () => {
     })
 
     it('matches a favorite whichever studio it was favorited in', () => {
-      const resource = {
+      const application = {
         type: 'studio',
-        applicationId: 'k3n9xq2lp8vbt4mw',
+        id: 'k3n9xq2lp8vbt4mw',
         workspaceName: 'default',
       } as const
-      publish([{...favorite, resource}])
+      publish([{...favorite, application}])
       expect(read()).toBe(true)
     })
 
@@ -130,7 +134,7 @@ describe('getBusFavoriteState', () => {
         {
           ...favorite,
           document: {id: 'doc', type: 'movie', resource: {id: 'library', type: 'media-library'}},
-          resource: {type: 'media-library', id: 'library'},
+          application: {type: 'media-library', id: 'library'},
         },
       ])
       expect(read({resourceId: 'library', resourceType: 'media-library'})).toBe(true)

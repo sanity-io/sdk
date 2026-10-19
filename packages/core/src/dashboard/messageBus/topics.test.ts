@@ -62,8 +62,8 @@ describe('dashboard topic types', () => {
       readonly document: Events.DashboardDocumentReference & {
         readonly resource: NonNullable<Events.DashboardDocumentReference['resource']>
       }
-      readonly resource:
-        | {readonly type: 'studio'; readonly applicationId: string; readonly workspaceName: string}
+      readonly application:
+        | {readonly type: 'studio'; readonly id: string; readonly workspaceName: string}
         | {readonly type: 'media-library' | 'canvas'; readonly id: string}
       readonly metadata?: {readonly path?: string}
       readonly createdAt: string
