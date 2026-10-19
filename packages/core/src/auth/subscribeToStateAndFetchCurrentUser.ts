@@ -17,8 +17,8 @@ import {AuthStateType} from './authStateType'
 import {type AuthMethodOptions, type AuthState, type AuthStoreState} from './authStore'
 
 /**
- * Subscribes to auth state changes and fetches the current user when
- * the state transitions to `LOGGED_IN` without a `currentUser`.
+ * Subscribes to auth state changes and fetches the current user whenever
+ * the state is `LOGGED_IN` with a new token.
  *
  * @param context - The store context for the auth store.
  * @param fetchOptions - Configuration options. When `useProjectHostname` is
@@ -49,7 +49,7 @@ export const subscribeToStateAndFetchCurrentUser = (
         ): value is {
           authState: Extract<AuthState, {type: AuthStateType.LOGGED_IN}>
           authMethod: AuthMethodOptions
-        } => value.authState.type === AuthStateType.LOGGED_IN && !value.authState.currentUser,
+        } => value.authState.type === AuthStateType.LOGGED_IN,
       ),
       map((value) => ({token: value.authState.token, authMethod: value.authMethod})),
       distinctUntilChanged(
@@ -86,7 +86,12 @@ export const subscribeToStateAndFetchCurrentUser = (
              */
             catchError((error) => {
               logger.error('Failed to fetch current user', {error})
-              state.set('setError', {authState: {type: AuthStateType.ERROR, error}})
+              const {authState} = state.get()
+
+              if (authState.type !== AuthStateType.LOGGED_IN || !authState.currentUser) {
+                state.set('setError', {authState: {type: AuthStateType.ERROR, error}})
+              }
+
               return EMPTY
             }),
           ),
@@ -100,12 +105,12 @@ export const subscribeToStateAndFetchCurrentUser = (
       })
       // userId is PII, so only surface it at debug level
       logger.debug('Current user details', {userId: currentUser.id})
-      state.set('setCurrentUser', (prev) => ({
-        authState:
-          prev.authState.type === AuthStateType.LOGGED_IN
-            ? {...prev.authState, currentUser}
-            : prev.authState,
-      }))
+      state.set('setCurrentUser', (prev) =>
+        prev.authState.type === AuthStateType.LOGGED_IN &&
+        prev.authState.currentUser?.id !== currentUser.id
+          ? {authState: {...prev.authState, currentUser}}
+          : prev,
+      )
     },
   })
 }

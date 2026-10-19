@@ -243,4 +243,60 @@ describe('subscribeToStateAndFetchCurrentUser', () => {
 
     subscription.unsubscribe()
   })
+
+  describe('when the token changes', () => {
+    const someone = {id: 'someone'} as CurrentUser
+
+    function loggedInAs(request: ReturnType<typeof vi.fn>) {
+      const clientFactory = vi.fn().mockReturnValue({observable: {request}})
+      const instance = createSanityInstance({projectId: 'p', dataset: 'd', auth: {clientFactory}})
+      const state = createStoreState(authStore.getInitialState(instance, null))
+      const subscription = subscribeToStateAndFetchCurrentUser({state, instance, key: null})
+      state.set('setLoggedIn', {
+        authState: {type: AuthStateType.LOGGED_IN, token: 'token-1', currentUser: null},
+      })
+      state.set('setToken', (prev) => ({authState: {...prev.authState, token: 'token-2'}}))
+      return {state, subscription}
+    }
+
+    it('replaces the current user when the new token belongs to someone else', () => {
+      const someoneElse = {id: 'someone-else'} as CurrentUser
+      const request = vi.fn().mockReturnValueOnce(of(someone)).mockReturnValueOnce(of(someoneElse))
+
+      const {state, subscription} = loggedInAs(request)
+
+      expect(state.get().authState).toMatchObject({token: 'token-2', currentUser: someoneElse})
+      subscription.unsubscribe()
+    })
+
+    it('keeps the current user when the new token belongs to the same user', () => {
+      const request = vi
+        .fn()
+        .mockReturnValueOnce(of(someone))
+        .mockReturnValueOnce(of({...someone}))
+
+      const {state, subscription} = loggedInAs(request)
+
+      expect(request).toHaveBeenCalledTimes(2)
+      const {authState} = state.get()
+      expect(authState.type === AuthStateType.LOGGED_IN && authState.currentUser).toBe(someone)
+      subscription.unsubscribe()
+    })
+
+    it('keeps the current user when refetching it fails', () => {
+      const request = vi
+        .fn()
+        .mockReturnValueOnce(of(someone))
+        .mockReturnValueOnce(throwError(() => new Error('Network error')))
+
+      const {state, subscription} = loggedInAs(request)
+
+      expect(state.get().authState).toMatchObject({
+        type: AuthStateType.LOGGED_IN,
+        token: 'token-2',
+        currentUser: someone,
+      })
+      subscription.unsubscribe()
+    })
+  })
 })
