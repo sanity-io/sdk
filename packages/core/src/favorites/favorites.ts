@@ -32,7 +32,7 @@ export interface FavoriteDocumentContext extends DocumentHandle {
 }
 
 /**
- * The `document` a favorite write addresses over Comlink.
+ * The `document` a favorite read or write addresses over Comlink and the message bus.
  *
  * @internal
  */

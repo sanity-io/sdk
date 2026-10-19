@@ -36,13 +36,17 @@ const context: FavoriteDocumentContext = {
 }
 
 describe('getBusFavoriteState', () => {
-  // Studios travel as their dataset resource.
   const favorite: FavoriteDocument = {
-    id: 'doc',
-    type: 'movie',
-    resource: {id: 'p.d', type: 'dataset'},
-    _resource: {_id: 'v27rvqtlp3lmdvcln6ey3lro-default', _type: 'studio'},
+    id: 'favorite',
+    document: {id: 'doc', type: 'movie', resource: {id: 'p.d', type: 'studio'}},
+    resource: {type: 'studio', applicationId: 'v27rvqtlp3lmdvcln6ey3lro', workspaceName: 'default'},
+    createdAt: '2026-10-19T13:28:23Z',
+    updatedAt: '2026-10-19T13:28:23Z',
   }
+  const favoriteOf = (document: Partial<FavoriteDocument['document']>): FavoriteDocument => ({
+    ...favorite,
+    document: {...favorite.document, ...document},
+  })
 
   const provideFavorites = (provided: boolean) =>
     host.connections.subscribe((client) =>
@@ -112,14 +116,28 @@ describe('getBusFavoriteState', () => {
     })
 
     it('matches a favorite whichever studio it was favorited in', () => {
-      publish([
-        {...favorite, _resource: {_id: 'k3n9xq2lp8vbt4mwy7rcd1zs-default', _type: 'studio'}},
-      ])
+      const resource = {
+        type: 'studio',
+        applicationId: 'k3n9xq2lp8vbt4mw',
+        workspaceName: 'default',
+      } as const
+      publish([{...favorite, resource}])
       expect(read()).toBe(true)
     })
 
+    it('matches a media-library favorite', () => {
+      publish([
+        {
+          ...favorite,
+          document: {id: 'doc', type: 'movie', resource: {id: 'library', type: 'media-library'}},
+          resource: {type: 'media-library', id: 'library'},
+        },
+      ])
+      expect(read({resourceId: 'library', resourceType: 'media-library'})).toBe(true)
+    })
+
     it('matches a favorite stored under the same schemaName', () => {
-      publish([{...favorite, resource: {...favorite.resource, schemaName: 'production'}}])
+      publish([favoriteOf({resource: {...favorite.document.resource, schemaName: 'production'}})])
       expect(read({schemaName: 'production'})).toBe(true)
     })
 
@@ -128,12 +146,12 @@ describe('getBusFavoriteState', () => {
       {stored: 'doc', read: 'versions.rABC.doc'},
       {stored: 'drafts.doc', read: 'doc'},
     ])('matches a favorite stored as $stored when read as $read', ({stored, read: documentId}) => {
-      publish([{...favorite, id: stored}])
+      publish([favoriteOf({id: stored})])
       expect(read({documentId})).toBe(true)
     })
 
     it('degrades a malformed favorite ID to not favorited instead of throwing', () => {
-      publish([{...favorite, id: 'not a document id'}])
+      publish([favoriteOf({id: 'not a document id'})])
       expect(read()).toBe(false)
     })
   })
@@ -168,7 +186,7 @@ describe('setBusFavorite', () => {
   it.each([
     {
       input: {...context, schemaName: 'production', isFavorited: true},
-      resource: {id: 'p.d', type: 'dataset', schemaName: 'production'},
+      resource: {id: 'p.d', type: 'studio', schemaName: 'production'},
     },
     {
       input: {

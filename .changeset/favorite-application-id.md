@@ -2,4 +2,4 @@
 '@sanity/sdk': minor
 ---
 
-Each favorite in `favorites.documents` carries `_resource`, the resource it was favorited in, so a favorite opens in the right studio when several studios share its dataset and workspace name. Hosts must set it; `favorites.update` takes the document without it.
+Each favorite in `favorites.documents` carries the favorite's `id`, `createdAt`, `updatedAt`, `metadata.path` and the `resource` it was favorited in (`applicationId` and `workspaceName` for studios), with the document under `document`, addressed like Comlink's favorite messages. A studio document's resource type is `studio` on the bus, as over Comlink.

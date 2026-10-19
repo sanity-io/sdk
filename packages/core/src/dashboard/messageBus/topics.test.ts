@@ -1,3 +1,4 @@
+import {type Events} from '@sanity/message-protocol'
 import {describe, expect, expectTypeOf, it} from 'vitest'
 
 import {type Application, type ApplicationInclude} from '../../applications/applications'
@@ -56,19 +57,27 @@ describe('dashboard topic types', () => {
   })
 
   it('types the favorites topics', () => {
-    expectTypeOf<FavoriteDocument>().toEqualTypeOf<
-      ApplicationActivity['document'] & {
-        readonly _resource: {
-          readonly _id: string
-          readonly _type: 'studio' | 'media-library' | 'canvas'
-        }
-      }
-    >()
     expectTypeOf<ValueOf<'favorites.documents'>>().toEqualTypeOf<FavoriteDocument[]>()
+    expectTypeOf<FavoriteDocument>().toEqualTypeOf<{
+      readonly id: string
+      readonly document: Events.DashboardDocumentReference & {
+        readonly resource: NonNullable<Events.DashboardDocumentReference['resource']>
+      }
+      readonly resource:
+        | {readonly type: 'studio'; readonly applicationId: string; readonly workspaceName: string}
+        | {readonly type: 'media-library' | 'canvas'; readonly id: string}
+      readonly metadata?: {readonly path?: string}
+      readonly createdAt: string
+      readonly updatedAt: string
+    }>()
     expectTypeOf<PayloadOf<'favorites.update'>>().toEqualTypeOf<{
-      document: ApplicationActivity['document']
+      document: FavoriteDocument['document']
       favorited: boolean
     }>()
+    // A favorite's document is addressed the same way over Comlink and the bus.
+    expectTypeOf<FavoriteDocument['document']>().toExtend<
+      Events.FavoriteMutateMessage['data']['document']
+    >()
     expectTypeOf<ReplyOf<'favorites.update'>>().toEqualTypeOf<void>()
   })
 
