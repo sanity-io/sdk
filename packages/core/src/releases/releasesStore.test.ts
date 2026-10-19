@@ -227,7 +227,8 @@ describe('releasesStore', () => {
 
   it('surfaces a failed fetch until fetching recovers, without clearing a CORS error', () => {
     vi.mocked(observeReleases).mockReturnValue(new Subject<ReleaseDocument[]>().asObservable())
-    const state = getActiveReleasesState(instance, {resource: {projectId: 'test', dataset: 'test'}})
+    const resource = {projectId: 'test', dataset: 'test'}
+    const state = getActiveReleasesState(instance, {resource})
     state.subscribe()
     const [, options] = vi.mocked(observeReleases).mock.lastCall!
     const fetchError = new Error('Unauthorized')
@@ -235,6 +236,7 @@ describe('releasesStore', () => {
 
     options.onError(fetchError)
     expect(() => state.getCurrent()).toThrow(fetchError)
+    expect(() => getAllReleasesState(instance, {resource}).getCurrent()).toThrow(fetchError)
 
     options.onError(undefined)
     expect(state.getCurrent()).toEqual([])

@@ -105,23 +105,19 @@ const subscribeToReleases = ({
     onCorsError: (error) => state.set('setError', {error}),
     onError: (fetchError) => state.set('setFetchError', {fetchError}),
   })
-  return (
-    releases$
-      .pipe(
-        map((releases) => {
-          // logic here mirrors that of studio:
-          // https://github.com/sanity-io/sanity/blob/156e8fa482703d99219f08da7bacb384517f1513/packages/sanity/src/core/releases/store/useActiveReleases.ts#L29
-          const sorted = sortReleases(releases ?? STABLE_EMPTY_RELEASES).reverse()
-          state.set('setReleases', {
-            allReleases: sorted,
-            activeReleases: sorted.filter(
-              (release) => !ARCHIVED_RELEASE_STATES.includes(release.state),
-            ),
-          })
-        }),
-      )
-      // live-connection errors are already retried inside observeLiveEvents;
-      // a fetch error is terminal and surfaced via setError
-      .subscribe({error: (error) => state.set('setError', {error})})
-  )
+  return releases$
+    .pipe(
+      map((releases) => {
+        // logic here mirrors that of studio:
+        // https://github.com/sanity-io/sanity/blob/156e8fa482703d99219f08da7bacb384517f1513/packages/sanity/src/core/releases/store/useActiveReleases.ts#L29
+        const sorted = sortReleases(releases ?? STABLE_EMPTY_RELEASES).reverse()
+        state.set('setReleases', {
+          allReleases: sorted,
+          activeReleases: sorted.filter(
+            (release) => !ARCHIVED_RELEASE_STATES.includes(release.state),
+          ),
+        })
+      }),
+    )
+    .subscribe({error: (error) => state.set('setError', {error})})
 }
