@@ -84,6 +84,7 @@ import {
   type QueuedTransaction,
   removeQueuedTransaction,
   revertOutgoingTransaction,
+  throwDocumentError,
   transitionAppliedTransactionsToOutgoing,
   type UnverifiedDocumentRevision,
 } from './reducers'
@@ -228,16 +229,6 @@ export function getDocumentState(
   ...args: Parameters<typeof _getDocumentState>
 ): StateSource<unknown> {
   return _getDocumentState(...args)
-}
-
-function throwDocumentError(
-  documentStates: DocumentStoreState['documentStates'],
-  documentIds: string[],
-): void {
-  for (const documentId of documentIds) {
-    const documentError = documentStates[documentId]?.error
-    if (documentError) throw documentError
-  }
 }
 
 /** Version wins over draft, and draft over published. Undefined until every read has arrived. */

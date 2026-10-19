@@ -11,7 +11,7 @@ import {type DocumentAction} from './actions'
 import {ActionError, PermissionActionError, processActions} from './processActions/processActions'
 import {checkGrant} from './processActions/shared'
 import {type DocumentSet} from './processMutations'
-import {type SyncTransactionState} from './reducers'
+import {type SyncTransactionState, throwDocumentError} from './reducers'
 
 export type Grant = 'read' | 'update' | 'create' | 'history'
 
@@ -88,6 +88,7 @@ const documentsSelector = createSelector(
         .flat(),
     )
 
+    throwDocumentError(documentStates, documentIds)
     const documents: DocumentSet = {}
 
     for (const documentId of documentIds) {
