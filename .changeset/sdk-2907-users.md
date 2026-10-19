@@ -2,4 +2,4 @@
 '@sanity/sdk': patch
 ---
 
-Refetch users when the token changes, including after a 401 or 403, and retry network and server errors before reporting them.
+Retry failed user lookups once the token changes, and stop refetching a loaded users list on every token change.

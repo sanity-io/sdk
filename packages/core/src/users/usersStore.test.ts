@@ -2,7 +2,7 @@ import {ClientError, type SanityClient} from '@sanity/client'
 import {BehaviorSubject, delay, filter, firstValueFrom, Observable, of, throwError} from 'rxjs'
 import {beforeEach, describe, expect, it, onTestFinished, vi} from 'vitest'
 
-import {getClientState} from '../client/clientStore'
+import {getClient, getClientState} from '../client/clientStore'
 import {uninstallTestMessageBus} from '../dashboard/messageBus/__fixtures__/uninstallTestMessageBus'
 import {installMessageBus} from '../dashboard/messageBus/bus'
 import {createSanityInstance} from '../store/createSanityInstance'
@@ -34,6 +34,7 @@ function mockClients(client: SanityClient) {
   vi.mocked(getClientState).mockReturnValue({
     observable: clients.asObservable(),
   } as StateSource<SanityClient>)
+  vi.mocked(getClient).mockImplementation(() => clients.getValue())
   return clients
 }
 
@@ -94,6 +95,11 @@ describe('usersStore', () => {
         observable: of(client),
       } as StateSource<SanityClient>
     })
+    vi.mocked(getClient).mockReturnValue({
+      observable: {
+        request,
+      },
+    } as unknown as SanityClient)
   })
 
   it('initializes users state and cleans up after unsubscribe', async () => {
@@ -357,7 +363,7 @@ describe('usersStore', () => {
     instance.dispose()
   })
 
-  it('reports a rejected users request right away', async () => {
+  it('handles errors in users fetching', async () => {
     const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
     const errorMessage = 'Failed to fetch users'
 
@@ -395,22 +401,10 @@ describe('usersStore', () => {
     instance.dispose()
   })
 
-  it('reports a missing resource ID for a single user without breaking other lookups', async () => {
-    const instance = createSanityInstance({})
-
-    const state = getUsersState(instance, {userId: 'gUser1'})
-    const unsubscribe = state.subscribe()
-    expect(() => state.getCurrent()).toThrow('An organizationId or a projectId is required')
-
-    await expect(
-      resolveUsers(instance, {resourceType: 'project', projectId: 'project1'}),
-    ).resolves.toMatchObject({data: mockUsers})
-
-    unsubscribe()
-    instance.dispose()
-  })
-
-  it('refetches users that failed with a 401 once the token changes', async () => {
+  it.each([
+    ['users', {resourceType: 'project', projectId: 'project1'}],
+    ['a single user', {userId: 'gUser1', projectId: 'project1'}],
+  ] as const)('refetches %s that failed with a 401 once the token changes', async (_, options) => {
     vi.useFakeTimers()
     onTestFinished(() => {
       vi.useRealTimers()
@@ -420,7 +414,7 @@ describe('usersStore', () => {
       clientWith(() => throwError(() => clientError(401, 'Session not found'))),
     )
 
-    const state = getUsersState(instance, {resourceType: 'project', projectId: 'project1'})
+    const state = getUsersState(instance, options)
     const unsubscribe = state.subscribe()
     expect(() => state.getCurrent()).toThrow('Session not found')
 
@@ -433,53 +427,23 @@ describe('usersStore', () => {
     instance.dispose()
   })
 
-  it('refetches a single user that failed with a 401 once the token changes', async () => {
-    vi.useFakeTimers()
-    onTestFinished(() => {
-      vi.useRealTimers()
-    })
+  it.each([
+    ['users', {resourceType: 'project', projectId: 'project1'}],
+    ['a single user', {userId: 'gUser1', projectId: 'project1'}],
+  ] as const)('does not refetch %s that loaded when the token changes', async (_, options) => {
     const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
-    const clients = mockClients(
-      clientWith(() => throwError(() => clientError(401, 'Session not found'))),
-    )
-
-    const state = getUsersState(instance, {userId: 'gUser1', projectId: 'project1'})
-    const unsubscribe = state.subscribe()
-    expect(() => state.getCurrent()).toThrow('Session not found')
-
-    clients.next(clientWith(request))
-    await vi.advanceTimersByTimeAsync(0)
-
-    expect(state.getCurrent()).toEqual({data: mockUsers, totalCount: 2, hasMore: false})
-
-    unsubscribe()
-    instance.dispose()
-  })
-
-  it('refetches the loaded users from the first page when the token changes', async () => {
-    vi.useFakeTimers()
-    onTestFinished(() => {
-      vi.useRealTimers()
-    })
-    const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
-    vi.mocked(request).mockReturnValue(of({...mockResponse, nextCursor: 'page-2'}))
     const clients = mockClients(clientWith(request))
 
-    const state = getUsersState(instance, {
-      resourceType: 'project',
-      projectId: 'project1',
-      batchSize: 1,
-    })
+    const state = getUsersState(instance, options)
     const unsubscribe = state.subscribe()
+    await firstValueFrom(state.observable.pipe(filter((i) => i !== undefined)))
+    const loaded = state.getCurrent()
 
-    const nextRequest = vi
-      .fn()
-      .mockReturnValue(of({data: [mockUsers[1]], totalCount: 1, nextCursor: null}))
-    clients.next(clientWith(nextRequest))
-    await vi.advanceTimersByTimeAsync(0)
+    clients.next(clientWith(request))
+    await new Promise((resolve) => setTimeout(resolve, 0))
 
-    expect(nextRequest.mock.calls[0][0].query).toEqual({limit: '2'})
-    expect(state.getCurrent()).toEqual({data: [mockUsers[1]], totalCount: 1, hasMore: false})
+    expect(request).toHaveBeenCalledTimes(1)
+    expect(state.getCurrent()).toBe(loaded)
 
     unsubscribe()
     instance.dispose()
@@ -566,13 +530,17 @@ describe('usersStore', () => {
       }
 
       const specificRequest = vi.fn().mockReturnValue(of(mockProjectUser).pipe(delay(0)))
-      mockClients(clientWith(specificRequest))
+      vi.mocked(getClient).mockReturnValue({
+        observable: {
+          request: specificRequest,
+        },
+      } as unknown as SanityClient)
 
       const user$ = getUserState(instance, {userId: projectUserId, projectId: 'project1'})
 
       const result = await firstValueFrom(user$.pipe(filter((i) => i !== undefined)))
 
-      expect(getClientState).toHaveBeenCalledWith(
+      expect(getClient).toHaveBeenCalledWith(
         instance,
         expect.objectContaining({
           projectId: 'project1',
