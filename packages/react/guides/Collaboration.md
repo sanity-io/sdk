@@ -151,7 +151,7 @@ function ResolveButton({commentId}: {commentId: string}) {
 
 ### Optimistic writes and failed creates
 
-Every action writes optimistically: the change shows immediately and rolls back if the server rejects it, so you can render straight from `useCommentThreads` without tracking pending state. A write reaches every list the comment belongs in, whichever one you wrote it from, so a document's comments and a query that matches them stay in step.
+Every action writes optimistically: the change shows immediately and rolls back if the server rejects it, so you can render straight from `useCommentThreads` without tracking pending state. Creates and replies reach every matching list, whichever one you wrote them from, so a document's comments and a query that matches them stay in step.
 
 Creating is the exception, and `replyToComment` counts as creating. A comment that fails to post stays on screen carrying `state.createError` rather than disappearing, so nobody loses what they typed. Passing the same `commentId` again retries it:
 
