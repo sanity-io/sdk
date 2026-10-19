@@ -120,6 +120,23 @@ function Mentions({userId}: {userId: string}) {
 
 Suspense, `isPending`, and `error` work the same as in `useCommentThreads`.
 
+The list is flat. To read it as threads, pass it to `buildCommentThreads`, which groups comments exactly as `useCommentThreads` does. Thread first and group by anything else afterwards, since a thread needs its replies in the same input as its parent:
+
+```tsx
+import {buildCommentThreads, useCommentsQuery} from '@sanity/sdk-react/collaboration'
+import {useMemo} from 'react'
+
+function OpenThreadsAcross({refs}: {refs: string[]}) {
+  const {comments} = useCommentsQuery({filter: 'target.document._ref in $refs', params: {refs}})
+  const threads = useMemo(
+    () => buildCommentThreads(comments).filter((thread) => thread.status === 'open'),
+    [comments],
+  )
+
+  return <span>{threads.length}</span>
+}
+```
+
 Writes show here before the server confirms them, the same as they do on a document's comments: the filter is matched against the written comment locally, so a new comment that answers it appears straight away. Some filters cannot be answered that way, since they need more than the one comment to evaluate: one that dereferences with `->`, one that runs a `*[...]` of its own, and one that calls a context-dependent function such as `sanity::dataset()`, `releases::all()` or `now()`. Those still work and still stay up to date, but only once the server says so, and they cost a connection of their own rather than sharing the one every other list reads from.
 
 ## Writing comments

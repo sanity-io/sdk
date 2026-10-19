@@ -30,7 +30,7 @@ import {type StoreState} from '../../store/createStoreState'
 import {defineStore, type StoreContext} from '../../store/defineStore'
 import {randomId} from '../../utils/ids'
 import {setCleanupTimeout} from '../../utils/setCleanupTimeout'
-import {buildCommentThreads} from '../buildCommentThreads'
+import {threadComments} from '../buildCommentThreads'
 import {toCommentFieldPath} from '../commentFieldPath'
 import {observeAddonDatasetClient} from './addonDatasetStore'
 import {COMMENTS_STATE_CLEAR_DELAY} from './commentsConstants'
@@ -273,7 +273,7 @@ function selectCommentThreads(
   const cached = byFilter.get(cacheKey)
   if (cached) return cached
 
-  const threads = buildCommentThreads(comments).filter((thread) => {
+  const threads = threadComments(comments).filter((thread) => {
     if (options.status && thread.parentComment.status !== options.status) return false
     if (fieldPath === undefined) return true
     return thread.fieldPath === fieldPath

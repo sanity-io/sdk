@@ -1,4 +1,4 @@
-import {type CommentStatus} from './types'
+import {type Comment, type CommentStatus, type CommentThread} from './types'
 
 /**
  * What threading needs off a comment: its identity and parentage, plus the
@@ -30,18 +30,13 @@ interface ThreadOf<TComment> {
 /**
  * Groups a flat comment list into threads.
  *
- * A thread's parent is the comment with no `parentCommentId`; replies point at
- * the parent's `id`. Replies whose parent is missing from the input are
- * dropped, which is what happens when a parent is deleted but its replies have
- * not disappeared yet.
- *
- * Threads come back in the order their parents appear in `comments`, so passing
- * the store's newest-first list gives newest-thread-first. Replies within a
- * thread are always oldest first, since that is reading order.
+ * Users get {@link buildCommentThreads}, which is typed to {@link Comment}. This
+ * one is generic so the deprecated add-on dataset store can thread its own
+ * comment shape through the same code.
  *
  * @internal
  */
-export function buildCommentThreads<TComment extends ThreadableComment>(
+export function threadComments<TComment extends ThreadableComment>(
   comments: TComment[],
 ): ThreadOf<TComment>[] {
   const repliesByParent = new Map<string, TComment[]>()
@@ -80,4 +75,31 @@ export function buildCommentThreads<TComment extends ThreadableComment>(
   }
 
   return threads
+}
+
+/**
+ * Groups a flat comment list into threads, the same way `getCommentThreadsState`
+ * and `useCommentThreads` do.
+ *
+ * Use it on the flat list from `getCommentsQueryState` or `useCommentsQuery`
+ * when you want threads, for example for comments read across several
+ * documents in one query. Pass replies along with their parents: a thread is
+ * assembled from one input, so group by anything else after threading, not
+ * before.
+ *
+ * A thread's parent is the comment with no `parentCommentId`; replies point at
+ * the parent's `id`. Replies whose parent is missing from the input are
+ * dropped, which is what happens when a parent is deleted but its replies have
+ * not disappeared yet.
+ *
+ * Threads come back in the order their parents appear in `comments`, so passing
+ * the store's newest-first list gives newest-thread-first. Replies within a
+ * thread are always oldest first, since that is reading order.
+ *
+ * @param comments - The comments to group, replies included
+ * @returns One thread per parent comment in `comments`
+ * @beta
+ */
+export function buildCommentThreads(comments: Comment[]): CommentThread[] {
+  return threadComments(comments)
 }
