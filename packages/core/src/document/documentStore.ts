@@ -101,6 +101,7 @@ export interface DocumentStoreState {
    */
   identity?: string
   error?: unknown
+  aclError?: unknown
   sharedListener: SharedListener
   fetchDocument: (documentId: string) => Observable<ResolveDocument | null>
   events: Subject<DocumentEvent>
@@ -263,9 +264,12 @@ function hasEveryDocumentArrived(
 const _getDocumentState = bindActionByResource(
   documentStore,
   createStateSourceAction({
-    selector: ({state: {error, documentStates}}, options: DocumentOptions<string | undefined>) => {
+    selector: (
+      {state: {error, aclError, documentStates}},
+      options: DocumentOptions<string | undefined>,
+    ) => {
       const {path} = options
-      if (error) throw error
+      if (error ?? aclError) throw error ?? aclError
       const document = selectLocalDocument(documentStates, getDocumentIdsFromHandleLikes([options]))
       if (document === undefined) return undefined
 
@@ -317,10 +321,10 @@ export const getDocumentSyncStatus = bindActionByResource(
   documentStore,
   createStateSourceAction({
     selector: (
-      {state: {error, documentStates: documents, outgoing, applied, queued}},
+      {state: {error, aclError, documentStates: documents, outgoing, applied, queued}},
       doc: DocumentHandle,
     ) => {
-      if (error) throw error
+      if (error ?? aclError) throw error ?? aclError
       if (!hasEveryDocumentArrived(documents, getDocumentIdsFromHandleLikes([doc])))
         return undefined
       return !queued.length && !applied.length && !outgoing
@@ -627,19 +631,13 @@ const subscribeToClientAndFetchDatasetAcl = ({
 
   const clients$ = getClientState(instance, clientOptions).observable
 
-  let aclError: unknown
-
   return clients$
     .pipe(
       switchMap((client) => client.observable.request<DatasetAcl>({url, tag: 'acl.get'})),
-      retryRead(
-        clients$,
-        (error) => {
-          if (error !== undefined || state.get().error === aclError) state.set('setError', {error})
-          aclError = error
-        },
-        {baseDelay: ACL_RETRY_BASE_DELAY, maxDelay: ACL_RETRY_MAX_DELAY},
-      ),
+      retryRead(clients$, (aclError) => state.set('setAclError', {aclError}), {
+        baseDelay: ACL_RETRY_BASE_DELAY,
+        maxDelay: ACL_RETRY_MAX_DELAY,
+      }),
       tap((datasetAcl) => state.set('setGrants', {grants: createGrantsLookup(datasetAcl)})),
     )
     .subscribe({
