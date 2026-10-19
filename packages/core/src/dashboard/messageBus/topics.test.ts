@@ -57,7 +57,12 @@ describe('dashboard topic types', () => {
 
   it('types the favorites topics', () => {
     expectTypeOf<FavoriteDocument>().toEqualTypeOf<
-      ApplicationActivity['document'] & {readonly applicationId: string}
+      ApplicationActivity['document'] & {
+        readonly _resource: {
+          readonly _id: string
+          readonly _type: 'studio' | 'media-library' | 'canvas'
+        }
+      }
     >()
     expectTypeOf<ValueOf<'favorites.documents'>>().toEqualTypeOf<FavoriteDocument[]>()
     expectTypeOf<PayloadOf<'favorites.update'>>().toEqualTypeOf<{

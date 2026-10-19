@@ -41,7 +41,7 @@ describe('getBusFavoriteState', () => {
     id: 'doc',
     type: 'movie',
     resource: {id: 'p.d', type: 'dataset'},
-    applicationId: 'v27rvqtlp3lmdvcln6ey3lro',
+    _resource: {_id: 'v27rvqtlp3lmdvcln6ey3lro-default', _type: 'studio'},
   }
 
   const provideFavorites = (provided: boolean) =>
@@ -109,6 +109,13 @@ describe('getBusFavoriteState', () => {
     ])('does not match a favorite that differs in %o', (difference) => {
       publish([favorite])
       expect(read(difference)).toBe(false)
+    })
+
+    it('matches a favorite whichever studio it was favorited in', () => {
+      publish([
+        {...favorite, _resource: {_id: 'k3n9xq2lp8vbt4mwy7rcd1zs-default', _type: 'studio'}},
+      ])
+      expect(read()).toBe(true)
     })
 
     it('matches a favorite stored under the same schemaName', () => {

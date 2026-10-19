@@ -99,10 +99,13 @@ export type ApplicationActivity = DocumentActivity
  */
 export type FavoriteDocument = DocumentActivity['document'] & {
   /**
-   * ID of the application the document was favorited in. Together with `resource.schemaName`,
-   * it identifies a studio workspace even when several studios use the same dataset.
+   * The resource the document was favorited in, as Dashboard stores it. For a studio, `_id` is
+   * `<applicationId>-<workspaceName>`, which tells apart studios that share a dataset.
    */
-  readonly applicationId: string
+  readonly _resource: {
+    readonly _id: string
+    readonly _type: 'studio' | 'media-library' | 'canvas'
+  }
 }
 
 /**
