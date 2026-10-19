@@ -260,12 +260,24 @@ describe('useNavigateToStudioDocument (message bus)', () => {
     ])
   })
 
+  it('links a workspace named `default` at base path `/` to the studio root, not to `/default`', () => {
+    mockWorkspacesByProjectIdAndDataset = {
+      'project1:dataset1': [{...mockWorkspace, name: 'default', basePath: '/'}],
+    }
+
+    const {result} = renderHookWithInstance(() => useNavigateToStudioDocument(mockDocumentHandle))
+    result.current.navigateToStudioDocument()
+
+    expect(updates).toEqual([{url: '/studios/studio-app/intent/edit/id=doc123;type=article/'}])
+  })
+
   it('selects the workspace matching the preferred studio url', () => {
     const preferredUrl = 'https://preferred.sanity.studio'
     const mockWorkspace2 = {
       ...mockWorkspace,
       id: 'workspace2',
       name: 'staging',
+      basePath: '/staging',
       userApplicationId: 'preferred-app',
       url: preferredUrl,
     }
