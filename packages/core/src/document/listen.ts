@@ -66,7 +66,7 @@ interface ListenerSequenceState {
   buffer: MutationEvent[]
 }
 
-export class OutOfSyncError extends Error {
+class OutOfSyncError extends Error {
   /**
    * Attach state to the error for debugging/reporting
    */
