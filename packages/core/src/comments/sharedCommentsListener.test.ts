@@ -25,7 +25,7 @@ let instance: SanityInstance
 let listens: Subject<ListenEvent<StoredComment>>[]
 let listen: ReturnType<typeof vi.fn>
 let client$: BehaviorSubject<SanityClient>
-/** Which organization a resource resolves to, so a test can put two in one. */
+/** Which organization a resource resolves to, so tests can vary ownership. */
 let organizations: Map<string, string>
 
 beforeEach(() => {
@@ -60,7 +60,7 @@ afterEach(() => {
 })
 
 describe('getSharedCommentsListener', () => {
-  it('listens for every comment in the organization', () => {
+  it('listens for every comment on the resource', () => {
     getSharedCommentsListener(instance, RESOURCE).subscribe()
 
     expect(listen).toHaveBeenCalledWith(
@@ -70,27 +70,25 @@ describe('getSharedCommentsListener', () => {
     )
   })
 
-  it('opens one connection for two resources in the same organization', () => {
-    getSharedCommentsListener(instance, RESOURCE).subscribe()
-    getSharedCommentsListener(instance, OTHER_RESOURCE).subscribe()
-
-    expect(listen).toHaveBeenCalledTimes(1)
-  })
-
-  it('keeps organizations apart', () => {
-    organizations.set(OTHER_RESOURCE.dataset!, 'org-2')
-
+  it('opens separate connections for two resources in the same organization', () => {
     getSharedCommentsListener(instance, RESOURCE).subscribe()
     getSharedCommentsListener(instance, OTHER_RESOURCE).subscribe()
 
     expect(listen).toHaveBeenCalledTimes(2)
   })
 
+  it('shares one connection between lists on the same resource', () => {
+    getSharedCommentsListener(instance, RESOURCE).subscribe()
+    getSharedCommentsListener(instance, RESOURCE).subscribe()
+
+    expect(listen).toHaveBeenCalledTimes(1)
+  })
+
   it('delivers every comment to every reader', () => {
     const first: ListenEvent<StoredComment>[] = []
     const second: ListenEvent<StoredComment>[] = []
     getSharedCommentsListener(instance, RESOURCE).subscribe((event) => first.push(event))
-    getSharedCommentsListener(instance, OTHER_RESOURCE).subscribe((event) => second.push(event))
+    getSharedCommentsListener(instance, RESOURCE).subscribe((event) => second.push(event))
 
     const appeared = {
       type: 'mutation',
@@ -145,6 +143,22 @@ describe('getSharedCommentsListener', () => {
     // A token refresh replaces the client, and the listener has to follow it.
     client$.next(client$.value)
 
+    expect(listen).toHaveBeenCalledTimes(2)
+  })
+
+  it('delivers an error to every reader and recovers for later readers', () => {
+    const firstError = vi.fn()
+    const secondError = vi.fn()
+    getSharedCommentsListener(instance, RESOURCE).subscribe({error: firstError})
+    getSharedCommentsListener(instance, RESOURCE).subscribe({error: secondError})
+
+    const error = new Error('connection lost')
+    listens[0].error(error)
+
+    expect(firstError).toHaveBeenCalledWith(error)
+    expect(secondError).toHaveBeenCalledWith(error)
+
+    getSharedCommentsListener(instance, RESOURCE).subscribe()
     expect(listen).toHaveBeenCalledTimes(2)
   })
 })

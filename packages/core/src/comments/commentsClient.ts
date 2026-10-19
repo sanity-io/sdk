@@ -133,10 +133,34 @@ export function toTargetDocumentRef(
  * derives the comment API's `resourceType`/`resourceId` from `projectId` and
  * `dataset` itself.
  */
+function toResourceIdentity(resource: DocumentResource): {
+  resource: DatasetResource
+  resourceType: 'dataset'
+  resourceId: string
+} {
+  const datasetResource = assertDatasetResource(resource)
+  return {
+    resource: datasetResource,
+    resourceType: 'dataset',
+    resourceId: `${datasetResource.projectId}.${datasetResource.dataset}`,
+  }
+}
+
+/**
+ * The identity the comments API sends for a resource.
+ *
+ * @internal
+ */
+export function toCommentsResourceKey(resource: DocumentResource): string {
+  const {resourceType, resourceId} = toResourceIdentity(resource)
+  return `${resourceType}:${resourceId}`
+}
+
 function toClientOptions(resource: DocumentResource, organizationId: string): ClientOptions {
+  const identity = toResourceIdentity(resource)
   return {
     apiVersion: COMMENTS_API_VERSION,
-    resource: assertDatasetResource(resource),
+    resource: identity.resource,
     collaboration: {organizationId},
   }
 }

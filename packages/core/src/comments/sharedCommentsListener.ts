@@ -5,20 +5,24 @@ import {type DocumentResource} from '../config/sanityConfig'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {UPSTREAM_CLOSE_DELAY_MS} from '../store/createStoreInstance'
 import {cleanupTimer} from '../utils/setCleanupTimeout'
-import {observeCommentsClient, observeCommentsOrganizationId} from './commentsClient'
+import {
+  observeCommentsClient,
+  observeCommentsOrganizationId,
+  toCommentsResourceKey,
+} from './commentsClient'
 import {buildListenQuery, LISTEN_OPTIONS, TYPE_FILTER} from './commentsConstants'
 import {type StoredComment} from './types'
 
-/** Every comment mutation in the organization, as the listener reports it. */
+/** Every comment mutation for the resource, as the listener reports it. */
 type CommentsListener = Observable<ListenEvent<StoredComment>>
 
 /**
- * One listener per organization, for as long as something is reading comments
- * from it.
+ * One listener per resource, for as long as something is reading comments from
+ * it.
  *
- * Keyed by instance so the listeners die with it, and by organization because
- * that is what a listener covers. The entry is dropped once the last reader has
- * gone, so a later one opens a fresh connection rather than an inert stream.
+ * Keyed by instance so the listeners die with it, and by the same resource
+ * identity sent to the comments API. The entry is dropped once the last reader
+ * has gone, so a later one opens a fresh connection rather than an inert stream.
  */
 const listeners = new WeakMap<SanityInstance, Map<string, CommentsListener>>()
 
@@ -61,14 +65,10 @@ function createListener(
 }
 
 /**
- * The organization's comment listener, opening one if it is not already there.
+ * The resource's comment listener, opening one if it is not already there.
  *
- * Every comment in the organization comes through it, including comments on
- * canvases and on documents in other projects. Narrowing is left to each list,
- * which is what lets one connection serve all of them.
- *
- * The resource only supplies the client and the organization to resolve. Which
- * resource got there first does not change what the listener carries.
+ * Every comment for the resource comes through it. Narrowing is left to each
+ * list, which is what lets one connection serve all of that resource's lists.
  *
  * @internal
  */
@@ -76,22 +76,23 @@ export function getSharedCommentsListener(
   instance: SanityInstance,
   resource: DocumentResource,
 ): CommentsListener {
+  const resourceKey = toCommentsResourceKey(resource)
   return observeCommentsOrganizationId(instance, resource).pipe(
     switchMap((organizationId) => {
-      let byOrganization = listeners.get(instance)
-      if (!byOrganization) {
-        byOrganization = new Map()
-        listeners.set(instance, byOrganization)
+      let byResource = listeners.get(instance)
+      if (!byResource) {
+        byResource = new Map()
+        listeners.set(instance, byResource)
       }
 
-      const existing = byOrganization.get(organizationId)
+      const existing = byResource.get(resourceKey)
       if (existing) return existing
 
-      const registry = byOrganization
+      const registry = byResource
       const listener = createListener(instance, resource, organizationId, () =>
-        registry.delete(organizationId),
+        registry.delete(resourceKey),
       )
-      registry.set(organizationId, listener)
+      registry.set(resourceKey, listener)
       return listener
     }),
   )
