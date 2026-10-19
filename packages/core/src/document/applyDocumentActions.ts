@@ -112,7 +112,7 @@ async function _applyDocumentActions(
   }
 
   const fatalError$ = state.observable.pipe(
-    map((s) => s.error),
+    map((s) => s.error ?? s.aclError),
     first(Boolean),
     map((error) => ({type: 'error', error}) as const),
   )
