@@ -31,6 +31,7 @@ export interface ReleasesStoreState {
   activeReleases?: ReleaseDocument[]
   allReleases?: ReleaseDocument[]
   error?: unknown
+  fetchError?: unknown
 }
 
 export const releasesStore = defineStore<ReleasesStoreState, BoundResourceKey>({
@@ -52,7 +53,7 @@ const _getActiveReleasesState = bindActionByResource(
   releasesStore,
   createStateSourceAction({
     selector: ({state}) => {
-      if (state.error) throw state.error
+      if (state.error ?? state.fetchError) throw state.error ?? state.fetchError
       return state.activeReleases
     },
   }),
@@ -77,7 +78,7 @@ const _getAllReleasesState = bindActionByResource(
   releasesStore,
   createStateSourceAction({
     selector: ({state}) => {
-      if (state.error) throw state.error
+      if (state.error ?? state.fetchError) throw state.error ?? state.fetchError
       return state.allReleases
     },
   }),
@@ -102,6 +103,7 @@ const subscribeToReleases = ({
     // Surface CORS errors as store state instead of erroring the stream so
     // they can be handled by the Cors Error component
     onCorsError: (error) => state.set('setError', {error}),
+    onError: (fetchError) => state.set('setFetchError', {fetchError}),
   })
   return (
     releases$

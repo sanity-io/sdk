@@ -1,5 +1,10 @@
-import {type LiveEventMessage, type ReleaseDocument, type SanityClient} from '@sanity/client'
-import {of, Subject} from 'rxjs'
+import {
+  ClientError,
+  type LiveEventMessage,
+  type ReleaseDocument,
+  type SanityClient,
+} from '@sanity/client'
+import {BehaviorSubject, of, Subject, throwError} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {getClientState} from '../client/clientStore'
@@ -40,7 +45,7 @@ describe('observeReleases', () => {
   })
 
   it('fetches releases through the raw perspective', () => {
-    const releases$ = observeReleases(instance, {onCorsError: vi.fn()})
+    const releases$ = observeReleases(instance, {onCorsError: vi.fn(), onError: vi.fn()})
     const emissions: (ReleaseDocument[] | undefined)[] = []
     const subscription = releases$.subscribe((releases) => emissions.push(releases))
 
@@ -58,7 +63,7 @@ describe('observeReleases', () => {
   })
 
   it('refetches with the live event id when a message matches the sync tags', () => {
-    const releases$ = observeReleases(instance, {onCorsError: vi.fn()})
+    const releases$ = observeReleases(instance, {onCorsError: vi.fn(), onError: vi.fn()})
     const emissions: (ReleaseDocument[] | undefined)[] = []
     const subscription = releases$.subscribe((releases) => emissions.push(releases))
 
@@ -75,7 +80,7 @@ describe('observeReleases', () => {
   })
 
   it('ignores live events that do not match the sync tags', () => {
-    const releases$ = observeReleases(instance, {onCorsError: vi.fn()})
+    const releases$ = observeReleases(instance, {onCorsError: vi.fn(), onError: vi.fn()})
     const subscription = releases$.subscribe()
 
     liveMessages.next({type: 'message', id: 'event-1', tags: ['s1:other']} as LiveEventMessage)
@@ -92,7 +97,7 @@ describe('observeReleases', () => {
       return response$
     })
 
-    const releases$ = observeReleases(instance, {onCorsError: vi.fn()})
+    const releases$ = observeReleases(instance, {onCorsError: vi.fn(), onError: vi.fn()})
     const emissions: (ReleaseDocument[] | undefined)[] = []
     const subscription = releases$.subscribe((releases) => emissions.push(releases))
 
@@ -119,6 +124,33 @@ describe('observeReleases', () => {
     fetchResponses[1].complete()
     expect(emissions).toHaveLength(2)
 
+    subscription.unsubscribe()
+  })
+
+  it('refetches releases that failed with a 401 once the token changes', () => {
+    const unauthorized = new ClientError({
+      statusCode: 401,
+      headers: {},
+      body: {error: 'Unauthorized', message: 'Session not found'},
+    })
+    const clients = new BehaviorSubject({
+      observable: {fetch: () => throwError(() => unauthorized)},
+    } as unknown as SanityClient)
+    vi.mocked(getClientState).mockReturnValue({
+      observable: clients.asObservable(),
+    } as StateSource<SanityClient>)
+    const onError = vi.fn()
+    const emissions: (ReleaseDocument[] | undefined)[] = []
+
+    const subscription = observeReleases(instance, {onCorsError: vi.fn(), onError}).subscribe(
+      (releases) => emissions.push(releases),
+    )
+    expect(onError).toHaveBeenLastCalledWith(unauthorized)
+
+    clients.next({observable: {fetch}} as unknown as SanityClient)
+
+    expect(emissions).toEqual([[release]])
+    expect(onError).toHaveBeenLastCalledWith(undefined)
     subscription.unsubscribe()
   })
 })

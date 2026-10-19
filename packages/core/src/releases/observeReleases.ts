@@ -13,6 +13,7 @@ import {
 
 import {getClientState} from '../client/clientStore'
 import {observeLiveEvents} from '../client/liveEvents'
+import {retryRead} from '../client/retry'
 import {type DocumentResource} from '../config/sanityConfig'
 import {type SanityInstance} from '../store/createSanityInstance'
 
@@ -31,6 +32,8 @@ export interface ObserveReleasesOptions {
    * misconfiguration. See `observeLiveEvents`.
    */
   onCorsError: (error: unknown) => void
+  /** Receives a failed fetch, and `undefined` once fetching recovers. */
+  onError: (error: unknown) => void
 }
 
 /**
@@ -46,7 +49,7 @@ export interface ObserveReleasesOptions {
  */
 export function observeReleases(
   instance: SanityInstance,
-  {resource, onCorsError}: ObserveReleasesOptions,
+  {resource, onCorsError, onError}: ObserveReleasesOptions,
 ): Observable<ReleaseDocument[] | undefined> {
   const client$ = getClientState(instance, {
     apiVersion: RELEASES_API_VERSION,
@@ -93,5 +96,6 @@ export function observeReleases(
         map((response) => response.result),
       )
     }),
+    retryRead(client$, onError),
   )
 }
