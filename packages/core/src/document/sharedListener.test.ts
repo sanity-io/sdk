@@ -32,7 +32,6 @@ describe('createSharedListener', () => {
     // Create a fake client whose listen() method returns our subject's observable.
     fakeClient = {
       listen: vi.fn(() => fakeListenSubject.asObservable()),
-      config: () => ({token: 'token'}),
     } as unknown as SanityClient
     // Make getSubscribableClient return an observable that immediately emits fakeClient.
     vi.mocked(getClientState).mockReturnValue({
@@ -174,20 +173,6 @@ describe('createSharedListener', () => {
     expect(result.message).toBe(errorMessage)
   })
 
-  it('opens the listener only once the client has credentials', () => {
-    const clients = new Subject<SanityClient>()
-    vi.mocked(getClientState).mockReturnValue({
-      observable: clients.asObservable(),
-    } as StateSource<SanityClient>)
-    createSharedListener(instance).events.subscribe()
-
-    clients.next({...fakeClient, config: () => ({})} as SanityClient)
-    expect(fakeClient.listen).not.toHaveBeenCalled()
-
-    clients.next(fakeClient)
-    expect(fakeClient.listen).toHaveBeenCalledTimes(1)
-  })
-
   it('should stop emitting events after calling dispose', async () => {
     const welcomeEvent: WelcomeEvent = {type: 'welcome', listenerName: 'listener'}
     const mutationEvent: MutationEvent = {type: 'mutation'} as MutationEvent
@@ -213,7 +198,7 @@ describe('createFetchDocument', () => {
 
   beforeEach(() => {
     // Create a fake client.
-    fakeClient = {fetch: vi.fn(), config: () => ({token: 'token'})} as unknown as SanityClient
+    fakeClient = {fetch: vi.fn()} as unknown as SanityClient
 
     vi.mocked(getClientState).mockReturnValue({
       observable: of(fakeClient),
@@ -281,21 +266,6 @@ describe('createFetchDocument', () => {
       message: 'Document with ID `doc1` is inaccessible due to permissions.',
       statusCode: 403,
     })
-  })
-
-  it('fetches only once the client has credentials', async () => {
-    const clients = new Subject<SanityClient>()
-    vi.mocked(getClientState).mockReturnValue({
-      observable: clients.asObservable(),
-    } as StateSource<SanityClient>)
-    fakeLoadDocument.mockReturnValue(of({id: 'doc1', document: {_id: 'doc1'}, accessible: true}))
-    const document = lastValueFrom(createFetchDocument(instance)('doc1'))
-
-    clients.next({...fakeClient, config: () => ({})} as SanityClient)
-    expect(createDocumentLoaderFromClient).not.toHaveBeenCalled()
-
-    clients.next(fakeClient)
-    await expect(document).resolves.toEqual({_id: 'doc1'})
   })
 
   it('should propagate errors from the loadDocument observable', async () => {

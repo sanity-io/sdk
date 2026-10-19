@@ -290,7 +290,6 @@ function createMockClient(server: MockContentLake): SanityClient {
     action,
     request,
     fetch,
-    config: () => ({token: 'token'}),
     observable: {
       action: (...args: Parameters<typeof action>) => from(action(...args)),
       request: (...args: Parameters<typeof request>) => from(request(...args)),

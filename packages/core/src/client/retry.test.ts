@@ -9,7 +9,7 @@ import {BehaviorSubject, defer, of, throwError} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {OUT_OF_SYNC_RETRY_COUNT, OUT_OF_SYNC_RETRY_MAX_DELAY} from '../document/documentConstants'
-import {hasCredentials, retryRead} from './retry'
+import {retryRead} from './retry'
 
 const createClient = (config: object = {token: 'token'}) => ({config: () => config}) as SanityClient
 const clientError = (statusCode: number) => new ClientError({statusCode, headers: {}, body: {}})
@@ -86,15 +86,5 @@ describe('retryRead', () => {
     read.clients.next(createClient())
 
     expect(read.values).toEqual(['ok'])
-  })
-})
-
-describe('hasCredentials', () => {
-  it.each([
-    [{token: 'token'}, true],
-    [{withCredentials: true}, true],
-    [{}, false],
-  ])('a client configured with %o has credentials: %s', (config, expected) => {
-    expect(hasCredentials(createClient(config))).toBe(expected)
   })
 })

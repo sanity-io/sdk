@@ -9,7 +9,6 @@ import {catchError, defer, EMPTY, filter, type Observable, retry, switchMap} fro
 import {type DocumentResource} from '../config/sanityConfig'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {getClientState} from './clientStore'
-import {hasCredentials} from './retry'
 
 /**
  * All live-events subscriptions must use identical connection options
@@ -65,10 +64,8 @@ export function observeLiveEvents(
     apiVersion: LIVE_EVENTS_API_VERSION,
     resource,
   }).observable.pipe(
-    switchMap((client) => {
-      if (!hasCredentials(client)) return EMPTY
-
-      return defer(() =>
+    switchMap((client) =>
+      defer(() =>
         client.live.events({includeDrafts: !!client.config().token, tag: 'live-events'}),
       ).pipe(
         catchError((error) => {
@@ -103,8 +100,8 @@ export function observeLiveEvents(
         // retried, not surfaced. Dropped connections are already reconnected
         // inside @sanity/client.
         retry({delay: LIVE_EVENTS_RETRY_DELAY}),
-      )
-    }),
+      ),
+    ),
     filter((e): e is LiveEventMessage => e.type === 'message'),
   )
 }
