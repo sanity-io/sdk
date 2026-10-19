@@ -1,3 +1,5 @@
+import {type ApplicationWorkspace} from '@sanity/sdk'
+
 /**
  * @public
  * @category URLs
@@ -57,7 +59,17 @@ export interface StudioWorkspaceUrl extends DashboardUrl {
  * @category URLs
  */
 export interface StudioUrl extends StudioWorkspaceUrl {
-  workspace(workspace: string): StudioWorkspaceUrl
+  /**
+   * Enters a workspace at its `basePath`, the path the studio routes it by. Takes the workspace,
+   * or any object with its `basePath`; a `null` base path is the studio's root.
+   *
+   * @example
+   * ```ts
+   * urlFor.studios(studio.id).workspace(workspace).intent('edit', {id, type}).url()
+   * // '/studios/<studio id>/<base path>/intent/edit/id=<id>;type=<type>/'
+   * ```
+   */
+  workspace(workspace: Pick<ApplicationWorkspace, 'basePath'>): StudioWorkspaceUrl
 }
 
 /**
@@ -365,8 +377,9 @@ class StudioUrlBuilder
 {
   static readonly namespace = 'studios'
 
-  workspace(workspace: string): StudioWorkspaceUrl {
-    return this.append(workspace)
+  workspace({basePath}: Pick<ApplicationWorkspace, 'basePath'>): StudioWorkspaceUrl {
+    // A workspace without a base path is the studio's root.
+    return basePath === null ? this : this.append(...splitPath([basePath]))
   }
 
   intent(intent: 'edit', parameters: EditIntentParameters): StudioIntentUrl
