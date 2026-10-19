@@ -19,13 +19,22 @@ export const API_VERSION = 'v2025-05-06'
 export const UNVERIFIED_REVISION_RETENTION_TIME = 30_000
 
 /**
- * Base delay (ms) before retrying a read after a transient failure. Backoff
- * doubles on each successive retry, capped at {@link OUT_OF_SYNC_RETRY_MAX_DELAY},
- * and the failure surfaces after {@link OUT_OF_SYNC_RETRY_COUNT} retries.
+ * Base delay (ms) before retrying a document listener or query after a transient
+ * failure. Backoff doubles on each successive retry, capped at
+ * {@link OUT_OF_SYNC_RETRY_MAX_DELAY}, and the failure surfaces after
+ * {@link OUT_OF_SYNC_RETRY_COUNT} retries.
  */
 export const OUT_OF_SYNC_RETRY_BASE_DELAY = 500
 export const OUT_OF_SYNC_RETRY_MAX_DELAY = 10_000
 export const OUT_OF_SYNC_RETRY_COUNT = 5
+
+/**
+ * Base delay (ms) before retrying the dataset ACL fetch after a transient
+ * failure (a network error or 5xx response). Backoff doubles on each
+ * successive retry, capped at {@link ACL_RETRY_MAX_DELAY}.
+ */
+export const ACL_RETRY_BASE_DELAY = 500
+export const ACL_RETRY_MAX_DELAY = 10_000
 
 /**
  * Base delay (ms) before resubmitting an outgoing transaction whose submission
