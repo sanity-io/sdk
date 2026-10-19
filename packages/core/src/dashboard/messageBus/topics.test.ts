@@ -57,7 +57,6 @@ describe('dashboard topic types', () => {
   })
 
   it('types the favorites topics', () => {
-    expectTypeOf<ValueOf<'favorites.documents'>>().toEqualTypeOf<FavoriteDocument[]>()
     expectTypeOf<FavoriteDocument>().toEqualTypeOf<{
       readonly id: string
       readonly document: Events.DashboardDocumentReference & {
@@ -70,6 +69,7 @@ describe('dashboard topic types', () => {
       readonly createdAt: string
       readonly updatedAt: string
     }>()
+    expectTypeOf<ValueOf<'favorites.documents'>>().toEqualTypeOf<FavoriteDocument[]>()
     expectTypeOf<PayloadOf<'favorites.update'>>().toEqualTypeOf<{
       document: FavoriteDocument['document']
       favorited: boolean

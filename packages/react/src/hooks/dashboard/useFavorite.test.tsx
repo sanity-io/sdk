@@ -105,7 +105,6 @@ describe('useFavorite', () => {
 describe('useFavorite (message bus)', () => {
   const MESSAGE_BUS_KEY = Symbol.for('sanity.os.bus')
   const handle = {documentId: 'doc', documentType: 'movie', resourceType: 'studio' as const}
-  // `test.test` is the test providers' dataset.
   const favorite: FavoriteDocument = {
     id: 'favorite',
     document: {id: 'doc', type: 'movie', resource: {id: 'test.test', type: 'studio'}},

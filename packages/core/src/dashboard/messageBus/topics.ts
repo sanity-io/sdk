@@ -105,7 +105,7 @@ export interface FavoriteDocument {
   readonly document: Events.DashboardDocumentReference & {
     readonly resource: NonNullable<Events.DashboardDocumentReference['resource']>
   }
-  /** Where the document was favorited. Tells apart studios that share a dataset. */
+  /** Where the document was favorited. */
   readonly resource:
     | {readonly type: 'studio'; readonly applicationId: string; readonly workspaceName: string}
     | {readonly type: 'media-library' | 'canvas'; readonly id: string}
