@@ -456,7 +456,7 @@ describe('usersStore', () => {
     instance.dispose()
   })
 
-  it('replaces the users list with the first page when the token changes', async () => {
+  it('refetches the loaded users from the first page when the token changes', async () => {
     vi.useFakeTimers()
     onTestFinished(() => {
       vi.useRealTimers()
@@ -465,7 +465,11 @@ describe('usersStore', () => {
     vi.mocked(request).mockReturnValue(of({...mockResponse, nextCursor: 'page-2'}))
     const clients = mockClients(clientWith(request))
 
-    const state = getUsersState(instance, {resourceType: 'project', projectId: 'project1'})
+    const state = getUsersState(instance, {
+      resourceType: 'project',
+      projectId: 'project1',
+      batchSize: 1,
+    })
     const unsubscribe = state.subscribe()
 
     const nextRequest = vi
@@ -474,7 +478,7 @@ describe('usersStore', () => {
     clients.next(clientWith(nextRequest))
     await vi.advanceTimersByTimeAsync(0)
 
-    expect(nextRequest.mock.calls[0][0].query).toEqual({limit: expect.any(String)})
+    expect(nextRequest.mock.calls[0][0].query).toEqual({limit: '2'})
     expect(state.getCurrent()).toEqual({data: [mockUsers[1]], totalCount: 1, hasMore: false})
 
     unsubscribe()
