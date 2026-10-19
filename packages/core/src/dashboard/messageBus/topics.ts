@@ -1,3 +1,4 @@
+import {type Events} from '@sanity/message-protocol'
 import {type CurrentUser} from '@sanity/types'
 
 import {type AccessResourceType} from '../../access/checkPermissions'
@@ -92,12 +93,31 @@ export interface DocumentActivity {
 export type ApplicationActivity = DocumentActivity
 
 /**
- * A document a user favorited, addressed like {@link DocumentActivity}'s document.
+ * A document a user favorited, addressed like Comlink's favorite messages.
  * @public
  * @category Types
  * @category Message Bus
  */
-export type FavoriteDocument = DocumentActivity['document']
+export interface FavoriteDocument {
+  /** ID of the stored favorite. */
+  readonly id: string
+  /** The favorited document and the resource it lives in. */
+  readonly document: Events.DashboardDocumentReference & {
+    readonly resource: NonNullable<Events.DashboardDocumentReference['resource']>
+  }
+  /** Where the document was favorited. */
+  readonly application:
+    | {readonly type: 'studio'; readonly id: string; readonly workspaceName: string}
+    | {readonly type: 'media-library' | 'canvas'; readonly id: string}
+  readonly metadata?: {
+    /** The application path the document was favorited at. */
+    readonly path?: string
+  }
+  /** When the document was favorited, as an ISO 8601 timestamp. */
+  readonly createdAt: string
+  /** When the favorite last changed, as an ISO 8601 timestamp. */
+  readonly updatedAt: string
+}
 
 /**
  * A label rendered for an application interface; `null` clears it.
@@ -270,7 +290,10 @@ export interface DashboardTopics {
    * the change, so a read after the reply sees it. A favorite is identified by its published
    * document ID, type, resource and `schemaName` (workspace).
    */
-  'favorites.update': EventTopicDef<{document: FavoriteDocument; favorited: boolean}, void>
+  'favorites.update': EventTopicDef<
+    {document: FavoriteDocument['document']; favorited: boolean},
+    void
+  >
   /** The current dashboard location and active navigation. */
   'navigation.location': StateTopicDef<NavigationLocation | null>
   /**

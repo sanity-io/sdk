@@ -15,14 +15,11 @@ import {
   toFavoriteDocument,
 } from './favorites'
 
-function toBusFavoriteDocument(context: FavoriteDocumentContext): FavoriteDocument {
-  const document = toFavoriteDocument(context)
-  const type = context.resourceType === 'studio' ? 'dataset' : context.resourceType
-  return {...document, resource: {...document.resource, type}}
-}
-
 // Published IDs mirror Dashboard's `_stableId` match.
-const isSameFavorite = (a: FavoriteDocument, b: FavoriteDocument): boolean =>
+const isSameFavorite = (
+  a: FavoriteDocument['document'],
+  b: FavoriteDocument['document'],
+): boolean =>
   a.type === b.type &&
   a.resource.id === b.resource.id &&
   a.resource.type === b.resource.type &&
@@ -48,7 +45,7 @@ export function getBusFavoriteState(
 ): StateSource<boolean | undefined> {
   const capabilities = getTopicState(instance, 'applications.capabilities')
   const documents = getTopicState(instance, 'favorites.documents')
-  const target = toBusFavoriteDocument(context)
+  const target = toFavoriteDocument(context)
 
   const getCurrent = (): boolean | undefined => {
     const provided = capabilities.getCurrent() as CapabilityRecord | undefined
@@ -57,7 +54,7 @@ export function getBusFavoriteState(
     // A failed read degrades to "not favorited", like the Comlink fetcher.
     try {
       const favorites = documents.getCurrent() as FavoriteDocument[] | undefined
-      return favorites?.some((favorite) => isSameFavorite(favorite, target))
+      return favorites?.some((favorite) => isSameFavorite(favorite.document, target))
     } catch {
       return false
     }
@@ -108,7 +105,7 @@ export const setBusFavorite = defineMutation<SetFavoriteInput, FavoriteStatusRes
       defer(() =>
         requireDashboardMessageBus(instance, 'update a favorite').emit(
           'favorites.update',
-          {document: toBusFavoriteDocument(context), favorited: isFavorited},
+          {document: toFavoriteDocument(context), favorited: isFavorited},
           // Matches the reply timeout of the Comlink write.
           {timeout: FETCH_TIMEOUT_DEFAULT},
         ),
