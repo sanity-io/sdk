@@ -3,7 +3,11 @@ import {DocumentId, isPublishedIdEqual} from '@sanity/id-utils'
 import {catchError, defer, distinctUntilChanged, EMPTY, map, merge, type Observable} from 'rxjs'
 
 import {requireDashboardMessageBus} from '../dashboard/messageBus/store'
-import {type CapabilityRecord, type FavoriteDocument} from '../dashboard/messageBus/topics'
+import {
+  type CapabilityRecord,
+  type DocumentActivity,
+  type FavoriteDocument,
+} from '../dashboard/messageBus/topics'
 import {getTopicState, resolveTopic} from '../dashboard/messageBus/topicStore'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {type StateSource} from '../store/createStateSourceAction'
@@ -15,14 +19,17 @@ import {
   toFavoriteDocument,
 } from './favorites'
 
-function toBusFavoriteDocument(context: FavoriteDocumentContext): FavoriteDocument {
+function toBusFavoriteDocument(context: FavoriteDocumentContext): DocumentActivity['document'] {
   const document = toFavoriteDocument(context)
   const type = context.resourceType === 'studio' ? 'dataset' : context.resourceType
   return {...document, resource: {...document.resource, type}}
 }
 
 // Published IDs mirror Dashboard's `_stableId` match.
-const isSameFavorite = (a: FavoriteDocument, b: FavoriteDocument): boolean =>
+const isSameFavorite = (
+  a: DocumentActivity['document'],
+  b: DocumentActivity['document'],
+): boolean =>
   a.type === b.type &&
   a.resource.id === b.resource.id &&
   a.resource.type === b.resource.type &&

@@ -110,6 +110,7 @@ describe('useFavorite (message bus)', () => {
     id: 'doc',
     type: 'movie',
     resource: {id: 'test.test', type: 'dataset'},
+    applicationId: 'v27rvqtlp3lmdvcln6ey3lro',
   }
 
   let host: MessageBusHost

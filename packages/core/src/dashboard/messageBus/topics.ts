@@ -97,7 +97,13 @@ export type ApplicationActivity = DocumentActivity
  * @category Types
  * @category Message Bus
  */
-export type FavoriteDocument = DocumentActivity['document']
+export type FavoriteDocument = DocumentActivity['document'] & {
+  /**
+   * ID of the application the document was favorited in. Together with `resource.schemaName`,
+   * it identifies a studio workspace even when several studios use the same dataset.
+   */
+  readonly applicationId: string
+}
 
 /**
  * A label rendered for an application interface; `null` clears it.
@@ -270,7 +276,10 @@ export interface DashboardTopics {
    * the change, so a read after the reply sees it. A favorite is identified by its published
    * document ID, type, resource and `schemaName` (workspace).
    */
-  'favorites.update': EventTopicDef<{document: FavoriteDocument; favorited: boolean}, void>
+  'favorites.update': EventTopicDef<
+    {document: DocumentActivity['document']; favorited: boolean},
+    void
+  >
   /** The current dashboard location and active navigation. */
   'navigation.location': StateTopicDef<NavigationLocation | null>
   /**

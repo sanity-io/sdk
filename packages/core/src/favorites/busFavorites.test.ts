@@ -41,6 +41,7 @@ describe('getBusFavoriteState', () => {
     id: 'doc',
     type: 'movie',
     resource: {id: 'p.d', type: 'dataset'},
+    applicationId: 'v27rvqtlp3lmdvcln6ey3lro',
   }
 
   const provideFavorites = (provided: boolean) =>
