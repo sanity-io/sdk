@@ -386,6 +386,18 @@ describe('usersStore', () => {
     instance.dispose()
   })
 
+  it('reports a missing project ID right away', () => {
+    const instance = createSanityInstance({})
+
+    const state = getUsersState(instance, {resourceType: 'project'})
+    const unsubscribe = state.subscribe()
+
+    expect(() => state.getCurrent()).toThrow('Project ID required for this API.')
+
+    unsubscribe()
+    instance.dispose()
+  })
+
   it('refetches users that failed with a 401 once the token changes', async () => {
     const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
     const clients = mockClients({observable: {request}} as unknown as SanityClient)
