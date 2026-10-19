@@ -395,7 +395,7 @@ describe('usersStore', () => {
     const unsubscribe = state.subscribe()
     expect(() => state.getCurrent()).toThrow('Session not found')
 
-    clients.next({...clients.getValue()})
+    clients.next({...clients.getValue()} as SanityClient)
 
     await vi.waitFor(() => expect(state.getCurrent()).toMatchObject({data: mockUsers}), {
       interval: 1,
