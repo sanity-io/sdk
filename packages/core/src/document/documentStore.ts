@@ -627,13 +627,19 @@ const subscribeToClientAndFetchDatasetAcl = ({
 
   const clients$ = getClientState(instance, clientOptions).observable
 
+  let aclError: unknown
+
   return clients$
     .pipe(
       switchMap((client) => client.observable.request<DatasetAcl>({url, tag: 'acl.get'})),
-      retryRead(clients$, (error) => state.set('setError', {error}), {
-        baseDelay: ACL_RETRY_BASE_DELAY,
-        maxDelay: ACL_RETRY_MAX_DELAY,
-      }),
+      retryRead(
+        clients$,
+        (error) => {
+          if (error !== undefined || state.get().error === aclError) state.set('setError', {error})
+          aclError = error
+        },
+        {baseDelay: ACL_RETRY_BASE_DELAY, maxDelay: ACL_RETRY_MAX_DELAY},
+      ),
       tap((datasetAcl) => state.set('setGrants', {grants: createGrantsLookup(datasetAcl)})),
     )
     .subscribe({
