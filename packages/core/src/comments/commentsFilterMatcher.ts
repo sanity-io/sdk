@@ -66,52 +66,83 @@ function combine(results: WalkResult[]): WalkResult {
   }
 }
 
-/** Walk a parsed expression, accepting only nodes whose inputs can all be supplied locally. */
-function inspect(node: ExprNode): WalkResult {
+const SAFE_TERMINALS = new Set<ExprNode['type']>(['Parameter', 'This', 'Value'])
+const UNSAFE_TERMINALS = new Set<ExprNode['type']>([
+  'Asc',
+  'Context',
+  'Deref',
+  'Desc',
+  'Everything',
+  'Parent',
+  'PipeFuncCall',
+  'SelectorFuncCall',
+  'SelectorNested',
+])
+
+function inspectTerminal(node: ExprNode): WalkResult | undefined {
+  if (SAFE_TERMINALS.has(node.type)) return SAFE
+  if (UNSAFE_TERMINALS.has(node.type)) return UNSAFE
+  return undefined
+}
+
+function inspectUnary(node: ExprNode): WalkResult | undefined {
   switch (node.type) {
-    case 'AccessAttribute':
-      return node.base ? inspect(node.base) : SAFE
     case 'AccessElement':
     case 'ArrayCoerce':
     case 'Group':
     case 'Neg':
     case 'Not':
     case 'Pos':
+    case 'Slice':
       return inspect(node.base)
+    default:
+      return undefined
+  }
+}
+
+function inspectBinary(node: ExprNode): WalkResult | undefined {
+  switch (node.type) {
     case 'And':
     case 'OpCall':
     case 'Or':
       return combine([inspect(node.left), inspect(node.right)])
-    case 'Array':
-      return combine(node.elements.map((element: ArrayElementNode) => inspect(element.value)))
+    case 'InRange':
+      return combine([inspect(node.base), inspect(node.left), inspect(node.right)])
+    default:
+      return undefined
+  }
+}
+
+function inspectPair(node: ExprNode): WalkResult | undefined {
+  switch (node.type) {
     case 'Filter':
-      return combine([inspect(node.base), inspect(node.expr)])
     case 'FlatMap':
     case 'Map':
     case 'Projection':
       return combine([inspect(node.base), inspect(node.expr)])
-    case 'FuncCall': {
-      const name = `${node.namespace}::${node.name}`
-      if (!PURE_FUNCTIONS.has(name)) return UNSAFE
-      const inspected = combine(node.args.map(inspect))
-      return {...inspected, usesIdentity: inspected.usesIdentity || name === 'global::identity'}
-    }
-    case 'InRange':
-      return combine([inspect(node.base), inspect(node.left), inspect(node.right)])
+    default:
+      return undefined
+  }
+}
+
+function inspectObjectAttribute(attribute: ObjectAttributeNode): WalkResult[] {
+  switch (attribute.type) {
+    case 'ObjectAttributeValue':
+    case 'ObjectSplat':
+      return [inspect(attribute.value)]
+    case 'ObjectConditionalSplat':
+      return [inspect(attribute.condition), inspect(attribute.value)]
+    default:
+      return [UNSAFE]
+  }
+}
+
+function inspectCollection(node: ExprNode): WalkResult | undefined {
+  switch (node.type) {
+    case 'Array':
+      return combine(node.elements.map((element: ArrayElementNode) => inspect(element.value)))
     case 'Object':
-      return combine(
-        node.attributes.flatMap((attribute: ObjectAttributeNode) => {
-          switch (attribute.type) {
-            case 'ObjectAttributeValue':
-            case 'ObjectSplat':
-              return [inspect(attribute.value)]
-            case 'ObjectConditionalSplat':
-              return [inspect(attribute.condition), inspect(attribute.value)]
-            default:
-              return [UNSAFE]
-          }
-        }),
-      )
+      return combine(node.attributes.flatMap(inspectObjectAttribute))
     case 'Select':
       return combine([
         ...node.alternatives.flatMap((alternative: SelectAlternativeNode) => [
@@ -120,27 +151,38 @@ function inspect(node: ExprNode): WalkResult {
         ]),
         ...(node.fallback ? [inspect(node.fallback)] : []),
       ])
-    case 'Slice':
-      return inspect(node.base)
     case 'Tuple':
       return combine(node.members.map(inspect))
-    case 'Parameter':
-    case 'This':
-    case 'Value':
-      return SAFE
-    case 'Asc':
-    case 'Context':
-    case 'Deref':
-    case 'Desc':
-    case 'Everything':
-    case 'Parent':
-    case 'PipeFuncCall':
-    case 'SelectorFuncCall':
-    case 'SelectorNested':
-      return UNSAFE
     default:
-      return UNSAFE
+      return undefined
   }
+}
+
+const INSPECTORS = [inspectTerminal, inspectUnary, inspectBinary, inspectPair, inspectCollection]
+
+function inspectKnownNode(node: ExprNode): WalkResult | undefined {
+  for (const inspector of INSPECTORS) {
+    const result = inspector(node)
+    if (result) return result
+  }
+  return undefined
+}
+
+function inspectFunction(node: Extract<ExprNode, {type: 'FuncCall'}>): WalkResult {
+  const name = `${node.namespace}::${node.name}`
+  if (!PURE_FUNCTIONS.has(name)) return UNSAFE
+  const inspected = combine(node.args.map(inspect))
+  return {...inspected, usesIdentity: inspected.usesIdentity || name === 'global::identity'}
+}
+
+/** Walk a parsed expression, accepting only nodes whose inputs can all be supplied locally. */
+function inspect(node: ExprNode): WalkResult {
+  if (node.type === 'AccessAttribute') return node.base ? inspect(node.base) : SAFE
+
+  const known = inspectKnownNode(node)
+  if (known) return known
+
+  return node.type === 'FuncCall' ? inspectFunction(node) : UNSAFE
 }
 
 function compile(filter: string): CommentsMatcher | undefined {
