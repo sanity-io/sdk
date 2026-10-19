@@ -79,10 +79,10 @@ describe('studio', () => {
     expect(
       urlFor
         .studios('studio-1')
-        .workspace({basePath: '/default'})
+        .workspace({basePath: '/production'})
         .intent('edit', {id: 'drafts.document-1', type: 'article'})
         .url(),
-    ).toBe('/studios/studio-1/default/intent/edit/id=drafts.document-1;type=article/')
+    ).toBe('/studios/studio-1/production/intent/edit/id=drafts.document-1;type=article/')
 
     expect(urlFor.studios('studio-1').intent('edit', {id: 'document-1', mode: 'focus'}).url()).toBe(
       '/studios/studio-1/intent/edit/id=document-1;mode=focus/',
@@ -125,8 +125,8 @@ describe('studio', () => {
   })
 
   it('builds studio task URLs', () => {
-    expect(urlFor.studios('studio-1').workspace({basePath: '/default'}).task('task/1').url()).toBe(
-      '/studios/studio-1/default?selectedTask=task%2F1',
+    expect(urlFor.studios('studio-1').workspace({basePath: '/'}).task('task/1').url()).toBe(
+      '/studios/studio-1?selectedTask=task%2F1',
     )
     expect(urlFor.studios('studio-1').intent('edit', {id: 'document-1'}).task('task-1').url()).toBe(
       '/studios/studio-1/intent/edit/id=document-1/?selectedTask=task-1',
