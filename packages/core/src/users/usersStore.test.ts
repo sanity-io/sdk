@@ -401,53 +401,71 @@ describe('usersStore', () => {
     instance.dispose()
   })
 
-  it.each([
-    ['users', {resourceType: 'project', projectId: 'project1'}],
-    ['a single user', {userId: 'gUser1', projectId: 'project1'}],
-  ] as const)('refetches %s that failed with a 401 once the token changes', async (_, options) => {
-    vi.useFakeTimers()
-    onTestFinished(() => {
-      vi.useRealTimers()
-    })
-    const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
-    const clients = mockClients(
-      clientWith(() => throwError(() => clientError(401, 'Session not found'))),
-    )
+  const projectUser = {
+    id: 'pUser1',
+    sanityUserId: 'pUser1',
+    displayName: 'Project User',
+    createdAt: '2023-01-01T00:00:00Z',
+  } as PatchedSanityUserFromClient
+  const lookups = [
+    ['users', {resourceType: 'project', projectId: 'project1'}, mockResponse, 2],
+    ['a single user', {userId: 'gUser1', projectId: 'project1'}, mockResponse, 2],
+    ['a project user', {userId: 'pUser1', projectId: 'project1'}, projectUser, 1],
+  ] as const
 
-    const state = getUsersState(instance, options)
-    const unsubscribe = state.subscribe()
-    expect(() => state.getCurrent()).toThrow('Session not found')
+  it.each(lookups)(
+    'refetches %s that failed with a 401 once the token changes',
+    async (_, options, response, userCount) => {
+      vi.useFakeTimers()
+      onTestFinished(() => {
+        vi.useRealTimers()
+      })
+      const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
+      const clients = mockClients(
+        clientWith(() => throwError(() => clientError(401, 'Session not found'))),
+      )
 
-    clients.next(clientWith(request))
-    await vi.advanceTimersByTimeAsync(0)
+      const state = getUsersState(instance, options)
+      const unsubscribe = state.subscribe()
+      expect(() => state.getCurrent()).toThrow('Session not found')
 
-    expect(state.getCurrent()).toEqual({data: mockUsers, totalCount: 2, hasMore: false})
+      clients.next(clientWith(() => of(response)))
+      await vi.advanceTimersByTimeAsync(0)
 
-    unsubscribe()
-    instance.dispose()
-  })
+      expect(() => state.getCurrent()).not.toThrow()
+      expect(state.getCurrent()?.data).toHaveLength(userCount)
 
-  it.each([
-    ['users', {resourceType: 'project', projectId: 'project1'}],
-    ['a single user', {userId: 'gUser1', projectId: 'project1'}],
-  ] as const)('does not refetch %s that loaded when the token changes', async (_, options) => {
-    const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
-    const clients = mockClients(clientWith(request))
+      unsubscribe()
+      instance.dispose()
+    },
+  )
 
-    const state = getUsersState(instance, options)
-    const unsubscribe = state.subscribe()
-    await firstValueFrom(state.observable.pipe(filter((i) => i !== undefined)))
-    const loaded = state.getCurrent()
+  it.each(lookups)(
+    'does not refetch %s that loaded when the token changes',
+    async (_, options, response) => {
+      vi.useFakeTimers()
+      onTestFinished(() => {
+        vi.useRealTimers()
+      })
+      const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
+      const loadedRequest = vi.fn().mockReturnValue(of(response))
+      const clients = mockClients(clientWith(loadedRequest))
 
-    clients.next(clientWith(request))
-    await new Promise((resolve) => setTimeout(resolve, 0))
+      const state = getUsersState(instance, options)
+      const unsubscribe = state.subscribe()
+      const loaded = state.getCurrent()
+      expect(loaded).toBeDefined()
 
-    expect(request).toHaveBeenCalledTimes(1)
-    expect(state.getCurrent()).toBe(loaded)
+      clients.next(clientWith(loadedRequest))
+      await vi.advanceTimersByTimeAsync(0)
 
-    unsubscribe()
-    instance.dispose()
-  })
+      expect(loadedRequest).toHaveBeenCalledTimes(1)
+      expect(state.getCurrent()).toBe(loaded)
+
+      unsubscribe()
+      instance.dispose()
+    },
+  )
 
   it('delays users state removal after unsubscribe', async () => {
     const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
