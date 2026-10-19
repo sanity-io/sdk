@@ -2,12 +2,13 @@ import {type ListenEvent, type QueryParams, type SanityClient} from '@sanity/cli
 import {filter, Observable, switchMap, take} from 'rxjs'
 
 import {buildSnapshotQuery} from './commentsConstants'
+import {type CommentsMatch} from './commentsFilterMatcher'
 import {type StoredComment} from './types'
 
 /** What the listener saw, in terms the store can apply. */
 export type CommentsEvent =
   | {type: 'snapshot'; comments: StoredComment[]}
-  | {type: 'appear'; comment: StoredComment}
+  | {type: 'appear'; comment: StoredComment; transactionId: string}
   | {type: 'disappear'; commentId: string}
   | {type: 'update'; comment: StoredComment; transactionId: string}
   | {type: 'error'; error: unknown}
@@ -15,7 +16,7 @@ export type CommentsEvent =
 /**
  * Turns one listener event into what it means for this list.
  *
- * The listener carries every comment in the organization, so whether an event
+ * The listener carries every comment for the resource, so whether an event
  * is an arrival, a change, or a departure is a question about this list rather
  * than about the mutation: a comment that now matches the filter has appeared
  * here even if it was an edit, and one that no longer matches has left here
@@ -24,7 +25,7 @@ export type CommentsEvent =
  */
 function toCommentsEvent(
   event: ListenEvent<StoredComment>,
-  matches: (comment: StoredComment) => boolean,
+  matches: (comment: StoredComment) => CommentsMatch,
   held: Set<string>,
 ): CommentsEvent | undefined {
   if (event.type !== 'mutation') return undefined
@@ -40,7 +41,16 @@ function toCommentsEvent(
   if (!event.result) return undefined
   const comment = event.result
 
-  if (!matches(comment)) {
+  const match = matches(comment)
+  if (match === undefined) {
+    // Keep what the server snapshot already classified. In particular, a local
+    // evaluation failure must never manufacture a departure from this list.
+    return held.has(comment._id)
+      ? {type: 'update', comment, transactionId: event.transactionId}
+      : undefined
+  }
+
+  if (!match) {
     // Edited out of this list's filter. Never in it is the common case by far,
     // since most of what the listener carries belongs to other lists entirely.
     return held.delete(comment._id) ? {type: 'disappear', commentId: comment._id} : undefined
@@ -51,13 +61,13 @@ function toCommentsEvent(
   }
 
   held.add(comment._id)
-  return {type: 'appear', comment}
+  return {type: 'appear', comment, transactionId: event.transactionId}
 }
 
 /**
  * Watches one comment list: a snapshot on connect, then the changes to it.
  *
- * The listener is shared across every list in the organization, so this picks
+ * The listener is shared across every list for the resource, so this picks
  * out the events that belong to this one by testing each comment against the
  * list's own filter. The snapshot still comes from the server, because a filter
  * says which comments belong rather than which comments exist.
@@ -81,7 +91,7 @@ export function observeComments(options: {
   events$: Observable<ListenEvent<StoredComment>>
   filter: string
   params: QueryParams
-  matches: (comment: StoredComment) => boolean
+  matches: (comment: StoredComment) => CommentsMatch
 }): Observable<CommentsEvent> {
   const {client, events$, filter: commentsFilter, params, matches} = options
   const {comments} = client.observable.collaboration

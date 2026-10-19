@@ -62,7 +62,7 @@ let writes: {update: ReturnType<typeof vi.fn>}
 /**
  * Keyed on query *and* params, so that a list opening a listener of its own is
  * visible as one. Every list that can be matched locally shares the one keyed
- * on the organization-wide filter.
+ * on the resource-wide filter.
  */
 function listenerFor(query: string, params: Record<string, unknown>) {
   const key = `${query}|${JSON.stringify(params)}`
@@ -605,6 +605,17 @@ describe('transaction reconciliation', () => {
     sharedListener().next(updateEvent('tx-elsewhere', 'resolved'))
 
     expect(source.getCurrent()![0].status).toBe('resolved')
+  })
+
+  it('does not apply an older update that is classified as appearing', () => {
+    const source = getCommentsQueryState(instance, {filter: 'status == "resolved"'})
+    source.subscribe()
+    snapshot([])
+    markPending(instance, {commentId: 'a', transactionId: 'tx-2'})
+
+    sharedListener().next(updateEvent('tx-1', 'resolved'))
+
+    expect(source.getCurrent()).toEqual([])
   })
 
   it('rolls a failed write back onto the change it held back', async () => {

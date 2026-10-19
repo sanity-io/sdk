@@ -88,7 +88,7 @@ describe('compileCommentsFilter', () => {
     expect(matches(filter, storedComment({_id: 'a'}), {}, 'user-1')).toBe(true)
     expect(matches(filter, storedComment({_id: 'a'}), {}, 'user-2')).toBe(false)
     // No signed in user is not the same as a match on nobody.
-    expect(matches(filter, storedComment({_id: 'a'}), {})).toBe(false)
+    expect(matches(filter, storedComment({_id: 'a'}), {})).toBe(undefined)
   })
 
   it('refuses a filter that dereferences', () => {
@@ -103,6 +103,28 @@ describe('compileCommentsFilter', () => {
     expect(
       compileCommentsFilter(buildCommentsQueryFilter('threadId in *[_type == "other"]._id')),
     ).toBe(undefined)
+  })
+
+  it.each([
+    'sanity::projectId() == "p"',
+    'sanity::dataset() == "d"',
+    'count(releases::all()) > 0',
+    'dateTime(_createdAt) < dateTime(now())',
+    '^._id == "parent"',
+  ])('refuses context-dependent expression %s', (expression) => {
+    expect(compileCommentsFilter(buildCommentsQueryFilter(expression))).toBe(undefined)
+  })
+
+  it('returns unevaluable when evaluation throws', () => {
+    const filter = buildCommentsQueryFilter('$value == 1')
+    const params = Object.defineProperty({}, 'value', {
+      enumerable: true,
+      get: () => {
+        throw new Error('boom')
+      },
+    })
+
+    expect(matches(filter, storedComment({_id: 'a'}), params)).toBe(undefined)
   })
 
   it('refuses a filter that does not parse', () => {

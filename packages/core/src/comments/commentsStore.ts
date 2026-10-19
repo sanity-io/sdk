@@ -144,7 +144,7 @@ export function toMatchingCommentKeys(
       // readers, and a single comment is not an answer to that.
       if (!entry?.comments) return false
       const {filter, params} = parseCommentsKey(key)
-      return compileCommentsFilter(filter)?.(comment, params, identity) ?? false
+      return compileCommentsFilter(filter)?.(comment, params, identity) === true
     })
     .map(([key]) => key)
 }
@@ -167,22 +167,12 @@ function applyEvent(
       state.set('setComments', setComments(key, event.comments))
       return
     case 'appear':
-      state.set('receiveComment', receiveComment(key, event.comment))
-      return
-    case 'disappear':
-      state.set('removeComment', removeCommentFromEntry(key, event.commentId))
-      return
-    case 'error':
-      state.set('setCommentsError', setCommentsError(key, event.error))
-      return
     case 'update': {
       const pending = state.get().pendingTransactions[event.comment._id]
 
-      // Our own writes come back through the listener. When a later transaction
-      // is already in flight for this comment, an echo of an earlier one would
-      // undo it on screen, so hold it back and wait for the one we are
-      // expecting. Held rather than discarded, so that if our write fails the
-      // rollback can land on this state instead of erasing it.
+      // A locally classified `appear` can be an update that moved into this
+      // list. Treat it like any other echo so an older transaction cannot
+      // overwrite a newer optimistic edit.
       if (pending && pending !== event.transactionId) {
         state.set('recordDroppedEcho', recordDroppedEcho(event.comment))
         return
@@ -192,7 +182,14 @@ function applyEvent(
       if (pending) {
         state.set('clearPendingTransaction', clearPendingTransaction(event.comment._id, pending))
       }
+      return
     }
+    case 'disappear':
+      state.set('removeComment', removeCommentFromEntry(key, event.commentId))
+      return
+    case 'error':
+      state.set('setCommentsError', setCommentsError(key, event.error))
+      return
   }
 }
 
@@ -226,7 +223,7 @@ const watchSubscribedQueries = ({
             const {filter, params} = parseCommentsKey(group$.key)
             const matcher = compileCommentsFilter(filter)
             // Held rather than looked up per comment: the listener carries the
-            // whole organization's, and every one of them is tested here. Read
+            // whole resource's, and every one of them is tested here. Read
             // on each, so that signing in does not leave a stale identity.
             const currentUser = getCurrentUserState(instance)
 
@@ -234,7 +231,7 @@ const watchSubscribedQueries = ({
               switchMap((client) =>
                 observeComments({
                   client,
-                  // Sharing the organization's listener means answering locally
+                  // Sharing the resource's listener means answering locally
                   // which of its comments belong here. A filter the evaluator
                   // cannot answer for keeps a listener of its own, where the
                   // server has already answered it.

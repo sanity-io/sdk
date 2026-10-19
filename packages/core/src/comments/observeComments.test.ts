@@ -3,6 +3,7 @@ import {Subject} from 'rxjs'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {commentTarget, storedComment, TARGET_REF} from './__fixtures__/comments'
+import {type CommentsMatch} from './commentsFilterMatcher'
 import {type CommentsEvent, observeComments} from './observeComments'
 import {type StoredComment} from './types'
 
@@ -11,7 +12,7 @@ const WELCOME = {type: 'welcome'} as ListenEvent<StoredComment>
 const FILTER = '_type == "sanity.comment" && target.document._ref == $targetRef'
 const PARAMS = {targetRef: TARGET_REF}
 
-/** What the shared listener carries, which is every comment in the organization. */
+/** What the shared listener carries, which is every comment for the resource. */
 let events$: Subject<ListenEvent<StoredComment>>
 let fetches: Subject<StoredComment[]>[]
 let comments: {fetch: ReturnType<typeof vi.fn>}
@@ -38,7 +39,7 @@ function onTargetDocument(comment: StoredComment): boolean {
   return comment.target.document._ref === TARGET_REF
 }
 
-function collect(matches: (comment: StoredComment) => boolean = onTargetDocument) {
+function collect(matches: (comment: StoredComment) => CommentsMatch = onTargetDocument) {
   const events: CommentsEvent[] = []
   const subscription = observeComments({
     client,
@@ -101,7 +102,7 @@ describe('observeComments', () => {
     events$.next(mutation('disappear', 'a'))
 
     expect(events.slice(1)).toEqual([
-      {type: 'appear', comment: created},
+      {type: 'appear', comment: created, transactionId: 'tx-a'},
       {type: 'update', comment: edited, transactionId: 'tx-a'},
       {type: 'disappear', commentId: 'a'},
     ])
@@ -133,6 +134,27 @@ describe('observeComments', () => {
     expect(events).toHaveLength(2)
   })
 
+  it('keeps a held comment when local evaluation is unevaluable', () => {
+    const {events} = collect(() => undefined)
+    events$.next(WELCOME)
+    fetches[0].next([storedComment({_id: 'a'})])
+
+    const edited = storedComment({_id: 'a', status: 'resolved'})
+    events$.next(mutation('update', 'a', edited))
+
+    expect(events.slice(1)).toEqual([{type: 'update', comment: edited, transactionId: 'tx-a'}])
+  })
+
+  it('does not add an unheld comment when local evaluation is unevaluable', () => {
+    const {events} = collect(() => undefined)
+    events$.next(WELCOME)
+    fetches[0].next([])
+
+    events$.next(mutation('appear', 'a', storedComment({_id: 'a'})))
+
+    expect(events).toHaveLength(1)
+  })
+
   it('reports a comment edited into the filter as newly arrived', () => {
     const {events} = collect()
     events$.next(WELCOME)
@@ -141,7 +163,7 @@ describe('observeComments', () => {
     const arrived = storedComment({_id: 'a'})
     events$.next(mutation('update', 'a', arrived))
 
-    expect(events.slice(1)).toEqual([{type: 'appear', comment: arrived}])
+    expect(events.slice(1)).toEqual([{type: 'appear', comment: arrived, transactionId: 'tx-a'}])
   })
 
   it('ignores a mutation that carries no document', () => {
@@ -171,7 +193,7 @@ describe('observeComments', () => {
 
     expect(events).toEqual([
       {type: 'snapshot', comments: [storedComment({_id: 'a'})]},
-      {type: 'appear', comment: created},
+      {type: 'appear', comment: created, transactionId: 'tx-late'},
     ])
   })
 
