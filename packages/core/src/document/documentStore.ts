@@ -635,7 +635,6 @@ const subscribeToClientAndFetchDatasetAcl = ({
       retryRead(
         clients$,
         (error) => {
-          // on recovery, keep a fatal error another subscription set in the meantime
           if (error !== undefined || state.get().error === aclError) state.set('setError', {error})
           aclError = error
         },

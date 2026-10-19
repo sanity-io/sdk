@@ -105,7 +105,6 @@ export function createFetchDocument(instance: SanityInstance, resource?: Documen
       map((result) => {
         if (!result.accessible) {
           if (result.reason === 'existence') return null
-          // lets `retryRead` wait for new credentials instead of retrying on a timer
           throw Object.assign(
             new Error(`Document with ID \`${documentId}\` is inaccessible due to permissions.`),
             {statusCode: 403},
