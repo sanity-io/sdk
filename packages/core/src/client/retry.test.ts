@@ -70,6 +70,16 @@ describe('retryRead', () => {
     expect(read.setError).toHaveBeenLastCalledWith(undefined)
   })
 
+  it('does not report a transient failure that recovers within its retries', async () => {
+    const error = new ServerError({statusCode: 503, headers: {}, body: {}})
+    const read = startRead(Array.from({length: OUT_OF_SYNC_RETRY_COUNT}, () => error))
+
+    await vi.advanceTimersByTimeAsync(OUT_OF_SYNC_RETRY_MAX_DELAY * OUT_OF_SYNC_RETRY_COUNT)
+
+    expect(read.setError).not.toHaveBeenCalled()
+    expect(read.values).toEqual(['ok'])
+  })
+
   it('reports a transient failure that outlasts its retries, then clears it on recovery', async () => {
     const error = new ServerError({statusCode: 503, headers: {}, body: {}})
     const read = startRead(Array.from({length: OUT_OF_SYNC_RETRY_COUNT + 1}, () => error))

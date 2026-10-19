@@ -1101,6 +1101,9 @@ it('surfaces a dataset ACL 403 and refetches the ACL once the token changes', as
     )
   })
   expect(aclAttempts).toBe(1)
+  await expect(applyDocumentActions(instance, {actions: [createDocument(doc)]})).rejects.toThrow(
+    'Forbidden - Session does not have access to this dataset',
+  )
 
   hasAccess = true
   const client$ = (getClientState as () => StateSource<SanityClient>)()
