@@ -34,13 +34,19 @@ function isTransient(error: unknown): boolean {
 
 /**
  * Retries transient failures after a backoff and any other failure once `clients` emits a new
- * client. `setError` receives `undefined` once the read recovers.
+ * client. Transient failures reach `setError` after `count` retries. `setError` receives
+ * `undefined` once the read recovers.
  *
  * @internal
  */
 export function retryRead<T>(
   clients: Observable<SanityClient>,
   setError: (error: unknown) => void,
+  {baseDelay, maxDelay, count = Infinity}: {baseDelay: number; maxDelay: number; count?: number} = {
+    baseDelay: OUT_OF_SYNC_RETRY_BASE_DELAY,
+    maxDelay: OUT_OF_SYNC_RETRY_MAX_DELAY,
+    count: OUT_OF_SYNC_RETRY_COUNT,
+  },
 ): MonoTypeOperatorFunction<T> {
   return (source) =>
     defer(() => {
@@ -57,7 +63,7 @@ export function retryRead<T>(
           delay: (error: unknown, retryCount) => {
             const transient = isTransient(error)
 
-            if (!transient || retryCount > OUT_OF_SYNC_RETRY_COUNT) {
+            if (!transient || retryCount > count) {
               failing = true
               setError(error)
             }
@@ -67,10 +73,7 @@ export function retryRead<T>(
 
             if (!transient) return nextClient
 
-            const backoff = Math.min(
-              OUT_OF_SYNC_RETRY_BASE_DELAY * 2 ** (retryCount - 1),
-              OUT_OF_SYNC_RETRY_MAX_DELAY,
-            )
+            const backoff = Math.min(baseDelay * 2 ** (retryCount - 1), maxDelay)
 
             return race(timer(backoff), nextClient)
           },

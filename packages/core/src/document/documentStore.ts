@@ -50,6 +50,8 @@ import {defineStore, type StoreContext} from '../store/defineStore'
 import {type ResolveDocument} from '../typegen/resolve'
 import {type DocumentAction} from './actions'
 import {
+  ACL_RETRY_BASE_DELAY,
+  ACL_RETRY_MAX_DELAY,
   API_VERSION,
   INITIAL_OUTGOING_THROTTLE_TIME,
   SUBMISSION_RETRY_BASE_DELAY,
@@ -630,11 +632,15 @@ const subscribeToClientAndFetchDatasetAcl = ({
   return clients$
     .pipe(
       switchMap((client) => client.observable.request<DatasetAcl>({url, tag: 'acl.get'})),
-      retryRead(clients$, (error) => {
-        // on recovery, keep a fatal error another subscription set in the meantime
-        if (error !== undefined || state.get().error === aclError) state.set('setError', {error})
-        aclError = error
-      }),
+      retryRead(
+        clients$,
+        (error) => {
+          // on recovery, keep a fatal error another subscription set in the meantime
+          if (error !== undefined || state.get().error === aclError) state.set('setError', {error})
+          aclError = error
+        },
+        {baseDelay: ACL_RETRY_BASE_DELAY, maxDelay: ACL_RETRY_MAX_DELAY},
+      ),
       tap((datasetAcl) => state.set('setGrants', {grants: createGrantsLookup(datasetAcl)})),
     )
     .subscribe({

@@ -1467,6 +1467,8 @@ vi.mock('./documentConstants.ts', async (importOriginal) => {
     OUT_OF_SYNC_RETRY_BASE_DELAY: 0,
     OUT_OF_SYNC_RETRY_MAX_DELAY: 0,
     OUT_OF_SYNC_RETRY_COUNT: 2,
+    ACL_RETRY_BASE_DELAY: 0,
+    ACL_RETRY_MAX_DELAY: 0,
     get SUBMISSION_RETRY_BASE_DELAY() {
       return submissionRetryDelay.ms
     },
