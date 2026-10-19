@@ -1,5 +1,5 @@
-import {type SanityClient} from '@sanity/client'
-import {delay, filter, firstValueFrom, Observable, of} from 'rxjs'
+import {ClientError, type SanityClient} from '@sanity/client'
+import {BehaviorSubject, delay, filter, firstValueFrom, Observable, of, throwError} from 'rxjs'
 import {beforeEach, describe, expect, it, onTestFinished, vi} from 'vitest'
 
 import {getClient, getClientState} from '../client/clientStore'
@@ -23,6 +23,17 @@ vi.mock('./usersConstants', async (importOriginal) => ({
 }))
 
 vi.mock('../client/clientStore')
+
+const clientError = (statusCode: number, message = 'Request failed') =>
+  new ClientError({statusCode, headers: {}, body: {error: 'Error', message}})
+
+function mockClients(client: SanityClient) {
+  const clients = new BehaviorSubject(client)
+  vi.mocked(getClientState).mockReturnValue({
+    observable: clients.asObservable(),
+  } as StateSource<SanityClient>)
+  return clients
+}
 
 describe('usersStore', () => {
   let request: SanityClient['observable']['request']
@@ -358,7 +369,7 @@ describe('usersStore', () => {
     vi.mocked(request).mockImplementationOnce(
       () =>
         new Observable((observer) => {
-          observer.error(new Error(errorMessage))
+          observer.error(clientError(400, errorMessage))
         }),
     )
 
@@ -370,6 +381,44 @@ describe('usersStore', () => {
 
     // Verify error is thrown when accessing state
     expect(() => state.getCurrent()).toThrow(errorMessage)
+
+    unsubscribe()
+    instance.dispose()
+  })
+
+  it('refetches users that failed with a 401 once the token changes', async () => {
+    const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
+    const clients = mockClients({observable: {request}} as unknown as SanityClient)
+    vi.mocked(request).mockReturnValueOnce(throwError(() => clientError(401, 'Session not found')))
+
+    const state = getUsersState(instance, {resourceType: 'project', projectId: 'project1'})
+    const unsubscribe = state.subscribe()
+    expect(() => state.getCurrent()).toThrow('Session not found')
+
+    clients.next({...clients.getValue()})
+
+    await vi.waitFor(() => expect(state.getCurrent()).toMatchObject({data: mockUsers}), {
+      interval: 1,
+    })
+
+    unsubscribe()
+    instance.dispose()
+  })
+
+  it('refetches a single user that failed with a 401 once the token changes', async () => {
+    const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
+    const clients = mockClients({} as SanityClient)
+    vi.mocked(request).mockReturnValueOnce(throwError(() => clientError(401, 'Session not found')))
+
+    const state = getUsersState(instance, {userId: 'gUser1', projectId: 'project1'})
+    const unsubscribe = state.subscribe()
+    expect(() => state.getCurrent()).toThrow('Session not found')
+
+    clients.next({} as SanityClient)
+
+    await vi.waitFor(() => expect(state.getCurrent()).toMatchObject({data: mockUsers}), {
+      interval: 1,
+    })
 
     unsubscribe()
     instance.dispose()
