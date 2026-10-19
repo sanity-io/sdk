@@ -258,16 +258,15 @@ const listenForLoadMoreAndFetch = ({state, instance}: StoreContext<UsersStoreSta
               withLatestFrom(cursor$),
               switchMap(([[resource, client], cursor]) => {
                 const fresh = client !== dataClient
+                const loadedCount = state.get().users[group$.key]?.users?.length ?? 0
+                const limit = (fresh ? Math.max(batchSize, loadedCount) : batchSize).toString()
 
                 return client.observable
                   .request<SanityUserResponse>({
                     method: 'GET',
                     url: `access/${resource.type}/${resource.id}/users`,
                     tag: 'users.list',
-                    query:
-                      cursor && !fresh
-                        ? {nextCursor: cursor, limit: batchSize.toString()}
-                        : {limit: batchSize.toString()},
+                    query: cursor && !fresh ? {nextCursor: cursor, limit} : {limit},
                   })
                   .pipe(map((response) => ({client, fresh, response})))
               }),
