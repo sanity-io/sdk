@@ -93,7 +93,7 @@ export interface DocumentActivity {
 export type ApplicationActivity = DocumentActivity
 
 /**
- * A favorited document and the resource it lives in, addressed like Comlink's favorite messages.
+ * A document a user favorited, addressed like Comlink's favorite messages.
  * @public
  * @category Types
  * @category Message Bus
@@ -103,7 +103,7 @@ export type FavoriteDocument = Events.DashboardDocumentReference & {
 }
 
 /**
- * A document a user favorited, and where and when they favorited it.
+ * A favorite in `favorites.documents`.
  * @public
  * @category Types
  * @category Message Bus
