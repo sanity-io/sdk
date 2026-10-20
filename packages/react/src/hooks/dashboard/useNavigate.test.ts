@@ -89,13 +89,22 @@ describe('useNavigate (message bus)', () => {
   // The single navigation.location.update responder for the describe: it records every payload
   // and replies with whatever `updateReply` currently holds, so a test can force a not-ok reply
   // without registering a second competing responder.
+  type UpdateReply = {ok: true} | {ok: false; reason: 'not-navigable' | 'interrupted' | 'failed'}
   let updates: {url: string; history?: string}[]
-  let updateReply: {ok: true} | {ok: false; reason: 'not-navigable' | 'interrupted' | 'failed'}
+  let updateReply: UpdateReply | ((url: string) => UpdateReply)
 
   const emitLocation = (value: NavigationLocation | null) =>
     host.connections.subscribe((client) =>
       client.emit('navigation.location', value as ValueOf<'navigation.location'>),
     )
+
+  // The host commits a navigation into this app: a transition to `path`, then the settled location.
+  const commitInApp = (from: string, path: string) => {
+    const to = {appId: 'app', path}
+    emitLocation({appId: 'app', path: from, transition: {navigationType: 'push', to}})
+    emitLocation({appId: 'app', path, transition: {navigationType: 'push', to}})
+    emitLocation({appId: 'app', path, transition: null})
+  }
 
   const publishBasePath = () =>
     host.connections.subscribe((client) =>
@@ -109,7 +118,9 @@ describe('useNavigate (message bus)', () => {
     host = installMessageBus({appId: 'dashboard'})
     host.subscribe('navigation.location.update', (message) => {
       updates.push(message.payload)
-      message.reply(updateReply)
+      message.reply(
+        typeof updateReply === 'function' ? updateReply(message.payload.url) : updateReply,
+      )
     })
   })
 
@@ -387,6 +398,91 @@ describe('useNavigate (message bus)', () => {
     })
 
     expect(navigateFn).not.toHaveBeenCalled()
+  })
+
+  it('does not echo an older report that the host commits after a newer one was sent', async () => {
+    publishBasePath()
+    emitLocation({appId: 'app', path: 'documents/abc', transition: null})
+
+    const navigateFn = vi.fn()
+    const {result} = renderHookWithInstance(() => useNavigate(navigateFn))
+
+    await act(async () => {
+      result.current({path: 'documents/def'})
+      result.current({path: 'documents/ghi'})
+    })
+    act(() => {
+      commitInApp('documents/abc', 'documents/def')
+      commitInApp('documents/def', 'documents/ghi')
+    })
+
+    expect(navigateFn).not.toHaveBeenCalled()
+
+    act(() => commitInApp('documents/ghi', 'documents/jkl'))
+
+    expect(navigateFn).toHaveBeenCalledExactlyOnceWith({path: 'documents/jkl', type: 'push'})
+  })
+
+  it('does not echo reports that revisit an earlier path', async () => {
+    publishBasePath()
+    emitLocation({appId: 'app', path: 'documents/abc', transition: null})
+
+    const navigateFn = vi.fn()
+    const {result} = renderHookWithInstance(() => useNavigate(navigateFn))
+
+    await act(async () => {
+      result.current({path: 'documents/def'})
+      result.current({path: 'documents/ghi'})
+      result.current({path: 'documents/def'})
+    })
+    act(() => {
+      commitInApp('documents/abc', 'documents/def')
+      commitInApp('documents/def', 'documents/ghi')
+      commitInApp('documents/ghi', 'documents/def')
+    })
+
+    expect(navigateFn).not.toHaveBeenCalled()
+  })
+
+  it('settles earlier reports when the echo of a later one commits', async () => {
+    publishBasePath()
+    emitLocation({appId: 'app', path: 'documents/abc', transition: null})
+
+    const navigateFn = vi.fn()
+    const {result} = renderHookWithInstance(() => useNavigate(navigateFn))
+
+    await act(async () => {
+      result.current({path: 'documents/def'})
+      result.current({path: 'documents/ghi'})
+    })
+    act(() => commitInApp('documents/abc', 'documents/ghi'))
+
+    expect(navigateFn).not.toHaveBeenCalled()
+
+    act(() => commitInApp('documents/ghi', 'documents/def'))
+
+    expect(navigateFn).toHaveBeenCalledExactlyOnceWith({path: 'documents/def', type: 'push'})
+  })
+
+  it('fires a host commit to the path of a rejected report while an earlier report is pending', async () => {
+    publishBasePath()
+    emitLocation({appId: 'app', path: 'documents/abc', transition: null})
+    updateReply = (url) =>
+      url.endsWith('/documents/ghi') ? {ok: false, reason: 'interrupted'} : {ok: true}
+
+    const navigateFn = vi.fn()
+    const {result} = renderHookWithInstance(() => useNavigate(navigateFn))
+
+    await act(async () => {
+      result.current({path: 'documents/def'})
+      result.current({path: 'documents/ghi'})
+    })
+    act(() => {
+      commitInApp('documents/abc', 'documents/def')
+      commitInApp('documents/def', 'documents/ghi')
+    })
+
+    expect(navigateFn).toHaveBeenCalledExactlyOnceWith({path: 'documents/ghi', type: 'push'})
   })
 
   it('fires host-mediated commits while the base path is unpublished', () => {

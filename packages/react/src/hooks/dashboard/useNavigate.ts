@@ -151,8 +151,9 @@ function useBusNavigate(
   const instance = useSanityInstance()
   const bus = requireDashboardMessageBus(instance, 'navigate')
   const navigate = useEffectEvent(navigateFn)
-  // The path of this app's latest outbound request, used to suppress the echo of our own commit.
-  const ownRequest = useRef<string | null>(null)
+  // This app's in-app reports the host may still commit, in send order. The host's commits carry
+  // no request id, so a commit is matched to a report by path alone.
+  const ownRequests = useRef<{path: string}[]>([])
 
   useEffect(() => {
     // bus.subscribe, not useTopic: the rule needs the previous emission, and React coalesces
@@ -179,12 +180,15 @@ function useBusNavigate(
           },
         ),
         filter(([, curr]) => {
-          // Loop suppression: any own-app host-mediated commit consumes the pending request, so
-          // a request that lands elsewhere (or never lands) can't strand its path and drop a
-          // later host navigation. Only the commit for our exact path is our own echo to drop.
-          const suppress = curr.path === ownRequest.current
-          ownRequest.current = null
-          return !suppress
+          // Loop suppression. The host commits requests in order, so the echo of a report also
+          // settles every earlier one, including reports the app sent again before the host
+          // caught up. A commit that matches no report is the host's own navigation and settles
+          // them all, so a report that never lands can't strand its path and drop a later host
+          // navigation.
+          const pending = ownRequests.current
+          const index = pending.findIndex((request) => request.path === curr.path)
+          ownRequests.current = pending.slice(index + 1)
+          return index === -1
         }),
         map(([prev, curr]) => ({path: curr.path, type: prev.transition.navigationType})),
       )
@@ -197,11 +201,12 @@ function useBusNavigate(
       // The host commits paths without a leading slash; store the same form so the echo matches.
       // A dashboard-scoped report never moved our router, so its commit must reach navigateFn.
       const own = scope === 'in-app' ? path.replace(/^\//, '') : null
-      if (own !== null) ownRequest.current = own
+      const request = own === null ? null : {path: own}
+      if (request) ownRequests.current = [...ownRequests.current, request]
       // A request that never landed must drop its suppression, or a later host navigation to the
       // same path would be dropped. Best-effort: never throws.
       const clearIfStale = () => {
-        if (ownRequest.current === own) ownRequest.current = null
+        ownRequests.current = ownRequests.current.filter((pending) => pending !== request)
       }
       // The base path is read per call, not in render, so a host that has not published it only
       // loses outbound reporting; the inbound subscription above still installs.
