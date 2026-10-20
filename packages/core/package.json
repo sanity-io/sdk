@@ -81,7 +81,7 @@
     "ts:check": "tsc --noEmit"
   },
   "dependencies": {
-    "@sanity/bifur-client": "^1.0.0",
+    "@sanity/bifur-client": "^2.0.2",
     "@sanity/client": "catalog:",
     "@sanity/comlink": "catalog:",
     "@sanity/diff-match-patch": "^3.2.1",

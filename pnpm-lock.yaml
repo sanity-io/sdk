@@ -674,8 +674,8 @@ importers:
   packages/core:
     dependencies:
       '@sanity/bifur-client':
-        specifier: ^1.0.0
-        version: 1.0.0
+        specifier: ^2.0.2
+        version: 2.0.2
       '@sanity/client':
         specifier: 'catalog:'
         version: 8.10.0(vitest@5.0.5)
