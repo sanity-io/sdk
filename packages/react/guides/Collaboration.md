@@ -120,6 +120,34 @@ function Mentions({userId}: {userId: string}) {
 
 Suspense, `isPending`, and `error` work the same as in `useCommentThreads`.
 
+The list is flat. To read it as threads, pass it to `buildCommentThreads`, which groups comments exactly as `useCommentThreads` does. Thread first and group by anything else afterwards, since a thread needs its replies in the same input as its parent:
+
+```tsx
+import {buildCommentThreads, useCommentsQuery} from '@sanity/sdk-react/collaboration'
+import {useMemo} from 'react'
+
+function OpenThreadsAcross({refs}: {refs: string[]}) {
+  const {comments} = useCommentsQuery({filter: 'target.document._ref in $refs', params: {refs}})
+  const threads = useMemo(
+    () => buildCommentThreads(comments).filter((thread) => thread.status === 'open'),
+    [comments],
+  )
+
+  return <span>{threads.length}</span>
+}
+```
+
+The filter runs over every comment the organization can read, not only the ones in the dataset you are reading. Comment queries are routed by organization and the project and dataset are not sent with them, so they pick the organization but do not narrow the results. To keep to one dataset, add a `target.document._ref` prefix condition yourself. Refs are `dataset:{projectId}.{dataset}:{documentId}`:
+
+```tsx
+const {comments} = useCommentsQuery({
+  filter: 'string::startsWith(target.document._ref, $prefix) && status == "open"',
+  params: {prefix: 'dataset:abc123.production:'},
+})
+```
+
+Writes show here before the server confirms them, the same as they do on a document's comments: the filter is matched against the written comment locally, so a new comment that answers it appears straight away. That holds for writes made through the resource the query is bound to: a query reaches across the organization, so it also gets comments written through another dataset, but those arrive once the server confirms them. Some filters cannot be answered that way, since they need more than the one comment to evaluate: one that dereferences with `->`, one that runs a `*[...]` of its own, and one that calls a context-dependent function such as `sanity::dataset()`, `releases::all()` or `now()`. Those still work and still stay up to date, but only once the server says so, and they cost a connection of their own rather than sharing the one every other list reads from. For a time window, pass the cutoff as a parameter, as in `_createdAt > $since`, rather than comparing with `now()`.
+
 ## Writing comments
 
 `useCommentActions` returns the write actions, bound to the current instance.
@@ -149,7 +177,7 @@ function ResolveButton({commentId}: {commentId: string}) {
 
 ### Optimistic writes and failed creates
 
-Every action writes optimistically: the change shows immediately and rolls back if the server rejects it, so you can render straight from `useCommentThreads` without tracking pending state.
+Every action writes optimistically: the change shows immediately and rolls back if the server rejects it, so you can render straight from `useCommentThreads` without tracking pending state. Creates and replies reach every matching list, whichever one you wrote them from, so a document's comments and a query that matches them stay in step.
 
 Creating is the exception, and `replyToComment` counts as creating. A comment that fails to post stays on screen carrying `state.createError` rather than disappearing, so nobody loses what they typed. Passing the same `commentId` again retries it:
 

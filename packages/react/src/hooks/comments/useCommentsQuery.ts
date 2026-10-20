@@ -47,11 +47,24 @@ const SOURCE: CommentListSource<CommentsQueryOptions, Comment[]> = {
  * `_type == "sanity.comment"` is applied for you. Comments are stored per
  * organization, resolved rather than configured: the one the Dashboard opened
  * the app in, else `organizationId` on the Sanity config, else the organization
- * owning the resource's project. The filter runs within that organization.
+ * owning the resource's project. The filter runs over every comment that
+ * organization can read, not only the ones in the resource's dataset: comment
+ * queries are routed by organization and the resource is not sent with them.
+ * To keep to one dataset, add a `target.document._ref` prefix condition
+ * yourself. Refs are `dataset:{projectId}.{dataset}:{documentId}`.
  *
  * Suspends until the comments have loaded. Switching filter is a transition, so
  * the previous list stays on screen and `isPending` goes true rather than the
  * component suspending again.
+ *
+ * Writes show here before the server confirms them, the same as they do on a
+ * document's comments, because the filter is matched against the written
+ * comment locally. That holds for writes through the resource the query is
+ * bound to; comments written through another dataset arrive once the server
+ * confirms them. A filter that cannot be answered that way — one that
+ * dereferences, runs a `*[...]` of its own, or calls a context-dependent
+ * function such as `sanity::dataset()` or `now()` — still works, but only
+ * follows the server, and costs a connection of its own rather than sharing one.
  *
  * @category Comments
  * @function
@@ -64,6 +77,18 @@ const SOURCE: CommentListSource<CommentsQueryOptions, Comment[]> = {
  *   const {comments} = useCommentsQuery({
  *     filter: 'count(message[].children[_type == "mention" && userId == $userId]) > 0',
  *     params: {userId},
+ *   })
+ *
+ *   return <span>{comments.length}</span>
+ * }
+ * ```
+ *
+ * @example Open comments in one dataset
+ * ```tsx
+ * function OpenInProduction() {
+ *   const {comments} = useCommentsQuery({
+ *     filter: 'string::startsWith(target.document._ref, $prefix) && status == "open"',
+ *     params: {prefix: 'dataset:abc123.production:'},
  *   })
  *
  *   return <span>{comments.length}</span>
