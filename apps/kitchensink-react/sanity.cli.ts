@@ -59,11 +59,21 @@ export default defineCliConfig({
     resolve: {
       ...prev.resolve,
       alias: [
-        ...Object.entries({
-          ...prev.resolve?.alias,
-          '@sanity/sdk': resolve(import.meta.dirname, '../../packages/core/src/_exports'),
-          '@sanity/sdk-react': resolve(import.meta.dirname, '../../packages/react/src/_exports'),
-        }).map(([find, replacement]) => ({find, replacement: replacement as string})),
+        ...Object.entries({...prev.resolve?.alias}).map(([find, replacement]) => ({
+          find,
+          replacement: replacement as string,
+        })),
+        // Subpath exports (`/dashboard`, `/_internal`, ...) map onto the matching file in
+        // `src/_exports`, but `package.json` has no counterpart there and must resolve to the
+        // real manifest: `sanity` imports `@sanity/sdk-react/package.json` for telemetry.
+        {
+          find: /^@sanity\/sdk(?=\/|$)(?!\/package\.json$)/,
+          replacement: resolve(import.meta.dirname, '../../packages/core/src/_exports'),
+        },
+        {
+          find: /^@sanity\/sdk-react(?=\/|$)(?!\/package\.json$)/,
+          replacement: resolve(import.meta.dirname, '../../packages/react/src/_exports'),
+        },
         // Regex finds with $ anchors so subpath exports resolve precisely
         // (a string find would rewrite `@portabletext/editor/selectors` into
         // a path inside lib/index.js).
