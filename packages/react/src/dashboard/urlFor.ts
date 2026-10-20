@@ -427,11 +427,9 @@ class StudioUrlBuilder
  */
 export interface Urls {
   studios(): DashboardUrl
-  /** Routes an application by its slug, or its id without one. A string is used as-is. */
-  studios(appId: string | Pick<ApplicationBase, 'id' | 'slug'>): StudioUrl
+  studios(application: string | Pick<ApplicationBase, 'id' | 'slug'>): StudioUrl
   applications(): DashboardUrl
-  /** Routes an application by its slug, or its id without one. A string is used as-is. */
-  applications(appId: string | Pick<ApplicationBase, 'id' | 'slug'>): CoreApplicationUrl
+  applications(application: string | Pick<ApplicationBase, 'id' | 'slug'>): CoreApplicationUrl
   mediaLibrary(): MediaLibraryUrl
   canvas(): CanvasUrl
   home(): DashboardUrl
@@ -460,19 +458,19 @@ const createUrls = <const Builders extends BuilderRegistry>(
   builders: Builders,
 ): Urls & BuilderMethods<Builders> => {
   function studios(): DashboardUrl
-  function studios(appId: ApplicationAddress): StudioUrl
-  function studios(appId?: ApplicationAddress): DashboardUrl | StudioUrl {
-    return appId === undefined
+  function studios(application: ApplicationAddress): StudioUrl
+  function studios(application?: ApplicationAddress): DashboardUrl | StudioUrl {
+    return application === undefined
       ? new UrlBuilder(new URL('/studios/', relativeUrlBase))
-      : createRootBuilder(StudioUrlBuilder, applicationSegment(appId))
+      : createRootBuilder(StudioUrlBuilder, applicationSegment(application))
   }
 
   function applications(): DashboardUrl
-  function applications(appId: ApplicationAddress): CoreApplicationUrl
-  function applications(appId?: ApplicationAddress): DashboardUrl | CoreApplicationUrl {
-    return appId === undefined
+  function applications(application: ApplicationAddress): CoreApplicationUrl
+  function applications(application?: ApplicationAddress): DashboardUrl | CoreApplicationUrl {
+    return application === undefined
       ? new UrlBuilder(new URL('/applications/', relativeUrlBase))
-      : createRootBuilder(CoreApplicationUrlBuilder, applicationSegment(appId))
+      : createRootBuilder(CoreApplicationUrlBuilder, applicationSegment(application))
   }
 
   const methods = Object.fromEntries(
