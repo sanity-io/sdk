@@ -787,19 +787,19 @@ function migrationTransformAt(
 function migrateVersionedValue(
   steps: readonly TopicMigration[] | undefined,
   value: unknown,
-  from: number,
-  to: number,
+  fromVersion: number,
+  toVersion: number,
   select: (step: TopicMigration) => TopicMigrationTransform | undefined,
 ): unknown {
-  if (from === to) return value
+  if (fromVersion === toVersion) return value
 
   let current = value
-  if (from < to) {
-    for (let version = from; version < to; version++) {
+  if (fromVersion < toVersion) {
+    for (let version = fromVersion; version < toVersion; version++) {
       current = migrationTransformAt(steps, version, select).up(current)
     }
   } else {
-    for (let version = from; version > to; version--) {
+    for (let version = fromVersion; version > toVersion; version--) {
       current = migrationTransformAt(steps, version - 1, select).down(current)
     }
   }

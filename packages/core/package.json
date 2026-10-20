@@ -73,7 +73,7 @@
     "dev": "pkg watch",
     "docs": "typedoc --json docs/typedoc.json --tsconfig ./tsconfig.dist.json",
     "format": "oxfmt",
-    "lint": "eslint .",
+    "lint": "oxlint",
     "prepublishOnly": "pnpm run build",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
@@ -100,7 +100,7 @@
     "zustand": "^5.0.15"
   },
   "devDependencies": {
-    "@repo/config-eslint": "workspace:*",
+    "@repo/config-oxlint": "workspace:*",
     "@repo/config-test": "workspace:*",
     "@repo/package.bundle": "workspace:*",
     "@repo/package.config": "workspace:*",
@@ -109,8 +109,8 @@
     "@sanity/pkg-utils": "catalog:",
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",
-    "eslint": "catalog:",
     "oxfmt": "catalog:",
+    "oxlint": "catalog:",
     "rolldown": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:",

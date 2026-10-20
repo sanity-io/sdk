@@ -7,7 +7,7 @@
     "build": "pnpm tsc && vite build",
     "clean": "rimraf dist",
     "dev": "vite",
-    "lint": "eslint .",
+    "lint": "oxlint",
     "preview": "vite preview",
     "tsc": "tsc --noEmit"
   },
@@ -17,13 +17,13 @@
     "react-dom": "catalog:"
   },
   "devDependencies": {
-    "@repo/config-eslint": "workspace:*",
+    "@repo/config-oxlint": "workspace:*",
     "@repo/tsconfig": "workspace:*",
     "@sanity/sdk": "workspace:*",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "catalog:",
-    "eslint": "catalog:",
+    "oxlint": "catalog:",
     "rimraf": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:"
