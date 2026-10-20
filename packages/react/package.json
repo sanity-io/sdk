@@ -108,7 +108,7 @@
     "typescript": "catalog:",
     "vite": "catalog:",
     "vitest": "catalog:",
-    "xstate": "5.33.2"
+    "xstate": "5.33.3"
   },
   "peerDependencies": {
     "react": "^19.2.0",
