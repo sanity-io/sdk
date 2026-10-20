@@ -171,7 +171,7 @@ catalogs:
       specifier: ^1.0.5
       version: 1.0.5
     '@sanity/client':
-      specifier: ^8.9.0
+      specifier: ^8.10.0
       version: 8.10.0
     '@sanity/comlink':
       specifier: ^4.0.3
@@ -180,13 +180,13 @@ catalogs:
       specifier: ^0.24.0
       version: 0.24.0
     '@sanity/pkg-utils':
-      specifier: ^13.0.11
+      specifier: ^13.0.15
       version: 13.0.15
     '@sanity/tsconfig':
       specifier: ^2.2.1
       version: 2.2.1
     '@sanity/types':
-      specifier: ^6.19.0
+      specifier: ^6.20.0
       version: 6.20.0
     '@testing-library/jest-dom':
       specifier: ^7.0.1
