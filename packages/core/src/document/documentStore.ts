@@ -107,6 +107,8 @@ export interface DocumentStoreState {
   events: Subject<DocumentEvent>
 }
 
+export const getStoreError = ({error, aclError}: DocumentStoreState): unknown => error ?? aclError
+
 export interface DocumentState {
   id: string
   error?: unknown
@@ -264,13 +266,14 @@ function hasEveryDocumentArrived(
 const _getDocumentState = bindActionByResource(
   documentStore,
   createStateSourceAction({
-    selector: (
-      {state: {error, aclError, documentStates}},
-      options: DocumentOptions<string | undefined>,
-    ) => {
+    selector: ({state}, options: DocumentOptions<string | undefined>) => {
       const {path} = options
-      if (error ?? aclError) throw error ?? aclError
-      const document = selectLocalDocument(documentStates, getDocumentIdsFromHandleLikes([options]))
+      const error = getStoreError(state)
+      if (error) throw error
+      const document = selectLocalDocument(
+        state.documentStates,
+        getDocumentIdsFromHandleLikes([options]),
+      )
       if (document === undefined) return undefined
 
       if (!path) return document
@@ -320,11 +323,10 @@ const _resolveDocument = bindActionByResource(
 export const getDocumentSyncStatus = bindActionByResource(
   documentStore,
   createStateSourceAction({
-    selector: (
-      {state: {error, aclError, documentStates: documents, outgoing, applied, queued}},
-      doc: DocumentHandle,
-    ) => {
-      if (error ?? aclError) throw error ?? aclError
+    selector: ({state}, doc: DocumentHandle) => {
+      const error = getStoreError(state)
+      if (error) throw error
+      const {documentStates: documents, outgoing, applied, queued} = state
       if (!hasEveryDocumentArrived(documents, getDocumentIdsFromHandleLikes([doc])))
         return undefined
       return !queued.length && !applied.length && !outgoing

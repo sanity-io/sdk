@@ -7,7 +7,7 @@ import {type StoreContext} from '../store/defineStore'
 import {type ResolveDocument} from '../typegen/resolve'
 import {randomUuid} from '../utils/ids'
 import {type Action} from './actions'
-import {documentStore, type DocumentStoreState} from './documentStore'
+import {documentStore, type DocumentStoreState, getStoreError} from './documentStore'
 import {type DocumentTransactionSubmissionResult} from './events'
 import {type DocumentSet} from './processMutations'
 import {type AppliedTransaction, type QueuedTransaction, queueTransaction} from './reducers'
@@ -112,7 +112,7 @@ async function _applyDocumentActions(
   }
 
   const fatalError$ = state.observable.pipe(
-    map((s) => s.error ?? s.aclError),
+    map(getStoreError),
     first(Boolean),
     map((error) => ({type: 'error', error}) as const),
   )
