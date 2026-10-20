@@ -1,9 +1,10 @@
 import {installMessageBus, resetMessageBus} from '@sanity/sdk/_internal'
 import {connectMessageBus, type MessageBusHost} from '@sanity/sdk/dashboard'
+import {Suspense, use} from 'react'
 import {afterEach, beforeEach, describe, expect, expectTypeOf, it, vi} from 'vitest'
 
-import {renderHook} from '../../../test/test-utils'
-import {useWorker} from './useWorker'
+import {act, render, renderHook} from '../../../test/test-utils'
+import {useWorker, type WorkerClient} from './useWorker'
 
 const MESSAGE_BUS_KEY = Symbol.for('sanity.os.bus')
 
@@ -38,6 +39,28 @@ describe('useWorker', () => {
 
     rerender()
     expect(result.current).toBe(feed)
+  })
+
+  it('keeps its client when the first render suspends', async () => {
+    const clients: WorkerClient<Feed>[] = []
+    let resolve!: () => void
+    const ready = new Promise<void>((done) => (resolve = done))
+    function Inbox() {
+      clients.push(useWorker<Feed>('feed'))
+      use(ready)
+      return null
+    }
+    await act(async () => {
+      render(
+        <Suspense fallback={null}>
+          <Inbox />
+        </Suspense>,
+      )
+    })
+    await act(async () => resolve())
+
+    expect(clients.length).toBeGreaterThan(1)
+    expect(new Set(clients).size).toBe(1)
   })
 
   it('rejects with the code the dashboard refuses with', async () => {

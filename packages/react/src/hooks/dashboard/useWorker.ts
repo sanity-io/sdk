@@ -1,6 +1,5 @@
-import {requireDashboardMessageBus, workerMessages} from '@sanity/sdk/_internal'
+import {getWorkerClient} from '@sanity/sdk/_internal'
 import {type MessageBusEmitOptions} from '@sanity/sdk/dashboard'
-import {useMemo} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
 
@@ -38,7 +37,7 @@ export interface WorkerClient<T extends WorkerTypes = WorkerTypes> {
 
 /**
  * Returns a client for one of the application's own workers, named by service. The client is
- * the same object across renders while the name stays the same.
+ * the same object for the same name, even across a render that suspended, so it can key caches.
  *
  * A worker's messages aren't stored, so a view that starts listening later misses earlier ones.
  * Listen first, then post for what you need. Have the worker send a message when it starts,
@@ -76,22 +75,5 @@ export interface WorkerClient<T extends WorkerTypes = WorkerTypes> {
  * @category Dashboard
  */
 export function useWorker<T extends WorkerTypes = WorkerTypes>(name: string): WorkerClient<T> {
-  const instance = useSanityInstance()
-  const messageBus = requireDashboardMessageBus(instance, `use worker "${name}"`)
-  return useMemo<WorkerClient<T>>(
-    () => ({
-      post: (payload?: unknown, options?: MessageBusEmitOptions) =>
-        // Inside the executor, so a closed bus rejects instead of throwing.
-        new Promise((resolve) =>
-          resolve(messageBus.emit('workers.post', {name, payload}, options)),
-        ),
-      subscribe: (handler) => {
-        const subscription = workerMessages(messageBus, name).subscribe((message) =>
-          handler(message as T['message']),
-        )
-        return () => subscription.unsubscribe()
-      },
-    }),
-    [messageBus, name],
-  )
+  return getWorkerClient(useSanityInstance(), name) as WorkerClient<T>
 }
