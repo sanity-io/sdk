@@ -55,6 +55,7 @@ const PURE_FUNCTIONS = new Set([
 type WalkResult = {safe: boolean; usesIdentity: boolean}
 
 const UNSAFE: WalkResult = {safe: false, usesIdentity: false}
+const SAFE: WalkResult = {safe: true, usesIdentity: false}
 
 /**
  * Node types whose inputs can all be supplied by `@` and the params. Everything
@@ -94,35 +95,38 @@ const SAFE_NODES = new Set<string>([
   'Value',
 ])
 
-function isNode(value: unknown): value is {type: string} {
-  return (
-    typeof value === 'object' && value !== null && typeof Reflect.get(value, 'type') === 'string'
-  )
+/** A pure function call is safe; `identity()` additionally needs the user to be known. */
+function inspectFuncCall({namespace, name}: FuncCallNode): WalkResult {
+  const qualified = `${namespace}::${name}`
+  if (!PURE_FUNCTIONS.has(qualified)) return UNSAFE
+  return {safe: true, usesIdentity: qualified === 'global::identity'}
 }
 
-/** Walk a parsed expression, accepting only nodes whose inputs can all be supplied locally. */
-function inspect(node: {type: string}): WalkResult {
-  if (!SAFE_NODES.has(node.type)) return UNSAFE
+/** Every object-valued field of a node, with array fields flattened one level. */
+function childObjects(node: object): object[] {
+  return Object.values(node)
+    .flat()
+    .filter((child): child is object => typeof child === 'object' && child !== null)
+}
+
+/**
+ * Walk a parsed expression, accepting only nodes whose inputs can all be
+ * supplied locally. An object without a recognised `type` fails closed.
+ */
+function inspect(node: object): WalkResult {
+  const type: unknown = Reflect.get(node, 'type')
+  if (typeof type !== 'string' || !SAFE_NODES.has(type)) return UNSAFE
   // A literal's value is data, not syntax, even when it has a `type` key.
-  if (node.type === 'Value') return {safe: true, usesIdentity: false}
+  if (type === 'Value') return SAFE
 
-  let usesIdentity = false
-  if (node.type === 'FuncCall') {
-    const {namespace, name} = node as FuncCallNode
-    const qualified = `${namespace}::${name}`
-    if (!PURE_FUNCTIONS.has(qualified)) return UNSAFE
-    usesIdentity = qualified === 'global::identity'
-  }
+  const own = type === 'FuncCall' ? inspectFuncCall(node as FuncCallNode) : SAFE
+  if (!own.safe) return UNSAFE
 
-  for (const field of Object.values(node)) {
-    for (const child of Array.isArray(field) ? field : [field]) {
-      if (typeof child !== 'object' || child === null) continue
-      // Fail closed on a child that is not a node we can recognise.
-      if (!isNode(child)) return UNSAFE
-      const result = inspect(child)
-      if (!result.safe) return UNSAFE
-      usesIdentity ||= result.usesIdentity
-    }
+  let usesIdentity = own.usesIdentity
+  for (const child of childObjects(node)) {
+    const result = inspect(child)
+    if (!result.safe) return UNSAFE
+    usesIdentity ||= result.usesIdentity
   }
   return {safe: true, usesIdentity}
 }
