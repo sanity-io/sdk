@@ -55,11 +55,6 @@ describe('studio', () => {
     expect(urlFor.studios('studio-1').url()).toBe('/studios/studio-1')
   })
 
-  it('routes a studio by its slug, or its id without one', () => {
-    expect(urlFor.studios({id: 'studio-1', slug: 'marketing'}).url()).toBe('/studios/marketing')
-    expect(urlFor.studios({id: 'studio-1', slug: null}).url()).toBe('/studios/studio-1')
-  })
-
   it.each([
     {basePath: '/', expected: '/studios/studio-1'},
     {basePath: null, expected: '/studios/studio-1'},
@@ -170,11 +165,6 @@ describe('coreApp', () => {
     expect(urlFor.applications('app-1').path('documents', 'document/1').url()).toBe(
       '/applications/app-1/documents/document/1',
     )
-  })
-
-  it('routes an application by its slug, or its id without one', () => {
-    expect(urlFor.applications({id: 'app-1', slug: 'inbox'}).url()).toBe('/applications/inbox')
-    expect(urlFor.applications({id: 'app-1', slug: null}).url()).toBe('/applications/app-1')
   })
 
   it('exposes application-specific builder interfaces', () => {

@@ -53,7 +53,7 @@ function useBusStudioNavigator(
   return useCallback(
     (workspace: DashboardResource) => {
       const url = urlFor
-        .studios({id: workspace.userApplicationId, slug: workspace.userApplicationSlug ?? null})
+        .studios(workspace.userApplicationSlug ?? workspace.userApplicationId)
         .workspace(workspace)
         .intent('edit', {id: documentHandle.documentId, type: documentHandle.documentType})
         .url()

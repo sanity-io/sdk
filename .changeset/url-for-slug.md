@@ -2,4 +2,4 @@
 '@sanity/sdk-react': minor
 ---
 
-`urlFor.studios()` and `urlFor.applications()` accept an application and link to its slug, falling back to its id.
+`useNavigateToStudioDocument` opens the studio at its slug in the Dashboard, falling back to its id.
