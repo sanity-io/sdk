@@ -128,43 +128,15 @@ export function toTargetDocumentRef(
 }
 
 /**
- * The comments API resource for a dataset resource: the `resourceType` and
- * `resourceId` the client sends with every request, listen included.
- */
-function toResourceIdentity(resource: DocumentResource): {
-  resource: DatasetResource
-  resourceType: 'dataset'
-  resourceId: string
-} {
-  const datasetResource = assertDatasetResource(resource)
-  return {
-    resource: datasetResource,
-    resourceType: 'dataset',
-    resourceId: `${datasetResource.projectId}.${datasetResource.dataset}`,
-  }
-}
-
-/**
- * The identity the comments API sends for a resource.
- *
- * @internal
- */
-export function toCommentsResourceKey(resource: DocumentResource): string {
-  const {resourceType, resourceId} = toResourceIdentity(resource)
-  return `${resourceType}:${resourceId}`
-}
-
-/**
  * A dataset resource keeps the project API domain, which is what avoids the
  * CORS and Studio auth cookie problems a global host would bring. The client
  * derives the comment API's `resourceType`/`resourceId` from `projectId` and
  * `dataset` itself.
  */
 function toClientOptions(resource: DocumentResource, organizationId: string): ClientOptions {
-  const identity = toResourceIdentity(resource)
   return {
     apiVersion: COMMENTS_API_VERSION,
-    resource: identity.resource,
+    resource: assertDatasetResource(resource),
     collaboration: {organizationId},
   }
 }

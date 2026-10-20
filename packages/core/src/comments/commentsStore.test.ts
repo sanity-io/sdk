@@ -62,7 +62,7 @@ let writes: {update: ReturnType<typeof vi.fn>}
 /**
  * Keyed on query *and* params, so that a list opening a listener of its own is
  * visible as one. Every list that can be matched locally shares the one keyed
- * on the resource-wide filter.
+ * on the organization-wide filter.
  */
 function listenerFor(query: string, params: Record<string, unknown>) {
   const key = `${query}|${JSON.stringify(params)}`
@@ -250,7 +250,7 @@ describe('getCommentThreadsState', () => {
     )
   })
 
-  it('opens one listener for the resource rather than one per list', () => {
+  it('opens one listener for the organization rather than one per list', () => {
     getCommentThreadsState(instance, HANDLE).subscribe()
     getCommentThreadsState(instance, {...HANDLE, documentId: 'doc-2'}).subscribe()
     getCommentsQueryState(instance, {filter: 'status == "open"'}).subscribe()
@@ -264,6 +264,41 @@ describe('getCommentThreadsState', () => {
     )
     // Which comments belong where is still a question per list.
     expect(fetches).toHaveLength(3)
+  })
+
+  it('shares one listener between resources in an organization, each list keeping its own', () => {
+    const staging: DocumentResource = {projectId: 'p', dataset: 'staging'}
+    const production = getCommentThreadsState(instance, HANDLE)
+    const other = getCommentThreadsState(instance, {...HANDLE, resource: staging})
+    production.subscribe()
+    other.subscribe()
+    snapshot([], 0)
+    snapshot([], 1)
+
+    // The API routes a listen by organization, so a second dataset would only
+    // carry the same stream again.
+    expect(client.observable.collaboration.comments.listen).toHaveBeenCalledTimes(1)
+
+    // That stream carries both datasets' comments, and the target reference is
+    // what keeps each list to its own.
+    sharedListener().next({
+      type: 'mutation',
+      transition: 'appear',
+      documentId: 'staged',
+      result: storedComment({
+        _id: 'staged',
+        target: commentTarget({
+          document: {
+            _ref: 'dataset:p.staging:doc-1',
+            _type: 'globalDocumentReference',
+            _weak: true,
+          },
+        }),
+      }),
+    } as ListenEvent<StoredComment>)
+
+    expect(production.getCurrent()).toEqual([])
+    expect(other.getCurrent()!.map((thread) => thread.parentComment.id)).toEqual(['staged'])
   })
 
   it('keeps a listener of its own for a filter it cannot match locally', () => {

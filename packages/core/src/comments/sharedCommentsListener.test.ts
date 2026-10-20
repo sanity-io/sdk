@@ -25,7 +25,7 @@ let instance: SanityInstance
 let listens: Subject<ListenEvent<StoredComment>>[]
 let listen: ReturnType<typeof vi.fn>
 let client$: BehaviorSubject<SanityClient>
-/** Which organization a resource resolves to, so tests can vary ownership. */
+/** Which organization a resource resolves to, so a test can put two in one. */
 let organizations: Map<string, string>
 
 beforeEach(() => {
@@ -60,7 +60,7 @@ afterEach(() => {
 })
 
 describe('getSharedCommentsListener', () => {
-  it('listens for every comment on the resource', () => {
+  it('listens for every comment in the organization', () => {
     getSharedCommentsListener(instance, RESOURCE).subscribe()
 
     expect(listen).toHaveBeenCalledWith(
@@ -70,7 +70,18 @@ describe('getSharedCommentsListener', () => {
     )
   })
 
-  it('opens separate connections for two resources in the same organization', () => {
+  it('opens one connection for two resources in the same organization', () => {
+    // The API routes a listen by organization and ignores the resource, so a
+    // second connection would carry exactly what the first already does.
+    getSharedCommentsListener(instance, RESOURCE).subscribe()
+    getSharedCommentsListener(instance, OTHER_RESOURCE).subscribe()
+
+    expect(listen).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps organizations apart', () => {
+    organizations.set(OTHER_RESOURCE.dataset!, 'org-2')
+
     getSharedCommentsListener(instance, RESOURCE).subscribe()
     getSharedCommentsListener(instance, OTHER_RESOURCE).subscribe()
 

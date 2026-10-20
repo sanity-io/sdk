@@ -5,24 +5,25 @@ import {type DocumentResource} from '../config/sanityConfig'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {UPSTREAM_CLOSE_DELAY_MS} from '../store/createStoreInstance'
 import {cleanupTimer} from '../utils/setCleanupTimeout'
-import {
-  observeCommentsClient,
-  observeCommentsOrganizationId,
-  toCommentsResourceKey,
-} from './commentsClient'
+import {observeCommentsClient, observeCommentsOrganizationId} from './commentsClient'
 import {buildListenQuery, LISTEN_OPTIONS, TYPE_FILTER} from './commentsConstants'
 import {type StoredComment} from './types'
 
-/** Every comment mutation for the resource, as the listener reports it. */
+/** Every comment mutation in the organization, as the listener reports it. */
 type CommentsListener = Observable<ListenEvent<StoredComment>>
 
 /**
- * One listener per resource, for as long as something is reading comments from
- * it.
+ * One listener per organization, for as long as something is reading comments
+ * from it.
  *
- * Keyed by instance so the listeners die with it, and by the same resource
- * identity sent to the comments API. The entry is dropped once the last reader
- * has gone, so a later one opens a fresh connection rather than an inert stream.
+ * Keyed by instance so the listeners die with it, and by organization because
+ * that is what a listener covers. The comments API routes reads and listens by
+ * organization and drops the `resourceType`/`resourceId` the client sends, then
+ * filters by the comment groups the caller belongs to. A listener opened on one
+ * dataset's client therefore already carries every comment in the organization
+ * the caller can read, and one per dataset would only carry the same stream
+ * again. The entry is dropped once the last reader has gone, so a later one
+ * opens a fresh connection rather than an inert stream.
  */
 const listeners = new WeakMap<SanityInstance, Map<string, CommentsListener>>()
 
@@ -65,10 +66,17 @@ function createListener(
 }
 
 /**
- * The resource's comment listener, opening one if it is not already there.
+ * The organization's comment listener, opening one if it is not already there.
  *
- * Every comment for the resource comes through it. Narrowing is left to each
- * list, which is what lets one connection serve all of that resource's lists.
+ * Every comment in the organization comes through it, including comments on
+ * canvases and on documents in other projects. Narrowing is left to each list,
+ * which is what lets one connection serve all of them. Document lists match on
+ * `target.document._ref`, which names the dataset, so each stays on its own
+ * resource's comments, and would still if the API ever began to honour the
+ * resource on a listen.
+ *
+ * The resource only supplies the client and the organization to resolve. Which
+ * resource got there first does not change what the listener carries.
  *
  * @internal
  */
@@ -76,27 +84,22 @@ export function getSharedCommentsListener(
   instance: SanityInstance,
   resource: DocumentResource,
 ): CommentsListener {
-  const resourceKey = toCommentsResourceKey(resource)
   return observeCommentsOrganizationId(instance, resource).pipe(
     switchMap((organizationId) => {
-      // The organization is part of the key so that a project moving to
-      // another organization opens a listener for it rather than reusing one
-      // opened with the old one.
-      const key = `${resourceKey}|${organizationId}`
-      let byResource = listeners.get(instance)
-      if (!byResource) {
-        byResource = new Map()
-        listeners.set(instance, byResource)
+      let byOrganization = listeners.get(instance)
+      if (!byOrganization) {
+        byOrganization = new Map()
+        listeners.set(instance, byOrganization)
       }
 
-      const existing = byResource.get(key)
+      const existing = byOrganization.get(organizationId)
       if (existing) return existing
 
-      const registry = byResource
+      const registry = byOrganization
       const listener = createListener(instance, resource, organizationId, () =>
-        registry.delete(key),
+        registry.delete(organizationId),
       )
-      registry.set(key, listener)
+      registry.set(organizationId, listener)
       return listener
     }),
   )

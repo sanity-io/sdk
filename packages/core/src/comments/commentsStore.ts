@@ -223,7 +223,7 @@ const watchSubscribedQueries = ({
             const {filter, params} = parseCommentsKey(group$.key)
             const matcher = compileCommentsFilter(filter)
             // Held rather than looked up per comment: the listener carries the
-            // whole resource's, and every one of them is tested here. Read
+            // whole organization's, and every one of them is tested here. Read
             // on each, so that signing in does not leave a stale identity.
             const currentUser = getCurrentUserState(instance)
 
@@ -231,7 +231,7 @@ const watchSubscribedQueries = ({
               switchMap((client) =>
                 observeComments({
                   client,
-                  // Sharing the resource's listener means answering locally
+                  // Sharing the organization's listener means answering locally
                   // which of its comments belong here. A filter the evaluator
                   // cannot answer for keeps a listener of its own, where the
                   // server has already answered it.
