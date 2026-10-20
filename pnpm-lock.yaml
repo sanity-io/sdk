@@ -686,8 +686,8 @@ importers:
         specifier: ^3.2.1
         version: 3.2.1
       '@sanity/diff-patch':
-        specifier: ^6.0.0
-        version: 6.0.0
+        specifier: ^7.0.0
+        version: 7.0.0
       '@sanity/id-utils':
         specifier: ^1.1.0
         version: 1.1.0
@@ -3318,6 +3318,10 @@ packages:
   '@sanity/diff-patch@6.0.0':
     resolution: {integrity: sha512-oJ5kZQV6C/DAlcpRLEU7AcVWXrSPuJb3Z1TQ9tm/qZOVWJENwWln45jtepQEYolTIuGx9jUlhYUi3hGIkOt8RA==}
     engines: {node: '>=18.2'}
+
+  '@sanity/diff-patch@7.0.0':
+    resolution: {integrity: sha512-e/xGFPWtDN5ZafxtG/DcP4URBk3EPblR+Ett1pT3AmiViNLPkHfwnG/Jj4+DlHkvcKTSw6jebuGVEFkumAxHQg==}
+    engines: {node: '>=22.12.0'}
 
   '@sanity/diff@6.15.0':
     resolution: {integrity: sha512-5DlYyVhRbaeectF0EzCdrwXcGj8sIz6Mw4TF9ZHzFGZu3BdoSjvShuR5wXSw94wBejrD1MHIo6TPEZ9TKDtWdQ==}
@@ -11005,6 +11009,10 @@ snapshots:
       '@sanity/diff-match-patch': 3.2.1
 
   '@sanity/diff-patch@6.0.0':
+    dependencies:
+      '@sanity/diff-match-patch': 3.2.1
+
+  '@sanity/diff-patch@7.0.0':
     dependencies:
       '@sanity/diff-match-patch': 3.2.1
 
