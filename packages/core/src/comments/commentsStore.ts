@@ -3,6 +3,7 @@ import {
   catchError,
   distinctUntilChanged,
   EMPTY,
+  filter as filterEvents,
   first,
   firstValueFrom,
   groupBy,
@@ -18,7 +19,8 @@ import {
   tap,
 } from 'rxjs'
 
-import {getCurrentUserState} from '../auth/authStore'
+import {AuthStateType} from '../auth/authStateType'
+import {getAuthState, getCurrentUserState} from '../auth/authStore'
 import {type DocumentHandle, type DocumentResource} from '../config/sanityConfig'
 import {isReleasePerspective} from '../releases/utils/isReleasePerspective'
 import {bindActionByResource, type BoundResourceKey} from '../store/createActionBinder'
@@ -158,6 +160,23 @@ function toCommentsQueryKey(options: WithResource<CommentsQueryOptions>): string
   })
 }
 
+/** The current user's id once auth has settled, `undefined` when it settled without one. */
+function observeSettledUserId(instance: SanityInstance): Observable<string | undefined> {
+  return getAuthState(instance).observable.pipe(
+    // Skip loading, whenever it happens: logging in, or logged in with
+    // `/users/me` in flight. A switch of user should not pass through "none".
+    filterEvents(
+      (authState) =>
+        authState.type !== AuthStateType.LOGGING_IN &&
+        !(authState.type === AuthStateType.LOGGED_IN && !authState.currentUser),
+    ),
+    map((authState) =>
+      authState.type === AuthStateType.LOGGED_IN ? authState.currentUser?.id : undefined,
+    ),
+    distinctUntilChanged(),
+  )
+}
+
 /**
  * Applies a write's echo unless a newer write of ours to the same comment is in
  * flight, in which case it is held back for a rollback to land on.
@@ -244,12 +263,12 @@ const watchSubscribedQueries = ({
             // whole organization's, and every one of them is tested here. Read
             // on each, so that signing in does not leave a stale identity.
             const currentUser = getCurrentUserState(instance)
-            // A filter on identity() cannot be matched before the user is
-            // known, and nothing replays what the listener carried meanwhile,
-            // so such a list starts only once the user is there to match with.
-            const ready$ = matcher?.usesIdentity
-              ? currentUser.observable.pipe(first((user) => Boolean(user?.id)))
-              : of(null)
+            // A filter on identity() cannot be matched while the user is
+            // loading, and nothing replays what the listener carried meanwhile,
+            // so such a list waits for auth to settle. Settled without a user
+            // (logged out, or failed) it starts anyway and the server answers;
+            // a different user means a different list, so it starts again.
+            const ready$ = matcher?.usesIdentity ? observeSettledUserId(instance) : of(undefined)
 
             return ready$.pipe(
               switchMap(() => observeCommentsClientForResource(instance, key.resource)),

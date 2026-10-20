@@ -1,7 +1,9 @@
 import {type ListenEvent, type SanityClient} from '@sanity/client'
-import {BehaviorSubject, of, Subject} from 'rxjs'
+import {BehaviorSubject, map, of, Subject} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
+import {AuthStateType} from '../auth/authStateType'
+import {type AuthState} from '../auth/authStore'
 import {type DocumentResource} from '../config/sanityConfig'
 import {bindActionByResource} from '../store/createActionBinder'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
@@ -30,17 +32,30 @@ import {
 import {setPendingTransaction} from './reducers'
 import {type StoredComment} from './types'
 
-/** The signed-in user, which a test can hold back to stand in for `/users/me` loading. */
-let currentUser$: BehaviorSubject<{id: string} | null>
+/** Auth, which a test can hold at `/users/me` loading or settle without a user. */
+let authState$: BehaviorSubject<AuthState>
 
-vi.mock('../auth/authStore', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../auth/authStore')>()),
-  getCurrentUserState: vi.fn(() => ({
-    observable: currentUser$,
-    getCurrent: () => currentUser$.getValue(),
-    subscribe: () => () => {},
-  })),
-}))
+function loggedIn(currentUser: {id: string} | null): AuthState {
+  return {type: AuthStateType.LOGGED_IN, token: 't', currentUser} as AuthState
+}
+
+vi.mock('../auth/authStore', async (importOriginal) => {
+  const userOf = (authState: AuthState) =>
+    authState.type === AuthStateType.LOGGED_IN ? authState.currentUser : null
+  return {
+    ...(await importOriginal<typeof import('../auth/authStore')>()),
+    getAuthState: vi.fn(() => ({
+      observable: authState$,
+      getCurrent: () => authState$.getValue(),
+      subscribe: () => () => {},
+    })),
+    getCurrentUserState: vi.fn(() => ({
+      observable: authState$.pipe(map(userOf)),
+      getCurrent: () => userOf(authState$.getValue()),
+      subscribe: () => () => {},
+    })),
+  }
+})
 
 vi.mock('./commentsClient', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./commentsClient')>()),
@@ -91,7 +106,7 @@ function sharedListener() {
 }
 
 beforeEach(() => {
-  currentUser$ = new BehaviorSubject<{id: string} | null>({id: 'user-1'})
+  authState$ = new BehaviorSubject(loggedIn({id: 'user-1'}))
   listeners = new Map()
   fetches = []
 
@@ -600,7 +615,7 @@ describe('getCommentsQueryState', () => {
   })
 
   it('waits for the user before following a filter on identity()', () => {
-    currentUser$.next(null)
+    authState$.next(loggedIn(null))
     const source = getCommentsQueryState(instance, {filter: '_system.createdBy == identity()'})
     source.subscribe()
 
@@ -608,7 +623,7 @@ describe('getCommentsQueryState', () => {
     // until the user loaded, and nothing would bring them back.
     expect(listeners.size).toBe(0)
 
-    currentUser$.next({id: 'user-1'})
+    authState$.next(loggedIn({id: 'user-1'}))
     snapshot([])
     sharedListener().next({
       type: 'mutation',
@@ -619,6 +634,34 @@ describe('getCommentsQueryState', () => {
     } as ListenEvent<StoredComment>)
 
     expect(source.getCurrent()!.map((comment) => comment.id)).toEqual(['mine'])
+  })
+
+  it('lets the server answer a filter on identity() when there is no user', () => {
+    // Logged out, or `/users/me` failed: no user is coming, so waiting for one
+    // would leave the list suspended for good.
+    authState$.next({type: AuthStateType.LOGGED_OUT, isDestroyingSession: false} as AuthState)
+    const source = getCommentsQueryState(instance, {filter: '_system.createdBy == identity()'})
+    source.subscribe()
+
+    snapshot([])
+
+    expect(source.getCurrent()).toEqual([])
+  })
+
+  it('reads a filter on identity() again for a different user', () => {
+    const source = getCommentsQueryState(instance, {filter: '_system.createdBy == identity()'})
+    source.subscribe()
+    snapshot([storedComment({_id: 'a-1', _system: {createdBy: 'user-1'}})])
+    expect(source.getCurrent()!.map((comment) => comment.id)).toEqual(['a-1'])
+
+    // Someone else signs in: what identity() selects has changed, so the list
+    // is fetched again rather than kept from the previous user.
+    authState$.next(loggedIn({id: 'user-2'}))
+    connect()
+    expect(fetches).toHaveLength(2)
+    fetches[1].next([storedComment({_id: 'b-1', _system: {createdBy: 'user-2'}})])
+
+    expect(source.getCurrent()!.map((comment) => comment.id)).toEqual(['b-1'])
   })
 
   it('reads through a client for the resource it is bound to', () => {
