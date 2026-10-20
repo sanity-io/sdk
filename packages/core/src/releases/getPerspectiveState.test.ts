@@ -162,6 +162,28 @@ describe('getPerspectiveState', () => {
     expect(perspective2).toEqual(['release1', 'drafts'])
   })
 
+  it('should ignore the variant when caching options', async () => {
+    const state1 = getPerspectiveState(instance, {perspective: {releaseName: 'release1'}})
+    mockReleasesQuerySubject.next(activeReleases)
+    const perspective1 = await firstValueFrom(
+      state1.observable.pipe(
+        filter(
+          (perspective): perspective is NonNullable<typeof perspective> =>
+            perspective !== undefined,
+        ),
+        take(1),
+      ),
+    )
+
+    const state2 = getPerspectiveState(instance, {
+      perspective: {releaseName: 'release1'},
+      variant: 'french',
+    })
+
+    // same array reference: the variant did not create a new cache entry
+    expect(state2.getCurrent()).toBe(perspective1)
+  })
+
   it('should handle changes in activeReleases (cache test)', async () => {
     const options: PerspectiveHandle = {perspective: {releaseName: 'release1'}}
 

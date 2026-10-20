@@ -11,7 +11,12 @@ import {type DocumentAction} from './actions'
 import {ActionError, PermissionActionError, processActions} from './processActions/processActions'
 import {checkGrant} from './processActions/shared'
 import {type DocumentSet} from './processMutations'
-import {type SyncTransactionState} from './reducers'
+import {
+  getVariantCandidateKeys,
+  resolveVariantIds,
+  resolveVariantKey,
+  type VariantTrackingState,
+} from './variantTracking'
 
 export type Grant = 'read' | 'update' | 'create' | 'history'
 
@@ -62,31 +67,20 @@ const nullReplacer: object = {}
 // (If the same documents are computed, the MultiKeyWeakMap will return the same instance.)
 const documentsSelector = createSelector(
   [
-    ({state: {documentStates}}: SelectorContext<SyncTransactionState>) => documentStates,
-    (_context: SelectorContext<SyncTransactionState>, {actions}: {actions: DocumentAction[]}) =>
+    ({state: {documentStates}}: SelectorContext<VariantTrackingState>) => documentStates,
+    ({state: {variantIndex}}: SelectorContext<VariantTrackingState>) => variantIndex,
+    (_context: SelectorContext<VariantTrackingState>, {actions}: {actions: DocumentAction[]}) =>
       actions,
   ],
-  (documentStates, actions) => {
-    // Collect all document IDs needed for permission checks.
-    // Important: liveEdit documents don't have drafts, so we only fetch the single document to avoid waiting for non-existent draft documents.
-    const documentIds = new Set(
-      actions
-        .map((action) => {
-          if (typeof action.documentId !== 'string') return []
-          // For liveEdit documents, only fetch the single document
-          if (action.liveEdit) return [action.documentId]
-          // For standard documents, fetch both draft and published
-          const ids: string[] = [
-            getPublishedId(DocumentId(action.documentId)),
-            getDraftId(DocumentId(action.documentId)),
-          ]
-          if (isReleasePerspective(action.perspective)) {
-            ids.push(getVersionId(DocumentId(action.documentId), action.perspective.releaseName))
-          }
-          return ids
-        })
-        .flat(),
-    )
+  (documentStates, variantIndex, actions) => {
+    const documentIds = new Set<string>()
+    for (const action of actions) {
+      const ids = getActionDocumentIds(action, {documentStates, variantIndex})
+      // an unresolved variant key means we don't yet know whether the document
+      // exists, so wait
+      if (ids === undefined) return undefined
+      ids.forEach((id) => documentIds.add(id))
+    }
 
     const documents: DocumentSet = {}
 
@@ -112,13 +106,45 @@ const documentsSelector = createSelector(
   },
 )
 
+/**
+ * The document ids a permission check on an action must have loaded. liveEdit
+ * documents have no drafts, so only the single document is needed; standard
+ * documents need draft and published, plus the release version and any variant
+ * documents the action's perspective and variant address. Returns `undefined`
+ * while a variant key is still unresolved.
+ */
+function getActionDocumentIds(
+  action: DocumentAction,
+  state: Pick<VariantTrackingState, 'variantIndex' | 'documentStates'>,
+): string[] | undefined {
+  if (typeof action.documentId !== 'string') return []
+  if (action.liveEdit) return [action.documentId]
+
+  const documentId = DocumentId(action.documentId)
+  const ids: string[] = [getPublishedId(documentId), getDraftId(documentId)]
+  if (isReleasePerspective(action.perspective)) {
+    ids.push(getVersionId(documentId, action.perspective.releaseName))
+  }
+  for (const key of getActionVariantKeys(action)) {
+    const resolved = resolveVariantKey(state, key)
+    if (resolved === undefined) return undefined
+    if (resolved !== null) ids.push(resolved)
+  }
+  return ids
+}
+
+function getActionVariantKeys(action: DocumentAction): string[] {
+  if (typeof action.documentId !== 'string') return []
+  return getVariantCandidateKeys({...action, documentId: action.documentId})
+}
+
 // Cache the actions array based on a serialized version, but “attach” the cache
 // to the computed documents. That way if the computed documents object is no longer in use,
 // the cache is eligible for GC.
 const memoizedActionsSelector = createSelector(
   [
     documentsSelector,
-    (_state: SelectorContext<SyncTransactionState>, {actions}: {actions: DocumentAction[]}) =>
+    (_state: SelectorContext<VariantTrackingState>, {actions}: {actions: DocumentAction[]}) =>
       actions,
   ],
   (documents, actions) => {
@@ -170,20 +196,26 @@ export function calculatePermissions(
 
 const _calculatePermissions = createSelector(
   [
-    ({state: {grants}}: SelectorContext<SyncTransactionState>) => grants,
-    ({state: {identity}}: SelectorContext<SyncTransactionState>) => identity,
+    ({state: {grants}}: SelectorContext<VariantTrackingState>) => grants,
+    ({state: {identity}}: SelectorContext<VariantTrackingState>) => identity,
     documentsSelector,
     memoizedActionsSelector,
+    ({state: {variantIndex}}: SelectorContext<VariantTrackingState>) => variantIndex,
   ],
   (
     grants: Record<Grant, ExprNode> | undefined,
     identity: string | undefined,
     documents: DocumentSet | undefined,
     actions: DocumentAction[] | undefined,
+    variantIndex: VariantTrackingState['variantIndex'],
   ): DocumentPermissionsResult | undefined => {
     if (!documents) return undefined
     if (!grants) return undefined
     if (!actions) return undefined
+    // variant documents are addressed by store key, which the handlers can't
+    // derive from the actions themselves
+    const variants = resolveVariantIds({variantIndex}, actions.flatMap(getActionVariantKeys))
+    if (!variants) return undefined
 
     const timestamp = new Date().toISOString()
     const reasons: PermissionDeniedReason[] = []
@@ -197,6 +229,7 @@ const _calculatePermissions = createSelector(
         timestamp,
         grants,
         identity,
+        variantIds: variants.variantIds,
       })
     } catch (error) {
       if (error instanceof PermissionActionError) {

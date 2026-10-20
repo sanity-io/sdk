@@ -3,6 +3,8 @@ import {jsonMatch, stringifyPath} from '@sanity/json-match'
 import {type Mutation, type PatchOperations, type SanityDocument} from '@sanity/types'
 import {evaluateSync, type ExprNode} from 'groq-js'
 
+import {type PerspectiveHandle} from '../../config/sanityConfig'
+import {isReleasePerspective} from '../../releases/utils/isReleasePerspective'
 import {type Grant} from '../permissions'
 import {type DocumentSet, processMutations} from '../processMutations'
 import {type HttpAction} from '../reducers'
@@ -21,6 +23,14 @@ export interface ActionHandlerContext {
   identity: string | undefined
   outgoingActions: HttpAction[]
   outgoingMutations: Mutation[]
+  /**
+   * The store key behind each variant document key this transaction may
+   * touch: a concrete id when the variant exists, otherwise the
+   * `UnknownDocumentId` a locally created variant will live under until the
+   * remote announces its id. Variant ids are opaque, so handlers can't derive
+   * them from the action.
+   */
+  variantIds: Record<string, string>
 }
 
 export interface ActionHandlerResult {
@@ -57,6 +67,26 @@ export class ActionError extends Error implements ActionErrorOptions {
 }
 
 export class PermissionActionError extends ActionError {}
+
+/**
+ * Publishing and unpublishing only apply to the draft/published pair. liveEdit
+ * documents have no draft and release versions are published through their
+ * release, so both are rejected up front.
+ */
+export function assertDraftPublishedAction(
+  action: {liveEdit?: boolean; perspective?: PerspectiveHandle['perspective']},
+  documentId: string,
+  transactionId: string,
+  verb: 'publish' | 'unpublish',
+): void {
+  if (action.liveEdit || isReleasePerspective(action.perspective)) {
+    throw new ActionError({
+      documentId,
+      transactionId,
+      message: `Cannot ${verb} this document. ${verb === 'publish' ? 'Publishing' : 'Unpublishing'} is not supported for liveEdit or version (release) documents.`,
+    })
+  }
+}
 
 /**
  * Creates a `processMutations` wrapper that surfaces application failures as

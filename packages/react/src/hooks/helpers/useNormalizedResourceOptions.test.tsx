@@ -203,6 +203,65 @@ describe('useNormalizedResourceOptions', () => {
     })
   })
 
+  describe('variant resolution', () => {
+    it('uses explicit variant from options', () => {
+      const {result} = renderHook(() => useNormalizedResourceOptions({variant: 'french'}))
+      expect(result.current.variant).toBe('french')
+    })
+
+    it('falls back to VariantContext when no variant in options', () => {
+      const {result} = renderHook(() => useNormalizedResourceOptions({}), {
+        wrapper: ({children}) => (
+          <ResourceProvider variant="french" fallback={null}>
+            {children}
+          </ResourceProvider>
+        ),
+      })
+      expect(result.current.variant).toBe('french')
+    })
+
+    it('explicit variant overrides VariantContext', () => {
+      const {result} = renderHook(() => useNormalizedResourceOptions({variant: 'german'}), {
+        wrapper: ({children}) => (
+          <ResourceProvider variant="french" fallback={null}>
+            {children}
+          </ResourceProvider>
+        ),
+      })
+      expect(result.current.variant).toBe('german')
+    })
+
+    it('an explicit undefined variant suppresses VariantContext', () => {
+      const {result} = renderHook(() => useNormalizedResourceOptions({variant: undefined}), {
+        wrapper: ({children}) => (
+          <ResourceProvider variant="french" fallback={null}>
+            {children}
+          </ResourceProvider>
+        ),
+      })
+      expect(result.current.variant).toBeUndefined()
+    })
+
+    it('omits variant from result when not set', () => {
+      const {result} = renderHook(() => useNormalizedResourceOptions({}), {
+        wrapper: NoResourceWrapper,
+      })
+      expect(result.current).not.toHaveProperty('variant')
+    })
+
+    it('resolves perspective and variant independently', () => {
+      const {result} = renderHook(() => useNormalizedResourceOptions({perspective: 'published'}), {
+        wrapper: ({children}) => (
+          <ResourceProvider perspective="drafts" variant="french" fallback={null}>
+            {children}
+          </ResourceProvider>
+        ),
+      })
+      expect(result.current.perspective).toBe('published')
+      expect(result.current.variant).toBe('french')
+    })
+  })
+
   describe('field stripping', () => {
     it('strips resourceName from the result', () => {
       const {result} = renderHook(() => useNormalizedResourceOptions({resourceName: 'dataset'}))

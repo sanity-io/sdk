@@ -1,6 +1,7 @@
 import {
   type ActionsResult,
   type DocumentOptions,
+  type DocumentValue,
   editDocument,
   getDocumentState,
   type JsonMatch,
@@ -8,7 +9,6 @@ import {
   resolveDocument,
 } from '@sanity/sdk'
 import {isDeepEqual} from '@sanity/sdk/_internal'
-
 import {useCallback} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
@@ -36,7 +36,7 @@ export function useEditDocument<
 >(
   options: DocumentOptions<undefined, TDocumentType, TDataset, TProjectId>,
 ): (
-  nextValue: Updater<ResolveDocument<TDocumentType, `${TProjectId}.${TDataset}`>>,
+  nextValue: Updater<DocumentValue<ResolveDocument<TDocumentType, `${TProjectId}.${TDataset}`>>>,
 ) => Promise<ActionsResult<ResolveDocument<TDocumentType, `${TProjectId}.${TDataset}`>>>
 
 // Overload 2: Path provided, relies on Typegen

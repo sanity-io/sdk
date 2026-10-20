@@ -9,10 +9,12 @@ import {Activity, StrictMode, use, useEffect} from 'react'
 import {describe, expect, it, vi} from 'vitest'
 
 import {ResourceContext} from './DefaultResourceContext'
+import {PerspectiveContext} from './PerspectiveContext'
 import {ProjectContext} from './ProjectContext'
 import {ResourceProvider} from './ResourceProvider'
 import {SanityInstanceContext} from './SanityInstanceContext'
 import {SanityInstanceProvider} from './SanityInstanceProvider'
+import {VariantContext} from './VariantContext'
 
 const testConfig: SanityConfig = {
   projectId: 'test-project',
@@ -325,6 +327,60 @@ describe('ResourceProvider', () => {
     await expect(captured.promise).resolves.toEqual({
       resource: undefined,
       projectId: 'child-project',
+    })
+  })
+
+  describe('perspective and variant contexts', () => {
+    type Captured = {perspective: unknown; variant: string | undefined}
+
+    function renderCapturing(tree: (capture: React.ReactNode) => React.ReactNode) {
+      const captured = promiseWithResolvers<Captured>()
+      const Capture = () => {
+        const perspective = use(PerspectiveContext)
+        const variant = use(VariantContext)
+        useEffect(() => captured.resolve({perspective, variant}), [perspective, variant])
+        return null
+      }
+      render(tree(<Capture />))
+      return captured.promise
+    }
+
+    it('provides the perspective and variant from its own config', async () => {
+      const result = renderCapturing((capture) => (
+        <ResourceProvider {...testConfig} perspective="published" variant="french" fallback={null}>
+          {capture}
+        </ResourceProvider>
+      ))
+      await expect(result).resolves.toEqual({perspective: 'published', variant: 'french'})
+    })
+
+    it('inherits the parent values when a nested provider sets neither', async () => {
+      const result = renderCapturing((capture) => (
+        <ResourceProvider {...testConfig} perspective="published" variant="french" fallback={null}>
+          <ResourceProvider fallback={null}>{capture}</ResourceProvider>
+        </ResourceProvider>
+      ))
+      await expect(result).resolves.toEqual({perspective: 'published', variant: 'french'})
+    })
+
+    it('overrides the parent values independently', async () => {
+      const result = renderCapturing((capture) => (
+        <ResourceProvider {...testConfig} perspective="published" variant="french" fallback={null}>
+          <ResourceProvider variant="german" fallback={null}>
+            {capture}
+          </ResourceProvider>
+        </ResourceProvider>
+      ))
+      await expect(result).resolves.toEqual({perspective: 'published', variant: 'german'})
+    })
+
+    it('leaves both undefined when nothing in the tree sets them', async () => {
+      const result = renderCapturing((capture) => (
+        <ResourceProvider {...testConfig} fallback={null}>
+          {capture}
+        </ResourceProvider>
+      ))
+      await expect(result).resolves.toEqual({perspective: undefined, variant: undefined})
     })
   })
 })

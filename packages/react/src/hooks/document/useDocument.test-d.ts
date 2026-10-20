@@ -1,4 +1,4 @@
-import {createDocumentHandle} from '@sanity/sdk'
+import {createDocumentHandle, type DocumentValue} from '@sanity/sdk'
 import {expectTypeOf, test} from 'vitest'
 
 import {useDocument} from './useDocument'
@@ -47,8 +47,10 @@ const productionHandle = createDocumentHandle({
 })
 
 test('useDocument resolves the document type for each handle resource', () => {
-  expectTypeOf(useDocument(testHandle).data).toEqualTypeOf<HookPost | null>()
-  expectTypeOf(useDocument(productionHandle).data).toEqualTypeOf<ProductionPost | null>()
+  expectTypeOf(useDocument(testHandle).data).toEqualTypeOf<DocumentValue<HookPost> | null>()
+  expectTypeOf(
+    useDocument(productionHandle).data,
+  ).toEqualTypeOf<DocumentValue<ProductionPost> | null>()
 })
 
 test('useDocument preserves the resource when selecting a field', () => {

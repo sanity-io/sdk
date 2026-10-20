@@ -17,6 +17,7 @@ import {useContext, useMemo} from 'react'
 
 import {PerspectiveContext} from '../../context/PerspectiveContext'
 import {ResourcesContext} from '../../context/ResourcesContext'
+import {VariantContext} from '../../context/VariantContext'
 import {useSanityInstance} from '../context/useSanityInstance'
 import {
   normalizeResourceOptions,
@@ -49,6 +50,7 @@ type Resolvable = {
   projectId?: string
   dataset?: string
   perspective?: PerspectiveHandle['perspective']
+  variant?: string
 }
 
 /**
@@ -94,10 +96,17 @@ export function useCommentActions(): CommentActions {
   const resources = useContext(ResourcesContext)
   const contextResource = useEffectiveContextResource()
   const contextPerspective = useContext(PerspectiveContext)
+  const contextVariant = useContext(VariantContext)
 
   return useMemo(() => {
     const resolve = <T extends Resolvable>(options: T) =>
-      normalizeResourceOptions(options, resources, contextResource, contextPerspective)
+      normalizeResourceOptions(
+        options,
+        resources,
+        contextResource,
+        contextPerspective,
+        contextVariant,
+      )
 
     return {
       createComment: (options) => createComment(instance, resolve(options)),
@@ -106,5 +115,5 @@ export function useCommentActions(): CommentActions {
       setCommentStatus: (options) => setCommentStatus(instance, resolve(options)),
       removeComment: (options) => removeComment(instance, resolve(options)),
     }
-  }, [contextPerspective, contextResource, instance, resources])
+  }, [contextPerspective, contextResource, contextVariant, instance, resources])
 }

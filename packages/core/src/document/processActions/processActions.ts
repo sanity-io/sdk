@@ -55,6 +55,12 @@ interface ProcessActionsOptions {
   working: DocumentSet
 
   /**
+   * Resolved store keys for the variant documents these actions may touch. See
+   * `ActionHandlerContext.variantIds`.
+   */
+  variantIds?: Record<string, string>
+
+  /**
    * The timestamp to use for `_updateAt` and other similar timestamps for this
    * transaction
    */
@@ -124,6 +130,7 @@ export function processActions({
   timestamp,
   grants,
   identity,
+  variantIds = {},
 }: ProcessActionsOptions): ProcessActionsResult {
   let base: DocumentSet = {...initialBase}
   let working: DocumentSet = {...initialWorking}
@@ -159,6 +166,7 @@ export function processActions({
       identity,
       outgoingActions,
       outgoingMutations,
+      variantIds,
     })
     base = result.base
     working = result.working

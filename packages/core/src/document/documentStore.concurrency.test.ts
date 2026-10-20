@@ -31,6 +31,7 @@ import {type Mutation, type PatchOperations, type SanityDocument} from '@sanity/
 import {
   defer,
   delay,
+  EMPTY,
   first,
   firstValueFrom,
   from,
@@ -60,6 +61,8 @@ vi.mock('../client/clientStore.ts', () => ({
 vi.mock('./sharedListener.ts', () => ({
   createSharedListener: vi.fn(),
   createFetchDocument: vi.fn(),
+  // no test here subscribes to a variant, so the group fetcher is never called
+  createFetchDocumentGroup: vi.fn(() => () => EMPTY),
 }))
 
 vi.mock('./documentConstants.ts', async (importOriginal) => {

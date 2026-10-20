@@ -1,5 +1,6 @@
 import {
   type DocumentOptions,
+  type DocumentValue,
   getDocumentState,
   type JsonMatch,
   type ResolveDocument,
@@ -52,7 +53,7 @@ interface UseDocument {
   /** @internal */
   <TDocumentType extends string, TDataset extends string, TProjectId extends string = string>(
     options: UseDocumentOptions<undefined, TDocumentType, TDataset, TProjectId>,
-  ): {data: ResolveDocument<TDocumentType, `${TProjectId}.${TDataset}`> | null}
+  ): {data: DocumentValue<ResolveDocument<TDocumentType, `${TProjectId}.${TDataset}`>> | null}
 
   /** @internal */
   <
@@ -146,7 +147,7 @@ interface UseDocument {
           | JsonMatch<ResolveDocument<TDocumentType, `${TProjectId}.${TDataset}`>, TPath>
           | undefined
       }
-    : {data: ResolveDocument<TDocumentType, `${TProjectId}.${TDataset}`> | null}
+    : {data: DocumentValue<ResolveDocument<TDocumentType, `${TProjectId}.${TDataset}`>> | null}
 
   /**
    * @public

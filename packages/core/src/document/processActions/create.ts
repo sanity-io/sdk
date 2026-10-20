@@ -11,6 +11,7 @@ import {
   checkGrant,
   PermissionActionError,
 } from './shared'
+import {handleVariantCreate, isVariantAction} from './variant'
 
 export function handleCreate(
   action: CreateDocumentAction,
@@ -18,6 +19,8 @@ export function handleCreate(
 ): ActionHandlerResult {
   const {transactionId, timestamp, grants, identity, outgoingActions, outgoingMutations} = ctx
   let {base, working} = ctx
+
+  if (isVariantAction(action)) return handleVariantCreate(action, ctx)
 
   const documentId = getId(action.documentId)
 

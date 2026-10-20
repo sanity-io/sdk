@@ -1,16 +1,17 @@
 import {DocumentId, getDraftId, getPublishedId} from '@sanity/id-utils'
 import {type Mutation, type SanityDocument} from '@sanity/types'
 
-import {isReleasePerspective} from '../../releases/utils/isReleasePerspective'
 import {type UnpublishDocumentAction} from '../actions'
 import {getId, processMutations} from '../processMutations'
 import {
   ActionError,
   type ActionHandlerContext,
   type ActionHandlerResult,
+  assertDraftPublishedAction,
   checkGrant,
   PermissionActionError,
 } from './shared'
+import {handleVariantUnpublish, isVariantAction} from './variant'
 
 export function handleUnpublish(
   action: UnpublishDocumentAction,
@@ -19,15 +20,11 @@ export function handleUnpublish(
   const {transactionId, timestamp, grants, identity, outgoingActions, outgoingMutations} = ctx
   let {base, working} = ctx
 
+  if (isVariantAction(action)) return handleVariantUnpublish(action, ctx)
+
   const documentId = getId(action.documentId)
 
-  if (action.liveEdit || isReleasePerspective(action.perspective)) {
-    throw new ActionError({
-      documentId,
-      transactionId,
-      message: `Cannot unpublish this document. Unpublishing is not supported for liveEdit or version (release) documents.`,
-    })
-  }
+  assertDraftPublishedAction(action, documentId, transactionId, 'unpublish')
 
   // Standard draft/published or version logic
   const draftId = getDraftId(DocumentId(documentId))

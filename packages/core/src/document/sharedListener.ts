@@ -90,6 +90,40 @@ export function createSharedListener(
   }
 }
 
+/**
+ * The `/doc` endpoint's response shape. `omitted` distinguishes documents the
+ * caller may not read from ones that don't exist.
+ */
+export interface DocumentGroupResponse {
+  documents: SanityDocument[]
+  omitted: {id: string; reason: 'existence' | 'permission' | string}[]
+}
+
+/**
+ * Fetches every document in a group: the published document, its draft, and
+ * all release and variant versions. Variant documents can only be reached this
+ * way, since their ids are opaque hashes. `@sanity/mutate`'s loader can't be
+ * used here: it builds its own URL and discards documents it didn't request.
+ */
+export function createFetchDocumentGroup(instance: SanityInstance, resource?: DocumentResource) {
+  return function (groupId: string): Observable<DocumentGroupResponse> {
+    return getClientState(instance, {
+      apiVersion: API_VERSION,
+      resource,
+    }).observable.pipe(
+      switchMap((client) =>
+        client.observable.request<DocumentGroupResponse>({
+          url: client.getDataUrl('doc', groupId),
+          query: {includeAllVersions: 'true'},
+          tag: 'document-group',
+        }),
+      ),
+      map((response) => ({documents: response.documents ?? [], omitted: response.omitted ?? []})),
+      first(),
+    )
+  }
+}
+
 export function createFetchDocument(instance: SanityInstance, resource?: DocumentResource) {
   return function (documentId: string): Observable<SanityDocument | null> {
     return getClientState(instance, {
