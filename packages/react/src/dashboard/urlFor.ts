@@ -65,8 +65,8 @@ export interface StudioUrl extends StudioWorkspaceUrl {
    *
    * @example
    * ```ts
-   * urlFor.studios(studio.slug ?? studio.id).workspace(workspace).intent('edit', {id, type}).url()
-   * // '/studios/<studio slug or id>/<base path>/intent/edit/id=<id>;type=<type>/'
+   * urlFor.studios(studio.slug).workspace(workspace).intent('edit', {id, type}).url()
+   * // '/studios/<studio slug>/<base path>/intent/edit/id=<id>;type=<type>/'
    * ```
    */
   workspace(workspace: Pick<ApplicationWorkspace, 'basePath'>): StudioWorkspaceUrl
