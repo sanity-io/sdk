@@ -17,7 +17,6 @@
     "eslint-plugin-simple-import-sort": "^14.0.0",
     "eslint-plugin-tsdoc": "^0.5.4",
     "eslint-plugin-turbo": "^2.11.7",
-    "eslint-plugin-unused-imports": "^4.4.1",
     "oxlint": "catalog:"
   }
 }

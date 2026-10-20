@@ -68,7 +68,7 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
-    "ts:check": "tsc --noEmit"
+    "ts:check": "${TSC:-tsc} --noEmit"
   },
   "dependencies": {
     "@module-federation/runtime": "^2.9.2",

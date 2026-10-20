@@ -78,7 +78,7 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
-    "ts:check": "tsc --noEmit"
+    "ts:check": "${TSC:-tsc} --noEmit"
   },
   "dependencies": {
     "@sanity/bifur-client": "^2.0.2",
