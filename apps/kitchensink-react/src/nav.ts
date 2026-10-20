@@ -75,6 +75,7 @@ export const navGroups: NavGroup[] = [
     items: [
       {path: 'releases', title: 'Releases', icon: PublishIcon},
       {path: 'perspectives', title: 'Perspectives', icon: PresentationIcon},
+      {path: 'variants', title: 'Variants', icon: PresentationIcon},
       {path: 'presence', title: 'Presence', icon: ActivityIcon},
     ],
   },

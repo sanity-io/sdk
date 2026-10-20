@@ -12,7 +12,7 @@ import {Box, Card, Text, VStack} from 'ui5'
 
 interface JsonDocumentEditorProps {
   /** Document handle for the document being edited */
-  documentHandle: Pick<DocumentHandle, 'documentId' | 'documentType' | 'perspective'>
+  documentHandle: Pick<DocumentHandle, 'documentId' | 'documentType' | 'perspective' | 'variant'>
 
   /** Optional minimum height (defaults to 400px) */
   minHeight?: string
@@ -28,6 +28,9 @@ interface JsonDocumentEditorProps {
 
   /** Optional card wrapper (defaults to true) */
   wrapInCard?: boolean
+
+  /** Render the document without allowing edits (defaults to false) */
+  readOnly?: boolean
 }
 
 function ErrorFallback({error}: {error: Error}) {
@@ -50,6 +53,7 @@ export function JsonDocumentEditor({
   showSyncStatus = true,
   containerStyle,
   wrapInCard = true,
+  readOnly = false,
 }: JsonDocumentEditorProps): React.JSX.Element {
   const {data: document} = useDocument(documentHandle)
   const editDocument = useEditDocument(documentHandle)
@@ -78,7 +82,11 @@ export function JsonDocumentEditor({
           ...containerStyle,
         }}
       >
-        <JsonEditor data={document || {}} setData={editDocument as (data: JsonData) => void} />
+        <JsonEditor
+          data={document || {}}
+          setData={editDocument as (data: JsonData) => void}
+          viewOnly={readOnly}
+        />
       </Box>
     </VStack>
   )

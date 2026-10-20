@@ -30,6 +30,7 @@ import {StudioDemoRoute} from './routes/StudioDemoRoute'
 import {TodoRoute} from './routes/TodoRoute'
 import {UserDetailRoute} from './routes/UserDetailRoute'
 import {UsersRoute} from './routes/UsersRoute'
+import {VariantsRoute} from './routes/VariantsRoute'
 
 const documentCollectionRoutes = [
   {
@@ -137,6 +138,7 @@ export function AppRoutes(): JSX.Element {
           <Route path="perspectives" element={<PerspectivesRoute />} />
           <Route path="todo" element={<TodoRoute />} />
           <Route path="studio-demo" element={<StudioDemoRoute />} />
+          <Route path="variants" element={<VariantsRoute />} />
         </Route>
         <Route path="comlink-demo">
           {frameRoutes.map((route) => (
