@@ -508,6 +508,22 @@ export const getCommentThreadsState: (
  *
  * `undefined` until the first snapshot arrives.
  *
+ * The filter runs over every comment the organization can read, not only the
+ * ones on the resource you pass. Comment queries are routed by organization and
+ * the resource is not sent with them, so it chooses the organization and the
+ * client but does not narrow the results. To keep to one dataset, add a
+ * `target.document._ref` prefix condition yourself: refs are
+ * `dataset:{projectId}.{dataset}:{documentId}`.
+ *
+ * @example Open comments in one dataset
+ * ```ts
+ * getCommentsQueryState(instance, {
+ *   ...resource,
+ *   filter: 'string::startsWith(target.document._ref, $prefix) && status == "open"',
+ *   params: {prefix: 'dataset:abc123.production:'},
+ * })
+ * ```
+ *
  * @beta
  */
 export const getCommentsQueryState: (
@@ -589,6 +605,9 @@ export const resolveCommentThreads: (
 
 /**
  * Waits for a GROQ comment query to load.
+ *
+ * Like {@link getCommentsQueryState}, the filter covers the whole organization
+ * the resource belongs to, not just the resource.
  *
  * @beta
  */

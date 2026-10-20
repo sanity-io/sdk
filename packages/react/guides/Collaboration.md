@@ -137,6 +137,15 @@ function OpenThreadsAcross({refs}: {refs: string[]}) {
 }
 ```
 
+The filter runs over every comment the organization can read, not only the ones in the dataset you are reading. Comment queries are routed by organization and the project and dataset are not sent with them, so they pick the organization but do not narrow the results. To keep to one dataset, add a `target.document._ref` prefix condition yourself. Refs are `dataset:{projectId}.{dataset}:{documentId}`:
+
+```tsx
+const {comments} = useCommentsQuery({
+  filter: 'string::startsWith(target.document._ref, $prefix) && status == "open"',
+  params: {prefix: 'dataset:abc123.production:'},
+})
+```
+
 Writes show here before the server confirms them, the same as they do on a document's comments: the filter is matched against the written comment locally, so a new comment that answers it appears straight away. Some filters cannot be answered that way, since they need more than the one comment to evaluate: one that dereferences with `->`, one that runs a `*[...]` of its own, and one that calls a context-dependent function such as `sanity::dataset()`, `releases::all()` or `now()`. Those still work and still stay up to date, but only once the server says so, and they cost a connection of their own rather than sharing the one every other list reads from.
 
 ## Writing comments

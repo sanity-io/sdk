@@ -47,7 +47,11 @@ const SOURCE: CommentListSource<CommentsQueryOptions, Comment[]> = {
  * `_type == "sanity.comment"` is applied for you. Comments are stored per
  * organization, resolved rather than configured: the one the Dashboard opened
  * the app in, else `organizationId` on the Sanity config, else the organization
- * owning the resource's project. The filter runs within that organization.
+ * owning the resource's project. The filter runs over every comment that
+ * organization can read, not only the ones in the resource's dataset: comment
+ * queries are routed by organization and the resource is not sent with them.
+ * To keep to one dataset, add a `target.document._ref` prefix condition
+ * yourself. Refs are `dataset:{projectId}.{dataset}:{documentId}`.
  *
  * Suspends until the comments have loaded. Switching filter is a transition, so
  * the previous list stays on screen and `isPending` goes true rather than the
@@ -71,6 +75,18 @@ const SOURCE: CommentListSource<CommentsQueryOptions, Comment[]> = {
  *   const {comments} = useCommentsQuery({
  *     filter: 'count(message[].children[_type == "mention" && userId == $userId]) > 0',
  *     params: {userId},
+ *   })
+ *
+ *   return <span>{comments.length}</span>
+ * }
+ * ```
+ *
+ * @example Open comments in one dataset
+ * ```tsx
+ * function OpenInProduction() {
+ *   const {comments} = useCommentsQuery({
+ *     filter: 'string::startsWith(target.document._ref, $prefix) && status == "open"',
+ *     params: {prefix: 'dataset:abc123.production:'},
  *   })
  *
  *   return <span>{comments.length}</span>
