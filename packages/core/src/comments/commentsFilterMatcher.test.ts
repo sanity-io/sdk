@@ -115,6 +115,34 @@ describe('compileCommentsFilter', () => {
     expect(compileCommentsFilter(buildCommentsQueryFilter(expression))).toBe(undefined)
   })
 
+  it.each([
+    'select(status == "open" => target.document->._id, null) == $id',
+    '{"id": target.document->._id}.id == $id',
+    'coalesce(threadId, *[_type == "other"][0]._id) == $id',
+    '[target.document->._id][0] == $id',
+    'status in [..."open", ^.status]',
+    'count(message[@ match now()]) > 0',
+  ])('refuses an unsafe expression nested in %s', (expression) => {
+    expect(compileCommentsFilter(buildCommentsQueryFilter(expression))).toBe(undefined)
+  })
+
+  it('accepts selects, objects and arrays built from the comment', () => {
+    const filter = buildCommentsQueryFilter(
+      'select(status == "open" => {"id": threadId}, {"id": null}).id in [$id, "x"]',
+    )
+
+    expect(matches(filter, storedComment({_id: 'a', threadId: 't-1'}), {id: 't-1'})).toBe(true)
+    expect(matches(filter, storedComment({_id: 'a', threadId: 't-1'}), {id: 't-2'})).toBe(false)
+  })
+
+  it('finds identity() nested inside other expressions', () => {
+    const filter = buildCommentsQueryFilter(
+      'select(defined(threadId) => _system.createdBy == identity(), false)',
+    )
+
+    expect(matches(filter, storedComment({_id: 'a'}))).toBe(undefined)
+  })
+
   it('returns unevaluable when evaluation throws', () => {
     const filter = buildCommentsQueryFilter('$value == 1')
     const params = Object.defineProperty({}, 'value', {

@@ -1,11 +1,4 @@
-import {
-  type ArrayElementNode,
-  evaluateSync,
-  type ExprNode,
-  type ObjectAttributeNode,
-  parse,
-  type SelectAlternativeNode,
-} from 'groq-js'
+import {evaluateSync, type ExprNode, type FuncCallNode, parse} from 'groq-js'
 
 import {buildListenQuery} from './commentsConstants'
 import {type StoredComment} from './types'
@@ -61,133 +54,77 @@ const PURE_FUNCTIONS = new Set([
 
 type WalkResult = {safe: boolean; usesIdentity: boolean}
 
-const SAFE: WalkResult = {safe: true, usesIdentity: false}
 const UNSAFE: WalkResult = {safe: false, usesIdentity: false}
 
-function combine(results: WalkResult[]): WalkResult {
-  return {
-    safe: results.every((result) => result.safe),
-    usesIdentity: results.some((result) => result.usesIdentity),
-  }
-}
-
-const SAFE_TERMINALS = new Set<ExprNode['type']>(['Parameter', 'This', 'Value'])
-const UNSAFE_TERMINALS = new Set<ExprNode['type']>([
-  'Asc',
-  'Context',
-  'Deref',
-  'Desc',
-  'Everything',
-  'Parent',
-  'PipeFuncCall',
-  'SelectorFuncCall',
-  'SelectorNested',
+/**
+ * Node types whose inputs can all be supplied by `@` and the params. Everything
+ * else is refused, including `*` (a subquery), `->`, `^`, context nodes,
+ * ordering, pipe functions and `anywhere()`, as well as any node type a later
+ * groq-js might add.
+ */
+const SAFE_NODES = new Set<string>([
+  'AccessAttribute',
+  'AccessElement',
+  'And',
+  'Array',
+  'ArrayCoerce',
+  'ArrayElement',
+  'Filter',
+  'FlatMap',
+  'FuncCall',
+  'Group',
+  'InRange',
+  'Map',
+  'Neg',
+  'Not',
+  'Object',
+  'ObjectAttributeValue',
+  'ObjectConditionalSplat',
+  'ObjectSplat',
+  'OpCall',
+  'Or',
+  'Parameter',
+  'Pos',
+  'Projection',
+  'Select',
+  'SelectAlternative',
+  'Slice',
+  'This',
+  'Tuple',
+  'Value',
 ])
 
-function inspectTerminal(node: ExprNode): WalkResult | undefined {
-  if (SAFE_TERMINALS.has(node.type)) return SAFE
-  if (UNSAFE_TERMINALS.has(node.type)) return UNSAFE
-  return undefined
-}
-
-function inspectUnary(node: ExprNode): WalkResult | undefined {
-  switch (node.type) {
-    case 'AccessElement':
-    case 'ArrayCoerce':
-    case 'Group':
-    case 'Neg':
-    case 'Not':
-    case 'Pos':
-    case 'Slice':
-      return inspect(node.base)
-    default:
-      return undefined
-  }
-}
-
-function inspectBinary(node: ExprNode): WalkResult | undefined {
-  switch (node.type) {
-    case 'And':
-    case 'OpCall':
-    case 'Or':
-      return combine([inspect(node.left), inspect(node.right)])
-    case 'InRange':
-      return combine([inspect(node.base), inspect(node.left), inspect(node.right)])
-    default:
-      return undefined
-  }
-}
-
-function inspectPair(node: ExprNode): WalkResult | undefined {
-  switch (node.type) {
-    case 'Filter':
-    case 'FlatMap':
-    case 'Map':
-    case 'Projection':
-      return combine([inspect(node.base), inspect(node.expr)])
-    default:
-      return undefined
-  }
-}
-
-function inspectObjectAttribute(attribute: ObjectAttributeNode): WalkResult[] {
-  switch (attribute.type) {
-    case 'ObjectAttributeValue':
-    case 'ObjectSplat':
-      return [inspect(attribute.value)]
-    case 'ObjectConditionalSplat':
-      return [inspect(attribute.condition), inspect(attribute.value)]
-    default:
-      return [UNSAFE]
-  }
-}
-
-function inspectCollection(node: ExprNode): WalkResult | undefined {
-  switch (node.type) {
-    case 'Array':
-      return combine(node.elements.map((element: ArrayElementNode) => inspect(element.value)))
-    case 'Object':
-      return combine(node.attributes.flatMap(inspectObjectAttribute))
-    case 'Select':
-      return combine([
-        ...node.alternatives.flatMap((alternative: SelectAlternativeNode) => [
-          inspect(alternative.condition),
-          inspect(alternative.value),
-        ]),
-        ...(node.fallback ? [inspect(node.fallback)] : []),
-      ])
-    case 'Tuple':
-      return combine(node.members.map(inspect))
-    default:
-      return undefined
-  }
-}
-
-const INSPECTORS = [inspectTerminal, inspectUnary, inspectBinary, inspectPair, inspectCollection]
-
-function inspectKnownNode(node: ExprNode): WalkResult | undefined {
-  for (const inspector of INSPECTORS) {
-    const result = inspector(node)
-    if (result) return result
-  }
-  return undefined
-}
-
-function inspectFunction(node: Extract<ExprNode, {type: 'FuncCall'}>): WalkResult {
-  const name = `${node.namespace}::${node.name}`
-  if (!PURE_FUNCTIONS.has(name)) return UNSAFE
-  const inspected = combine(node.args.map(inspect))
-  return {...inspected, usesIdentity: inspected.usesIdentity || name === 'global::identity'}
+function isNode(value: unknown): value is {type: string} {
+  return (
+    typeof value === 'object' && value !== null && typeof Reflect.get(value, 'type') === 'string'
+  )
 }
 
 /** Walk a parsed expression, accepting only nodes whose inputs can all be supplied locally. */
-function inspect(node: ExprNode): WalkResult {
-  if (node.type === 'AccessAttribute') return node.base ? inspect(node.base) : SAFE
+function inspect(node: {type: string}): WalkResult {
+  if (!SAFE_NODES.has(node.type)) return UNSAFE
+  // A literal's value is data, not syntax, even when it has a `type` key.
+  if (node.type === 'Value') return {safe: true, usesIdentity: false}
 
-  const known = inspectKnownNode(node)
-  if (known) return known
+  let usesIdentity = false
+  if (node.type === 'FuncCall') {
+    const {namespace, name} = node as FuncCallNode
+    const qualified = `${namespace}::${name}`
+    if (!PURE_FUNCTIONS.has(qualified)) return UNSAFE
+    usesIdentity = qualified === 'global::identity'
+  }
 
-  return node.type === 'FuncCall' ? inspectFunction(node) : UNSAFE
+  for (const field of Object.values(node)) {
+    for (const child of Array.isArray(field) ? field : [field]) {
+      if (typeof child !== 'object' || child === null) continue
+      // Fail closed on a child that is not a node we can recognise.
+      if (!isNode(child)) return UNSAFE
+      const result = inspect(child)
+      if (!result.safe) return UNSAFE
+      usesIdentity ||= result.usesIdentity
+    }
+  }
+  return {safe: true, usesIdentity}
 }
 
 function compile(filter: string): CommentsMatcher | undefined {
