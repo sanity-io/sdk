@@ -523,6 +523,30 @@ describe('the lists a new comment shows up in', () => {
     expect(query.getCurrent()![0].state).toBeUndefined()
   })
 
+  it('clears a failed copy from a list only the failed attempt reached', async () => {
+    // The retry carries different context, so it answers a different query
+    // than the attempt that failed, and never touches the first one itself.
+    const first = readingQuery('context.tool == "a"')
+    const second = readingQuery('context.tool == "b"')
+    comments.create.mockRejectedValueOnce(new Error('nope'))
+
+    await expect(
+      createComment(instance, {...CREATE, commentId: 'c1', message: MESSAGE, context: {tool: 'a'}}),
+    ).rejects.toThrow('nope')
+    expect(first.getCurrent()![0].state).toEqual({type: 'createError', error: expect.any(Error)})
+
+    comments.create.mockImplementation(async () => comment({_id: 'c1', context: {tool: 'b'}}))
+    await createComment(instance, {
+      ...CREATE,
+      commentId: 'c1',
+      message: MESSAGE,
+      context: {tool: 'b'},
+    })
+
+    expect(first.getCurrent()).toEqual([])
+    expect(second.getCurrent()!.map((found) => found.id)).toEqual(['c1'])
+  })
+
   it('takes it back out of a list the comment the server wrote does not belong in', async () => {
     // The API owns part of the comment, so the one that comes back can answer a
     // filter differently from the one shown while the write was in flight.

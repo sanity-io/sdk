@@ -17,11 +17,14 @@ export type CommentsMatch = boolean | undefined
  *
  * @internal
  */
-export type CommentsMatcher = (
+export type CommentsMatcher = ((
   comment: StoredComment,
   params: Record<string, unknown>,
   identity: string | undefined,
-) => CommentsMatch
+) => CommentsMatch) & {
+  /** Reads `identity()`, so has no answer until the current user is known. */
+  usesIdentity: boolean
+}
 
 /**
  * Functions safe to answer against a single comment. Add only functions whose
@@ -145,7 +148,11 @@ function compile(filter: string): CommentsMatcher | undefined {
   const inspection = inspect(tree.expr)
   if (!inspection.safe) return undefined
 
-  return (comment, params, identity) => {
+  const matcher = (
+    comment: StoredComment,
+    params: Record<string, unknown>,
+    identity: string | undefined,
+  ): CommentsMatch => {
     // Until auth has loaded, null is not a trustworthy value for identity().
     if (inspection.usesIdentity && !identity) return undefined
 
@@ -156,6 +163,7 @@ function compile(filter: string): CommentsMatcher | undefined {
       return undefined
     }
   }
+  return Object.assign(matcher, {usesIdentity: inspection.usesIdentity})
 }
 
 /** Filters recur across events, so retain their parsed matchers within a bounded cache. */

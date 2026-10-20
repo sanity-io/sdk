@@ -30,6 +30,18 @@ import {
 import {setPendingTransaction} from './reducers'
 import {type StoredComment} from './types'
 
+/** The signed-in user, which a test can hold back to stand in for `/users/me` loading. */
+let currentUser$: BehaviorSubject<{id: string} | null>
+
+vi.mock('../auth/authStore', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../auth/authStore')>()),
+  getCurrentUserState: vi.fn(() => ({
+    observable: currentUser$,
+    getCurrent: () => currentUser$.getValue(),
+    subscribe: () => () => {},
+  })),
+}))
+
 vi.mock('./commentsClient', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./commentsClient')>()),
   observeCommentsClientForResource: vi.fn(() => client$),
@@ -79,6 +91,7 @@ function sharedListener() {
 }
 
 beforeEach(() => {
+  currentUser$ = new BehaviorSubject<{id: string} | null>({id: 'user-1'})
   listeners = new Map()
   fetches = []
 
@@ -586,6 +599,28 @@ describe('getCommentsQueryState', () => {
     expect(fetches).toHaveLength(1)
   })
 
+  it('waits for the user before following a filter on identity()', () => {
+    currentUser$.next(null)
+    const source = getCommentsQueryState(instance, {filter: '_system.createdBy == identity()'})
+    source.subscribe()
+
+    // Started now, it would drop every matching create the listener carried
+    // until the user loaded, and nothing would bring them back.
+    expect(listeners.size).toBe(0)
+
+    currentUser$.next({id: 'user-1'})
+    snapshot([])
+    sharedListener().next({
+      type: 'mutation',
+      transition: 'appear',
+      documentId: 'mine',
+      result: storedComment({_id: 'mine', _system: {createdBy: 'user-1'}}),
+      transactionId: 'tx-mine',
+    } as ListenEvent<StoredComment>)
+
+    expect(source.getCurrent()!.map((comment) => comment.id)).toEqual(['mine'])
+  })
+
   it('reads through a client for the resource it is bound to', () => {
     // The organization is resolved from the resource rather than keyed on, so
     // one filter is one entry and one listener.
@@ -640,6 +675,30 @@ describe('transaction reconciliation', () => {
     sharedListener().next(updateEvent('tx-elsewhere', 'resolved'))
 
     expect(source.getCurrent()![0].status).toBe('resolved')
+  })
+
+  it('keeps a comment our newer write reopened when an older echo resolves it', () => {
+    // We reopened it (tx-2, in flight). The echo of the earlier resolve (tx-1)
+    // takes it out of this open-only list, but it is the stale one.
+    const source = getCommentsQueryState(instance, {filter: 'status == "open"'})
+    source.subscribe()
+    snapshot([storedComment({_id: 'a'})])
+    markPending(instance, {commentId: 'a', transactionId: 'tx-2'})
+
+    sharedListener().next(updateEvent('tx-1', 'resolved'))
+
+    expect(source.getCurrent()!.map((comment) => comment.id)).toEqual(['a'])
+  })
+
+  it('takes a comment out when our own write is what edits it out', () => {
+    const source = getCommentsQueryState(instance, {filter: 'status == "open"'})
+    source.subscribe()
+    snapshot([storedComment({_id: 'a'})])
+    markPending(instance, {commentId: 'a', transactionId: 'tx-2'})
+
+    sharedListener().next(updateEvent('tx-2', 'resolved'))
+
+    expect(source.getCurrent()).toEqual([])
   })
 
   it('does not apply an older update that is classified as appearing', () => {

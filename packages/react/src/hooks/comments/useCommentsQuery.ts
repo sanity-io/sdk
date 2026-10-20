@@ -59,7 +59,9 @@ const SOURCE: CommentListSource<CommentsQueryOptions, Comment[]> = {
  *
  * Writes show here before the server confirms them, the same as they do on a
  * document's comments, because the filter is matched against the written
- * comment locally. A filter that cannot be answered that way — one that
+ * comment locally. That holds for writes through the resource the query is
+ * bound to; comments written through another dataset arrive once the server
+ * confirms them. A filter that cannot be answered that way — one that
  * dereferences, runs a `*[...]` of its own, or calls a context-dependent
  * function such as `sanity::dataset()` or `now()` — still works, but only
  * follows the server, and costs a connection of its own rather than sharing one.

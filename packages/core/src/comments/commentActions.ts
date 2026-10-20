@@ -252,6 +252,16 @@ function buildOptimisticComment(options: {
   }
 }
 
+/** The lists still showing a failed create of this id, waiting to be retried. */
+function toFailedCopyKeys(state: StoreState<CommentsStoreState>, commentId: string): string[] {
+  return Object.entries(state.get().entries)
+    .filter(([, entry]) => {
+      const type = entry?.comments?.[commentId]?._state?.type
+      return type === 'createError' || type === 'createRetrying'
+    })
+    .map(([key]) => key)
+}
+
 /**
  * Writes a comment, showing it before the round trip so a thread feels
  * immediate.
@@ -290,7 +300,11 @@ async function postComment(
     for (const commentsKey of matching) {
       state.set('receiveComment', receiveComment(commentsKey, created))
     }
-    for (const commentsKey of optimisticKeys) {
+    // Wherever this attempt or an earlier failed one showed it, and the comment
+    // as written does not belong. A retry can differ from the attempt that
+    // failed, so the failed copy can sit in a list this attempt never reached.
+    const shown = new Set([...optimisticKeys, ...toFailedCopyKeys(state, created._id)])
+    for (const commentsKey of shown) {
       if (matching.has(commentsKey)) continue
       state.set('removeComment', removeCommentFromEntry(commentsKey, created._id))
     }

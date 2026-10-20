@@ -10,6 +10,7 @@ import {
   mergeMap,
   NEVER,
   Observable,
+  of,
   pairwise,
   race,
   startWith,
@@ -157,6 +158,27 @@ function toCommentsQueryKey(options: WithResource<CommentsQueryOptions>): string
   })
 }
 
+/**
+ * Applies a write's echo unless a newer write of ours to the same comment is in
+ * flight, in which case it is held back for a rollback to land on.
+ */
+function applyEcho(
+  state: StoreState<CommentsStoreState>,
+  {comment, transactionId}: {comment: StoredComment; transactionId: string},
+  apply: () => void,
+): void {
+  const pending = state.get().pendingTransactions[comment._id]
+  if (pending && pending !== transactionId) {
+    state.set('recordDroppedEcho', recordDroppedEcho(comment))
+    return
+  }
+
+  apply()
+  if (pending) {
+    state.set('clearPendingTransaction', clearPendingTransaction(comment._id, pending))
+  }
+}
+
 function applyEvent(
   state: StoreState<CommentsStoreState>,
   key: string,
@@ -167,23 +189,19 @@ function applyEvent(
       state.set('setComments', setComments(key, event.comments))
       return
     case 'appear':
-    case 'update': {
-      const pending = state.get().pendingTransactions[event.comment._id]
-
+    case 'update':
       // A locally classified `appear` can be an update that moved into this
       // list. Treat it like any other echo so an older transaction cannot
       // overwrite a newer optimistic edit.
-      if (pending && pending !== event.transactionId) {
-        state.set('recordDroppedEcho', recordDroppedEcho(event.comment))
-        return
-      }
-
-      state.set('receiveComment', receiveComment(key, event.comment))
-      if (pending) {
-        state.set('clearPendingTransaction', clearPendingTransaction(event.comment._id, pending))
-      }
+      applyEcho(state, event, () => state.set('receiveComment', receiveComment(key, event.comment)))
       return
-    }
+    case 'leave':
+      // Edited out of this list. If a newer write of ours has it back in, this
+      // echo is the stale one, and the comment stays.
+      applyEcho(state, event, () =>
+        state.set('removeComment', removeCommentFromEntry(key, event.comment._id)),
+      )
+      return
     case 'disappear':
       state.set('removeComment', removeCommentFromEntry(key, event.commentId))
       return
@@ -226,8 +244,15 @@ const watchSubscribedQueries = ({
             // whole organization's, and every one of them is tested here. Read
             // on each, so that signing in does not leave a stale identity.
             const currentUser = getCurrentUserState(instance)
+            // A filter on identity() cannot be matched before the user is
+            // known, and nothing replays what the listener carried meanwhile,
+            // so such a list starts only once the user is there to match with.
+            const ready$ = matcher?.usesIdentity
+              ? currentUser.observable.pipe(first((user) => Boolean(user?.id)))
+              : of(null)
 
-            return observeCommentsClientForResource(instance, key.resource).pipe(
+            return ready$.pipe(
+              switchMap(() => observeCommentsClientForResource(instance, key.resource)),
               switchMap((client) =>
                 observeComments({
                   client,

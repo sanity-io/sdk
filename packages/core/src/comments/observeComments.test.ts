@@ -127,7 +127,10 @@ describe('observeComments', () => {
     // Still a comment, just no longer one of ours.
     events$.next(mutation('update', 'a', elsewhere('a')))
 
-    expect(events.slice(1)).toEqual([{type: 'disappear', commentId: 'a'}])
+    // Carrying its transaction, so that a stale one can be told apart.
+    expect(events.slice(1)).toEqual([
+      {type: 'leave', comment: elsewhere('a'), transactionId: 'tx-a'},
+    ])
 
     // And having left, it does not leave again.
     events$.next(mutation('update', 'a', elsewhere('a')))

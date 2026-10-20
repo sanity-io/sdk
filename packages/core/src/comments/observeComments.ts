@@ -10,6 +10,7 @@ export type CommentsEvent =
   | {type: 'snapshot'; comments: StoredComment[]}
   | {type: 'appear'; comment: StoredComment; transactionId: string}
   | {type: 'disappear'; commentId: string}
+  | {type: 'leave'; comment: StoredComment; transactionId: string}
   | {type: 'update'; comment: StoredComment; transactionId: string}
   | {type: 'error'; error: unknown}
 
@@ -45,9 +46,10 @@ function toCommentsEvent(
   if (match === undefined) {
     // Keep what the server snapshot already classified. In particular, a local
     // evaluation failure must never manufacture a departure from this list.
-    // An unheld comment is dropped rather than guessed at: if it does belong
-    // (say, an identity() filter before auth has loaded), it shows from the
-    // next snapshot. That window is short, and cheaper than resubscribing.
+    // An unheld comment is dropped rather than guessed at. A list whose filter
+    // reads identity() does not start until the user is known, so this is a
+    // filter that throws on this one comment, which the server would not have
+    // matched either.
     return held.has(comment._id)
       ? {type: 'update', comment, transactionId: event.transactionId}
       : undefined
@@ -56,7 +58,12 @@ function toCommentsEvent(
   if (!match) {
     // Edited out of this list's filter. Never in it is the common case by far,
     // since most of what the listener carries belongs to other lists entirely.
-    return held.delete(comment._id) ? {type: 'disappear', commentId: comment._id} : undefined
+    // Unlike a delete, this is a write like any other, so it keeps its
+    // transaction: an older one must not take out a comment that a newer write
+    // of ours has put back.
+    return held.delete(comment._id)
+      ? {type: 'leave', comment, transactionId: event.transactionId}
+      : undefined
   }
 
   if (held.has(comment._id)) {
