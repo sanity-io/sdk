@@ -1,4 +1,4 @@
-import {type ApplicationWorkspace} from '@sanity/sdk'
+import {type ApplicationBase, type ApplicationWorkspace} from '@sanity/sdk'
 
 /**
  * @public
@@ -65,8 +65,8 @@ export interface StudioUrl extends StudioWorkspaceUrl {
    *
    * @example
    * ```ts
-   * urlFor.studios(studio.id).workspace(workspace).intent('edit', {id, type}).url()
-   * // '/studios/<studio id>/<base path>/intent/edit/id=<id>;type=<type>/'
+   * urlFor.studios(studio).workspace(workspace).intent('edit', {id, type}).url()
+   * // '/studios/<studio slug>/<base path>/intent/edit/id=<id>;type=<type>/'
    * ```
    */
   workspace(workspace: Pick<ApplicationWorkspace, 'basePath'>): StudioWorkspaceUrl
@@ -125,6 +125,11 @@ type BuilderRegistry = Readonly<
 type BuilderMethods<Builders extends BuilderRegistry> = {
   readonly [Name in keyof Builders]: () => InstanceType<Builders[Name]>
 }
+
+type ApplicationAddress = string | Pick<ApplicationBase, 'id' | 'slug'>
+
+const applicationSegment = (application: ApplicationAddress) =>
+  typeof application === 'string' ? application : (application.slug ?? application.id)
 
 const splitPath = (path: readonly string[]) =>
   path.flatMap((part) => part.split('/')).filter(Boolean)
@@ -422,9 +427,11 @@ class StudioUrlBuilder
  */
 export interface Urls {
   studios(): DashboardUrl
-  studios(appId: string): StudioUrl
+  /** Routes an application by its slug, or its id without one. A string is used as-is. */
+  studios(appId: string | Pick<ApplicationBase, 'id' | 'slug'>): StudioUrl
   applications(): DashboardUrl
-  applications(appId: string): CoreApplicationUrl
+  /** Routes an application by its slug, or its id without one. A string is used as-is. */
+  applications(appId: string | Pick<ApplicationBase, 'id' | 'slug'>): CoreApplicationUrl
   mediaLibrary(): MediaLibraryUrl
   canvas(): CanvasUrl
   home(): DashboardUrl
@@ -453,19 +460,19 @@ const createUrls = <const Builders extends BuilderRegistry>(
   builders: Builders,
 ): Urls & BuilderMethods<Builders> => {
   function studios(): DashboardUrl
-  function studios(appId: string): StudioUrl
-  function studios(appId?: string): DashboardUrl | StudioUrl {
+  function studios(appId: ApplicationAddress): StudioUrl
+  function studios(appId?: ApplicationAddress): DashboardUrl | StudioUrl {
     return appId === undefined
       ? new UrlBuilder(new URL('/studios/', relativeUrlBase))
-      : createRootBuilder(StudioUrlBuilder, appId)
+      : createRootBuilder(StudioUrlBuilder, applicationSegment(appId))
   }
 
   function applications(): DashboardUrl
-  function applications(appId: string): CoreApplicationUrl
-  function applications(appId?: string): DashboardUrl | CoreApplicationUrl {
+  function applications(appId: ApplicationAddress): CoreApplicationUrl
+  function applications(appId?: ApplicationAddress): DashboardUrl | CoreApplicationUrl {
     return appId === undefined
       ? new UrlBuilder(new URL('/applications/', relativeUrlBase))
-      : createRootBuilder(CoreApplicationUrlBuilder, appId)
+      : createRootBuilder(CoreApplicationUrlBuilder, applicationSegment(appId))
   }
 
   const methods = Object.fromEntries(
