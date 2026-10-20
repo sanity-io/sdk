@@ -8,11 +8,12 @@
     "./vitest": "./vitest.mjs"
   },
   "scripts": {
-    "lint": "eslint ."
+    "lint": "oxlint"
   },
   "devDependencies": {
-    "@repo/config-eslint": "workspace:*",
+    "@repo/config-oxlint": "workspace:*",
     "@repo/dev-aliases": "workspace:*",
+    "oxlint": "catalog:",
     "vitest": "catalog:"
   }
 }

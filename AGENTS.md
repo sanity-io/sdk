@@ -4,7 +4,7 @@ This is the `@sanity/sdk` monorepo, the SDK for building Sanity-powered apps.
 
 - `packages/core` publishes as `@sanity/sdk`. Framework-agnostic TypeScript core, no React.
 - `packages/react` publishes as `@sanity/sdk-react`. React hooks and components on top of core.
-- `packages/@repo/*` are workspace-internal shared configs (ESLint, TypeScript, test config).
+- `packages/@repo/*` are workspace-internal shared configs (oxlint, TypeScript, test config).
 - `packages/e2e` is the end-to-end test package.
 - `apps/kitchensink-react` is an internal testing and examples app. It is not published.
 - `apps/standalone-react` is a smaller standalone example app.
@@ -18,7 +18,7 @@ This repo uses pnpm with Turbo. Common commands run from the root:
 - `pnpm install` installs dependencies.
 - `pnpm test` runs Vitest across the workspace.
 - `pnpm ts:check` runs the TypeScript type check.
-- `pnpm lint` runs ESLint with `--fix`.
+- `pnpm lint` runs oxlint with `--fix`.
 - `pnpm dev` runs the kitchensink dev server.
 - `pnpm build` builds packages and apps.
 - `pnpm fallow audit` checks changed files for dead code, complexity, and duplication.
@@ -42,8 +42,8 @@ It reads the working tree, so there is no need to commit first, and it finishes 
 You are working in a TypeScript codebase with React 19, Vitest, and Sanity.io as the primary technologies.
 
 - Formatting is controlled by oxfmt via `.oxfmtrc.json`: no semicolons, single quotes, no bracket spacing (`{foo}` not `{ foo }`), 100-character print width, 2-space indentation.
-- Never use `any`. ESLint enforces this and the build will fail.
+- Never use `any`. oxlint enforces this and the build will fail.
 - Tests use Vitest and live next to the source file they cover, not in a separate `tests/` tree.
-- All exported members need TSDoc comments. ESLint's TSDoc plugin enforces this.
+- All exported members need TSDoc comments. oxlint runs the TSDoc plugin to enforce this.
 - Do not edit files under `dist/` or `node_modules/`.
 - Do not introduce React-specific dependencies into `packages/core`. Keep it framework-agnostic.
