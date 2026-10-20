@@ -395,8 +395,8 @@ importers:
         specifier: ^4.1.1
         version: 4.1.1
       json-edit-react:
-        specifier: ^1.30.2
-        version: 1.30.2(react@19.3.1)
+        specifier: ^2.0.4
+        version: 2.0.4(react@19.3.1)
       react:
         specifier: 'catalog:'
         version: 19.3.1
@@ -6111,10 +6111,10 @@ packages:
   json-bigint@1.0.0:
     resolution: {integrity: sha512-SiPv/8VpZuWbvLSMtTDU8hEfrZWg/mH/nV/b4o0CYbSxu1UIQPLdwKOCIyLQX+VIPO5vrLX3i8qtqFyhdPSUSQ==}
 
-  json-edit-react@1.30.2:
-    resolution: {integrity: sha512-uUIDqCxTvOXoIgxJXLscInTL09M+W7RPl/vJQIXlrgImcK8umQ8MdGFCCExCyPRNoRhAAXQJ0//QnDftM8UdSQ==}
+  json-edit-react@2.0.4:
+    resolution: {integrity: sha512-RqppTbjeV9+0o4UegI5mGTHhoC7P5KQJhDR2+8Dfg8IjK1AtLZhw4iTRaDM4RRZuL+/uIaeWFT3n1mf2ZiIXiQ==}
     peerDependencies:
-      react: '>=16.0.0'
+      react: '>=18.0.0'
 
   json-lexer@1.2.0:
     resolution: {integrity: sha512-7otpx5UPFeSELoF8nkZPHCfywg86wOsJV0WNOaysuO7mfWj1QFp2vlqESRRCeJKBXr+tqDgHh4HgqUFKTLcifQ==}
@@ -14197,7 +14197,7 @@ snapshots:
     dependencies:
       bignumber.js: 9.3.1
 
-  json-edit-react@1.30.2(react@19.3.1):
+  json-edit-react@2.0.4(react@19.3.1):
     dependencies:
       react: 19.3.1
 
