@@ -153,18 +153,40 @@ describe('retryRead', () => {
     expect(read.setError.mock.calls).toEqual([[error], [undefined], [error], [undefined]])
   })
 
-  it('reports a terminal failure after a reported transient one', async () => {
+  it.each([
+    ['a 403', clientError(403)],
+    ['a 401', clientError(401)],
+  ])('reports %s after a reported server error', async (_, error) => {
     const serverError = new ServerError({statusCode: 503, headers: {}, body: {}})
-    const forbidden = clientError(403)
     const read = startRead([
       ...Array.from({length: OUT_OF_SYNC_RETRY_COUNT + 1}, () => serverError),
-      forbidden,
+      error,
     ])
 
     await vi.advanceTimersByTimeAsync(OUT_OF_SYNC_RETRY_MAX_DELAY * (OUT_OF_SYNC_RETRY_COUNT + 2))
 
-    expect(read.setError.mock.calls).toEqual([[serverError], [forbidden]])
+    expect(read.setError.mock.calls).toEqual([[serverError], [error]])
     expect(read.attempts()).toBe(OUT_OF_SYNC_RETRY_COUNT + 2)
+  })
+
+  it('clears a session error once a new client hits a server error, then reports it after its retries', async () => {
+    const sessionError = clientError(401)
+    const serverError = new ServerError({statusCode: 503, headers: {}, body: {}})
+    const read = startRead([
+      sessionError,
+      ...Array.from({length: OUT_OF_SYNC_RETRY_COUNT + 1}, () => serverError),
+    ])
+
+    read.clients.next(createClient())
+    await vi.advanceTimersByTimeAsync(OUT_OF_SYNC_RETRY_MAX_DELAY * (OUT_OF_SYNC_RETRY_COUNT + 2))
+
+    expect(read.setError.mock.calls).toEqual([
+      [sessionError],
+      [undefined],
+      [serverError],
+      [undefined],
+    ])
+    expect(read.values).toEqual(['ok'])
   })
 
   it('retries a transient failure right away when the client changes', () => {

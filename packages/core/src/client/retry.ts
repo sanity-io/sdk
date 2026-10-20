@@ -60,8 +60,9 @@ function classify(error: unknown): 'session' | 'access' | 'transient' | 'termina
  *   `setError` after `count` retries
  * - a CORS error or any other 4xx reaches `setError` and isn't retried
  *
- * Each failure streak reaches `setError` once, and `setError` receives
- * `undefined` once the read recovers.
+ * `setError` receives a failure once, and again only when the kind of failure
+ * changes. It receives `undefined` once the read recovers, or when it moves on
+ * to a transient failure that isn't reported yet.
  *
  * @internal
  */
@@ -76,12 +77,12 @@ export function retryRead<T>(
 ): MonoTypeOperatorFunction<T> {
   return (source) =>
     defer(() => {
-      let failing = false
+      let shown: ReturnType<typeof classify> | undefined
 
       return source.pipe(
         tap(() => {
-          if (!failing) return
-          failing = false
+          if (!shown) return
+          shown = undefined
           setError(undefined)
         }),
         retry({
@@ -96,9 +97,11 @@ export function retryRead<T>(
               return EMPTY
             }
 
-            if (!failing && (failure !== 'transient' || retryCount > count)) {
-              failing = true
-              setError(error)
+            const visible = failure !== 'transient' || retryCount > count ? failure : undefined
+
+            if (visible !== shown) {
+              shown = visible
+              setError(visible ? error : undefined)
             }
 
             if (
