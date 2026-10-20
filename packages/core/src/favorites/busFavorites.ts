@@ -3,7 +3,11 @@ import {DocumentId, isPublishedIdEqual} from '@sanity/id-utils'
 import {catchError, defer, distinctUntilChanged, EMPTY, map, merge, type Observable} from 'rxjs'
 
 import {requireDashboardMessageBus} from '../dashboard/messageBus/store'
-import {type CapabilityRecord, type FavoriteDocument} from '../dashboard/messageBus/topics'
+import {
+  type CapabilityRecord,
+  type Favorite,
+  type FavoriteDocument,
+} from '../dashboard/messageBus/topics'
 import {getTopicState, resolveTopic} from '../dashboard/messageBus/topicStore'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {type StateSource} from '../store/createStateSourceAction'
@@ -16,10 +20,7 @@ import {
 } from './favorites'
 
 // Published IDs mirror Dashboard's `_stableId` match.
-const isSameFavorite = (
-  a: FavoriteDocument['document'],
-  b: FavoriteDocument['document'],
-): boolean =>
+const isSameFavorite = (a: FavoriteDocument, b: FavoriteDocument): boolean =>
   a.type === b.type &&
   a.resource.id === b.resource.id &&
   a.resource.type === b.resource.type &&
@@ -53,7 +54,7 @@ export function getBusFavoriteState(
     if (provided.favorites !== true) return false
     // A failed read degrades to "not favorited", like the Comlink fetcher.
     try {
-      const favorites = documents.getCurrent() as FavoriteDocument[] | undefined
+      const favorites = documents.getCurrent() as Favorite[] | undefined
       return favorites?.some((favorite) => isSameFavorite(favorite.document, target))
     } catch {
       return false

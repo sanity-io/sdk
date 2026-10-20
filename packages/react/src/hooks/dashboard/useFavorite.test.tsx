@@ -1,6 +1,6 @@
 import {favorites, type FavoriteStatusResponse, type StateSource} from '@sanity/sdk'
 import {type FetcherSnapshot, installMessageBus, resetMessageBus} from '@sanity/sdk/_internal'
-import {type FavoriteDocument, type MessageBusHost} from '@sanity/sdk/dashboard'
+import {type Favorite, type MessageBusHost} from '@sanity/sdk/dashboard'
 import {act} from '@testing-library/react'
 import {type ReactNode} from 'react'
 import {BehaviorSubject, type Subscription} from 'rxjs'
@@ -105,7 +105,7 @@ describe('useFavorite', () => {
 describe('useFavorite (message bus)', () => {
   const MESSAGE_BUS_KEY = Symbol.for('sanity.os.bus')
   const handle = {documentId: 'doc', documentType: 'movie', resourceType: 'studio' as const}
-  const favorite: FavoriteDocument = {
+  const favorite: Favorite = {
     id: 'favorite',
     document: {id: 'doc', type: 'movie', resource: {id: 'test.test', type: 'studio'}},
     application: {
@@ -128,7 +128,7 @@ describe('useFavorite (message bus)', () => {
       client.emit('applications.capabilities', provided ? {favorites: true} : {}),
     )
   }
-  const publish = (documents: FavoriteDocument[]) => {
+  const publish = (documents: Favorite[]) => {
     published?.unsubscribe()
     published = host.connections.subscribe((client) =>
       client.emit('favorites.documents', documents),
