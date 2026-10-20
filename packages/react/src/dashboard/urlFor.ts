@@ -128,9 +128,6 @@ type BuilderMethods<Builders extends BuilderRegistry> = {
 
 type ApplicationAddress = string | Pick<ApplicationBase, 'id' | 'slug'>
 
-const applicationSegment = (application: ApplicationAddress) =>
-  typeof application === 'string' ? application : (application.slug ?? application.id)
-
 const splitPath = (path: readonly string[]) =>
   path.flatMap((part) => part.split('/')).filter(Boolean)
 
@@ -462,7 +459,10 @@ const createUrls = <const Builders extends BuilderRegistry>(
   function studios(application?: ApplicationAddress): DashboardUrl | StudioUrl {
     return application === undefined
       ? new UrlBuilder(new URL('/studios/', relativeUrlBase))
-      : createRootBuilder(StudioUrlBuilder, applicationSegment(application))
+      : createRootBuilder(
+          StudioUrlBuilder,
+          typeof application === 'string' ? application : (application.slug ?? application.id),
+        )
   }
 
   function applications(): DashboardUrl
@@ -470,7 +470,10 @@ const createUrls = <const Builders extends BuilderRegistry>(
   function applications(application?: ApplicationAddress): DashboardUrl | CoreApplicationUrl {
     return application === undefined
       ? new UrlBuilder(new URL('/applications/', relativeUrlBase))
-      : createRootBuilder(CoreApplicationUrlBuilder, applicationSegment(application))
+      : createRootBuilder(
+          CoreApplicationUrlBuilder,
+          typeof application === 'string' ? application : (application.slug ?? application.id),
+        )
   }
 
   const methods = Object.fromEntries(
