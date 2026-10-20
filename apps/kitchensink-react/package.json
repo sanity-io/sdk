@@ -28,7 +28,7 @@
     "@sanity/ui": "^4.3.0",
     "groq": "catalog:",
     "inter-ui": "^4.1.1",
-    "json-edit-react": "^1.30.2",
+    "json-edit-react": "^2.0.4",
     "react": "catalog:",
     "react-compiler-runtime": "catalog:",
     "react-dom": "catalog:",
