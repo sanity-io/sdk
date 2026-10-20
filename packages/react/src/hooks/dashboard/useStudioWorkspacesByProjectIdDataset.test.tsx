@@ -337,6 +337,7 @@ describe('useStudioWorkspacesByProjectIdDataset (message bus)', () => {
           dataset: 'dataset1',
           type: 'studio',
           userApplicationId: 'studio-1',
+          userApplicationSlug: 'my-studio',
           url: 'https://my-studio.sanity.studio',
         },
         expect.objectContaining({id: 'workspace-2', title: 'My Studio', basePath: ''}),
@@ -346,6 +347,7 @@ describe('useStudioWorkspacesByProjectIdDataset (message bus)', () => {
         expect.objectContaining({
           id: 'workspace-local',
           userApplicationId: 'studio-local',
+          userApplicationSlug: null,
           url: 'http://localhost:3333',
         }),
       ],
