@@ -5,14 +5,16 @@ import {
   type SanityClient,
   ServerError,
 } from '@sanity/client'
-import {BehaviorSubject, defer, of, throwError} from 'rxjs'
+import {BehaviorSubject, concat, defer, Observable, of, throwError} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {OUT_OF_SYNC_RETRY_COUNT, OUT_OF_SYNC_RETRY_MAX_DELAY} from '../document/documentConstants'
+import {DocumentInaccessibleError} from '../document/listen'
 import {retryRead} from './retry'
 
-const createClient = (config: object = {token: 'token'}) => ({config: () => config}) as SanityClient
-const clientError = (statusCode: number) => new ClientError({statusCode, headers: {}, body: {}})
+const createClient = () => ({}) as SanityClient
+const clientError = (statusCode: number, body: object = {}) =>
+  new ClientError({statusCode, headers: {}, body})
 
 function startRead(failures: unknown[]) {
   const clients = new BehaviorSubject(createClient())
@@ -22,6 +24,8 @@ function startRead(failures: unknown[]) {
 
   defer(() => {
     const failure = failures[attempts++]
+
+    if (failure instanceof Observable) return failure
 
     return failure ? throwError(() => failure) : of('ok')
   })
@@ -53,10 +57,9 @@ describe('retryRead', () => {
 
   it.each([
     ['a 401', clientError(401)],
-    ['a 403', clientError(403)],
+    ['an expired session', clientError(401, {errorCode: 'SIO-401-AEX'})],
     ['a rejected listener', new ConnectionFailedError('rejected', {status: 401})],
-    ['a CORS error', new CorsOriginError({projectId: 'p'})],
-    ['an unreadable document', Object.assign(new Error('inaccessible'), {statusCode: 403})],
+    ['an unreadable document', new DocumentInaccessibleError('doc')],
   ])('reports %s and retries it only once the client changes', async (_, error) => {
     const read = startRead([error])
     expect(read.setError).toHaveBeenCalledWith(error)
@@ -70,6 +73,50 @@ describe('retryRead', () => {
     expect(read.setError).toHaveBeenLastCalledWith(undefined)
   })
 
+  it.each([
+    ['a 400', clientError(400)],
+    ['a 403', clientError(403)],
+    ['a CORS error', new CorsOriginError({projectId: 'p'})],
+  ])('reports %s and never retries it', async (_, error) => {
+    const read = startRead([error])
+    expect(read.setError).toHaveBeenCalledWith(error)
+
+    read.clients.next(createClient())
+    await vi.advanceTimersByTimeAsync(OUT_OF_SYNC_RETRY_MAX_DELAY * 10)
+
+    expect(read.attempts()).toBe(1)
+    expect(read.values).toEqual([])
+  })
+
+  const missingAccess = [
+    ['a missing membership', clientError(401, {error: {type: 'projectUserNotFoundError'}})],
+    ['a missing grant', clientError(401, {code: 'missing_grant'})],
+  ] as const
+
+  it.each(missingAccess)('reports %s once and retries it after a backoff', async (_, error) => {
+    const read = startRead([error, error])
+
+    await vi.advanceTimersByTimeAsync(OUT_OF_SYNC_RETRY_MAX_DELAY * 2)
+
+    expect(read.setError.mock.calls).toEqual([[error], [undefined]])
+    expect(read.values).toEqual(['ok'])
+  })
+
+  it.each(missingAccess)(
+    'retries %s only once the client changes after its retry budget',
+    async (_, error) => {
+      const read = startRead(Array.from({length: OUT_OF_SYNC_RETRY_COUNT + 1}, () => error))
+
+      await vi.advanceTimersByTimeAsync(OUT_OF_SYNC_RETRY_MAX_DELAY * (OUT_OF_SYNC_RETRY_COUNT + 2))
+      expect(read.attempts()).toBe(OUT_OF_SYNC_RETRY_COUNT + 1)
+
+      read.clients.next(createClient())
+
+      expect(read.values).toEqual(['ok'])
+      expect(read.setError.mock.calls).toEqual([[error], [undefined]])
+    },
+  )
+
   it('does not report a transient failure that recovers within its retries', async () => {
     const error = new ServerError({statusCode: 503, headers: {}, body: {}})
     const read = startRead(Array.from({length: OUT_OF_SYNC_RETRY_COUNT}, () => error))
@@ -80,14 +127,44 @@ describe('retryRead', () => {
     expect(read.values).toEqual(['ok'])
   })
 
-  it('reports a transient failure that outlasts its retries, then clears it on recovery', async () => {
+  it('reports a transient failure that outlasts its retries once, then clears it on recovery', async () => {
     const error = new ServerError({statusCode: 503, headers: {}, body: {}})
-    const read = startRead(Array.from({length: OUT_OF_SYNC_RETRY_COUNT + 1}, () => error))
+    const read = startRead(Array.from({length: OUT_OF_SYNC_RETRY_COUNT + 2}, () => error))
 
-    await vi.advanceTimersByTimeAsync(OUT_OF_SYNC_RETRY_MAX_DELAY * (OUT_OF_SYNC_RETRY_COUNT + 1))
+    await vi.advanceTimersByTimeAsync(OUT_OF_SYNC_RETRY_MAX_DELAY * (OUT_OF_SYNC_RETRY_COUNT + 2))
 
     expect(read.setError.mock.calls).toEqual([[error], [undefined]])
     expect(read.values).toEqual(['ok'])
+  })
+
+  it('reports each failure streak once', async () => {
+    const error = new ServerError({statusCode: 503, headers: {}, body: {}})
+    const okThenFail = concat(
+      of('ok'),
+      throwError(() => error),
+    )
+    const streak = [okThenFail, ...Array.from({length: OUT_OF_SYNC_RETRY_COUNT}, () => error)]
+    const read = startRead([...streak, ...streak])
+
+    await vi.advanceTimersByTimeAsync(
+      OUT_OF_SYNC_RETRY_MAX_DELAY * (OUT_OF_SYNC_RETRY_COUNT + 1) * 2,
+    )
+
+    expect(read.setError.mock.calls).toEqual([[error], [undefined], [error], [undefined]])
+  })
+
+  it('reports a terminal failure after a reported transient one', async () => {
+    const serverError = new ServerError({statusCode: 503, headers: {}, body: {}})
+    const forbidden = clientError(403)
+    const read = startRead([
+      ...Array.from({length: OUT_OF_SYNC_RETRY_COUNT + 1}, () => serverError),
+      forbidden,
+    ])
+
+    await vi.advanceTimersByTimeAsync(OUT_OF_SYNC_RETRY_MAX_DELAY * (OUT_OF_SYNC_RETRY_COUNT + 2))
+
+    expect(read.setError.mock.calls).toEqual([[serverError], [forbidden]])
+    expect(read.attempts()).toBe(OUT_OF_SYNC_RETRY_COUNT + 2)
   })
 
   it('retries a transient failure right away when the client changes', () => {

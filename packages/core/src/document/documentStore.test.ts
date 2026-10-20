@@ -66,7 +66,7 @@ import {
   type DocumentRemotePatchesEvent,
   type TransactionRevertedEvent,
 } from './events'
-import {DEFAULT_MAX_BUFFER_SIZE} from './listen'
+import {DEFAULT_MAX_BUFFER_SIZE, DocumentInaccessibleError} from './listen'
 import {type DatasetAcl} from './permissions'
 import {type DocumentSet, processMutations} from './processMutations'
 import {type HttpAction} from './reducers'
@@ -1074,11 +1074,41 @@ it('retries transient dataset ACL fetch failures instead of failing fatally', as
   expect(() => documentState.getCurrent()).not.toThrow()
 })
 
-it('surfaces a dataset ACL 403 and refetches the ACL once the token changes', async () => {
+it('does not retry dataset ACL fetch failures caused by 4xx client errors', async () => {
   const forbidden = new ClientError({
     statusCode: 403,
     headers: {},
     body: {error: 'Forbidden', message: 'Session does not have access to this dataset'},
+  })
+
+  let aclAttempts = 0
+  client.observable.request = vi.fn().mockReturnValue(
+    defer(() => {
+      aclAttempts++
+      return throwError(() => forbidden)
+    }),
+  )
+
+  const doc = createDocumentHandle({documentId: randomUuid(), documentType: 'article'})
+  const documentState = getDocumentState(instance, doc)
+  const unsubscribe = documentState.subscribe()
+
+  // the error is fatal: it surfaces through the store instead of being retried
+  await vi.waitFor(() => {
+    expect(() => documentState.getCurrent()).toThrow(
+      'Forbidden - Session does not have access to this dataset',
+    )
+  })
+  expect(aclAttempts).toBe(1)
+
+  unsubscribe()
+})
+
+it('surfaces a dataset ACL 401 and refetches the ACL once the token changes', async () => {
+  const sessionExpired = new ClientError({
+    statusCode: 401,
+    headers: {},
+    body: {errorCode: 'SIO-401-AEX', error: 'Unauthorized', message: 'Session is expired'},
   })
   const datasetAcl = [{filter: 'true', permissions: ['read', 'update', 'create', 'history']}]
 
@@ -1087,7 +1117,7 @@ it('surfaces a dataset ACL 403 and refetches the ACL once the token changes', as
   client.observable.request = vi.fn().mockReturnValue(
     defer(() => {
       aclAttempts++
-      return hasAccess ? of(datasetAcl) : throwError(() => forbidden)
+      return hasAccess ? of(datasetAcl) : throwError(() => sessionExpired)
     }),
   )
 
@@ -1096,13 +1126,11 @@ it('surfaces a dataset ACL 403 and refetches the ACL once the token changes', as
   const unsubscribe = documentState.subscribe()
 
   await vi.waitFor(() => {
-    expect(() => documentState.getCurrent()).toThrow(
-      'Forbidden - Session does not have access to this dataset',
-    )
+    expect(() => documentState.getCurrent()).toThrow('Unauthorized - Session is expired')
   })
   expect(aclAttempts).toBe(1)
   await expect(applyDocumentActions(instance, {actions: [createDocument(doc)]})).rejects.toThrow(
-    'Forbidden - Session does not have access to this dataset',
+    'Unauthorized - Session is expired',
   )
 
   hasAccess = true
@@ -1890,12 +1918,7 @@ it('resolves a readable document while another in the same dataset is inaccessib
   vi.mocked(createFetchDocument).mockReturnValue(
     vi.fn((id) =>
       (id === blockedId
-        ? throwError(() =>
-            Object.assign(
-              new Error(`Document with ID \`${blockedId}\` is inaccessible due to permissions.`),
-              {statusCode: 403},
-            ),
-          )
+        ? throwError(() => new DocumentInaccessibleError(blockedId))
         : of({_id: id, _type: 'article', _rev: 'rev-1'} as SanityDocument)
       ).pipe(delay(0)),
     ),
@@ -1931,12 +1954,7 @@ it('reloads a document it could not read once the token changes', async () => {
     vi.fn((id) =>
       (canRead
         ? of({_id: id, _type: 'article', _rev: 'rev-1'} as SanityDocument)
-        : throwError(() =>
-            Object.assign(
-              new Error(`Document with ID \`${id}\` is inaccessible due to permissions.`),
-              {statusCode: 403},
-            ),
-          )
+        : throwError(() => new DocumentInaccessibleError(id))
       ).pipe(delay(0)),
     ),
   )

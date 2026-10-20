@@ -85,6 +85,13 @@ export class DeadlineExceededError extends OutOfSyncError {
   }
 }
 
+export class DocumentInaccessibleError extends Error {
+  constructor(documentId: string) {
+    super(`Document with ID \`${documentId}\` is inaccessible due to permissions.`)
+    this.name = 'DocumentInaccessibleError'
+  }
+}
+
 export class MaxBufferExceededError extends OutOfSyncError {
   constructor(message: string, state: ListenerSequenceState) {
     super(message, state)
