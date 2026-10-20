@@ -32,7 +32,7 @@ minimumReleaseAgeExclude:
   - react-router@7.18.2
 
 catalog:
-  '@playwright/test': '^1.63.0'
+  '@playwright/test': '^1.64.1'
   '@sanity/browserslist-config': '^1.0.5'
   '@sanity/client': '^8.9.0'
   '@sanity/comlink': '^4.0.3'
