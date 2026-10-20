@@ -55,6 +55,10 @@ describe('studio', () => {
     expect(urlFor.studios('studio-1').url()).toBe('/studios/studio-1')
   })
 
+  it('builds studio URLs from a slug', () => {
+    expect(urlFor.studios('marketing').url()).toBe('/studios/marketing')
+  })
+
   it.each([
     {basePath: '/', expected: '/studios/studio-1'},
     {basePath: null, expected: '/studios/studio-1'},
@@ -165,6 +169,10 @@ describe('coreApp', () => {
     expect(urlFor.applications('app-1').path('documents', 'document/1').url()).toBe(
       '/applications/app-1/documents/document/1',
     )
+  })
+
+  it('builds application URLs from a slug', () => {
+    expect(urlFor.applications('inbox').url()).toBe('/applications/inbox')
   })
 
   it('exposes application-specific builder interfaces', () => {
