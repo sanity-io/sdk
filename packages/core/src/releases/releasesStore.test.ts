@@ -246,6 +246,19 @@ describe('releasesStore', () => {
     expect(() => state.getCurrent()).toThrow(corsError)
   })
 
+  it('clears a failed fetch once releases arrive from a reopened connection', () => {
+    const subject = new Subject<ReleaseDocument[]>()
+    vi.mocked(observeReleases).mockReturnValue(subject.asObservable())
+    const state = getActiveReleasesState(instance, {resource: {projectId: 'test', dataset: 'test'}})
+    state.subscribe()
+    const [, options] = vi.mocked(observeReleases).mock.lastCall!
+
+    options.onError(new Error('Unauthorized'))
+    subject.next([])
+
+    expect(state.getCurrent()).toEqual([])
+  })
+
   it('should surface the error when the releases query errors', async () => {
     const subject = new Subject<ReleaseDocument[]>()
     vi.mocked(observeReleases).mockReturnValue(subject.asObservable())

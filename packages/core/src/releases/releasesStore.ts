@@ -116,6 +116,7 @@ const subscribeToReleases = ({
           activeReleases: sorted.filter(
             (release) => !ARCHIVED_RELEASE_STATES.includes(release.state),
           ),
+          fetchError: undefined,
         })
       }),
     )
