@@ -468,6 +468,37 @@ describe('usersStore', () => {
     },
   )
 
+  it('refetches a page that failed with a 401 once the token changes', async () => {
+    vi.useFakeTimers()
+    onTestFinished(() => {
+      vi.useRealTimers()
+    })
+    const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
+    const options: GetUsersOptions = {resourceType: 'project', projectId: 'project1'}
+    const expiredRequest = vi
+      .fn()
+      .mockReturnValueOnce(of({data: [mockUsers[0]], totalCount: 2, nextCursor: 'page-2'}))
+      .mockReturnValue(throwError(() => clientError(401, 'Session not found')))
+    const freshRequest = vi
+      .fn()
+      .mockReturnValue(of({data: [mockUsers[1]], totalCount: 2, nextCursor: null}))
+    const clients = mockClients(clientWith(expiredRequest))
+
+    const state = getUsersState(instance, options)
+    const unsubscribe = state.subscribe()
+    await expect(loadMoreUsers(instance, options)).rejects.toThrow('Session not found')
+
+    clients.next(clientWith(freshRequest))
+    await vi.advanceTimersByTimeAsync(0)
+
+    expect(freshRequest).toHaveBeenCalledTimes(1)
+    expect(freshRequest.mock.calls[0][0].query).toMatchObject({nextCursor: 'page-2'})
+    expect(state.getCurrent()).toEqual({data: mockUsers, totalCount: 2, hasMore: false})
+
+    unsubscribe()
+    instance.dispose()
+  })
+
   it('delays users state removal after unsubscribe', async () => {
     const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
     const options: GetUsersOptions = {resourceType: 'project', projectId: 'project1'}
