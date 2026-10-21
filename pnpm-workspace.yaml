@@ -35,10 +35,10 @@ overrides:
 catalog:
   '@playwright/test': '^1.64.1'
   '@sanity/browserslist-config': '^1.0.5'
-  '@sanity/client': '^8.10.0'
+  '@sanity/client': '^8.10.1'
   '@sanity/comlink': '^4.0.3'
   '@sanity/message-protocol': '^0.24.0'
-  '@sanity/pkg-utils': '^13.0.15'
+  '@sanity/pkg-utils': '^13.0.16'
   '@sanity/tsconfig': '^2.2.1'
   '@sanity/types': '^6.20.0'
   'sanity': '^6.20.0'
