@@ -1,6 +1,14 @@
-import {type ClientOptions, getClientState, type SanityInstance} from '@sanity/sdk'
+import {type SanityClient} from '@sanity/client'
+import {type ClientOptions, getClientState} from '@sanity/sdk'
+import {useContext} from 'react'
 
+import {AppFunctionsContext} from '../../context/AppFunctionsContext'
 import {createStateSourceHook} from '../helpers/createStateSourceHook'
+
+const useClientState = createStateSourceHook({
+  getState: getClientState,
+  getConfig: (options: ClientOptions) => options,
+})
 
 /**
  * A React hook that provides a client that subscribes to changes in your application,
@@ -29,15 +37,21 @@ import {createStateSourceHook} from '../helpers/createStateSourceHook'
  * @public
  * @function
  */
-export const useClient = createStateSourceHook({
-  getState: (instance: SanityInstance, options: ClientOptions) => {
-    if (!options || typeof options !== 'object') {
-      throw new Error(
-        'useClient() requires a configuration object with at least an "apiVersion" property. ' +
-          'Example: useClient({ apiVersion: "2024-11-12" })',
-      )
-    }
-    return getClientState(instance, options)
-  },
-  getConfig: (options: ClientOptions) => options,
-})
+export function useClient(options: ClientOptions): SanityClient {
+  const binding = useContext(AppFunctionsContext)
+  if (!options || typeof options !== 'object') {
+    throw new Error(
+      'useClient() requires a configuration object with at least an "apiVersion" property. ' +
+        'Example: useClient({ apiVersion: "2024-11-12" })',
+    )
+  }
+  return useClientState(
+    binding
+      ? {
+          ...options,
+          stackId: options.stackId ?? binding.stackId,
+          organizationId: options.organizationId ?? binding.organizationId,
+        }
+      : options,
+  )
+}

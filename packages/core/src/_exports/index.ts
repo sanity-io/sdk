@@ -203,6 +203,11 @@ export type {
   SetFavoriteInput,
 } from '../favorites/favorites'
 export {favorites, setFavorite} from '../favorites/favorites'
+export type {
+  AppFunctionRegistry,
+  AppFunctions,
+  FunctionCallOptions,
+} from '../functions/clientFunctions'
 export {installation, installations} from '../installations/installations'
 export {
   type Installation,

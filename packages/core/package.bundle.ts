@@ -11,6 +11,7 @@ export default defineConfig(() => {
           agent: './src/_exports/agent.ts',
           comlink: './src/_exports/comlink.ts',
           dashboard: './src/_exports/dashboard.ts',
+          functions: './src/_exports/functions.ts',
         },
       },
     },
