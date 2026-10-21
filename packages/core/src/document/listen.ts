@@ -66,7 +66,7 @@ interface ListenerSequenceState {
   buffer: MutationEvent[]
 }
 
-export class OutOfSyncError extends Error {
+class OutOfSyncError extends Error {
   /**
    * Attach state to the error for debugging/reporting
    */
@@ -82,6 +82,13 @@ export class DeadlineExceededError extends OutOfSyncError {
   constructor(message: string, state: ListenerSequenceState) {
     super(message, state)
     this.name = 'DeadlineExceededError'
+  }
+}
+
+export class DocumentInaccessibleError extends Error {
+  constructor(documentId: string) {
+    super(`Document with ID \`${documentId}\` is inaccessible due to permissions.`)
+    this.name = 'DocumentInaccessibleError'
   }
 }
 
