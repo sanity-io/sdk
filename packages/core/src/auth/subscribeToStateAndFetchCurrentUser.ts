@@ -29,6 +29,10 @@ import {type AuthMethodOptions, type AuthState, type AuthStoreState} from './aut
  * Subscribes to auth state changes and fetches the current user when
  * the state transitions to `LOGGED_IN` without a `currentUser`.
  *
+ * Transient failures (see {@link isTransientError}) retry with a backoff before the
+ * state becomes `ERROR`. Other failures set `ERROR` right away. A new token cancels a
+ * pending retry, and a failure doesn't set `ERROR` once the user is no longer logged in.
+ *
  * @param context - The store context for the auth store.
  * @param fetchOptions - Configuration options. When `useProjectHostname` is
  *   `true`, requests use the project-specific hostname (required for Studio

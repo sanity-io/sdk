@@ -32,7 +32,8 @@ function getStatusCode(error: unknown): number | undefined {
 }
 
 /**
- * Whether a failed request can succeed when sent again: a network error, 408, 429 or 5xx.
+ * Whether a failed request can succeed when sent again: a 408, 429 or 5xx, or any
+ * error without an HTTP status, such as a network error. CORS errors are not transient.
  * @internal
  */
 export function isTransientError(error: unknown): boolean {
