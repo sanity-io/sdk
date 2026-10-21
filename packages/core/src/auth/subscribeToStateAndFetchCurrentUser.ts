@@ -5,10 +5,19 @@ import {
   EMPTY,
   filter,
   map,
+  retry,
   type Subscription,
   switchMap,
+  throwError,
+  timer,
 } from 'rxjs'
 
+import {isTransientError} from '../client/isTransientError'
+import {
+  OUT_OF_SYNC_RETRY_BASE_DELAY,
+  OUT_OF_SYNC_RETRY_COUNT,
+  OUT_OF_SYNC_RETRY_MAX_DELAY,
+} from '../document/documentConstants'
 import {type StoreContext} from '../store/defineStore'
 import {DEFAULT_API_VERSION, REQUEST_TAG_PREFIX} from './authConstants'
 import {getAuthLogger} from './authLogger'
@@ -78,6 +87,19 @@ export const subscribeToStateAndFetchCurrentUser = (
             tag: 'users.get-current',
           })
           .pipe(
+            // ERROR blocks the whole app, so transient failures retry before reaching it
+            retry({
+              count: OUT_OF_SYNC_RETRY_COUNT,
+              delay: (error: unknown, retryCount) =>
+                isTransientError(error)
+                  ? timer(
+                      Math.min(
+                        OUT_OF_SYNC_RETRY_BASE_DELAY * 2 ** (retryCount - 1),
+                        OUT_OF_SYNC_RETRY_MAX_DELAY,
+                      ),
+                    )
+                  : throwError(() => error),
+            }),
             /**
              * Catch inside switchMap so the outer subscription survives.
              * Without this, a 401 terminates the subscription permanently

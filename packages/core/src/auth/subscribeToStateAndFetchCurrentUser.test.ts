@@ -1,7 +1,13 @@
+import {ClientError} from '@sanity/client'
 import {type CurrentUser} from '@sanity/types'
-import {delay, of, throwError} from 'rxjs'
-import {beforeEach, describe, expect, it, vi} from 'vitest'
+import {defer, delay, of, throwError} from 'rxjs'
+import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
+import {
+  OUT_OF_SYNC_RETRY_BASE_DELAY,
+  OUT_OF_SYNC_RETRY_COUNT,
+  OUT_OF_SYNC_RETRY_MAX_DELAY,
+} from '../document/documentConstants'
 import {createSanityInstance} from '../store/createSanityInstance'
 import {createStoreState} from '../store/createStoreState'
 import {AuthStateType} from './authStateType'
@@ -22,6 +28,8 @@ vi.mock('../utils/logger', async (importOriginal) => {
     })),
   }
 })
+
+const clientError = (statusCode: number) => new ClientError({statusCode, headers: {}, body: {}})
 
 describe('subscribeToStateAndFetchCurrentUser', () => {
   beforeEach(() => {
@@ -104,8 +112,8 @@ describe('subscribeToStateAndFetchCurrentUser', () => {
     subscription.unsubscribe()
   })
 
-  it('sets an auth error if fetching the current user fails', () => {
-    const error = new Error('test error')
+  it('sets an auth error right away when the request is rejected', () => {
+    const error = clientError(401)
     const mockRequest = vi.fn().mockReturnValue(throwError(() => error))
     const mockClient = {observable: {request: mockRequest}}
     const clientFactory = vi.fn().mockReturnValue(mockClient)
@@ -129,7 +137,7 @@ describe('subscribeToStateAndFetchCurrentUser', () => {
   })
 
   it('recovers from a fetch error when a new token is set', () => {
-    const error = new Error('Unauthorized')
+    const error = clientError(401)
     const mockUser = {id: 'recovered-user'} as CurrentUser
     const mockRequest = vi
       .fn()
@@ -163,8 +171,8 @@ describe('subscribeToStateAndFetchCurrentUser', () => {
   })
 
   it('recovers from multiple consecutive fetch errors', () => {
-    const error1 = new Error('Unauthorized')
-    const error2 = new Error('Unauthorized again')
+    const error1 = clientError(401)
+    const error2 = clientError(403)
     const mockUser = {id: 'finally-recovered'} as CurrentUser
     const mockRequest = vi
       .fn()
@@ -203,7 +211,7 @@ describe('subscribeToStateAndFetchCurrentUser', () => {
   })
 
   it('does not re-fetch with the same token but recovers with a different token', () => {
-    const error = new Error('Unauthorized')
+    const error = clientError(401)
     const mockUser = {id: 'recovered-user'} as CurrentUser
     const mockRequest = vi
       .fn()
@@ -242,5 +250,80 @@ describe('subscribeToStateAndFetchCurrentUser', () => {
     expect(mockRequest).toHaveBeenCalledTimes(2)
 
     subscription.unsubscribe()
+  })
+
+  describe('with transient failures', () => {
+    beforeEach(() => vi.useFakeTimers())
+    afterEach(() => vi.useRealTimers())
+
+    function startFetch(failures: unknown[]) {
+      const mockUser = {id: 'example-user'} as CurrentUser
+      let attempts = 0
+      const request$ = defer(() => {
+        const failure = failures[attempts++]
+
+        return failure ? throwError(() => failure) : of(mockUser)
+      })
+      const clientFactory = vi.fn().mockReturnValue({observable: {request: () => request$}})
+      const instance = createSanityInstance({projectId: 'p', dataset: 'd', auth: {clientFactory}})
+      const state = createStoreState(authStore.getInitialState(instance, null))
+      const subscription = subscribeToStateAndFetchCurrentUser({state, instance, key: null})
+
+      state.set('setLoggedIn', {
+        authState: {type: AuthStateType.LOGGED_IN, token: 'token', currentUser: null},
+      })
+
+      return {state, subscription, mockUser, attempts: () => attempts}
+    }
+
+    it('stays logged in while it retries and then sets the current user', () => {
+      const {state, subscription, mockUser, attempts} = startFetch([clientError(503)])
+
+      expect(state.get()).toMatchObject({
+        authState: {type: AuthStateType.LOGGED_IN, currentUser: null},
+      })
+
+      vi.advanceTimersByTime(OUT_OF_SYNC_RETRY_BASE_DELAY)
+
+      expect(state.get()).toMatchObject({
+        authState: {type: AuthStateType.LOGGED_IN, currentUser: mockUser},
+      })
+      expect(attempts()).toBe(2)
+
+      subscription.unsubscribe()
+    })
+
+    it('drops a pending retry when the token changes', () => {
+      const {state, subscription, mockUser, attempts} = startFetch([
+        clientError(503),
+        clientError(503),
+      ])
+
+      state.set('setNewToken', {
+        authState: {type: AuthStateType.LOGGED_IN, token: 'new-token', currentUser: null},
+      })
+      vi.advanceTimersByTime(OUT_OF_SYNC_RETRY_BASE_DELAY)
+
+      expect(state.get()).toMatchObject({
+        authState: {type: AuthStateType.LOGGED_IN, token: 'new-token', currentUser: mockUser},
+      })
+      expect(attempts()).toBe(3)
+
+      subscription.unsubscribe()
+    })
+
+    it('sets an auth error once the retries run out', () => {
+      const error = clientError(500)
+      const {state, subscription, attempts} = startFetch(
+        Array(OUT_OF_SYNC_RETRY_COUNT + 1).fill(error),
+      )
+
+      vi.advanceTimersByTime(OUT_OF_SYNC_RETRY_COUNT * OUT_OF_SYNC_RETRY_MAX_DELAY)
+
+      expect(state.get()).toMatchObject({authState: {type: AuthStateType.ERROR, error}})
+      expect(attempts()).toBe(OUT_OF_SYNC_RETRY_COUNT + 1)
+
+      subscription.unsubscribe()
+    })
   })
 })

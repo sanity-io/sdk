@@ -1,9 +1,4 @@
-import {
-  ClientError,
-  ConnectionFailedError,
-  CorsOriginError,
-  type SanityClient,
-} from '@sanity/client'
+import {ClientError, type SanityClient} from '@sanity/client'
 import {
   defer,
   EMPTY,
@@ -25,11 +20,7 @@ import {
   OUT_OF_SYNC_RETRY_MAX_DELAY,
 } from '../document/documentConstants'
 import {DocumentInaccessibleError} from '../document/listen'
-
-function getStatusCode(error: unknown): number | undefined {
-  if (error instanceof ClientError) return error.statusCode
-  return error instanceof ConnectionFailedError ? error.status : undefined
-}
+import {getStatusCode, isTransientError} from './isTransientError'
 
 function isMissingAccess(error: unknown): boolean {
   if (getProjectAccessErrorDetails(error)) return true
@@ -38,15 +29,9 @@ function isMissingAccess(error: unknown): boolean {
 
 function classify(error: unknown): 'session' | 'access' | 'transient' | 'terminal' {
   if (error instanceof DocumentInaccessibleError) return 'session'
-  if (error instanceof CorsOriginError) return 'terminal'
+  if (getStatusCode(error) === 401) return isMissingAccess(error) ? 'access' : 'session'
 
-  const statusCode = getStatusCode(error)
-
-  if (statusCode === 401) return isMissingAccess(error) ? 'access' : 'session'
-
-  return statusCode === undefined || statusCode >= 500 || statusCode === 408 || statusCode === 429
-    ? 'transient'
-    : 'terminal'
+  return isTransientError(error) ? 'transient' : 'terminal'
 }
 
 /**
