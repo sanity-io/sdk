@@ -220,17 +220,17 @@ const listenForLoadMoreAndFetch = ({state, instance}: StoreContext<UsersStoreSta
                   filter((i) => typeof i === 'string'),
                 )
 
-            if (resourceType === 'project' && !projectId) {
-              setError(new Error('Project ID required for this API.'))
-              return EMPTY
-            }
-
             const resource$: Observable<{
               type: 'project' | 'organization'
               id: string
             }> =
-              resourceType === 'project' && projectId
-                ? of({type: 'project', id: projectId})
+              resourceType === 'project'
+                ? projectId
+                  ? of({type: 'project', id: projectId})
+                  : defer(() => {
+                      setError(new Error('Project ID required for this API.'))
+                      return EMPTY
+                    })
                 : organizationId$.pipe(map((id) => ({type: 'organization', id})))
 
             const client$ = getClientState(instance, {

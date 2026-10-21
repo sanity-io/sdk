@@ -396,6 +396,7 @@ describe('usersStore', () => {
     const unsubscribe = state.subscribe()
 
     expect(() => state.getCurrent()).toThrow('Project ID required for this API.')
+    expect(request).not.toHaveBeenCalled()
 
     unsubscribe()
     instance.dispose()
