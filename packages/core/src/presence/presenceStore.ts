@@ -214,7 +214,6 @@ export const presenceStore = defineStore<PresenceStoreState, BoundResourceKey>({
           apiVersion: PRESENCE_API_VERSION,
           projectId: resource.projectId,
           dataset: resource.dataset,
-          useProjectHostname: true,
         })
       : getClient(instance, {
           apiVersion: PRESENCE_API_VERSION,

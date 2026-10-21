@@ -1,6 +1,6 @@
 import {createClient, type SanityClient} from '@sanity/client'
 import {Subject} from 'rxjs'
-import {beforeEach, describe, expect, it, vi} from 'vitest'
+import {beforeEach, describe, expect, it, onTestFinished, vi} from 'vitest'
 
 import {getAuthMethodState, getTokenState} from '../auth/authStore'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
@@ -53,6 +53,7 @@ describe('clientStore', () => {
         ignoreBrowserTokenWarning: true,
         allowReconfigure: false,
         requestTagPrefix: 'sanity.sdk',
+        useProjectHostname: true,
         projectId: 'test-project',
         dataset: 'test-dataset',
         token: 'initial-token',
@@ -80,6 +81,33 @@ describe('clientStore', () => {
       )
 
       vi.unstubAllGlobals()
+    })
+
+    it.each([
+      [
+        'to <projectId>.<apiHost> by default',
+        undefined,
+        'https://test-project.proxy.example/api/document/space/v2024-11-12',
+      ],
+      [
+        'to apiHost as-is when useProjectHostname is false',
+        false,
+        'https://proxy.example/api/document/space/v2024-11-12',
+      ],
+    ])('should send project requests %s', async (_, useProjectHostname, url) => {
+      const {createClient: createRealClient} =
+        await vi.importActual<typeof import('@sanity/client')>('@sanity/client')
+      const proxyInstance = createSanityInstance({
+        projectId: 'test-project',
+        dataset: 'test-dataset',
+        useProjectHostname,
+        auth: {apiHost: 'https://proxy.example/api/document/space'},
+      })
+      onTestFinished(() => proxyInstance.dispose())
+
+      getClient(proxyInstance, {apiVersion: '2024-11-12'})
+
+      expect(createRealClient(vi.mocked(createClient).mock.calls[0][0]).config().url).toBe(url)
     })
 
     it('should throw when using disallowed configuration keys', () => {
