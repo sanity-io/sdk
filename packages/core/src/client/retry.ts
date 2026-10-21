@@ -1,4 +1,9 @@
-import {ClientError, type SanityClient} from '@sanity/client'
+import {
+  ClientError,
+  ConnectionFailedError,
+  CorsOriginError,
+  type SanityClient,
+} from '@sanity/client'
 import {
   defer,
   EMPTY,
@@ -12,19 +17,39 @@ import {
   timer,
 } from 'rxjs'
 
-import {getProjectAccessErrorDetails} from '../auth/projectAccessError'
-import {getClientErrorApiBody} from '../auth/utils'
+import {getClientErrorApiBody, getClientErrorApiType} from '../auth/utils'
 import {
   OUT_OF_SYNC_RETRY_BASE_DELAY,
   OUT_OF_SYNC_RETRY_COUNT,
   OUT_OF_SYNC_RETRY_MAX_DELAY,
 } from '../document/documentConstants'
 import {DocumentInaccessibleError} from '../document/listen'
-import {getStatusCode, isTransientError} from './isTransientError'
+
+function getStatusCode(error: unknown): number | undefined {
+  if (error instanceof ClientError) return error.statusCode
+
+  return error instanceof ConnectionFailedError ? error.status : undefined
+}
+
+/**
+ * Whether a failed request can succeed when sent again: a network error, 408, 429 or 5xx.
+ * @internal
+ */
+export function isTransientError(error: unknown): boolean {
+  if (error instanceof CorsOriginError) return false
+
+  const statusCode = getStatusCode(error)
+
+  return statusCode === undefined || statusCode >= 500 || statusCode === 408 || statusCode === 429
+}
 
 function isMissingAccess(error: unknown): boolean {
-  if (getProjectAccessErrorDetails(error)) return true
-  return error instanceof ClientError && getClientErrorApiBody(error)?.code === 'missing_grant'
+  if (!(error instanceof ClientError)) return false
+
+  return (
+    getClientErrorApiType(error) === 'projectUserNotFoundError' ||
+    getClientErrorApiBody(error)?.code === 'missing_grant'
+  )
 }
 
 function classify(error: unknown): 'session' | 'access' | 'transient' | 'terminal' {

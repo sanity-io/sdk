@@ -12,7 +12,7 @@ import {
   timer,
 } from 'rxjs'
 
-import {isTransientError} from '../client/isTransientError'
+import {isTransientError} from '../client/retry'
 import {
   OUT_OF_SYNC_RETRY_BASE_DELAY,
   OUT_OF_SYNC_RETRY_COUNT,
