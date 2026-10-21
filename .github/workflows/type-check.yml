@@ -17,7 +17,12 @@ permissions:
 
 jobs:
   type-check:
+    name: type-check (TypeScript ${{ matrix.typescript }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        typescript: [6, 7]
     env:
       TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
       TURBO_TEAM: ${{ vars.TURBO_TEAM }}
@@ -30,4 +35,7 @@ jobs:
           node-version: 22
 
       - name: Type Check
+        # Packages use TypeScript 7; the root's TypeScript 6 (kept for typedoc) covers the 6 run
+        env:
+          TSC: ${{ matrix.typescript == 6 && format('{0}/node_modules/typescript/bin/tsc', github.workspace) || '' }}
         run: pnpm ts:check

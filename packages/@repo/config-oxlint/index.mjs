@@ -93,7 +93,6 @@ export default {
   jsPlugins: [
     require.resolve('eslint-plugin-simple-import-sort'),
     require.resolve('eslint-plugin-turbo'),
-    require.resolve('eslint-plugin-unused-imports'),
     // `import-x` is reserved for oxlint's built-in plugin, which lacks `no-extraneous-dependencies`
     {name: 'import-x-js', specifier: require.resolve('eslint-plugin-import-x')},
   ],
@@ -184,14 +183,14 @@ export default {
     'simple-import-sort/exports': 'error',
     'simple-import-sort/imports': 'error',
     'turbo/no-undeclared-env-vars': 'error',
-    'unused-imports/no-unused-imports': 'error',
-    'unused-imports/no-unused-vars': [
+    'no-unused-vars': [
       'error',
       {
         args: 'after-used',
         argsIgnorePattern: '^_',
         vars: 'all',
         varsIgnorePattern: '^_',
+        fix: {imports: 'safe-fix', variables: 'suggestion'},
       },
     ],
   },
@@ -201,7 +200,6 @@ export default {
       files: ['**/*.js', '**/*.jsx', '**/*.mjs', '**/*.cjs'],
       rules: {
         'no-undef': 'error',
-        'no-unused-vars': 'error',
       },
     },
     {

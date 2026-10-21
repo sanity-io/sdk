@@ -80,7 +80,7 @@
     "tsx": "catalog:",
     "turbo": "^2.11.9",
     "typedoc": "^0.28.20",
-    "typescript": "catalog:",
+    "typescript": "^6.0.3",
     "vitest": "catalog:"
   },
   "devEngines": {
