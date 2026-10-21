@@ -53,6 +53,10 @@
     "./dashboard": {
       "source": "./src/_exports/dashboard.ts",
       "default": "./dist/_exports/dashboard.js"
+    },
+    "./functions": {
+      "source": "./src/_exports/functions.ts",
+      "default": "./dist/_exports/functions.js"
     }
   },
   "publishConfig": {
@@ -62,7 +66,8 @@
       "./_internal": "./dist/_exports/_internal.js",
       "./agent": "./dist/_exports/agent.js",
       "./comlink": "./dist/_exports/comlink.js",
-      "./dashboard": "./dist/_exports/dashboard.js"
+      "./dashboard": "./dist/_exports/dashboard.js",
+      "./functions": "./dist/_exports/functions.js"
     },
     "access": "public"
   },
@@ -86,6 +91,7 @@
     "@sanity/comlink": "catalog:",
     "@sanity/diff-match-patch": "^3.2.1",
     "@sanity/diff-patch": "^7.0.0",
+    "@sanity/functions": "^1.10.1",
     "@sanity/id-utils": "^1.1.0",
     "@sanity/image-url": "^2.1.1",
     "@sanity/json-match": "^1.0.5",

@@ -5,6 +5,11 @@ export {AuthBoundary, type AuthBoundaryProps} from '../components/auth/AuthBound
 export {SanityApp, type SanityAppProps} from '../components/SanityApp'
 export {SDKProvider, type SDKProviderProps} from '../components/SDKProvider'
 export {type DocumentHandle, type DocumentTypeHandle, type ResourceHandle} from '../config/handles'
+export {
+  type AppFunctionsConfig,
+  AppFunctionsProvider,
+  type AppFunctionsProviderProps,
+} from '../context/AppFunctionsProvider'
 export {ComlinkTokenRefreshProvider} from '../context/ComlinkTokenRefresh'
 export {renderSanityApp} from '../context/renderSanityApp'
 export {ResourceProvider, type ResourceProviderProps} from '../context/ResourceProvider'
@@ -70,6 +75,7 @@ export {
   type DocumentsResponse,
   useDocuments,
 } from '../hooks/documents/useDocuments'
+export {useFunctions} from '../hooks/functions/useFunctions'
 export {type FetcherHookResult} from '../hooks/helpers/createFetcherHook'
 export {type MutationHookResult} from '../hooks/helpers/createMutationHook'
 export {useInstallation} from '../hooks/installations/useInstallation'

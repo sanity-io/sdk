@@ -29,6 +29,8 @@ type AllowedClientConfigKey =
   | 'projectId'
   | 'requestTagPrefix'
   | 'useProjectHostname'
+  | 'stackId'
+  | 'organizationId'
 
 const allowedKeys = Object.keys({
   apiHost: null,
@@ -46,6 +48,8 @@ const allowedKeys = Object.keys({
   requestTagPrefix: null,
   useProjectHostname: null,
   resource: null,
+  stackId: null,
+  organizationId: null,
 } satisfies Record<keyof ClientOptions, null>) as (keyof ClientOptions)[]
 
 const DEFAULT_CLIENT_CONFIG: ClientConfig = {

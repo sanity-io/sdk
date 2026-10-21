@@ -23,6 +23,7 @@ export type {ApplicationStatus, ApplicationStatusUpdate} from '../dashboard/mess
 export {getTopicState, resolveTopic} from '../dashboard/messageBus/topicStore'
 export {getWorkerClient, type WorkerConnection} from '../dashboard/messageBus/workerStore'
 export {getBusFavoriteState, resolveBusFavorite, setBusFavorite} from '../favorites/busFavorites'
+export {type AppFunctionContract, createAppFunctions} from '../functions/clientFunctions'
 export {PREVIEW_PROJECTION} from '../preview/previewConstants'
 export {transformProjectionToPreview} from '../preview/previewProjectionUtils'
 export {getQueryKey, parseQueryKey} from '../query/queryStore' // only used for memoizing in React, not needed for actual functionality
