@@ -127,7 +127,6 @@ const listenForLoadMoreAndFetch = ({state, instance}: StoreContext<UsersStoreSta
                   // this is a global store, so we need to use the projectId from the options when we're fetching
                   // users from a project subdomain
                   projectId: options.projectId,
-                  useProjectHostname: true,
                 }
 
                 return defer(() =>

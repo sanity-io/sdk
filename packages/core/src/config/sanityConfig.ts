@@ -145,6 +145,12 @@ export interface SanityConfig extends DatasetHandle, PerspectiveHandle {
    * `SDKStudioContext` provider. Can also be set explicitly for programmatic use.
    */
   studio?: StudioConfig
+  /**
+   * Whether project requests go to `<projectId>.<apiHost>`. Defaults to `true`.
+   * Set it to `false` to send them to `auth.apiHost` as-is, for example a
+   * Content Lake-compatible proxy served under a path.
+   */
+  useProjectHostname?: boolean
 }
 
 /**

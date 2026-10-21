@@ -610,7 +610,6 @@ describe('usersStore', () => {
         instance,
         expect.objectContaining({
           projectId: 'project1',
-          useProjectHostname: true,
         }),
       )
       expect(specificRequest).toHaveBeenCalledWith({
