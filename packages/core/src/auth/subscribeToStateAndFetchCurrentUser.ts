@@ -87,7 +87,6 @@ export const subscribeToStateAndFetchCurrentUser = (
             tag: 'users.get-current',
           })
           .pipe(
-            // ERROR blocks the whole app, so transient failures retry before reaching it
             retry({
               count: OUT_OF_SYNC_RETRY_COUNT,
               delay: (error: unknown, retryCount) =>
@@ -108,7 +107,11 @@ export const subscribeToStateAndFetchCurrentUser = (
              */
             catchError((error) => {
               logger.error('Failed to fetch current user', {error})
-              state.set('setError', {authState: {type: AuthStateType.ERROR, error}})
+
+              if (state.get().authState.type === AuthStateType.LOGGED_IN) {
+                state.set('setError', {authState: {type: AuthStateType.ERROR, error}})
+              }
+
               return EMPTY
             }),
           ),

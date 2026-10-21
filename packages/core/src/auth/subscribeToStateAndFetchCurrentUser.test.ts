@@ -293,6 +293,19 @@ describe('subscribeToStateAndFetchCurrentUser', () => {
       subscription.unsubscribe()
     })
 
+    it('stays logged out when the user logs out while it retries', () => {
+      const {state, subscription} = startFetch(
+        Array(OUT_OF_SYNC_RETRY_COUNT + 1).fill(clientError(500)),
+      )
+
+      state.set('logout', {authState: {type: AuthStateType.LOGGED_OUT, isDestroyingSession: false}})
+      vi.advanceTimersByTime(OUT_OF_SYNC_RETRY_COUNT * OUT_OF_SYNC_RETRY_MAX_DELAY)
+
+      expect(state.get()).toMatchObject({authState: {type: AuthStateType.LOGGED_OUT}})
+
+      subscription.unsubscribe()
+    })
+
     it('drops a pending retry when the token changes', () => {
       const {state, subscription, mockUser, attempts} = startFetch([
         clientError(503),
