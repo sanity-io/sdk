@@ -101,6 +101,17 @@ describe('createRemoteInstance', () => {
     expect(mockRegisterRemotes).toHaveBeenCalledWith(remotes, {force: false})
   })
 
+  it('forces re-registration when asked', () => {
+    const instance = createRemoteInstance({name: 'sanity-workbench'})
+
+    instance.registerRemotes([{name: 'studio-1', entry: 'https://example.com'}], {force: true})
+
+    expect(mockRegisterRemotes).toHaveBeenCalledWith(
+      [{name: 'studio-1', entry: 'https://example.com/mf-manifest.json'}],
+      {force: true},
+    )
+  })
+
   it('resolves with the loaded module on success', async () => {
     const module = {render: () => () => {}}
     mockLoadRemote.mockResolvedValue(module)

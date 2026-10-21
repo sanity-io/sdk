@@ -63,12 +63,12 @@
     "dev": "pkg watch",
     "docs": "typedoc --json docs/typedoc.json --tsconfig ./tsconfig.dist.json",
     "format": "oxfmt",
-    "lint": "eslint .",
+    "lint": "oxlint",
     "prepublishOnly": "pnpm run build",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
-    "ts:check": "tsc --noEmit"
+    "ts:check": "${TSC:-tsc} --noEmit"
   },
   "dependencies": {
     "@module-federation/runtime": "^2.9.2",
@@ -81,7 +81,7 @@
     "rxjs": "catalog:"
   },
   "devDependencies": {
-    "@repo/config-eslint": "workspace:*",
+    "@repo/config-oxlint": "workspace:*",
     "@repo/config-test": "workspace:*",
     "@repo/package.bundle": "workspace:*",
     "@repo/package.config": "workspace:*",
@@ -97,25 +97,25 @@
     "@vitejs/plugin-react": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "babel-plugin-react-compiler": "^1.0.0",
-    "eslint": "catalog:",
     "groq": "catalog:",
     "groq-js": "catalog:",
     "jsdom": "catalog:",
     "oxfmt": "catalog:",
+    "oxlint": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
     "rolldown": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:",
     "vitest": "catalog:",
-    "xstate": "5.33.2"
+    "xstate": "5.33.3"
   },
   "peerDependencies": {
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },
   "browserslist": "extends @sanity/browserslist-config",
-  "packageManager": "pnpm@12.9.1",
+  "packageManager": "pnpm@12.14.0",
   "inlinedDependencies": {
     "@sanity/comlink": "4.0.3",
     "xstate": "5.32.6"

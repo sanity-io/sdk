@@ -1,3 +1,4 @@
+import {type ApplicationWorkspace} from '@sanity/sdk'
 import {describe, expect, expectTypeOf, it} from 'vitest'
 
 import {
@@ -52,17 +53,40 @@ describe('studio', () => {
   it('builds studio URLs', () => {
     expect(urlFor.studios().url()).toBe('/studios/')
     expect(urlFor.studios('studio-1').url()).toBe('/studios/studio-1')
-    expect(urlFor.studios('studio-1').workspace('default').url()).toBe('/studios/studio-1/default')
+  })
+
+  it('builds studio URLs from a slug', () => {
+    expect(urlFor.studios('marketing').url()).toBe('/studios/marketing')
+  })
+
+  it.each([
+    {basePath: '/', expected: '/studios/studio-1'},
+    {basePath: null, expected: '/studios/studio-1'},
+    {basePath: '/production', expected: '/studios/studio-1/production'},
+    {basePath: '/studio/production', expected: '/studios/studio-1/studio/production'},
+  ])('builds a workspace URL from its base path $basePath', ({basePath, expected}) => {
+    expect(urlFor.studios('studio-1').workspace({basePath}).url()).toBe(expected)
+  })
+
+  it('builds intent URLs inside a workspace at the root and at a base path', () => {
+    const intent = {id: 'document-1', type: 'article'} as const
+
+    expect(urlFor.studios('studio-1').workspace({basePath: '/'}).intent('edit', intent).url()).toBe(
+      '/studios/studio-1/intent/edit/id=document-1;type=article/',
+    )
+    expect(
+      urlFor.studios('studio-1').workspace({basePath: '/production'}).intent('edit', intent).url(),
+    ).toBe('/studios/studio-1/production/intent/edit/id=document-1;type=article/')
   })
 
   it('builds edit intent URLs', () => {
     expect(
       urlFor
         .studios('studio-1')
-        .workspace('default')
+        .workspace({basePath: '/production'})
         .intent('edit', {id: 'drafts.document-1', type: 'article'})
         .url(),
-    ).toBe('/studios/studio-1/default/intent/edit/id=drafts.document-1;type=article/')
+    ).toBe('/studios/studio-1/production/intent/edit/id=drafts.document-1;type=article/')
 
     expect(urlFor.studios('studio-1').intent('edit', {id: 'document-1', mode: 'focus'}).url()).toBe(
       '/studios/studio-1/intent/edit/id=document-1;mode=focus/',
@@ -105,8 +129,8 @@ describe('studio', () => {
   })
 
   it('builds studio task URLs', () => {
-    expect(urlFor.studios('studio-1').workspace('default').task('task/1').url()).toBe(
-      '/studios/studio-1/default?selectedTask=task%2F1',
+    expect(urlFor.studios('studio-1').workspace({basePath: '/'}).task('task/1').url()).toBe(
+      '/studios/studio-1?selectedTask=task%2F1',
     )
     expect(urlFor.studios('studio-1').intent('edit', {id: 'document-1'}).task('task-1').url()).toBe(
       '/studios/studio-1/intent/edit/id=document-1/?selectedTask=task-1',
@@ -120,7 +144,7 @@ describe('studio', () => {
   })
 
   it('encodes studio and workspace identifiers', () => {
-    expect(urlFor.studios('studio/1').workspace('main space').url()).toBe(
+    expect(urlFor.studios('studio/1').workspace({basePath: '/main space'}).url()).toBe(
       '/studios/studio%2F1/main%20space',
     )
   })
@@ -129,8 +153,9 @@ describe('studio', () => {
     expectTypeOf(urlFor.studios()).toEqualTypeOf<DashboardUrl>()
     expectTypeOf(urlFor.studios('studio-1')).toEqualTypeOf<StudioUrl>()
     expectTypeOf(
-      urlFor.studios('studio-1').workspace('default'),
+      urlFor.studios('studio-1').workspace({basePath: '/'}),
     ).toEqualTypeOf<StudioWorkspaceUrl>()
+    expectTypeOf(urlFor.studios('studio-1').workspace).toBeCallableWith({} as ApplicationWorkspace)
     expectTypeOf(
       urlFor.studios('studio-1').intent('edit', {id: 'document-1'}),
     ).toEqualTypeOf<StudioIntentUrl>()
@@ -144,6 +169,10 @@ describe('coreApp', () => {
     expect(urlFor.applications('app-1').path('documents', 'document/1').url()).toBe(
       '/applications/app-1/documents/document/1',
     )
+  })
+
+  it('builds application URLs from a slug', () => {
+    expect(urlFor.applications('inbox').url()).toBe('/applications/inbox')
   })
 
   it('exposes application-specific builder interfaces', () => {

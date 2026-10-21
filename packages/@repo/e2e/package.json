@@ -34,23 +34,23 @@
   "scripts": {
     "build": "pkg build --strict --clean --check",
     "cleanup": "tsx src/scripts/cleanup-datasets.ts",
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix"
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix"
   },
   "dependencies": {
     "@sanity/client": "catalog:",
-    "dotenv": "^17.4.2",
+    "dotenv": "^18.0.8",
     "lodash-es": "catalog:",
     "ora": "^7.0.1"
   },
   "devDependencies": {
     "@playwright/test": "catalog:",
-    "@repo/config-eslint": "workspace:*",
+    "@repo/config-oxlint": "workspace:*",
     "@repo/tsconfig": "workspace:*",
     "@sanity/pkg-utils": "catalog:",
     "@types/lodash-es": "catalog:",
     "@types/node": "catalog:",
-    "eslint": "catalog:",
+    "oxlint": "catalog:",
     "tsx": "catalog:",
     "typescript": "catalog:"
   },
@@ -62,5 +62,5 @@
       "optional": false
     }
   },
-  "packageManager": "pnpm@12.9.1"
+  "packageManager": "pnpm@12.14.0"
 }

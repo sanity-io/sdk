@@ -15,6 +15,7 @@ import {getClientState} from '../client/clientStore'
 import {createSanityInstance} from '../store/createSanityInstance'
 import {type StateSource} from '../store/createStateSourceAction'
 import {UPSTREAM_CLOSE_DELAY_MS} from '../store/createStoreInstance'
+import {DocumentInaccessibleError} from './listen'
 import {createFetchDocument, createSharedListener} from './sharedListener'
 
 const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
@@ -262,9 +263,7 @@ describe('createFetchDocument', () => {
     }
     fakeLoadDocument.mockReturnValue(of(inaccessibleResult))
 
-    await expect(lastValueFrom(fetchDocument('doc1'))).rejects.toThrow(
-      'Document with ID `doc1` is inaccessible due to permissions.',
-    )
+    await expect(lastValueFrom(fetchDocument('doc1'))).rejects.toThrow(DocumentInaccessibleError)
   })
 
   it('should propagate errors from the loadDocument observable', async () => {

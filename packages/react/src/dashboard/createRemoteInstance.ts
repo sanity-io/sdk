@@ -38,7 +38,8 @@ export type CreateRemoteInstanceOptions = MakeOptional<
  * @category Remote Modules
  */
 export interface RemoteInstance {
-  registerRemotes(remotes: FederationRemote[]): void
+  /** `force` replaces a registered remote, dropping its cached manifest and loaded module. */
+  registerRemotes(remotes: FederationRemote[], options?: {force?: boolean}): void
   /** Loads and evaluates a remote expose. */
   loadRemote<T>(id: string): Promise<T | null>
   /** Preloads assets without evaluating them; omit exposes to warm the whole remote. */
@@ -60,8 +61,8 @@ export function createRemoteInstance(options: CreateRemoteInstanceOptions): Remo
   })
 
   return {
-    registerRemotes: (remotes) =>
-      instance.registerRemotes(remotes.map(withManifest), {force: false}),
+    registerRemotes: (remotes, {force = false} = {}) =>
+      instance.registerRemotes(remotes.map(withManifest), {force}),
     loadRemote: async <T>(id: string) => {
       let remoteModule: T | null
 

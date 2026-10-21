@@ -16,6 +16,7 @@ export interface DashboardResource {
   dataset: string
   type: string
   userApplicationId: string
+  userApplicationSlug?: string | null
   url: string
 }
 
@@ -91,6 +92,7 @@ function toResources(application: DashboardApplications[number]): DashboardResou
     dataset: workspace.dataset,
     type: 'studio',
     userApplicationId: application.id,
+    userApplicationSlug: application.slug,
     url,
   }))
 }

@@ -26,6 +26,7 @@ import {exhaustMapWithTrailing} from 'rxjs-exhaustmap-with-trailing'
 import {withProjectAccessMessage} from '../auth/projectAccessError'
 import {getClientState} from '../client/clientStore'
 import {observeQueryChanges} from '../client/observeQueryChanges'
+import {retryRead} from '../client/retry'
 import {type DatasetHandle, isDatasetResource} from '../config/sanityConfig'
 import {getPerspectiveState} from '../releases/getPerspectiveState'
 import {isReleasePerspective} from '../releases/utils/isReleasePerspective'
@@ -212,16 +213,15 @@ const listenForNewSubscribersAndFetch = ({
                         hasCurrentResult = true
                         state.set('setQueryData', setQueryData(group$.key, result))
                       }),
-                      // A failed refresh must not terminate this query's subscription.
-                      // Keep results only after this client and perspective fetched successfully.
-                      catchError((error: unknown) => {
-                        if (!hasCurrentResult) {
-                          state.set(
-                            'setQueryError',
-                            setQueryError(group$.key, withProjectAccessMessage(instance, error)),
-                          )
-                        }
-                        return EMPTY
+                      // A failed refresh must not terminate this query's subscription, so it
+                      // retries under the shared read policy instead of erroring. Keep results
+                      // only after this client and perspective fetched successfully.
+                      retryRead(client$, (error) => {
+                        if (error !== undefined && hasCurrentResult) return
+                        state.set(
+                          'setQueryError',
+                          setQueryError(group$.key, withProjectAccessMessage(instance, error)),
+                        )
                       }),
                     ),
                   ),

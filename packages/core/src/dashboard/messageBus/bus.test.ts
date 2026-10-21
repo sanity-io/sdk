@@ -16,6 +16,7 @@ import {
   type MessageBusHost,
   registerStateTopics,
   resetMessageBus,
+  workerMessages,
 } from './bus'
 import {type TopicManifest, type TopicMigration} from './topics'
 
@@ -502,6 +503,19 @@ describe('event topics', () => {
     expect(error).toMatchObject({code: 'REFUSED', message: 'not on screen'})
   })
 
+  it.each(['NO_RESPONDER', 'HANDLER_THREW'] as const)(
+    'rejects a sender with %s when the responder refuses with it',
+    async (code) => {
+      const messageBus = createMessageBus()
+      messageBus.subscribe('test.echo', (message) => message.reject('passed on', code))
+
+      await expect(messageBus.emit('test.echo', {n: 1})).rejects.toMatchObject({
+        code,
+        message: 'passed on',
+      })
+    },
+  )
+
   it('warns and ignores a reply or reject after a reject', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
     const messageBus = createMessageBus()
@@ -959,6 +973,59 @@ describe('per-connection state', () => {
     const application = connectApplicationToMessageBus(host, {appId: 'favorites'})
 
     expect('connections' in application).toBe(false)
+  })
+})
+
+describe('events on a host topic', () => {
+  it("delivers an application its own events and never another application's", () => {
+    const host = createMessageBus('dashboard')
+    const workerA = connectApplicationToMessageBus(host, {appId: 'app-a', moduleId: 'app-a/w'})
+    const workerB = connectApplicationToMessageBus(host, {appId: 'app-b', moduleId: 'app-b/w'})
+    const viewA = connectApplicationToMessageBus(host, {appId: 'app-a', moduleId: 'app-a/v'})
+    const hostReceived: unknown[] = []
+    const viewAReceived: unknown[] = []
+    host.subscribe('workers.message', (message) => hostReceived.push(message.payload))
+    viewA.subscribe('workers.message').subscribe((payload) => viewAReceived.push(payload))
+
+    workerA.emit('workers.message', 'for a')
+    workerB.emit('workers.message', 'for b')
+
+    expect(hostReceived).toEqual(['for a', 'for b'])
+    expect(viewAReceived).toEqual(['for a'])
+  })
+})
+
+describe('workerMessages', () => {
+  it("delivers only the named worker's messages from the connection's own application", () => {
+    const host = createMessageBus('dashboard')
+    const feed = connectApplicationToMessageBus(host, {appId: 'app', moduleId: 'app/services/feed'})
+    const sync = connectApplicationToMessageBus(host, {appId: 'app', moduleId: 'app/services/sync'})
+    const otherFeed = connectApplicationToMessageBus(host, {
+      appId: 'other',
+      moduleId: 'other/services/feed',
+    })
+    const view = connectApplicationToMessageBus(host, {appId: 'app', moduleId: 'app/views/panel'})
+    const received: unknown[] = []
+    workerMessages(view, 'feed').subscribe((message) => received.push(message))
+
+    feed.emit('workers.message', 'feed')
+    sync.emit('workers.message', 'sync')
+    otherFeed.emit('workers.message', 'other feed')
+
+    expect(received).toEqual(['feed'])
+  })
+
+  it('completes when the connection disconnects and fails once it has', () => {
+    const view = connectApplicationToMessageBus(createMessageBus('dashboard'), {appId: 'app'})
+    let completed = false
+    workerMessages(view, 'feed').subscribe({complete: () => (completed = true)})
+
+    view.disconnect()
+
+    expect(completed).toBe(true)
+    expect(() => workerMessages(view, 'feed')).toThrowError(
+      expect.objectContaining({code: 'ABORTED'}),
+    )
   })
 })
 

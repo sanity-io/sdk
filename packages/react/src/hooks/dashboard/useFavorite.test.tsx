@@ -105,11 +105,16 @@ describe('useFavorite', () => {
 describe('useFavorite (message bus)', () => {
   const MESSAGE_BUS_KEY = Symbol.for('sanity.os.bus')
   const handle = {documentId: 'doc', documentType: 'movie', resourceType: 'studio' as const}
-  // Studios travel as their dataset resource: the test providers' `test.test`.
   const favorite: FavoriteDocument = {
-    id: 'doc',
-    type: 'movie',
-    resource: {id: 'test.test', type: 'dataset'},
+    id: 'favorite',
+    document: {id: 'doc', type: 'movie', resource: {id: 'test.test', type: 'studio'}},
+    application: {
+      type: 'studio',
+      id: 'v27rvqtlp3lmdvcln6ey3lro',
+      workspaceName: 'default',
+    },
+    createdAt: '2026-10-19T13:28:23Z',
+    updatedAt: '2026-10-19T13:28:23Z',
   }
 
   let host: MessageBusHost

@@ -27,7 +27,7 @@ jobs:
       (github.event_name == 'issues' && github.event.sender.type != 'Bot' && github.event.issue.number == 1166)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
+      - uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3
         id: app-token
         with:
           client-id: ${{ secrets.ECOSPARK_APP_ID }}
@@ -58,7 +58,7 @@ jobs:
           cat "$CONFIG_FILE"
 
       - name: Self-hosted Renovate
-        uses: renovatebot/github-action@230ce922b08968d0a4f6f70f295601daff09ef1d # v46.3.7
+        uses: renovatebot/github-action@a63d9a7bc606f7336fd20b47f2f32259a35e6213 # v46.3.9
         with:
           token: ${{ steps.app-token.outputs.token }}
           configurationFile: .renovate-runner-config.json5

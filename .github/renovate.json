@@ -102,6 +102,12 @@
       "semanticCommitScope": "tooling"
     },
     {
+      "description": "The root's TypeScript serves typedoc, which doesn't support TypeScript 7 yet (TypeStrong/typedoc#3098)",
+      "matchFileNames": ["package.json"],
+      "matchPackageNames": ["typescript"],
+      "allowedVersions": "<7"
+    },
+    {
       "description": "Group vitest deps",
       "matchPackageNames": ["vitest", "@vitest/*"],
       "groupName": "vitest-tooling",

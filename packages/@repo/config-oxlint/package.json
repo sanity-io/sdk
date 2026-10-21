@@ -1,0 +1,22 @@
+{
+  "name": "@repo/config-oxlint",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./index.mjs",
+    "./tsdoc": "./tsdoc.mjs",
+    "./react": "./react.mjs"
+  },
+  "scripts": {
+    "lint": "oxlint"
+  },
+  "devDependencies": {
+    "eslint-plugin-import-x": "^4.17.1",
+    "eslint-plugin-react-compiler": "19.1.0-rc.2",
+    "eslint-plugin-simple-import-sort": "^14.0.0",
+    "eslint-plugin-tsdoc": "^0.5.4",
+    "eslint-plugin-turbo": "^2.11.7",
+    "oxlint": "catalog:"
+  }
+}

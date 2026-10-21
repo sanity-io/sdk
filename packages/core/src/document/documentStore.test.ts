@@ -66,7 +66,7 @@ import {
   type DocumentRemotePatchesEvent,
   type TransactionRevertedEvent,
 } from './events'
-import {DEFAULT_MAX_BUFFER_SIZE} from './listen'
+import {DEFAULT_MAX_BUFFER_SIZE, DocumentInaccessibleError} from './listen'
 import {type DatasetAcl} from './permissions'
 import {type DocumentSet, processMutations} from './processMutations'
 import {type HttpAction} from './reducers'
@@ -1104,6 +1104,46 @@ it('does not retry dataset ACL fetch failures caused by 4xx client errors', asyn
   unsubscribe()
 })
 
+it('surfaces a dataset ACL 401 and refetches the ACL once the token changes', async () => {
+  const sessionExpired = new ClientError({
+    statusCode: 401,
+    headers: {},
+    body: {errorCode: 'SIO-401-AEX', error: 'Unauthorized', message: 'Session is expired'},
+  })
+  const datasetAcl = [{filter: 'true', permissions: ['read', 'update', 'create', 'history']}]
+
+  let hasAccess = false
+  let aclAttempts = 0
+  client.observable.request = vi.fn().mockReturnValue(
+    defer(() => {
+      aclAttempts++
+      return hasAccess ? of(datasetAcl) : throwError(() => sessionExpired)
+    }),
+  )
+
+  const doc = createDocumentHandle({documentId: randomUuid(), documentType: 'article'})
+  const documentState = getDocumentState(instance, doc)
+  const unsubscribe = documentState.subscribe()
+
+  await vi.waitFor(() => {
+    expect(() => documentState.getCurrent()).toThrow('Unauthorized - Session is expired')
+  })
+  expect(aclAttempts).toBe(1)
+  await expect(applyDocumentActions(instance, {actions: [createDocument(doc)]})).rejects.toThrow(
+    'Unauthorized - Session is expired',
+  )
+
+  hasAccess = true
+  const client$ = (getClientState as () => StateSource<SanityClient>)()
+    .observable as ReplaySubject<SanityClient>
+  client$.next({...client} as SanityClient)
+
+  await vi.waitFor(() => expect(() => documentState.getCurrent()).not.toThrow())
+  expect(aclAttempts).toBe(2)
+
+  unsubscribe()
+})
+
 it('retries dataset ACL fetch failures caused by 429 rate-limit errors', async () => {
   const rateLimited = new ClientError({
     statusCode: 429,
@@ -1878,10 +1918,7 @@ it('resolves a readable document while another in the same dataset is inaccessib
   vi.mocked(createFetchDocument).mockReturnValue(
     vi.fn((id) =>
       (id === blockedId
-        ? throwError(
-            () =>
-              new Error(`Document with ID \`${blockedId}\` is inaccessible due to permissions.`),
-          )
+        ? throwError(() => new DocumentInaccessibleError(blockedId))
         : of({_id: id, _type: 'article', _rev: 'rev-1'} as SanityDocument)
       ).pipe(delay(0)),
     ),
@@ -1908,6 +1945,39 @@ it('resolves a readable document while another in the same dataset is inaccessib
 
   unsubscribeReadable()
   unsubscribeBlocked()
+})
+
+it('reloads a document it could not read once the token changes', async () => {
+  const documentId = DocumentId('doc-readable-after-token-change')
+  let canRead = false
+  vi.mocked(createFetchDocument).mockReturnValue(
+    vi.fn((id) =>
+      (canRead
+        ? of({_id: id, _type: 'article', _rev: 'rev-1'} as SanityDocument)
+        : throwError(() => new DocumentInaccessibleError(id))
+      ).pipe(delay(0)),
+    ),
+  )
+
+  const doc = createDocumentHandle({documentId, documentType: 'article', liveEdit: true})
+  const documentState = getDocumentState<TestDocument>(instance, doc)
+  await expect(
+    firstValueFrom(documentState.observable.pipe(first((value) => value !== undefined))),
+  ).rejects.toThrow('inaccessible due to permissions')
+
+  vi.useFakeTimers()
+
+  try {
+    canRead = true
+    const client$ = (getClientState as () => StateSource<SanityClient>)()
+      .observable as ReplaySubject<SanityClient>
+    client$.next({...client} as SanityClient)
+    await vi.advanceTimersByTimeAsync(0)
+
+    expect(documentState.getCurrent()).toMatchObject({_id: documentId})
+  } finally {
+    vi.useRealTimers()
+  }
 })
 
 it('reports an inaccessible draft to the document that reads it', async () => {
@@ -2003,7 +2073,7 @@ it('fails a release action whose release document cannot be read', async () => {
   ).rejects.toThrow(message)
 })
 
-it('gives up on a read that keeps failing rather than loading forever', async () => {
+it('surfaces a read that keeps failing once its retry budget runs out', async () => {
   const documentId = DocumentId('doc-with-failing-read')
   const draftId = getDraftId(documentId)
   let attempts = 0

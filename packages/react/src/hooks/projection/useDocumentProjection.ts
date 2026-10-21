@@ -1,4 +1,10 @@
-import {getProjectionState, resolveProjection, type ResolveProjectionResult} from '@sanity/sdk'
+import {
+  getProjectionState,
+  isDatasetResource,
+  isMediaLibraryResource,
+  resolveProjection,
+  type ResolveProjectionResult,
+} from '@sanity/sdk'
 import {useCallback, useMemo, useSyncExternalStore} from 'react'
 import {distinctUntilChanged, EMPTY, Observable, startWith, switchMap} from 'rxjs'
 
@@ -190,21 +196,38 @@ export function useDocumentProjection<TData extends object>({
   const normalizedProjection = useMemo(() => projection.trim(), [projection])
 
   // Normalize options: resolve resourceName to resource and strip resourceName
-  const normalizedDocHandle = useNormalizedResourceOptions(docHandle)
+  const {documentId, documentType, resource, perspective} = useNormalizedResourceOptions(docHandle)
 
-  // Memoize stateSource based on normalized projection and docHandle properties
-  // This prevents creating a new StateSource on every render when projection content is the same
+  // Resource normalization resolves aliases and context, but preserves property order.
+  // Serialize only handle identity fields in a fixed order so equivalent handles
+  // retain their subscription. Reading and suspending share the parsed options.
+  const normalizedDocHandle = {
+    documentId,
+    documentType,
+    resource:
+      resource &&
+      (isDatasetResource(resource)
+        ? {projectId: resource.projectId, dataset: resource.dataset}
+        : isMediaLibraryResource(resource)
+          ? {mediaLibraryId: resource.mediaLibraryId}
+          : {canvasId: resource.canvasId}),
+    perspective,
+  }
+  const docHandleKey = JSON.stringify(normalizedDocHandle)
+  const projectionOptions = useMemo(
+    () => ({
+      ...(JSON.parse(docHandleKey) as typeof normalizedDocHandle),
+      projection: normalizedProjection,
+    }),
+    [docHandleKey, normalizedProjection],
+  )
   const stateSource = useMemo(
-    () =>
-      getProjectionState<TData>(instance, {
-        ...normalizedDocHandle,
-        projection: normalizedProjection,
-      }),
-    [instance, normalizedDocHandle, normalizedProjection],
+    () => getProjectionState<TData>(instance, projectionOptions),
+    [instance, projectionOptions],
   )
 
   if (stateSource.getCurrent()?.data === null) {
-    throw resolveProjection(instance, {...normalizedDocHandle, projection: normalizedProjection})
+    throw resolveProjection(instance, projectionOptions)
   }
 
   // Create subscribe function for useSyncExternalStore

@@ -20,7 +20,8 @@
       "outputs": ["docs/**"]
     },
     "ts:check": {
-      "dependsOn": ["^ts:check"]
+      "dependsOn": ["^ts:check"],
+      "env": ["TSC"]
     },
     "clean": {},
     "cleanup": {

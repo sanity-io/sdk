@@ -12,6 +12,7 @@ export {
   type InstallMessageBusOptions,
   isMessageBusEnvironment,
   resetMessageBus,
+  workerMessages,
 } from '../dashboard/messageBus/bus'
 export {
   getDashboardMessageBus,
@@ -20,6 +21,7 @@ export {
 } from '../dashboard/messageBus/store'
 export type {ApplicationStatus, ApplicationStatusUpdate} from '../dashboard/messageBus/topics'
 export {getTopicState, resolveTopic} from '../dashboard/messageBus/topicStore'
+export {getWorkerClient, type WorkerConnection} from '../dashboard/messageBus/workerStore'
 export {getBusFavoriteState, resolveBusFavorite, setBusFavorite} from '../favorites/busFavorites'
 export {PREVIEW_PROJECTION} from '../preview/previewConstants'
 export {transformProjectionToPreview} from '../preview/previewProjectionUtils'

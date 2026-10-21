@@ -260,6 +260,8 @@ class FakeWebSocket extends EventTarget {
   static readonly CLOSED = 3
   static instances: FakeWebSocket[] = []
 
+  readonly CONNECTING = 0
+  readonly OPEN = FakeWebSocket.OPEN
   readonly CLOSING = 2
   readonly CLOSED = FakeWebSocket.CLOSED
   readyState = 0
