@@ -9,7 +9,7 @@ import {BehaviorSubject, concat, defer, Observable, of, throwError} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {OUT_OF_SYNC_RETRY_COUNT, OUT_OF_SYNC_RETRY_MAX_DELAY} from '../document/documentConstants'
-import {DocumentInaccessibleError} from '../document/listen'
+import {DocumentInaccessibleError} from '../document/documentInaccessibleError'
 import {retryRead} from './retry'
 
 const createClient = () => ({}) as SanityClient

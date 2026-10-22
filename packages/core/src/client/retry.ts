@@ -23,7 +23,7 @@ import {
   OUT_OF_SYNC_RETRY_COUNT,
   OUT_OF_SYNC_RETRY_MAX_DELAY,
 } from '../document/documentConstants'
-import {DocumentInaccessibleError} from '../document/listen'
+import {DocumentInaccessibleError} from '../document/documentInaccessibleError'
 
 function getStatusCode(error: unknown): number | undefined {
   if (error instanceof ClientError) return error.statusCode
