@@ -293,8 +293,8 @@ describe('subscribeToStateAndFetchCurrentUser', () => {
       subscription.unsubscribe()
     })
 
-    it('stays logged out when the user logs out while it retries', () => {
-      const {state, subscription} = startFetch(
+    it('stops retrying when the user logs out', () => {
+      const {state, subscription, attempts} = startFetch(
         Array(OUT_OF_SYNC_RETRY_COUNT + 1).fill(clientError(500)),
       )
 
@@ -302,6 +302,24 @@ describe('subscribeToStateAndFetchCurrentUser', () => {
       vi.advanceTimersByTime(OUT_OF_SYNC_RETRY_COUNT * OUT_OF_SYNC_RETRY_MAX_DELAY)
 
       expect(state.get()).toMatchObject({authState: {type: AuthStateType.LOGGED_OUT}})
+      expect(attempts()).toBe(1)
+
+      subscription.unsubscribe()
+    })
+
+    it('fetches again when the user logs back in with the same token', () => {
+      const {state, subscription, mockUser, attempts} = startFetch([clientError(503)])
+
+      state.set('logout', {authState: {type: AuthStateType.LOGGED_OUT, isDestroyingSession: false}})
+      vi.advanceTimersByTime(OUT_OF_SYNC_RETRY_MAX_DELAY)
+      state.set('setLoggedIn', {
+        authState: {type: AuthStateType.LOGGED_IN, token: 'token', currentUser: null},
+      })
+
+      expect(state.get()).toMatchObject({
+        authState: {type: AuthStateType.LOGGED_IN, currentUser: mockUser},
+      })
+      expect(attempts()).toBe(2)
 
       subscription.unsubscribe()
     })

@@ -23,7 +23,7 @@ import {DEFAULT_API_VERSION, REQUEST_TAG_PREFIX} from './authConstants'
 import {getAuthLogger} from './authLogger'
 import {isStudioConfig} from './authMode'
 import {AuthStateType} from './authStateType'
-import {type AuthMethodOptions, type AuthState, type AuthStoreState} from './authStore'
+import {type AuthStoreState} from './authStore'
 
 /**
  * Subscribes to auth state changes and fetches the current user when
@@ -52,26 +52,27 @@ export const subscribeToStateAndFetchCurrentUser = (
 
   const currentUser$ = state.observable
     .pipe(
-      map(({authState, options: storeOptions}) => ({
-        authState,
-        authMethod: storeOptions.authMethod,
-      })),
       filter(
-        (
-          value,
-        ): value is {
-          authState: Extract<AuthState, {type: AuthStateType.LOGGED_IN}>
-          authMethod: AuthMethodOptions
-        } => value.authState.type === AuthStateType.LOGGED_IN && !value.authState.currentUser,
+        ({authState}) =>
+          authState.type === AuthStateType.LOGGED_OUT ||
+          (authState.type === AuthStateType.LOGGED_IN && !authState.currentUser),
       ),
-      map((value) => ({token: value.authState.token, authMethod: value.authMethod})),
+      map(({authState, options: storeOptions}) =>
+        authState.type === AuthStateType.LOGGED_IN
+          ? {token: authState.token, authMethod: storeOptions.authMethod}
+          : null,
+      ),
       distinctUntilChanged(
-        (prev, curr) => prev.token === curr.token && prev.authMethod === curr.authMethod,
+        (prev, curr) => prev?.token === curr?.token && prev?.authMethod === curr?.authMethod,
       ),
     )
     .pipe(
-      map(({token, authMethod}) =>
-        clientFactory({
+      map((key) => {
+        if (!key) return null
+
+        const {token, authMethod} = key
+
+        return clientFactory({
           apiVersion: DEFAULT_API_VERSION,
           requestTagPrefix: REQUEST_TAG_PREFIX,
           token: authMethod === 'cookie' ? undefined : token,
@@ -81,10 +82,12 @@ export const subscribeToStateAndFetchCurrentUser = (
           ...(authMethod === 'cookie' ? {withCredentials: true} : {}),
           ...(useProjectHostname && projectId ? {projectId} : {}),
           ...(apiHost && {apiHost}),
-        }),
-      ),
-      switchMap((client) =>
-        client.observable
+        })
+      }),
+      switchMap((client) => {
+        if (!client) return EMPTY
+
+        return client.observable
           .request<CurrentUser>({
             url: '/users/me',
             method: 'GET',
@@ -111,15 +114,11 @@ export const subscribeToStateAndFetchCurrentUser = (
              */
             catchError((error) => {
               logger.error('Failed to fetch current user', {error})
-
-              if (state.get().authState.type === AuthStateType.LOGGED_IN) {
-                state.set('setError', {authState: {type: AuthStateType.ERROR, error}})
-              }
-
+              state.set('setError', {authState: {type: AuthStateType.ERROR, error}})
               return EMPTY
             }),
-          ),
-      ),
+          )
+      }),
     )
 
   return currentUser$.subscribe({
