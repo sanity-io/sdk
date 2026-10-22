@@ -402,6 +402,22 @@ describe('usersStore', () => {
     instance.dispose()
   })
 
+  it('reports a missing resource ID for a single user without breaking other lookups', async () => {
+    const instance = createSanityInstance({})
+
+    const state = getUsersState(instance, {userId: 'gUser1'})
+    const unsubscribe = state.subscribe()
+    expect(() => state.getCurrent()).toThrow('An organizationId or a projectId is required')
+
+    await expect(
+      resolveUsers(instance, {resourceType: 'project', projectId: 'project1'}),
+    ).resolves.toEqual({data: mockUsers, totalCount: 2, hasMore: false})
+    expect(request).toHaveBeenCalledTimes(1)
+
+    unsubscribe()
+    instance.dispose()
+  })
+
   const projectUser = {
     id: 'pUser1',
     sanityUserId: 'pUser1',

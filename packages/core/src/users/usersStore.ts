@@ -21,7 +21,6 @@ import {
   startWith,
   switchMap,
   tap,
-  throwError,
   withLatestFrom,
 } from 'rxjs'
 
@@ -178,8 +177,10 @@ const listenForLoadMoreAndFetch = ({state, instance}: StoreContext<UsersStoreSta
               const resourceId =
                 resourceType === 'organization' ? options.organizationId : options.projectId
               if (!resourceId) {
-                return throwError(() => new Error('An organizationId or a projectId is required'))
+                setError(new Error('An organizationId or a projectId is required'))
+                return EMPTY
               }
+
               return defer(() =>
                 getClient(instance, clientOptions).observable.request<
                   SanityUser | SanityUserResponse
