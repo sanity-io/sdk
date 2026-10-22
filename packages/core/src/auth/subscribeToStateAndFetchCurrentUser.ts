@@ -114,7 +114,11 @@ export const subscribeToStateAndFetchCurrentUser = (
              */
             catchError((error) => {
               logger.error('Failed to fetch current user', {error})
-              state.set('setError', {authState: {type: AuthStateType.ERROR, error}})
+              state.set('setError', (prev) =>
+                prev.authState.type === AuthStateType.LOGGED_IN
+                  ? {authState: {type: AuthStateType.ERROR, error}}
+                  : prev,
+              )
               return EMPTY
             }),
           )

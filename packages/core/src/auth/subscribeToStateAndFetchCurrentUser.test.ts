@@ -307,6 +307,22 @@ describe('subscribeToStateAndFetchCurrentUser', () => {
       subscription.unsubscribe()
     })
 
+    it('does not overwrite a token exchange when the retries run out', () => {
+      const {state, subscription} = startFetch(
+        Array(OUT_OF_SYNC_RETRY_COUNT + 1).fill(clientError(500)),
+      )
+
+      state.set('exchangeToken', {
+        authState: {type: AuthStateType.LOGGING_IN, isExchangingToken: true},
+      })
+      const exchanging = state.get().authState
+      vi.advanceTimersByTime(OUT_OF_SYNC_RETRY_COUNT * OUT_OF_SYNC_RETRY_MAX_DELAY)
+
+      expect(state.get().authState).toBe(exchanging)
+
+      subscription.unsubscribe()
+    })
+
     it('fetches again when the user logs back in with the same token', () => {
       const {state, subscription, mockUser, attempts} = startFetch([clientError(503)])
 
