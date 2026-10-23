@@ -73,6 +73,19 @@ type UseQueryOptions<
  *   )
  * }
  * ```
+ *
+ * @example Importing a `.groq` file (experimental)
+ * A query imported through `@sanity-labs/groq-content-mapper` carries its result and params
+ * types, so `data` is typed and `params` is checked with no generic and no Typegen registry.
+ * ```tsx
+ * import {useQuery} from '@sanity/sdk-react'
+ * import movieById from './movieById.groq' with {type: 'text'}
+ *
+ * function MovieDetails({movieId}: {movieId: string}) {
+ *   const {data} = useQuery({query: movieById, params: {id: movieId}})
+ *   return <h1>{data?.title}</h1>
+ * }
+ * ```
  */
 export function useQuery<
   TQuery extends string = string,
@@ -116,7 +129,9 @@ export function useQuery<
  * }
  * ```
  */
-export function useQuery<TData>(options: WithResourceNameSupport<QueryOptions>): {
+export function useQuery<TData, TQuery extends string = string>(
+  options: WithResourceNameSupport<QueryOptions<TQuery>>,
+): {
   /** The query result, cast to the provided type TData */
   data: TData
   /** True if another query is resolving in the background (suspense handles the initial loading state) */

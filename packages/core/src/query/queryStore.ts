@@ -1,4 +1,4 @@
-import {type ResponseQueryOptions} from '@sanity/client'
+import {type ClientParams, type ResponseQueryOptions} from '@sanity/client'
 import {
   catchError,
   combineLatest,
@@ -66,7 +66,12 @@ export interface QueryOptions<
     Pick<ResponseQueryOptions, 'useCdn' | 'cache' | 'next' | 'cacheMode' | 'tag'>,
     DatasetHandle<TDataset, TProjectId> {
   query: TQuery
-  params?: Record<string, unknown>
+  /**
+   * The query's parameters. For a query carrying a `__groqParams` brand, such as the default
+   * export of a `.groq` file imported through `@sanity-labs/groq-content-mapper`, these are
+   * checked against the branded params type (experimental).
+   */
+  params?: ClientParams<TQuery, Record<string, unknown>>
 }
 
 /**
@@ -277,16 +282,21 @@ export function getQueryState<
   queryOptions: QueryOptions<TQuery, TDataset, TProjectId>,
 ): StateSource<ResolveQueryResult<TQuery, `${TProjectId}.${TDataset}`> | undefined>
 
-/** @beta */
-export function getQueryState<TData>(
+/**
+ * `TQuery` is never written at a call site. With `TData` given it stays `string`, so params are
+ * the open record; without it, it is inferred, so a branded query's params are still checked.
+ *
+ * @beta
+ */
+export function getQueryState<TData, TQuery extends string = string>(
   instance: SanityInstance,
-  queryOptions: QueryOptions,
+  queryOptions: QueryOptions<TQuery>,
 ): StateSource<TData | undefined>
 
 /** @beta */
-export function getQueryState(
+export function getQueryState<TQuery extends string = string>(
   instance: SanityInstance,
-  queryOptions: QueryOptions,
+  queryOptions: QueryOptions<TQuery>,
 ): StateSource<unknown>
 
 /** @beta */
@@ -346,10 +356,14 @@ export function resolveQuery<
   queryOptions: ResolveQueryOptions<TQuery, TDataset, TProjectId>,
 ): Promise<ResolveQueryResult<TQuery, `${TProjectId}.${TDataset}`>>
 
-/** @beta */
-export function resolveQuery<TData>(
+/**
+ * `TQuery` is never written at a call site; see the matching {@link getQueryState} overload.
+ *
+ * @beta
+ */
+export function resolveQuery<TData, TQuery extends string = string>(
   instance: SanityInstance,
-  queryOptions: ResolveQueryOptions,
+  queryOptions: ResolveQueryOptions<TQuery>,
 ): Promise<TData>
 /** @beta */
 export function resolveQuery(...args: Parameters<typeof _resolveQuery>): Promise<unknown> {
