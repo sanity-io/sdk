@@ -3,6 +3,7 @@
   "ignorePatterns": ["**/typedoc-theme/**"],
   "entry": [
     "apps/kitchensink-react/src/App.tsx",
+    "apps/auto-updates-react/src/App.tsx",
     "bundle-stats.config.ts",
     "**/*.test-d.ts",
     "**/oxlint.config.mts"

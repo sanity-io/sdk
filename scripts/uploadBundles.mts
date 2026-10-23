@@ -141,7 +141,7 @@ async function updateManifest(newVersions: Map<string, string>) {
         ...initial.packages,
         [dirName]: {
           ...initial.packages[dirName],
-          default: value,
+          ...(value.includes('-') ? {} : {default: value}),
           versions: [...(initial.packages[dirName]?.versions || []), {version: value, timestamp}],
         },
       },
