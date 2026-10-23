@@ -132,7 +132,7 @@ To regenerate on every change while you develop, add `--watch` (`@sanity/cli` 8.
 later). It watches each resource's query files and schema file. A schema bound to a dataset
 is fetched once at startup, so restart the command after deploying a new schema. Generation
 during `sanity dev` (`typegen.enabled`) does not support `resources` yet and is skipped, so
-run `sanity typegen generate --watch` alongside it.
+run `npx sanity typegen generate --watch` alongside it.
 
 ### Generated files
 
