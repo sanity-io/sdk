@@ -1,96 +1,70 @@
-import {type ReleaseDocument, type SyncTag} from '@sanity/client'
-import {
-  BehaviorSubject,
-  combineLatest,
-  distinctUntilChanged,
-  filter,
-  map,
-  type Observable,
-  startWith,
-  switchMap,
-  tap,
-} from 'rxjs'
+import {type ReleaseDocument} from '@sanity/client'
+import {catchError, defer, EMPTY, map, type Observable, startWith, switchMap, tap} from 'rxjs'
+import {exhaustMapWithTrailing} from 'rxjs-exhaustmap-with-trailing'
 
 import {getClientState} from '../client/clientStore'
-import {observeLiveEvents} from '../client/liveEvents'
+import {observeQueryChanges} from '../client/observeQueryChanges'
 import {type DocumentResource} from '../config/sanityConfig'
 import {type SanityInstance} from '../store/createSanityInstance'
 
 const RELEASES_QUERY = 'releases::all()'
+const RELEASES_LISTEN_QUERY = '*[_type == "system.release" && _id in path("_.releases.*")]'
 const RELEASES_API_VERSION = 'v2025-05-06'
 
-/**
- * Options for {@link observeReleases}.
- * @internal
- */
+/** @internal */
 export interface ObserveReleasesOptions {
-  /** Resource to scope the underlying client and live connection to. */
   resource?: DocumentResource
-  /**
-   * Called when the live events connection fails due to a CORS
-   * misconfiguration. See `observeLiveEvents`.
-   */
-  onCorsError: (error: unknown) => void
+  /** Reports failures without ending the client or mutation subscriptions. */
+  onError: (error: unknown) => void
 }
 
 /**
- * Emits every release document (including archived and published), refetching
- * whenever a Live Content API event matches the query's sync tags.
- *
- * This fetches directly through the client store — deliberately not via the
- * query store — because release data is itself an input to query perspective
- * resolution (`getPerspectiveState`); fetching through the query store would
- * make the two stores mutually dependent.
- *
+ * Observes all release metadata, including archived and published releases.
+ * Fetches directly because release data is itself an input to query perspective
+ * resolution. Using the query store here would create a dependency cycle.
  * @internal
  */
 export function observeReleases(
   instance: SanityInstance,
-  {resource, onCorsError}: ObserveReleasesOptions,
+  {resource, onError}: ObserveReleasesOptions,
 ): Observable<ReleaseDocument[] | undefined> {
-  const client$ = getClientState(instance, {
-    apiVersion: RELEASES_API_VERSION,
-    resource,
-  }).observable
-
-  return client$.pipe(
+  return getClientState(instance, {apiVersion: RELEASES_API_VERSION, resource}).observable.pipe(
     switchMap((client) => {
-      const syncTags$ = new BehaviorSubject<SyncTag[] | undefined>(undefined)
-
-      // Pair the latest live message with the latest known sync tags so that
-      // a message arriving while a fetch is still in flight is re-evaluated
-      // (and refetched if it matches) once that fetch's tags land — instead
-      // of being dropped and leaving the store stale until the next event.
-      const refetchEventId$ = combineLatest([
-        observeLiveEvents(instance, {resource, onCorsError}).pipe(startWith(undefined)),
-        syncTags$,
-      ]).pipe(
-        filter(
-          ([message, syncTags]) =>
-            message === undefined || message.tags.some((tag) => syncTags?.includes(tag)),
-        ),
-        map(([message]) => message?.id),
-        distinctUntilChanged(),
-      )
-
-      return refetchEventId$.pipe(
-        switchMap((lastLiveEventId) =>
-          client.observable.fetch<ReleaseDocument[]>(
-            RELEASES_QUERY,
-            {},
-            {
-              perspective: 'raw',
-              filterResponse: false,
-              returnQuery: false,
-              lastLiveEventId,
-              tag: 'releases',
-            },
+      let hasCurrentResult = false
+      return observeQueryChanges(client, {
+        query: RELEASES_LISTEN_QUERY,
+        tag: 'releases.listen',
+      }).pipe(
+        // Completing the listener must allow an in-flight fetch to finish.
+        catchError((error: unknown) => {
+          onError(error)
+          return EMPTY
+        }),
+        startWith(undefined),
+        exhaustMapWithTrailing(() =>
+          defer(() =>
+            client.observable.fetch<ReleaseDocument[]>(
+              RELEASES_QUERY,
+              {},
+              {
+                perspective: 'raw',
+                useCdn: false,
+                filterResponse: false,
+                returnQuery: false,
+                tag: 'releases',
+              },
+            ),
+          ).pipe(
+            map((response) => response.result),
+            tap(() => {
+              hasCurrentResult = true
+            }),
+            catchError((error: unknown) => {
+              if (!hasCurrentResult) onError(error)
+              return EMPTY
+            }),
           ),
         ),
-        tap((response) => {
-          syncTags$.next(response.syncTags)
-        }),
-        map((response) => response.result),
       )
     }),
   )
