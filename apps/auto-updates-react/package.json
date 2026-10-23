@@ -1,0 +1,31 @@
+{
+  "name": "@sanity/auto-updates-react",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "pnpm tsc && sanity build",
+    "clean": "rimraf dist",
+    "deploy": "sanity deploy",
+    "lint": "oxlint",
+    "test:e2e": "playwright test",
+    "tsc": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@sanity/sdk-react": "workspace:*",
+    "react": "catalog:",
+    "react-dom": "catalog:"
+  },
+  "devDependencies": {
+    "@playwright/test": "catalog:",
+    "@repo/config-oxlint": "workspace:*",
+    "@repo/e2e": "workspace:*",
+    "@repo/tsconfig": "workspace:*",
+    "@types/react": "catalog:",
+    "oxlint": "catalog:",
+    "rimraf": "catalog:",
+    "sanity": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:"
+  }
+}

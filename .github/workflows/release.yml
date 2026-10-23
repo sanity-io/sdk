@@ -168,6 +168,8 @@ jobs:
       contents: read # for checkout
       id-token: write # to enable use of OIDC for npm provenance
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     env:
       TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
       TURBO_TEAM: ${{ vars.TURBO_TEAM }}
@@ -196,12 +198,14 @@ jobs:
       # `changeset version --snapshot` is a silent no-op when there are no
       # changesets. Fail loudly if the gate and this job's config ever disagree.
       - name: Guard against empty snapshot
+        id: version
         run: |
           VERSION=$(node -p "require('./packages/core/package.json').version")
           case "$VERSION" in
             *-next.*) ;;
             *) echo "::error::Expected a -next snapshot version, got $VERSION. The job gate and the changeset config disagree."; exit 1 ;;
           esac
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Build packages
         run: pnpm build:packages
@@ -214,6 +218,22 @@ jobs:
       # points at an sdk snapshot npm is not serving yet.
       - name: Publish snapshot to npm
         run: pnpm release:publish next
+
+      - name: Upload snapshot bundles to the staging module CDN
+        env:
+          GOOGLE_PROJECT_ID: ${{ secrets.GCS_STAGING_PROJECT_ID }}
+          GCLOUD_SERVICE_KEY: ${{ secrets.GCS_STAGING_SERVICE_KEY }}
+          GCLOUD_BUCKET: ${{ secrets.GCS_STAGING_BUCKET }}
+        run: |
+          pnpm build:bundle
+          pnpm upload:bundles
+
+  snapshot-e2e:
+    needs: snapshot
+    uses: ./.github/workflows/e2e-auto-updates.yml
+    with:
+      sdk-version: ${{ needs.snapshot.outputs.version }}
+    secrets: inherit
 
   post-release-steps:
     runs-on: ubuntu-latest
