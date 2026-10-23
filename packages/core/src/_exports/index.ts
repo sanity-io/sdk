@@ -251,7 +251,7 @@ export {
 } from '../project/project'
 export {getProjectionState} from '../projection/getProjectionState'
 export {resolveProjection} from '../projection/resolveProjection'
-export {type ProjectionValuePending} from '../projection/types'
+export {type DocumentStatus, type ProjectionValuePending} from '../projection/types'
 export {projects} from '../projects/projects'
 export {type ProjectsOptions} from '../projects/projects'
 export {getQueryState, type QueryOptions, resolveQuery} from '../query/queryStore'
