@@ -810,6 +810,16 @@ export function manageSubscriberIds(
   }
 }
 
+export function throwDocumentError(
+  documentStates: DocumentStoreState['documentStates'],
+  documentIds: Iterable<string>,
+): void {
+  for (const documentId of documentIds) {
+    const documentError = documentStates[documentId]?.error
+    if (documentError) throw documentError
+  }
+}
+
 // document handles are passed in via the public facing API, but we also need to
 // pull the correct document ids from action bodies, which have similar but not
 // identical shapes to the document handles. release actions also flow through
