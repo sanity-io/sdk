@@ -3,6 +3,7 @@ import {createSelector} from 'reselect'
 import {
   catchError,
   combineLatest,
+  defer,
   distinctUntilChanged,
   EMPTY,
   filter,
@@ -20,11 +21,11 @@ import {
   startWith,
   switchMap,
   tap,
-  throwError,
   withLatestFrom,
 } from 'rxjs'
 
 import {getClient, getClientState} from '../client/clientStore'
+import {retryRead} from '../client/retry'
 import {getDashboardOrganizationId} from '../dashboard/messageBus/topicStore'
 import {bindActionGlobally} from '../store/createActionBinder'
 import {createStateSourceAction, type SelectorContext} from '../store/createStateSourceAction'
@@ -114,97 +115,95 @@ const listenForLoadMoreAndFetch = ({state, instance}: StoreContext<UsersStoreSta
           switchMap((e) => {
             if (!e.added) return EMPTY
             const {userId, batchSize, ...options} = parseUsersKey(group$.key)
+            const setError = (error: unknown) =>
+              state.set('setUsersError', setUsersError(group$.key, error))
 
             if (userId) {
               // In the future we will be able to fetch a user from the global API using the resourceUserId,
               // but for now we need to use the project subdomain to fetch a user if the userId is a project user (starts with "p")
               if (userId.startsWith('p')) {
-                const client = getClient(instance, {
+                const clientOptions = {
                   apiVersion: PROJECT_API_VERSION,
                   // this is a global store, so we need to use the projectId from the options when we're fetching
                   // users from a project subdomain
                   projectId: options.projectId,
                   useProjectHostname: true,
-                })
+                }
 
-                return client.observable
-                  .request<PatchedSanityUserFromClient>({
+                return defer(() =>
+                  getClient(
+                    instance,
+                    clientOptions,
+                  ).observable.request<PatchedSanityUserFromClient>({
                     method: 'GET',
                     url: `/users/${userId}`,
                     tag: 'users.get',
-                  })
-                  .pipe(
-                    map((user) => {
-                      // We need to convert the user to the format we expect
-                      const convertedUser: SanityUser = {
-                        sanityUserId: user.sanityUserId,
-                        profile: {
-                          id: user.id,
-                          displayName: user.displayName,
-                          familyName: user.familyName ?? undefined,
-                          givenName: user.givenName ?? undefined,
-                          middleName: user.middleName ?? undefined,
-                          imageUrl: user.imageUrl ?? undefined,
-                          createdAt: user.createdAt,
-                          updatedAt: user.updatedAt,
-                          isCurrentUser: user.isCurrentUser,
-                          email: user.email,
-                          provider: user.provider,
-                        },
-                        memberships: [],
-                      }
-                      return {
-                        data: [convertedUser],
-                        totalCount: 1,
-                        nextCursor: null,
-                      }
-                    }),
-                    catchError((error) => {
-                      state.set('setUsersError', setUsersError(group$.key, error))
-                      return EMPTY
-                    }),
-                    tap((response) =>
-                      state.set('setUsersData', setUsersData(group$.key, response)),
-                    ),
-                  )
+                  }),
+                ).pipe(
+                  map((user) => {
+                    // We need to convert the user to the format we expect
+                    const convertedUser: SanityUser = {
+                      sanityUserId: user.sanityUserId,
+                      profile: {
+                        id: user.id,
+                        displayName: user.displayName,
+                        familyName: user.familyName ?? undefined,
+                        givenName: user.givenName ?? undefined,
+                        middleName: user.middleName ?? undefined,
+                        imageUrl: user.imageUrl ?? undefined,
+                        createdAt: user.createdAt,
+                        updatedAt: user.updatedAt,
+                        isCurrentUser: user.isCurrentUser,
+                        email: user.email,
+                        provider: user.provider,
+                      },
+                      memberships: [],
+                    }
+                    return {
+                      data: [convertedUser],
+                      totalCount: 1,
+                      nextCursor: null,
+                    }
+                  }),
+                  retryRead(getClientState(instance, clientOptions).observable, setError),
+                  tap((response) => state.set('setUsersData', setUsersData(group$.key, response))),
+                )
               }
 
               // Fetch the user from the global API
-              const scope = userId.startsWith('g') ? 'global' : undefined
-              const client = getClient(instance, {
-                scope,
-                apiVersion: API_VERSION,
-              })
+              const scope = userId.startsWith('g') ? ('global' as const) : undefined
+              const clientOptions = {scope, apiVersion: API_VERSION}
               const resourceType = options.resourceType || 'project'
               const resourceId =
                 resourceType === 'organization' ? options.organizationId : options.projectId
               if (!resourceId) {
-                return throwError(() => new Error('An organizationId or a projectId is required'))
+                setError(new Error('An organizationId or a projectId is required'))
+                return EMPTY
               }
-              return client.observable
-                .request<SanityUser | SanityUserResponse>({
+
+              return defer(() =>
+                getClient(instance, clientOptions).observable.request<
+                  SanityUser | SanityUserResponse
+                >({
                   method: 'GET',
                   url: `access/${resourceType}/${resourceId}/users/${userId}`,
                   tag: 'users.get',
-                })
-                .pipe(
-                  map((response) => {
-                    // If the response is a single user object (has sanityUserId), wrap it in the expected format
-                    if ('sanityUserId' in response) {
-                      return {
-                        data: [response],
-                        totalCount: 1,
-                        nextCursor: null,
-                      } as SanityUserResponse
-                    }
-                    return response as SanityUserResponse
-                  }),
-                  catchError((error) => {
-                    state.set('setUsersError', setUsersError(group$.key, error))
-                    return EMPTY
-                  }),
-                  tap((response) => state.set('setUsersData', setUsersData(group$.key, response))),
-                )
+                }),
+              ).pipe(
+                map((response) => {
+                  // If the response is a single user object (has sanityUserId), wrap it in the expected format
+                  if ('sanityUserId' in response) {
+                    return {
+                      data: [response],
+                      totalCount: 1,
+                      nextCursor: null,
+                    } as SanityUserResponse
+                  }
+                  return response as SanityUserResponse
+                }),
+                retryRead(getClientState(instance, clientOptions).observable, setError),
+                tap((response) => state.set('setUsersData', setUsersData(group$.key, response))),
+              )
             }
             const projectId = options.projectId
 
@@ -229,7 +228,10 @@ const listenForLoadMoreAndFetch = ({state, instance}: StoreContext<UsersStoreSta
               resourceType === 'project'
                 ? projectId
                   ? of({type: 'project', id: projectId})
-                  : throwError(() => new Error('Project ID required for this API.'))
+                  : defer(() => {
+                      setError(new Error('Project ID required for this API.'))
+                      return EMPTY
+                    })
                 : organizationId$.pipe(map((id) => ({type: 'organization', id})))
 
             const client$ = getClientState(instance, {
@@ -248,9 +250,9 @@ const listenForLoadMoreAndFetch = ({state, instance}: StoreContext<UsersStoreSta
               filter((cursor) => cursor !== null),
             )
 
-            return combineLatest([resource$, client$, loadMore$]).pipe(
-              withLatestFrom(cursor$),
-              switchMap(([[resource, client], cursor]) =>
+            return combineLatest([resource$, loadMore$]).pipe(
+              withLatestFrom(client$, cursor$),
+              switchMap(([[resource], client, cursor]) =>
                 client.observable.request<SanityUserResponse>({
                   method: 'GET',
                   url: `access/${resource.type}/${resource.id}/users`,
@@ -260,10 +262,7 @@ const listenForLoadMoreAndFetch = ({state, instance}: StoreContext<UsersStoreSta
                     : {limit: batchSize.toString()},
                 }),
               ),
-              catchError((error) => {
-                state.set('setUsersError', setUsersError(group$.key, error))
-                return EMPTY
-              }),
+              retryRead(client$, setError),
               tap((response) => state.set('setUsersData', setUsersData(group$.key, response))),
             )
           }),
