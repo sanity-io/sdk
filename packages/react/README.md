@@ -548,6 +548,55 @@ const {data} = useDocument<Article>(handle)
 // data is typed as Article
 ```
 
+#### Typed `.groq` files (experimental)
+
+`useQuery`, `getQueryState` and `resolveQuery` read the result and params types off a query imported from a `.groq` file through [`@sanity-labs/groq-content-mapper`](https://github.com/sanity-labs/groq-content-mapper), so there's no generic and no registry entry to keep in sync. This is experimental and needs TypeScript 7.1 or later, type-checking with `tsc --noEmit --runExternalCode`, and a `schema.json` from `npx sanity schema extract` in your Studio project. The mapper's README covers the details.
+
+```jsonc
+// tsconfig.json
+{
+  "compilerOptions": {/* ... */},
+  "contentMappers": [
+    {
+      "package": "@sanity-labs/groq-content-mapper",
+      "extensions": [".groq"],
+      "options": {
+        "schema": "./schema.json",
+        // Needed when the app queries more than one project or dataset: one schema per folder
+        // "schemas": [{"include": "src/queries/shop", "schema": "./shop.schema.json"}],
+      },
+    },
+  ],
+}
+```
+
+```ts
+// sanity.cli.ts
+import {defineCliConfig} from 'sanity/cli'
+
+export default defineCliConfig({
+  app: {
+    organizationId: 'your-org-id',
+    entry: './src/App.tsx',
+  },
+  // Delivers `.groq` imports as strings in `sanity dev` and `sanity build`
+  vite: async (viteConfig) => {
+    const {default: groqFiles} = await import('@sanity-labs/groq-content-mapper/vite')
+    return {
+      ...viteConfig,
+      plugins: [...viteConfig.plugins, groqFiles()],
+    }
+  },
+})
+```
+
+```tsx
+import movieById from './movieById.groq' with {type: 'text'}
+
+const {data} = useQuery({query: movieById, params: {id: movieId}})
+// data is typed from the query, and params are checked
+```
+
 ---
 
 ### Deployment
