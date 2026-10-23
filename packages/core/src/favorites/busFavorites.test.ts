@@ -7,7 +7,7 @@ import {
   type MessageBusHost,
   type MessageBusMessage,
 } from '../dashboard/messageBus/bus'
-import {type FavoriteDocument, type PayloadOf} from '../dashboard/messageBus/topics'
+import {type Favorite, type FavoriteDocument, type PayloadOf} from '../dashboard/messageBus/topics'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {getBusFavoriteState, resolveBusFavorite, setBusFavorite} from './busFavorites'
 import {type FavoriteDocumentContext} from './favorites'
@@ -36,7 +36,7 @@ const context: FavoriteDocumentContext = {
 }
 
 describe('getBusFavoriteState', () => {
-  const favorite: FavoriteDocument = {
+  const favorite: Favorite = {
     id: 'favorite',
     document: {id: 'doc', type: 'movie', resource: {id: 'p.d', type: 'studio'}},
     application: {
@@ -47,7 +47,7 @@ describe('getBusFavoriteState', () => {
     createdAt: '2026-10-19T13:28:23Z',
     updatedAt: '2026-10-19T13:28:23Z',
   }
-  const favoriteOf = (document: Partial<FavoriteDocument['document']>): FavoriteDocument => ({
+  const favoriteOf = (document: Partial<FavoriteDocument>): Favorite => ({
     ...favorite,
     document: {...favorite.document, ...document},
   })
@@ -56,7 +56,7 @@ describe('getBusFavoriteState', () => {
     host.connections.subscribe((client) =>
       client.emit('applications.capabilities', provided ? {favorites: true} : {}),
     )
-  const publish = (documents: FavoriteDocument[]) =>
+  const publish = (documents: Favorite[]) =>
     host.connections.subscribe((client) => client.emit('favorites.documents', documents))
   const read = (overrides: Partial<FavoriteDocumentContext> = {}) =>
     getBusFavoriteState(instance, {...context, ...overrides}).getCurrent()
