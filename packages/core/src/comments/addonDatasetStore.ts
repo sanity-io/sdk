@@ -80,7 +80,6 @@ function discover(
   return getClientState(instance, {
     apiVersion: ADDON_DATASET_API_VERSION,
     projectId: resource.projectId,
-    useProjectHostname: true,
   }).observable.pipe(
     switchMap((client) =>
       requestAddonDataset(client, resource).pipe(
@@ -101,7 +100,6 @@ async function discoverOnce(
     getClientState(instance, {
       apiVersion: ADDON_DATASET_API_VERSION,
       projectId: resource.projectId,
-      useProjectHostname: true,
     }).observable.pipe(take(1)),
   )
 
@@ -178,7 +176,6 @@ export const provisionAddonDataset: (
       const client = getClient(instance, {
         apiVersion: ADDON_DATASET_API_VERSION,
         projectId: resource.projectId,
-        useProjectHostname: true,
       })
 
       const response = await client.request<{datasetName?: string} | undefined>({
