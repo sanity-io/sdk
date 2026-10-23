@@ -810,7 +810,6 @@ export function manageSubscriberIds(
   }
 }
 
-// document handles are passed in via the public facing API, but we also need to
 export function throwDocumentError(
   documentStates: DocumentStoreState['documentStates'],
   documentIds: Iterable<string>,
