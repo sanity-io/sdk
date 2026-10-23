@@ -17,36 +17,47 @@ import {
   timer,
 } from 'rxjs'
 
-import {getProjectAccessErrorDetails} from '../auth/projectAccessError'
-import {getClientErrorApiBody} from '../auth/utils'
+import {getClientErrorApiBody, getClientErrorApiType} from '../auth/utils'
 import {
   OUT_OF_SYNC_RETRY_BASE_DELAY,
   OUT_OF_SYNC_RETRY_COUNT,
   OUT_OF_SYNC_RETRY_MAX_DELAY,
 } from '../document/documentConstants'
-import {DocumentInaccessibleError} from '../document/listen'
+import {DocumentInaccessibleError} from '../document/documentInaccessibleError'
 
 function getStatusCode(error: unknown): number | undefined {
   if (error instanceof ClientError) return error.statusCode
+
   return error instanceof ConnectionFailedError ? error.status : undefined
 }
 
+/**
+ * Whether a failed request can succeed when sent again: a 408, 429 or 5xx, or any
+ * error without an HTTP status, such as a network error. CORS errors are not transient.
+ * @internal
+ */
+export function isTransientError(error: unknown): boolean {
+  if (error instanceof CorsOriginError) return false
+
+  const statusCode = getStatusCode(error)
+
+  return statusCode === undefined || statusCode >= 500 || statusCode === 408 || statusCode === 429
+}
+
 function isMissingAccess(error: unknown): boolean {
-  if (getProjectAccessErrorDetails(error)) return true
-  return error instanceof ClientError && getClientErrorApiBody(error)?.code === 'missing_grant'
+  if (!(error instanceof ClientError)) return false
+
+  return (
+    getClientErrorApiType(error) === 'projectUserNotFoundError' ||
+    getClientErrorApiBody(error)?.code === 'missing_grant'
+  )
 }
 
 function classify(error: unknown): 'session' | 'access' | 'transient' | 'terminal' {
   if (error instanceof DocumentInaccessibleError) return 'session'
-  if (error instanceof CorsOriginError) return 'terminal'
+  if (getStatusCode(error) === 401) return isMissingAccess(error) ? 'access' : 'session'
 
-  const statusCode = getStatusCode(error)
-
-  if (statusCode === 401) return isMissingAccess(error) ? 'access' : 'session'
-
-  return statusCode === undefined || statusCode >= 500 || statusCode === 408 || statusCode === 429
-    ? 'transient'
-    : 'terminal'
+  return isTransientError(error) ? 'transient' : 'terminal'
 }
 
 /**
