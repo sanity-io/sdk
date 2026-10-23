@@ -46,6 +46,10 @@
       "source": "./src/_exports/agent.ts",
       "default": "./dist/_exports/agent.js"
     },
+    "./collaboration": {
+      "source": "./src/_exports/collaboration.ts",
+      "default": "./dist/_exports/collaboration.js"
+    },
     "./comlink": {
       "source": "./src/_exports/comlink.ts",
       "default": "./dist/_exports/comlink.js"
@@ -61,6 +65,7 @@
       "./package.json": "./package.json",
       "./_internal": "./dist/_exports/_internal.js",
       "./agent": "./dist/_exports/agent.js",
+      "./collaboration": "./dist/_exports/collaboration.js",
       "./comlink": "./dist/_exports/comlink.js",
       "./dashboard": "./dist/_exports/dashboard.js"
     },

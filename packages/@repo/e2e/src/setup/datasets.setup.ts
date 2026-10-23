@@ -1,6 +1,7 @@
 import {test as setup} from '@playwright/test'
 
 import {getClient} from '../helpers/clients'
+import {primeCommentsApi} from '../helpers/comments'
 import {getE2EEnv} from '../helpers/getE2EEnv'
 import {sanitizeDatasetName} from '../helpers/sanitizeDatasetName'
 import {startTimer} from '../helpers/timer'
@@ -32,4 +33,8 @@ setup('setup test datasets', async () => {
     })
     timer.end()
   }
+
+  // A comment store takes minutes to come up, so start it here rather than at
+  // the comments spec: the specs in between then do the waiting for free.
+  await primeCommentsApi()
 })
