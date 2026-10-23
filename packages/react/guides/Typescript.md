@@ -126,9 +126,13 @@ npx sanity typegen generate
 ```
 
 Run it again after changing a schema, query, or projection. To keep types current, run it
-before type checking, for example from your `install` or `typecheck` script. Watch mode
-(`--watch`) and generation during `sanity dev` (`typegen.enabled`) do not support
-`resources` yet: `--watch` exits with an error, and `sanity dev` skips generation.
+before type checking, for example from your `install` or `typecheck` script.
+
+To regenerate on every change while you develop, add `--watch` (`@sanity/cli` 8.22.0 or
+later). It watches each resource's query files and schema file. A schema bound to a dataset
+is fetched once at startup, so restart the command after deploying a new schema. Generation
+during `sanity dev` (`typegen.enabled`) does not support `resources` yet and is skipped, so
+run `sanity typegen generate --watch` alongside it.
 
 ### Generated files
 
