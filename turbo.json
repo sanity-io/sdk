@@ -23,6 +23,10 @@
       "dependsOn": ["^ts:check"],
       "env": ["TSC"]
     },
+    "@sanity/auto-updates-react#ts:check": {
+      "dependsOn": ["^ts:check", "@repo/e2e#build"],
+      "env": ["TSC"]
+    },
     "clean": {},
     "cleanup": {
       "cache": false,

@@ -7,8 +7,10 @@ import {getE2EEnv} from './helpers/getE2EEnv'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const SETUP_DIR = path.join(path.dirname(__dirname), 'src', 'setup')
+const STANDALONE_SETUP_DIR = path.join(path.dirname(__dirname), 'src', 'setup-standalone')
 const TEARDOWN_DIR = path.join(path.dirname(__dirname), 'src', 'teardown')
 const AUTH_FILE = path.join(path.dirname(__dirname), '.auth', 'user.json')
+const STANDALONE_AUTH_FILE = path.join(path.dirname(__dirname), '.auth', 'standalone.json')
 
 const {CI, SANITY_APP_E2E_ORGANIZATION_ID, VERCEL_AUTOMATION_BYPASS_SECRET} = getE2EEnv()
 const BASE_URL = `https://www.sanity.work/@${SANITY_APP_E2E_ORGANIZATION_ID}/application/__dev/`
@@ -59,6 +61,12 @@ export const basePlaywrightConfig: PlaywrightTestConfig = {
       teardown: 'cleanup',
     },
     {
+      name: 'setup-standalone',
+      testDir: STANDALONE_SETUP_DIR,
+      testMatch: /.*\.setup\.ts/,
+      teardown: 'cleanup',
+    },
+    {
       name: 'cleanup',
       testDir: TEARDOWN_DIR,
       testMatch: /.*\.teardown\.ts/,
@@ -86,13 +94,13 @@ export const basePlaywrightConfig: PlaywrightTestConfig = {
       name: 'webkit',
       use: {
         ...devices['Desktop Safari'],
-        storageState: AUTH_FILE,
+        storageState: STANDALONE_AUTH_FILE,
         // Webkit cannot execute JavaScript in sandboxed iframes without 'allow-scripts'
         // The dashboard creates sandboxed iframes for localhost apps that webkit cannot use
         // So webkit runs as standalone (localhost) instead of in the dashboard
         baseURL: 'http://localhost:3333/',
       },
-      dependencies: ['setup'],
+      dependencies: ['setup', 'setup-standalone'],
     },
   ],
 }
