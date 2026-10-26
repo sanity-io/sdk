@@ -120,14 +120,13 @@ const listenForLoadMoreAndFetch = ({state, instance}: StoreContext<UsersStoreSta
 
             if (userId) {
               // In the future we will be able to fetch a user from the global API using the resourceUserId,
-              // but for now we need to use the project subdomain to fetch a user if the userId is a project user (starts with "p")
+              // but for now we need to use the project API to fetch a user if the userId is a project user (starts with "p")
               if (userId.startsWith('p')) {
                 const clientOptions = {
                   apiVersion: PROJECT_API_VERSION,
                   // this is a global store, so we need to use the projectId from the options when we're fetching
-                  // users from a project subdomain
+                  // users from the project API
                   projectId: options.projectId,
-                  useProjectHostname: true,
                 }
 
                 return defer(() =>

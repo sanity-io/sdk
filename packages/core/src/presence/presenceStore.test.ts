@@ -297,7 +297,6 @@ describe('presenceStore', () => {
         apiVersion: '2026-03-30',
         projectId: 'my-project',
         dataset: 'my-dataset',
-        useProjectHostname: true,
       })
     })
 

@@ -54,6 +54,7 @@ export interface AuthConfig {
   /**
    * The API hostname for requests. Usually leave this undefined, but it can be set
    * if using a custom domain or CNAME for the API endpoint.
+   * Project requests go to `<projectId>.<apiHost>` unless `useProjectHostname` is `false`.
    */
   apiHost?: string
 

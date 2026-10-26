@@ -39,10 +39,7 @@ describe('datasets', () => {
     const result = await datasets.resolveState(instance)
     expect(result).toEqual([{id: 'a'}, {id: 'b'}])
     expect(list).toHaveBeenCalled()
-    expect(getClientState).toHaveBeenCalledWith(
-      instance,
-      expect.objectContaining({projectId: 'p', useProjectHostname: true}),
-    )
+    expect(getClientState).toHaveBeenCalledWith(instance, expect.objectContaining({projectId: 'p'}))
   })
 
   it('reads datasets for an explicit projectId over the instance config', async () => {
