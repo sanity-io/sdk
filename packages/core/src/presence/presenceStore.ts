@@ -207,14 +207,13 @@ export const presenceStore = defineStore<PresenceStoreState, BoundResourceKey>({
     // disconnect on unload, with the expiry sweep above as the backstop.
     const sessionId = randomId(16)
 
-    // Dataset resources must use the project hostname so the socket URL is project-specific.
+    // Dataset resources use a project client so the socket URL is project-specific.
     // Canvas resources use the global API endpoint via the resource config.
     const client = isDatasetResource(resource)
       ? getClient(instance, {
           apiVersion: PRESENCE_API_VERSION,
           projectId: resource.projectId,
           dataset: resource.dataset,
-          useProjectHostname: true,
         })
       : getClient(instance, {
           apiVersion: PRESENCE_API_VERSION,

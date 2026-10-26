@@ -42,6 +42,7 @@ describe('releasesStore', () => {
       expect.objectContaining({
         resource: {dataset: 'test', projectId: 'test'},
         onError: expect.any(Function),
+        onFetchError: expect.any(Function),
       }),
     )
   })
@@ -228,6 +229,40 @@ describe('releasesStore', () => {
     // the CORS error is recorded as store state so the releases selector
     // rethrows it (handled by the Cors Error component)
     expect(() => state.getCurrent()).toThrow(corsError)
+  })
+
+  it('surfaces a failed fetch until fetching recovers, without clearing a listener error', () => {
+    vi.mocked(observeReleases).mockReturnValue(new Subject<ReleaseDocument[]>().asObservable())
+    const resource = {projectId: 'test', dataset: 'test'}
+    const state = getActiveReleasesState(instance, {resource})
+    state.subscribe()
+    const [, options] = vi.mocked(observeReleases).mock.lastCall!
+    const fetchError = new Error('Unauthorized')
+    const corsError = new Error('CORS misconfiguration')
+
+    options.onFetchError(fetchError)
+    expect(() => state.getCurrent()).toThrow(fetchError)
+    expect(() => getAllReleasesState(instance, {resource}).getCurrent()).toThrow(fetchError)
+
+    options.onFetchError(undefined)
+    expect(state.getCurrent()).toEqual([])
+
+    options.onError(corsError)
+    options.onFetchError(undefined)
+    expect(() => state.getCurrent()).toThrow(corsError)
+  })
+
+  it('clears a failed fetch once releases arrive from a reopened connection', () => {
+    const subject = new Subject<ReleaseDocument[]>()
+    vi.mocked(observeReleases).mockReturnValue(subject.asObservable())
+    const state = getActiveReleasesState(instance, {resource: {projectId: 'test', dataset: 'test'}})
+    state.subscribe()
+    const [, options] = vi.mocked(observeReleases).mock.lastCall!
+
+    options.onFetchError(new Error('Unauthorized'))
+    subject.next([])
+
+    expect(state.getCurrent()).toEqual([])
   })
 
   it('should surface the error when the releases query errors', async () => {

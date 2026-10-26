@@ -15,7 +15,7 @@ import {getClientState} from '../client/clientStore'
 import {createSanityInstance} from '../store/createSanityInstance'
 import {type StateSource} from '../store/createStateSourceAction'
 import {UPSTREAM_CLOSE_DELAY_MS} from '../store/createStoreInstance'
-import {DocumentInaccessibleError} from './listen'
+import {DocumentInaccessibleError} from './documentInaccessibleError'
 import {createFetchDocument, createSharedListener} from './sharedListener'
 
 const instance = createSanityInstance({projectId: 'p', dataset: 'd'})

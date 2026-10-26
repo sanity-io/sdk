@@ -1,4 +1,5 @@
 import {
+  ClientError,
   ConnectionFailedError,
   type ListenEvent,
   type ReleaseDocument,
@@ -52,12 +53,18 @@ describe('observeReleases', () => {
     vi.useRealTimers()
   })
 
-  function observe(onError = vi.fn()) {
+  function observe(onError = vi.fn(), onFetchError = vi.fn()) {
     const emissions: (ReleaseDocument[] | undefined)[] = []
     subscriptions.add(
-      observeReleases(instance, {onError}).subscribe((value) => emissions.push(value)),
+      observeReleases(instance, {onError, onFetchError}).subscribe((value) =>
+        emissions.push(value),
+      ),
     )
     return emissions
+  }
+
+  function clientError(statusCode: number) {
+    return new ClientError({statusCode, headers: {}, body: {error: 'Error', message: 'failed'}})
   }
 
   function mutate() {
@@ -118,25 +125,25 @@ describe('observeReleases', () => {
   })
 
   it('keeps listening after a failed fetch and recovers on the next event', async () => {
-    const error = new Error('unavailable')
-    const onError = vi.fn()
+    const error = clientError(403)
+    const onFetchError = vi.fn()
     fetch.mockReturnValueOnce(throwError(() => error))
-    const emissions = observe(onError)
+    const emissions = observe(vi.fn(), onFetchError)
     await settle()
-    expect(onError).toHaveBeenCalledWith(error)
+    expect(onFetchError).toHaveBeenCalledWith(error)
     mutate()
     await settle()
     expect(emissions).toEqual([[release]])
   })
 
   it('retains loaded releases after a failed refresh and recovers on the next event', async () => {
-    const onError = vi.fn()
-    const emissions = observe(onError)
+    const onFetchError = vi.fn()
+    const emissions = observe(vi.fn(), onFetchError)
     await settle()
-    fetch.mockReturnValueOnce(throwError(() => new Error('unavailable')))
+    fetch.mockReturnValueOnce(throwError(() => clientError(403)))
     mutate()
     await settle()
-    expect(onError).not.toHaveBeenCalled()
+    expect(onFetchError).not.toHaveBeenCalled()
     expect(emissions).toEqual([[release]])
     const updated = {...release, metadata: {...release.metadata, title: 'Updated'}}
     fetch.mockReturnValueOnce(of({result: [updated]}))
@@ -146,14 +153,14 @@ describe('observeReleases', () => {
   })
 
   it('does not reuse release results when a new client cannot fetch them', async () => {
-    const onError = vi.fn()
-    observe(onError)
+    const onFetchError = vi.fn()
+    observe(vi.fn(), onFetchError)
     await settle()
-    const failure = new Error('forbidden')
+    const failure = clientError(403)
     fetch.mockReturnValueOnce(throwError(() => failure))
     clients.next({...clients.value} as SanityClient)
     await settle()
-    expect(onError).toHaveBeenCalledExactlyOnceWith(failure)
+    expect(onFetchError).toHaveBeenCalledExactlyOnceWith(failure)
   })
 
   it('refreshes after welcome rather than while reconnecting', async () => {
@@ -232,6 +239,31 @@ describe('observeReleases', () => {
     await settle()
     expect(nextEvents.observed).toBe(true)
     expect(emissions).toEqual([[release], [updated]])
+  })
+
+  it('backs off and retries a transient fetch failure without reporting it', async () => {
+    const onFetchError = vi.fn()
+    fetch.mockReturnValueOnce(throwError(() => clientError(503)))
+    const emissions = observe(vi.fn(), onFetchError)
+    await settle()
+    expect(emissions).toEqual([])
+    await vi.advanceTimersByTimeAsync(500)
+    expect(fetch).toHaveBeenCalledTimes(2)
+    expect(emissions).toEqual([[release]])
+    expect(onFetchError).not.toHaveBeenCalled()
+  })
+
+  it('refetches releases that failed with a 401 once the token changes', async () => {
+    const unauthorized = clientError(401)
+    const onFetchError = vi.fn()
+    fetch.mockReturnValueOnce(throwError(() => unauthorized))
+    const emissions = observe(vi.fn(), onFetchError)
+    await settle()
+    expect(onFetchError).toHaveBeenLastCalledWith(unauthorized)
+    clients.next({observable: {fetch, listen: () => new Subject()}} as unknown as SanityClient)
+    await settle()
+    expect(emissions).toEqual([[release]])
+    expect(onFetchError).toHaveBeenCalledOnce()
   })
 
   it('cancels a trailing fetch on unsubscribe', async () => {

@@ -29,6 +29,5 @@ export const datasets = defineFetcher<[options?: ProjectHandle], DatasetsRespons
     getClientState(instance, {
       apiVersion: API_VERSION,
       projectId: resolveProjectId(instance, options),
-      useProjectHostname: true,
     }).observable.pipe(switchMap((client) => client.observable.datasets.list())),
 })

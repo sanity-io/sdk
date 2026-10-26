@@ -52,6 +52,7 @@ import {
 } from './actions'
 import {applyDocumentActions} from './applyDocumentActions'
 import {OUT_OF_SYNC_RETRY_COUNT} from './documentConstants'
+import {DocumentInaccessibleError} from './documentInaccessibleError'
 import {
   getDocumentState,
   getDocumentSyncStatus,
@@ -66,7 +67,7 @@ import {
   type DocumentRemotePatchesEvent,
   type TransactionRevertedEvent,
 } from './events'
-import {DEFAULT_MAX_BUFFER_SIZE, DocumentInaccessibleError} from './listen'
+import {DEFAULT_MAX_BUFFER_SIZE} from './listen'
 import {type DatasetAcl} from './permissions'
 import {type DocumentSet, processMutations} from './processMutations'
 import {type HttpAction} from './reducers'
@@ -2025,6 +2026,27 @@ it('fails a write to a document it cannot read instead of waiting for it', async
       actions: [editDocument(doc, {set: {title: 'Edited'}})],
       resource,
     }),
+  ).rejects.toThrow(message)
+})
+
+it('reports the permissions of a document it cannot read as an error instead of loading forever', async () => {
+  const documentId = DocumentId('doc-with-blocked-draft-permissions')
+  const draftId = getDraftId(documentId)
+  const message = `Document with ID \`${draftId}\` is inaccessible due to permissions.`
+
+  vi.mocked(createFetchDocument).mockReturnValue(
+    vi.fn((id) =>
+      (id === draftId
+        ? throwError(() => new Error(message))
+        : of({_id: id, _type: 'article', _rev: 'rev-1'} as SanityDocument)
+      ).pipe(delay(0)),
+    ),
+  )
+
+  const doc = createDocumentHandle({documentId, documentType: 'article'})
+
+  await expect(
+    resolvePermissions(instance, {actions: [editDocument(doc, {set: {title: 'Edited'}})]}),
   ).rejects.toThrow(message)
 })
 

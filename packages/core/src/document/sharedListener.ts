@@ -18,7 +18,7 @@ import {type DocumentResource} from '../config/sanityConfig'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {UPSTREAM_CLOSE_DELAY_MS} from '../store/createStoreInstance'
 import {cleanupTimer} from '../utils/setCleanupTimeout'
-import {DocumentInaccessibleError} from './listen'
+import {DocumentInaccessibleError} from './documentInaccessibleError'
 import {dedupeListenerEvents, groupTransactionEvents} from './listenerEventOperators'
 
 const API_VERSION = 'v2025-05-06'

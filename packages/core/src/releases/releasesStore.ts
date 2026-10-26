@@ -31,6 +31,7 @@ export interface ReleasesStoreState {
   activeReleases?: ReleaseDocument[]
   allReleases?: ReleaseDocument[]
   error?: unknown
+  fetchError?: unknown
 }
 
 export const releasesStore = defineStore<ReleasesStoreState, BoundResourceKey>({
@@ -52,7 +53,7 @@ const _getActiveReleasesState = bindActionByResource(
   releasesStore,
   createStateSourceAction({
     selector: ({state}) => {
-      if (state.error) throw state.error
+      if (state.error ?? state.fetchError) throw state.error ?? state.fetchError
       return state.activeReleases
     },
   }),
@@ -77,7 +78,7 @@ const _getAllReleasesState = bindActionByResource(
   releasesStore,
   createStateSourceAction({
     selector: ({state}) => {
-      if (state.error) throw state.error
+      if (state.error ?? state.fetchError) throw state.error ?? state.fetchError
       return state.allReleases
     },
   }),
@@ -99,11 +100,14 @@ const subscribeToReleases = ({
 }: StoreContext<ReleasesStoreState, BoundResourceKey>) => {
   const releases$ = observeReleases(instance, {
     resource,
-    // Surface listener and fetch errors while allowing later updates to recover.
+    // Surface a listener failure while allowing later updates to recover.
     onError: (error) => state.set('setError', {error}),
+    onFetchError: (fetchError) => state.set('setFetchError', {fetchError}),
   })
   // Clear an upstream failure when demand closes so a later mount can retry.
-  const subscription = new Subscription(() => state.set('clearError', {error: undefined}))
+  const subscription = new Subscription(() =>
+    state.set('clearError', {error: undefined, fetchError: undefined}),
+  )
   subscription.add(
     releases$
       .pipe(
@@ -113,6 +117,7 @@ const subscribeToReleases = ({
           const sorted = sortReleases(releases ?? STABLE_EMPTY_RELEASES).reverse()
           state.set('setReleases', {
             error: undefined,
+            fetchError: undefined,
             allReleases: sorted,
             activeReleases: sorted.filter(
               (release) => !ARCHIVED_RELEASE_STATES.includes(release.state),
