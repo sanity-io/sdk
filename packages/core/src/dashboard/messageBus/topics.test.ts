@@ -14,6 +14,7 @@ import {
   DASHBOARD_TOPIC_MANIFEST,
   type DashboardTopics,
   type EventTopic,
+  type Favorite,
   type FavoriteDocument,
   type LocalApplication,
   type PayloadOf,
@@ -57,11 +58,14 @@ describe('dashboard topic types', () => {
   })
 
   it('types the favorites topics', () => {
-    expectTypeOf<FavoriteDocument>().toEqualTypeOf<{
-      readonly id: string
-      readonly document: Events.DashboardDocumentReference & {
+    expectTypeOf<FavoriteDocument>().toEqualTypeOf<
+      Events.DashboardDocumentReference & {
         readonly resource: NonNullable<Events.DashboardDocumentReference['resource']>
       }
+    >()
+    expectTypeOf<Favorite>().toEqualTypeOf<{
+      readonly id: string
+      readonly document: FavoriteDocument
       readonly application:
         | {readonly type: 'studio'; readonly id: string; readonly workspaceName: string}
         | {readonly type: 'media-library' | 'canvas'; readonly id: string}
@@ -69,15 +73,13 @@ describe('dashboard topic types', () => {
       readonly createdAt: string
       readonly updatedAt: string
     }>()
-    expectTypeOf<ValueOf<'favorites.documents'>>().toEqualTypeOf<FavoriteDocument[]>()
+    expectTypeOf<ValueOf<'favorites.documents'>>().toEqualTypeOf<Favorite[]>()
     expectTypeOf<PayloadOf<'favorites.update'>>().toEqualTypeOf<{
-      document: FavoriteDocument['document']
+      document: FavoriteDocument
       favorited: boolean
     }>()
     // A favorite's document is addressed the same way over Comlink and the bus.
-    expectTypeOf<FavoriteDocument['document']>().toExtend<
-      Events.FavoriteMutateMessage['data']['document']
-    >()
+    expectTypeOf<FavoriteDocument>().toExtend<Events.FavoriteMutateMessage['data']['document']>()
     expectTypeOf<ReplyOf<'favorites.update'>>().toEqualTypeOf<void>()
   })
 

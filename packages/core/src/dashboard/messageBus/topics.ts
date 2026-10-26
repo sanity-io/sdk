@@ -98,13 +98,20 @@ export type ApplicationActivity = DocumentActivity
  * @category Types
  * @category Message Bus
  */
-export interface FavoriteDocument {
+export type FavoriteDocument = Events.DashboardDocumentReference & {
+  readonly resource: NonNullable<Events.DashboardDocumentReference['resource']>
+}
+
+/**
+ * A favorite in `favorites.documents`.
+ * @public
+ * @category Types
+ * @category Message Bus
+ */
+export interface Favorite {
   /** ID of the stored favorite. */
   readonly id: string
-  /** The favorited document and the resource it lives in. */
-  readonly document: Events.DashboardDocumentReference & {
-    readonly resource: NonNullable<Events.DashboardDocumentReference['resource']>
-  }
+  readonly document: FavoriteDocument
   /** Where the document was favorited. */
   readonly application:
     | {readonly type: 'studio'; readonly id: string; readonly workspaceName: string}
@@ -284,16 +291,13 @@ export interface DashboardTopics {
   /** Requests a dashboard session token. */
   'auth.token.refresh': EventTopicDef<void, string>
   /** The signed-in user's favorited documents, published while the host provides `favorites`. */
-  'favorites.documents': StateTopicDef<FavoriteDocument[]>
+  'favorites.documents': StateTopicDef<Favorite[]>
   /**
    * Favorites or unfavorites a document. The host replies once `favorites.documents` reflects
    * the change, so a read after the reply sees it. A favorite is identified by its published
    * document ID, type, resource and `schemaName` (workspace).
    */
-  'favorites.update': EventTopicDef<
-    {document: FavoriteDocument['document']; favorited: boolean},
-    void
-  >
+  'favorites.update': EventTopicDef<{document: FavoriteDocument; favorited: boolean}, void>
   /** The current dashboard location and active navigation. */
   'navigation.location': StateTopicDef<NavigationLocation | null>
   /**
