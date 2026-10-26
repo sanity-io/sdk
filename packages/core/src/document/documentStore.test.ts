@@ -52,6 +52,7 @@ import {
 } from './actions'
 import {applyDocumentActions} from './applyDocumentActions'
 import {OUT_OF_SYNC_RETRY_COUNT} from './documentConstants'
+import {DocumentInaccessibleError} from './documentInaccessibleError'
 import {
   getDocumentState,
   getDocumentSyncStatus,
@@ -66,7 +67,7 @@ import {
   type DocumentRemotePatchesEvent,
   type TransactionRevertedEvent,
 } from './events'
-import {DEFAULT_MAX_BUFFER_SIZE, DocumentInaccessibleError} from './listen'
+import {DEFAULT_MAX_BUFFER_SIZE} from './listen'
 import {type DatasetAcl} from './permissions'
 import {type DocumentSet, processMutations} from './processMutations'
 import {type HttpAction} from './reducers'
