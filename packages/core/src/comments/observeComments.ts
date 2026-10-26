@@ -60,8 +60,11 @@ function toCommentsEvent(
     // since most of what the listener carries belongs to other lists entirely.
     // Unlike a delete, this is a write like any other, so it keeps its
     // transaction: an older one must not take out a comment that a newer write
-    // of ours has put back.
-    return held.delete(comment._id)
+    // of ours has put back. The id stays held, because the store may drop this
+    // echo for exactly that reason, and a later echo that is also out of the
+    // filter must still be able to take the comment out. A repeat `leave` for a
+    // comment the list no longer has changes nothing.
+    return held.has(comment._id)
       ? {type: 'leave', comment, transactionId: event.transactionId}
       : undefined
   }

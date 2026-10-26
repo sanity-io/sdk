@@ -733,6 +733,20 @@ describe('transaction reconciliation', () => {
     expect(source.getCurrent()!.map((comment) => comment.id)).toEqual(['a'])
   })
 
+  it('takes a comment out when our newer write also leaves the filter', () => {
+    // An older echo (tx-1) is dropped because tx-2 is in flight. When tx-2's
+    // own echo arrives, also outside the filter, the comment must still leave.
+    const source = getCommentsQueryState(instance, {filter: 'status == "open"'})
+    source.subscribe()
+    snapshot([storedComment({_id: 'a'})])
+    markPending(instance, {commentId: 'a', transactionId: 'tx-2'})
+
+    sharedListener().next(updateEvent('tx-1', 'resolved'))
+    sharedListener().next(updateEvent('tx-2', 'resolved'))
+
+    expect(source.getCurrent()).toEqual([])
+  })
+
   it('takes a comment out when our own write is what edits it out', () => {
     const source = getCommentsQueryState(instance, {filter: 'status == "open"'})
     source.subscribe()

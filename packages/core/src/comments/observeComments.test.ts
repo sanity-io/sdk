@@ -131,10 +131,6 @@ describe('observeComments', () => {
     expect(events.slice(1)).toEqual([
       {type: 'leave', comment: elsewhere('a'), transactionId: 'tx-a'},
     ])
-
-    // And having left, it does not leave again.
-    events$.next(mutation('update', 'a', elsewhere('a')))
-    expect(events).toHaveLength(2)
   })
 
   it('keeps a held comment when local evaluation is unevaluable', () => {
