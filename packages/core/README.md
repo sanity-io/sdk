@@ -21,6 +21,10 @@ The package exposes multiple entry points:
 
 `@sanity/sdk-react` re-exports the main `@sanity/sdk` entry point only. Import the agent and comlink utilities from their sub-entries directly.
 
+## TypeScript
+
+Generate types with Sanity TypeGen and `typegen.resources` (beta) so document, query, and projection results are typed from the handle's project and dataset. See the [TypeScript guide](https://www.sanity.io/docs/app-sdk/sdk-typegen).
+
 **Looking for our React SDK?** You’ll find it on:
 
 - [GitHub](https://github.com/sanity-io/sdk/tree/main/packages/react)
