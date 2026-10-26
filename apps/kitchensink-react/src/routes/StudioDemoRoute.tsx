@@ -3,6 +3,7 @@ import {DocumentIcon} from '@sanity/icons/Document'
 import {
   createDocumentHandle,
   type DocumentHandle,
+  type DocumentStatus,
   publishDocument,
   useApplyDocumentActions,
   useCreateDocument,
@@ -39,21 +40,13 @@ type ArticleHandle = DocumentHandle<typeof DOCUMENT_TYPE>
 interface ArticlePreview {
   title?: string
   subtitle?: string
-  // Projections include the document's draft/published status alongside the projected fields.
-  _status?: {
-    lastEditedDraftAt?: string
-    lastEditedPublishedAt?: string
-  }
 }
 
 function createArticleHandle(documentId: string): ArticleHandle {
   return createDocumentHandle({documentId, documentType: DOCUMENT_TYPE})
 }
 
-function StatusIndicators({
-  lastEditedDraftAt,
-  lastEditedPublishedAt,
-}: NonNullable<ArticlePreview['_status']>): JSX.Element {
+function StatusIndicators({lastEditedDraftAt, lastEditedPublishedAt}: DocumentStatus): JSX.Element {
   return (
     <IndicatorStack>
       {lastEditedDraftAt && <Indicator label="Draft" tone="caution" />}
@@ -134,7 +127,7 @@ function ArticleField({
   handle,
   label,
 }: {
-  field: keyof Omit<ArticlePreview, '_status'>
+  field: keyof ArticlePreview
   handle: ArticleHandle
   label: string
 }): JSX.Element {

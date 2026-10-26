@@ -1,6 +1,7 @@
 import type {} from '@sanity/client'
 import {
   createDocumentHandle,
+  type DocumentStatus,
   useDocument,
   useDocumentProjection,
   useQuery,
@@ -65,6 +66,6 @@ export type Checks = [
   Assert<Equal<typeof productionTitle, number | undefined>>,
   Assert<Equal<typeof testPosts, {title: string}[]>>,
   Assert<Equal<typeof productionPosts, {title: number}[]>>,
-  Assert<Equal<typeof testPreview, {title: string}>>,
-  Assert<Equal<typeof productionPreview, {title: number}>>,
+  Assert<Equal<typeof testPreview, {title: string} & {_status?: DocumentStatus}>>,
+  Assert<Equal<typeof productionPreview, {title: number} & {_status?: DocumentStatus}>>,
 ]
