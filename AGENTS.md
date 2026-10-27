@@ -48,3 +48,4 @@ You are working in a TypeScript codebase with React 19, Vitest, and Sanity.io as
 - All exported members need TSDoc comments. oxlint runs the TSDoc plugin to enforce this.
 - Do not edit files under `dist/` or `node_modules/`.
 - Do not introduce React-specific dependencies into `packages/core`. Keep it framework-agnostic.
+- When naming an API, reuse the SDK's existing word if the concept already exists. Borrow a term only for a new concept, and prefer a standard's word over one library's.
