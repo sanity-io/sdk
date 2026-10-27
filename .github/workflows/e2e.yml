@@ -53,17 +53,18 @@ jobs:
       - name: 📥 Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
+      - name: 🔧 Setup Environment
+        uses: ./.github/actions/setup
+        with:
+          node-version: 22
+
       - name: 🎭 Setup Playwright
         id: playwright
         uses: ./.github/actions/setup-playwright
         background: true
         with:
+          app: '@sanity/kitchensink-react'
           browser: ${{ matrix.browser }}
-
-      - name: 🔧 Setup Environment
-        uses: ./.github/actions/setup
-        with:
-          node-version: 22
 
       # Kitchensink must be built per browser because Vite bakes browser-specific
       # dataset names (SANITY_APP_E2E_DATASET_0/1) into the bundle at compile time.

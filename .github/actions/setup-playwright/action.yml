@@ -2,6 +2,9 @@ name: 'Setup Playwright'
 description: 'Restores Playwright browsers and WebKit system dependencies from cache, installing them on a miss'
 
 inputs:
+  app:
+    description: 'Workspace package that runs the Playwright tests'
+    required: true
   browser:
     description: 'Playwright project the job runs'
     required: true
@@ -9,12 +12,11 @@ inputs:
 runs:
   using: composite
   steps:
-    # Read from the lockfile so this can run in the background before `pnpm install` finishes
     - name: Determine Playwright version
       id: version
       run: |
-        version="$(grep -m1 -oE '^  playwright-core@[0-9.]+' pnpm-lock.yaml)"
-        echo "version=${version##*@}" >> "$GITHUB_OUTPUT"
+        version="$(pnpm --filter "${{ inputs.app }}" exec playwright --version)"
+        echo "version=${version#Version }" >> "$GITHUB_OUTPUT"
         echo "image-os=$ImageOS" >> "$GITHUB_OUTPUT"
         echo "image-version=$ImageVersion" >> "$GITHUB_OUTPUT"
       shell: bash
@@ -29,9 +31,7 @@ runs:
     # Headless projects launch chromium-headless-shell, so the full Chromium build is never used
     - name: Install Playwright browsers
       if: steps.browsers.outputs.cache-hit != 'true'
-      run: npx -y playwright-core@${{ steps.version.outputs.version }} install --only-shell
-      # Outside the repo, so npm doesn't enforce the root package.json devEngines against the runner's Node
-      working-directory: ${{ runner.temp }}
+      run: pnpm --filter "${{ inputs.app }}" exec playwright install --only-shell
       shell: bash
 
     - name: Save Playwright browsers
@@ -57,9 +57,8 @@ runs:
         mkdir -p ~/.cache/apt-archives/partial
         printf 'Dir::Cache::Archives "%s";\nAPT::Keep-Downloaded-Packages "true";\n' ~/.cache/apt-archives \
           | sudo tee /etc/apt/apt.conf.d/99playwright-archives
-        npx -y playwright-core@${{ steps.version.outputs.version }} install-deps webkit
+        pnpm --filter "${{ inputs.app }}" exec playwright install-deps webkit
         sudo apt-get autoclean
-      working-directory: ${{ runner.temp }}
       shell: bash
 
     - name: Save WebKit system dependencies
