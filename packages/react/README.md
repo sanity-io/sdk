@@ -48,6 +48,10 @@ export function App() {
 
 **Auth is automatic** — Dashboard injects an auth token via iframe. No custom login flow is needed for your application.
 
+### 3. Generate types (beta)
+
+Configure TypeGen before writing components so hooks return typed data. Add `typegen.resources` to `sanity.cli.ts` and run `npx sanity typegen generate --watch`. See [TypeScript & TypeGen](#typescript--typegen) for the steps.
+
 ---
 
 ## Guide
@@ -536,17 +540,92 @@ If you need to pass an explicit config, replace `studioMode` with `studio`:
 
 ### TypeScript & TypeGen
 
+Set up TypeGen when you create an app. Hooks then infer document, field, and query result types from the handle, so you don't write or pass result types yourself.
+
+This workflow is in beta. It requires `@sanity/sdk-react` 3.9.0 or later and `@sanity/cli` 8.16.0 or later. See the [TypeScript guide](https://www.sanity.io/docs/app-sdk/sdk-typegen) for every option and for troubleshooting.
+
+**1. Extract each dataset's schema.** Run this in the Studio that defines the schema, then copy the file into your app:
+
 ```bash
-# Generate types from your schema
-npx sanity typegen generate
+npx sanity schema extract --path schema.production.json
 ```
+
+**2. Declare your datasets in a module that the app and the CLI both import.** `as const` keeps the project ID and dataset as literal types, which inference needs. The CLI loads this file in Node, so it must not use browser globals.
+
+```ts
+// src/resources.ts
+import type {DocumentResource} from '@sanity/sdk-react'
+
+export const resources = {
+  production: {projectId: 'abc123', dataset: 'production'},
+} as const satisfies Record<string, DocumentResource>
+```
+
+**3. Add `typegen.resources` to `sanity.cli.ts`.** Each entry writes one types file for one dataset:
+
+```ts
+// sanity.cli.ts
+import {defineCliConfig} from 'sanity/cli'
+
+import {resources} from './src/resources'
+
+export default defineCliConfig({
+  app: {organizationId: 'your-org-id', entry: './src/App.tsx'},
+  typegen: {
+    resources: [
+      {
+        ...resources.production,
+        schema: './schema.production.json',
+        generates: './src/sanity.types.production.ts',
+      },
+    ],
+  },
+})
+```
+
+**4. Generate types.** Run it again after changing a schema or query, or add `--watch` (`@sanity/cli` 8.22.0 or later) to regenerate on every change. `sanity dev` does not generate types for `typegen.resources`, so run the watcher alongside it.
+
+```bash
+npx sanity typegen generate
+npx sanity typegen generate --watch
+```
+
+**5. Use hooks without type parameters.** Build handles and options from your declared resources:
 
 ```tsx
-import type {Article} from './sanity.types'
+import {createDocumentHandle, useDocument, useQuery} from '@sanity/sdk-react'
+import {defineQuery} from 'groq'
 
-const {data} = useDocument<Article>(handle)
-// data is typed as Article
+import {resources} from './resources'
+
+const book = createDocumentHandle({
+  ...resources.production,
+  documentId: 'book-1',
+  documentType: 'book',
+})
+
+const bookTitlesQuery = defineQuery('*[_type == "book"]{_id, title}')
+
+export function BookTitle() {
+  // `Book` from sanity.types.production.ts, or null
+  const {data: doc} = useDocument(book)
+  return <h1>{doc?.title}</h1>
+}
+
+export function BookTitles() {
+  // the generated result type for bookTitlesQuery
+  const {data} = useQuery({...resources.production, query: bookTitlesQuery})
+  return (
+    <ul>
+      {data.map((b) => (
+        <li key={b._id}>{b.title}</li>
+      ))}
+    </ul>
+  )
+}
 ```
+
+`defineQuery` comes from the `groq` package (6.12.0 or later). Apps created from the `app-quickstart` template don't include it, so run `npm install groq` first. Assign each query to a variable so TypeGen can find it.
 
 ---
 
