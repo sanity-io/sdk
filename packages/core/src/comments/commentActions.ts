@@ -48,13 +48,12 @@ export type CreateCommentOptions = DocumentHandle & {
    * Which field the thread hangs off, for example `title` or
    * `body[_key=="intro"].content`.
    *
-   * Required, and it has to resolve to a real path. There is no such thing as a
-   * comment on a document as a whole: the Studio only ever creates field
-   * comments, and its comment inspector throws on an empty path rather than
-   * ignoring it, so a pathless comment takes the inspector down for everyone
-   * looking at that document.
+   * Leave it out, or pass `''` or `[]`, to comment on the document as a whole.
+   * Such a comment is written without a path and reads back with
+   * `fieldPath: ''`. The Studio's field comments leave these out, so they don't
+   * show in its comments inspector.
    */
-  fieldPath: string | Path
+  fieldPath?: string | Path
   /** Reuse the id of a failed comment to retry it. Defaults to a new id. */
   commentId?: string
   /** Defaults to a new id, which starts a new thread. */
@@ -135,22 +134,18 @@ export interface ReactionOptions extends DatasetHandle {
 }
 
 /**
- * Refuses to write a comment that points at nothing.
+ * The stored form of a create's field path, `''` for a comment on the whole
+ * document.
  *
- * The type already requires `fieldPath`, but an empty string or an empty path
- * array both survive that and normalise to `''`. Such a comment is not merely
- * useless: the Studio's comment inspector calls `fromString` on the stored
- * path, which throws on `''`, so the inspector crashes for everyone viewing
- * that document until the comment is deleted. Cheaper to refuse the write.
+ * An anchor is a run of text inside a field, so it needs one: without a path
+ * there is nothing for the API to resolve it against.
  */
-function requireFieldPath(fieldPath: string | Path): string {
-  const normalized = toCommentFieldPath(fieldPath)
-  if (!normalized) {
-    throw new Error(
-      'A comment needs a field path. Comments attach to a field, not to a document as a whole.',
-    )
+function toCreateFieldPath(options: CreateCommentOptions): string {
+  const fieldPath = toCommentFieldPath(options.fieldPath)
+  if (!fieldPath && options.anchor) {
+    throw new Error('A comment with an anchor needs a field path to anchor it in.')
   }
-  return normalized
+  return fieldPath
 }
 
 function requireCurrentUserId(instance: SanityInstance): string {
@@ -247,7 +242,8 @@ function buildOptimisticComment(options: {
       documentType: options.documentType,
       sourceDocumentId: options.sourceDocumentId,
       ...(options.documentRevisionId ? {documentRevisionId: options.documentRevisionId} : {}),
-      path: {field: options.fieldPath},
+      // A comment on the whole document has no path, as the API stores it.
+      ...(options.fieldPath ? {path: {field: options.fieldPath}} : {}),
     },
   }
 }
@@ -345,7 +341,7 @@ export const createComment: (
     const {instance, key} = context
     const {anchor} = options
     const client = getWritableClient(instance, key)
-    const fieldPath = requireFieldPath(options.fieldPath)
+    const fieldPath = toCreateFieldPath(options)
     const commentId = options.commentId ?? randomUuid()
     const threadId = options.threadId ?? randomUuid()
     const sourceDocumentId = toSourceDocumentId(instance, options)
@@ -379,7 +375,8 @@ export const createComment: (
           // The API stores the field as `target.path.field` and resolves the
           // anchor into a selection — against the anchor's `fieldValue` when it
           // was given one, otherwise against the document.
-          ...(anchor ? {path: fieldPath, anchor} : {path: fieldPath}),
+          // A comment on the whole document goes without one.
+          ...(fieldPath ? (anchor ? {path: fieldPath, anchor} : {path: fieldPath}) : {}),
         },
       },
       client,
@@ -420,10 +417,8 @@ export const replyToComment: (
       documentType: parent.target.documentType,
       // The parent's, so the reply lands in the same thread and the same lists.
       // The API is the authority either way: it copies the parent's target onto
-      // the reply. Checked rather than defaulted to `''`, because a pathless
-      // reply takes down the Studio's inspector exactly as a pathless comment
-      // does.
-      fieldPath: requireFieldPath(parent.target.path?.field ?? ''),
+      // the reply. `''` when the thread is on the whole document.
+      fieldPath: parent.target.path?.field ?? '',
       message: options.message,
       parentCommentId,
       sourceDocumentId: parent.target.sourceDocumentId,

@@ -162,16 +162,16 @@ function ResolveButton({commentId}: {commentId: string}) {
 }
 ```
 
-| Action                | Key options                                        | Notes                                                                                    |
-| --------------------- | -------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `createComment`       | document handle, `fieldPath`, `message`, `anchor?` | Starts a thread. Returns the new `Comment`.                                              |
-| `replyToComment`      | `parentCommentId`, `message`                       | Placement comes from the parent, which has to be loaded.                                 |
-| `updateComment`       | `commentId`, `message`                             | Rewrites the message and marks the comment edited.                                       |
-| `updateCommentAnchor` | `commentId`, `anchor`                              | Re-anchors without marking it edited. `null` drops the anchor; omitting it does nothing. |
-| `setCommentStatus`    | `commentId`, `status`                              | Pass the thread's first comment; replies follow it.                                      |
-| `removeComment`       | `commentId`                                        | Removes replies too when it starts a thread.                                             |
-| `addReaction`         | `commentId`, `shortName`                           | Adds the current user's reaction.                                                        |
-| `removeReaction`      | `commentId`, `shortName`                           | Removes the current user's reaction.                                                     |
+| Action                | Key options                                         | Notes                                                                                    |
+| --------------------- | --------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `createComment`       | document handle, `fieldPath?`, `message`, `anchor?` | Starts a thread. Returns the new `Comment`.                                              |
+| `replyToComment`      | `parentCommentId`, `message`                        | Placement comes from the parent, which has to be loaded.                                 |
+| `updateComment`       | `commentId`, `message`                              | Rewrites the message and marks the comment edited.                                       |
+| `updateCommentAnchor` | `commentId`, `anchor`                               | Re-anchors without marking it edited. `null` drops the anchor; omitting it does nothing. |
+| `setCommentStatus`    | `commentId`, `status`                               | Pass the thread's first comment; replies follow it.                                      |
+| `removeComment`       | `commentId`                                         | Removes replies too when it starts a thread.                                             |
+| `addReaction`         | `commentId`, `shortName`                            | Adds the current user's reaction.                                                        |
+| `removeReaction`      | `commentId`, `shortName`                            | Removes the current user's reaction.                                                     |
 
 `createComment` also takes `commentId` and `threadId` to write against ids you chose, `documentRevisionId` to record which revision the comment was written about, and `context` for free-form data of your own. `replyToComment` takes `context` too, and both hand it back on the comment's `context`, so whatever you store there is readable wherever you read comments.
 
@@ -207,9 +207,11 @@ function Retry({comment}: {comment: Comment}) {
 }
 ```
 
-### Field paths are required
+### Comments on the whole document
 
-There is no such thing as a comment on a document as a whole. `fieldPath` accepts a string or a `Path` array, and an empty one throws rather than being written: the studio's comment inspector crashes on a comment with no path, for everyone looking at that document.
+`fieldPath` accepts a string or a `Path` array. Leave it out, or pass `''` or `[]`, to comment on the document as a whole. The comment is written without a path and reads back with `fieldPath: ''`, so `useCommentThreads({...handle, fieldPath: ''})` lists only those threads. An `anchor` still needs a field, since it's a run of text inside one.
+
+The Studio only shows field comments, so it leaves document-level comments out of its comments inspector.
 
 ## Messages
 

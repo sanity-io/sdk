@@ -45,7 +45,7 @@ vi.mock('./commentsClient', async (importOriginal) => ({
 
 const HANDLE = {documentId: 'doc-1', documentType: 'author'}
 
-/** Creates always name a field, since a pathless comment is refused. */
+/** A field-level create; the document-level tests leave `fieldPath` out. */
 const CREATE = {...HANDLE, fieldPath: 'name'}
 
 const MESSAGE = [{_type: 'block', _key: 'b1', children: [{_type: 'span', text: 'hi'}]}]
@@ -335,16 +335,30 @@ describe('createComment', () => {
     )
   })
 
-  it('refuses a comment that points at no field', async () => {
-    // Not pedantry. The Studio's inspector calls `fromString` on the stored
-    // path and throws on `''`, so a pathless comment crashes the inspector for
-    // everyone viewing that document until someone deletes it.
-    await expect(
-      createComment(instance, {...HANDLE, fieldPath: '', message: MESSAGE}),
-    ).rejects.toThrow(/needs a field path/)
+  it('writes a comment on the whole document without a path', async () => {
+    await createComment(instance, {...HANDLE, message: MESSAGE})
+    await createComment(instance, {...HANDLE, fieldPath: '', message: MESSAGE})
+    await createComment(instance, {...HANDLE, fieldPath: [], message: MESSAGE})
 
+    for (const [body] of comments.create.mock.calls) {
+      expect(body.target).toEqual({documentId: 'doc-1', documentType: 'author'})
+    }
+  })
+
+  it('shows a comment on the whole document with an empty field path', async () => {
+    const source = getCommentThreadsState(instance, HANDLE)
+    source.subscribe()
+    seedComments(instance, {comments: []})
+    comments.create.mockReturnValue(new Promise(() => {}))
+
+    void createComment(instance, {...HANDLE, commentId: 'c1', message: MESSAGE})
+
+    expect(source.getCurrent()).toMatchObject([{fieldPath: '', parentComment: {id: 'c1'}}])
+  })
+
+  it('refuses an anchor without a field to anchor it in', async () => {
     await expect(
-      createComment(instance, {...HANDLE, fieldPath: [], message: MESSAGE}),
+      createComment(instance, {...HANDLE, message: MESSAGE, anchor: ANCHOR}),
     ).rejects.toThrow(/needs a field path/)
 
     expect(comments.create).not.toHaveBeenCalled()
@@ -614,18 +628,33 @@ describe('replyToComment', () => {
     expect(comments.create).not.toHaveBeenCalled()
   })
 
-  it('refuses to reply to a parent that points at no field', async () => {
-    // A reply inherits the parent's path, so a pathless one would take down the
-    // Studio's inspector exactly as a pathless comment does.
+  it('replies to a thread on the whole document', async () => {
+    const source = getCommentThreadsState(instance, HANDLE)
+    source.subscribe()
     seedComments(instance, {
       comments: [comment({_id: 'parent', target: commentTarget({path: undefined})})],
     })
+    let resolveCreate: (value: StoredComment) => void = () => {}
+    comments.create.mockReturnValue(new Promise((resolve) => (resolveCreate = resolve)))
 
-    await expect(
-      replyToComment(instance, {parentCommentId: 'parent', message: MESSAGE}),
-    ).rejects.toThrow(/needs a field path/)
+    const pending = replyToComment(instance, {
+      parentCommentId: 'parent',
+      commentId: 'r1',
+      message: MESSAGE,
+    })
 
-    expect(comments.create).not.toHaveBeenCalled()
+    expect(source.getCurrent()).toMatchObject([
+      {fieldPath: '', parentComment: {id: 'parent'}, replies: [{id: 'r1'}]},
+    ])
+
+    resolveCreate(
+      comment({_id: 'r1', parentCommentId: 'parent', target: commentTarget({path: undefined})}),
+    )
+    await pending
+    expect(comments.create).toHaveBeenCalledWith(
+      {_id: 'r1', message: MESSAGE, parentCommentId: 'parent'},
+      {tag: 'comments.create'},
+    )
   })
 
   it('shows the reply in its parent’s thread before the server confirms it', async () => {

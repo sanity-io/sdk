@@ -11,9 +11,9 @@ export const ORGANIZATION_ID = 'org-1'
 export const TARGET_REF = 'dataset:p.d:doc-1'
 
 /**
- * A field path is part of the default because every comment the API stores has
- * one — a pathless comment is refused on the way in. Pass `path: undefined` for
- * the tests that are about what happens without one.
+ * A field path is part of the default because most comments have one. Pass
+ * `path: undefined` for a comment on the whole document, which the API stores
+ * without one.
  */
 export function commentTarget(
   overrides: Partial<StoredComment['target']> = {},
