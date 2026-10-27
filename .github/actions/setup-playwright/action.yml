@@ -15,7 +15,8 @@ runs:
       run: |
         version="$(grep -m1 -oE '^  playwright-core@[0-9.]+' pnpm-lock.yaml)"
         echo "version=${version##*@}" >> "$GITHUB_OUTPUT"
-        echo "image=$ImageOS-$ImageVersion" >> "$GITHUB_OUTPUT"
+        echo "image-os=$ImageOS" >> "$GITHUB_OUTPUT"
+        echo "image-version=$ImageVersion" >> "$GITHUB_OUTPUT"
       shell: bash
 
     - name: Restore Playwright browsers
@@ -46,7 +47,8 @@ runs:
       uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
       with:
         path: ~/.cache/apt-archives/*.deb
-        key: ${{ runner.os }}-${{ steps.version.outputs.image }}-playwright-${{ steps.version.outputs.version }}-webkit-debs
+        key: ${{ runner.os }}-${{ steps.version.outputs.image-os }}-webkit-debs-${{ steps.version.outputs.version }}-${{ steps.version.outputs.image-version }}
+        restore-keys: ${{ runner.os }}-${{ steps.version.outputs.image-os }}-webkit-debs-
 
     # The Azure apt mirror intermittently drops to ~125 kB/s; apt reuses cached .debs that still match its index
     - name: Install WebKit system dependencies
@@ -56,6 +58,7 @@ runs:
         printf 'Dir::Cache::Archives "%s";\nAPT::Keep-Downloaded-Packages "true";\n' ~/.cache/apt-archives \
           | sudo tee /etc/apt/apt.conf.d/99playwright-archives
         npx -y playwright-core@${{ steps.version.outputs.version }} install-deps webkit
+        sudo apt-get autoclean
       working-directory: ${{ runner.temp }}
       shell: bash
 
