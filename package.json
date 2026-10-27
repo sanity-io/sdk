@@ -60,7 +60,6 @@
     "@commitlint/config-conventional": "^21.2.4",
     "@commitlint/types": "^21.2.3",
     "@google-cloud/storage": "^8.4.0",
-    "@playwright/test": "catalog:",
     "@repo/config-oxlint": "workspace:*",
     "@repo/config-test": "workspace:*",
     "@repo/tsconfig": "workspace:*",
