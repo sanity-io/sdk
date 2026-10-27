@@ -6,6 +6,7 @@
 // `@sanity/sdk/collaboration` keeps re-exporting them in that major, marked
 // `@deprecated`, and is removed in the major after.
 
+export {buildCommentThreads} from '../comments/buildCommentThreads'
 export {
   addReaction,
   createComment,

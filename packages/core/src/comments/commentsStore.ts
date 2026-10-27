@@ -3,6 +3,7 @@ import {
   catchError,
   distinctUntilChanged,
   EMPTY,
+  filter as filterEvents,
   first,
   firstValueFrom,
   groupBy,
@@ -10,6 +11,7 @@ import {
   mergeMap,
   NEVER,
   Observable,
+  of,
   pairwise,
   race,
   startWith,
@@ -17,6 +19,8 @@ import {
   tap,
 } from 'rxjs'
 
+import {AuthStateType} from '../auth/authStateType'
+import {getAuthState, getCurrentUserState} from '../auth/authStore'
 import {type DocumentHandle, type DocumentResource} from '../config/sanityConfig'
 import {isReleasePerspective} from '../releases/utils/isReleasePerspective'
 import {bindActionByResource, type BoundResourceKey} from '../store/createActionBinder'
@@ -39,6 +43,7 @@ import {
   COMMENTS_STATE_CLEAR_DELAY,
   type CommentsScope,
 } from './commentsConstants'
+import {compileCommentsFilter} from './commentsFilterMatcher'
 import {
   type CommentsOptions,
   type CommentsQueryOptions,
@@ -60,6 +65,7 @@ import {
   setComments,
   setCommentsError,
 } from './reducers'
+import {getDedicatedCommentsListener, getSharedCommentsListener} from './sharedCommentsListener'
 import {type Comment, type CommentThread, type StoredComment} from './types'
 
 /** Read options with the resource they address already resolved. */
@@ -116,32 +122,34 @@ function toEntryKey(targetRef: string, scope: CommentsScope): string {
 }
 
 /**
- * Every entry a document read could be holding a newly written comment under.
+ * Every loaded list a comment belongs in.
  *
- * A create shows before the server confirms it, and which lists it belongs in is
- * decided by the `scope` each reader asked for rather than by anything the
- * writer said. They all key off the comment's own target, so they can be
- * enumerated, which is what lets a reader watching one scope see a new comment
- * at the same moment as a reader watching another.
+ * A create shows before the server confirms it, so which lists it belongs in
+ * has to be answered here rather than left to the echo to say. Every entry is a
+ * filter, which makes this the same question the listener routing asks of every
+ * comment it carries, answered by the same evaluator.
  *
- * GROQ reads are deliberately not covered: an arbitrary filter cannot be
- * evaluated locally, so those lists follow when the listener echoes the comment.
+ * A list whose filter cannot be answered locally is left out. It follows when
+ * the listener echoes the comment, which is where every list stood before.
  *
  * @internal
  */
-export function toWrittenCommentKeys(comment: StoredComment): string[] {
-  const {sourceDocumentId} = comment.target
+export function toMatchingCommentKeys(
+  instance: SanityInstance,
+  state: StoreState<CommentsStoreState>,
+  comment: StoredComment,
+): string[] {
+  const identity = getCurrentUserState(instance).getCurrent()?.id
 
-  const scopes: CommentsScope[] = [
-    {type: 'any'},
-    {type: 'exact', sourceDocumentId},
-    // A draft or published id belongs in the pooled list as well. A version id
-    // does not, which is what keeps a release's and a variant's comments out of
-    // it.
-    ...(isVersionId(DocumentId(sourceDocumentId)) ? [] : [{type: 'draft-and-published' as const}]),
-  ]
-
-  return scopes.map((scope) => toEntryKey(comment.target.document._ref, scope))
+  return Object.entries(state.get().entries)
+    .filter(([key, entry]) => {
+      // A list still waiting for its first snapshot is one that suspends its
+      // readers, and a single comment is not an answer to that.
+      if (!entry?.comments) return false
+      const {filter, params} = parseCommentsKey(key)
+      return compileCommentsFilter(filter)?.(comment, params, identity) === true
+    })
+    .map(([key]) => key)
 }
 
 /** Which entry a GROQ read addresses. */
@@ -150,6 +158,44 @@ function toCommentsQueryKey(options: WithResource<CommentsQueryOptions>): string
     filter: buildCommentsQueryFilter(options.filter),
     params: options.params ?? {},
   })
+}
+
+/** The current user's id once auth has settled, `undefined` when it settled without one. */
+function observeSettledUserId(instance: SanityInstance): Observable<string | undefined> {
+  return getAuthState(instance).observable.pipe(
+    // Skip loading, whenever it happens: logging in, or logged in with
+    // `/users/me` in flight. A switch of user should not pass through "none".
+    filterEvents(
+      (authState) =>
+        authState.type !== AuthStateType.LOGGING_IN &&
+        !(authState.type === AuthStateType.LOGGED_IN && !authState.currentUser),
+    ),
+    map((authState) =>
+      authState.type === AuthStateType.LOGGED_IN ? authState.currentUser?.id : undefined,
+    ),
+    distinctUntilChanged(),
+  )
+}
+
+/**
+ * Applies a write's echo unless a newer write of ours to the same comment is in
+ * flight, in which case it is held back for a rollback to land on.
+ */
+function applyEcho(
+  state: StoreState<CommentsStoreState>,
+  {comment, transactionId}: {comment: StoredComment; transactionId: string},
+  apply: () => void,
+): void {
+  const pending = state.get().pendingTransactions[comment._id]
+  if (pending && pending !== transactionId) {
+    state.set('recordDroppedEcho', recordDroppedEcho(comment))
+    return
+  }
+
+  apply()
+  if (pending) {
+    state.set('clearPendingTransaction', clearPendingTransaction(comment._id, pending))
+  }
 }
 
 function applyEvent(
@@ -162,7 +208,18 @@ function applyEvent(
       state.set('setComments', setComments(key, event.comments))
       return
     case 'appear':
-      state.set('receiveComment', receiveComment(key, event.comment))
+    case 'update':
+      // A locally classified `appear` can be an update that moved into this
+      // list. Treat it like any other echo so an older transaction cannot
+      // overwrite a newer optimistic edit.
+      applyEcho(state, event, () => state.set('receiveComment', receiveComment(key, event.comment)))
+      return
+    case 'leave':
+      // Edited out of this list. If a newer write of ours has it back in, this
+      // echo is the stale one, and the comment stays.
+      applyEcho(state, event, () =>
+        state.set('removeComment', removeCommentFromEntry(key, event.comment._id)),
+      )
       return
     case 'disappear':
       state.set('removeComment', removeCommentFromEntry(key, event.commentId))
@@ -170,24 +227,6 @@ function applyEvent(
     case 'error':
       state.set('setCommentsError', setCommentsError(key, event.error))
       return
-    case 'update': {
-      const pending = state.get().pendingTransactions[event.comment._id]
-
-      // Our own writes come back through the listener. When a later transaction
-      // is already in flight for this comment, an echo of an earlier one would
-      // undo it on screen, so hold it back and wait for the one we are
-      // expecting. Held rather than discarded, so that if our write fails the
-      // rollback can land on this state instead of erasing it.
-      if (pending && pending !== event.transactionId) {
-        state.set('recordDroppedEcho', recordDroppedEcho(event.comment))
-        return
-      }
-
-      state.set('receiveComment', receiveComment(key, event.comment))
-      if (pending) {
-        state.set('clearPendingTransaction', clearPendingTransaction(event.comment._id, pending))
-      }
-    }
   }
 }
 
@@ -219,10 +258,36 @@ const watchSubscribedQueries = ({
             if (!event.added) return EMPTY
 
             const {filter, params} = parseCommentsKey(group$.key)
+            const matcher = compileCommentsFilter(filter)
+            // Held rather than looked up per comment: the listener carries the
+            // whole organization's, and every one of them is tested here. Read
+            // on each, so that signing in does not leave a stale identity.
+            const currentUser = getCurrentUserState(instance)
+            // A filter on identity() cannot be matched while the user is
+            // loading, and nothing replays what the listener carried meanwhile,
+            // so such a list waits for auth to settle. Settled without a user
+            // (logged out, or failed) it starts anyway and the server answers;
+            // a different user means a different list, so it starts again.
+            const ready$ = matcher?.usesIdentity ? observeSettledUserId(instance) : of(undefined)
 
-            return observeCommentsClientForResource(instance, key.resource).pipe(
+            return ready$.pipe(
+              switchMap(() => observeCommentsClientForResource(instance, key.resource)),
               switchMap((client) =>
-                observeComments({client, filter, params}).pipe(
+                observeComments({
+                  client,
+                  // Sharing the organization's listener means answering locally
+                  // which of its comments belong here. A filter the evaluator
+                  // cannot answer for keeps a listener of its own, where the
+                  // server has already answered it.
+                  events$: matcher
+                    ? getSharedCommentsListener(instance, key.resource)
+                    : getDedicatedCommentsListener(client, filter, params),
+                  filter,
+                  params,
+                  matches: matcher
+                    ? (comment) => matcher(comment, params, currentUser.getCurrent()?.id)
+                    : () => true,
+                }).pipe(
                   tap((commentsEvent) => applyEvent(state, group$.key, commentsEvent)),
                   // Keep following the client after one listener fails. A token
                   // refresh or reconnect can then supply a new one.
@@ -487,6 +552,22 @@ export const getCommentThreadsState: (
  *
  * `undefined` until the first snapshot arrives.
  *
+ * The filter runs over every comment the organization can read, not only the
+ * ones on the resource you pass. Comment queries are routed by organization and
+ * the resource is not sent with them, so it chooses the organization and the
+ * client but does not narrow the results. To keep to one dataset, add a
+ * `target.document._ref` prefix condition yourself: refs are
+ * `dataset:{projectId}.{dataset}:{documentId}`.
+ *
+ * @example Open comments in one dataset
+ * ```ts
+ * getCommentsQueryState(instance, {
+ *   ...resource,
+ *   filter: 'string::startsWith(target.document._ref, $prefix) && status == "open"',
+ *   params: {prefix: 'dataset:abc123.production:'},
+ * })
+ * ```
+ *
  * @beta
  */
 export const getCommentsQueryState: (
@@ -568,6 +649,9 @@ export const resolveCommentThreads: (
 
 /**
  * Waits for a GROQ comment query to load.
+ *
+ * Like {@link getCommentsQueryState}, the filter covers the whole organization
+ * the resource belongs to, not just the resource.
  *
  * @beta
  */

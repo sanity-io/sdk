@@ -61,6 +61,10 @@ export interface CommentsQueryOptions extends DatasetHandle {
   /**
    * GROQ filter applied to comment documents. `_type == "sanity.comment"` is
    * added for you, so this only has to say which comments.
+   *
+   * It is evaluated against every comment the organization can read. The
+   * resource picks the organization but does not narrow the results; add a
+   * `target.document._ref` prefix condition to keep to one dataset.
    */
   filter: string
   params?: QueryParams
