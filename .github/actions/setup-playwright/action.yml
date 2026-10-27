@@ -29,6 +29,8 @@ runs:
     - name: Install Playwright browsers
       if: steps.browsers.outputs.cache-hit != 'true'
       run: npx -y playwright-core@${{ steps.version.outputs.version }} install --only-shell
+      # Outside the repo, so npm doesn't enforce the root package.json devEngines against the runner's Node
+      working-directory: ${{ runner.temp }}
       shell: bash
 
     - name: Save Playwright browsers
@@ -54,6 +56,7 @@ runs:
         printf 'Dir::Cache::Archives "%s";\nAPT::Keep-Downloaded-Packages "true";\n' ~/.cache/apt-archives \
           | sudo tee /etc/apt/apt.conf.d/99playwright-archives
         npx -y playwright-core@${{ steps.version.outputs.version }} install-deps webkit
+      working-directory: ${{ runner.temp }}
       shell: bash
 
     - name: Save WebKit system dependencies
