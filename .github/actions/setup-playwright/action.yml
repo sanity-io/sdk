@@ -1,0 +1,64 @@
+name: 'Setup Playwright'
+description: 'Restores Playwright browsers and WebKit system dependencies from cache, installing them on a miss'
+
+inputs:
+  browser:
+    description: 'Playwright project the job runs'
+    required: true
+
+runs:
+  using: composite
+  steps:
+    # Read from the lockfile so this can run in the background before `pnpm install` finishes
+    - name: Determine Playwright version
+      id: version
+      run: |
+        version="$(grep -m1 -oE '^  playwright-core@[0-9.]+' pnpm-lock.yaml)"
+        echo "version=${version##*@}" >> "$GITHUB_OUTPUT"
+        echo "image=$ImageOS-$ImageVersion" >> "$GITHUB_OUTPUT"
+      shell: bash
+
+    - name: Restore Playwright browsers
+      id: browsers
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+      with:
+        path: ~/.cache/ms-playwright
+        key: ${{ runner.os }}-playwright-${{ steps.version.outputs.version }}-only-shell
+
+    # Headless projects launch chromium-headless-shell, so the full Chromium build is never used
+    - name: Install Playwright browsers
+      if: steps.browsers.outputs.cache-hit != 'true'
+      run: npx -y playwright-core@${{ steps.version.outputs.version }} install --only-shell
+      shell: bash
+
+    - name: Save Playwright browsers
+      if: steps.browsers.outputs.cache-hit != 'true'
+      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+      with:
+        path: ~/.cache/ms-playwright
+        key: ${{ steps.browsers.outputs.cache-primary-key }}
+
+    - name: Restore WebKit system dependencies
+      id: webkit-debs
+      if: inputs.browser == 'webkit'
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+      with:
+        path: ~/.cache/apt-archives/*.deb
+        key: ${{ runner.os }}-${{ steps.version.outputs.image }}-playwright-${{ steps.version.outputs.version }}-webkit-debs
+
+    # The Azure apt mirror intermittently drops to ~125 kB/s; apt reuses cached .debs that still match its index
+    - name: Install WebKit system dependencies
+      if: inputs.browser == 'webkit'
+      run: |
+        mkdir -p ~/.cache/apt-archives/partial
+        printf 'Dir::Cache::Archives "%s";\nAPT::Keep-Downloaded-Packages "true";\n' ~/.cache/apt-archives \
+          | sudo tee /etc/apt/apt.conf.d/99playwright-archives
+        npx -y playwright-core@${{ steps.version.outputs.version }} install-deps webkit
+      shell: bash
+
+    - name: Save WebKit system dependencies
+      if: inputs.browser == 'webkit' && steps.webkit-debs.outputs.cache-hit != 'true'
+      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+      with:
+        path: ~/.cache/apt-archives/*.deb
+        key: ${{ steps.webkit-debs.outputs.cache-primary-key }}

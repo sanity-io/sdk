@@ -34,6 +34,12 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
+      - id: playwright
+        uses: ./.github/actions/setup-playwright
+        background: true
+        with:
+          browser: chromium
+
       - uses: ./.github/actions/setup
         with:
           node-version: 22
@@ -60,7 +66,7 @@ jobs:
           SANITY_AUTH_TOKEN: ${{ secrets.SDK_E2E_STAGING_DEPLOY_TOKEN }}
         run: pnpm exec sanity deploy --yes
 
-      - run: pnpm exec playwright install --with-deps chromium
+      - wait: playwright
 
       - run: pnpm test:e2e:auto-updates -- --project chromium
 
