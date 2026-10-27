@@ -165,6 +165,7 @@ jobs:
     needs: release
     if: needs.release.outputs.hasChangesets == 'true'
     permissions:
+      actions: write # to dispatch the auto-updates e2e
       contents: read # for checkout
       id-token: write # to enable use of OIDC for npm provenance
     runs-on: ubuntu-latest
@@ -196,12 +197,14 @@ jobs:
       # `changeset version --snapshot` is a silent no-op when there are no
       # changesets. Fail loudly if the gate and this job's config ever disagree.
       - name: Guard against empty snapshot
+        id: version
         run: |
           VERSION=$(node -p "require('./packages/core/package.json').version")
           case "$VERSION" in
             *-next.*) ;;
             *) echo "::error::Expected a -next snapshot version, got $VERSION. The job gate and the changeset config disagree."; exit 1 ;;
           esac
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Build packages
         run: pnpm build:packages
@@ -214,6 +217,21 @@ jobs:
       # points at an sdk snapshot npm is not serving yet.
       - name: Publish snapshot to npm
         run: pnpm release:publish next
+
+      - name: Upload snapshot bundles for auto-updates to staging
+        env:
+          GOOGLE_PROJECT_ID: ${{ secrets.GCS_STAGING_PROJECT_ID }}
+          GCLOUD_SERVICE_KEY: ${{ secrets.GCS_STAGING_SERVICE_KEY }}
+          GCLOUD_BUCKET: ${{ secrets.GCS_STAGING_BUCKET }}
+        run: |
+          pnpm build:bundle
+          pnpm upload:bundles
+
+      - name: Run the auto-updates e2e against the snapshot
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: gh workflow run e2e-auto-updates.yml -f sdk-version="$VERSION"
 
   post-release-steps:
     runs-on: ubuntu-latest

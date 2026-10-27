@@ -5,15 +5,8 @@ import {fileURLToPath} from 'node:url'
 import {test as teardown} from '@playwright/test'
 
 const __filename = fileURLToPath(import.meta.url)
-const AUTH_FILE = path.join(path.dirname(__filename), '..', '..', '.auth', 'user.json')
+const AUTH_DIR = path.join(path.dirname(__filename), '..', '..', '.auth')
 
-teardown('cleanup auth file', async () => {
-  try {
-    await fs.rm(AUTH_FILE)
-  } catch (error) {
-    // Ignore error if file doesn't exist
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-      throw error
-    }
-  }
+teardown('cleanup auth files', async () => {
+  await fs.rm(AUTH_DIR, {recursive: true, force: true})
 })
