@@ -3,7 +3,7 @@ import {type ActionsResult, type DocumentAction, type ResolveDocument} from '@sa
 import {type ResourceHandle} from '../../config/handles'
 import {useApplyActions} from '../helpers/useApplyActions'
 // this import is used in an `{@link useEditDocument}`
-// eslint-disable-next-line import-x/consistent-type-specifier-style
+// eslint-disable-next-line import-x/consistent-type-specifier-style, no-unused-vars
 import type {useEditDocument} from './useEditDocument'
 
 /**

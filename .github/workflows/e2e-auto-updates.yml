@@ -1,0 +1,71 @@
+name: Auto-updates E2E Tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      sdk-version:
+        type: string
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    # On the changesets Version PR, as a check right where the release is merged.
+    if: github.event_name != 'pull_request' || startsWith(github.head_ref, 'changeset-release/')
+    runs-on: ubuntu-latest
+    # Every run deploys to the same app, so one run's deploy must not land before another run's tests finish.
+    # Only the newest queued run is kept.
+    concurrency:
+      group: e2e-auto-updates
+    timeout-minutes: 30
+    env:
+      SANITY_INTERNAL_ENV: staging
+      SANITY_APP_E2E_PROJECT_ID: ${{ secrets.SDK_E2E_PROJECT_ID }}
+      SANITY_APP_E2E_ORGANIZATION_ID: ${{ secrets.SDK_E2E_ORGANIZATION_ID }}
+      SANITY_APP_E2E_AUTO_UPDATES_APP_ID: vz9iihhsyjpkt0htp7hriqvw
+      SDK_E2E_SESSION_TOKEN: ${{ secrets.SDK_E2E_SESSION_TOKEN }}
+      SDK_E2E_USER_ID: ${{ secrets.SDK_E2E_USER_ID }}
+      SDK_E2E_USER_PASSWORD: ${{ secrets.SDK_E2E_USER_PASSWORD }}
+      RECAPTCHA_E2E_STAGING_KEY: ${{ secrets.RECAPTCHA_E2E_STAGING_KEY }}
+      VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - uses: ./.github/actions/setup
+        with:
+          node-version: 22
+
+      # The Version PR's own version isn't uploaded until it merges, so test the latest snapshot of the same code.
+      - name: Use the latest next snapshot
+        if: github.event_name == 'pull_request'
+        run: echo "NEXT_VERSION=$(curl -fsS https://registry.npmjs.org/@sanity/sdk-react/next | jq -r .version)" >> "$GITHUB_ENV"
+
+      # module-server serves a version ~5 min after upload, and `sanity deploy` fails until it does.
+      - name: Pin SDK version
+        if: inputs.sdk-version || env.NEXT_VERSION
+        working-directory: packages/react
+        env:
+          SDK_VERSION: ${{ inputs.sdk-version || env.NEXT_VERSION }}
+        run: |
+          npm pkg set version="$SDK_VERSION"
+          until curl -fs --max-time 30 -o /dev/null \
+            "https://sanity-cdn.work/v1/modules/by-app/$SANITY_APP_E2E_AUTO_UPDATES_APP_ID/t$(date +%s)/%5E$SDK_VERSION/@sanity__sdk-react"; do sleep 60; done
+
+      - name: Deploy app
+        working-directory: apps/auto-updates-react
+        env:
+          SANITY_AUTH_TOKEN: ${{ secrets.SDK_E2E_STAGING_DEPLOY_TOKEN }}
+        run: pnpm exec sanity deploy --yes
+
+      - run: pnpm exec playwright install --with-deps chromium
+
+      - run: pnpm test:e2e:auto-updates -- --project chromium
+
+      - if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: playwright-report
+          path: apps/auto-updates-react/e2e/test-report

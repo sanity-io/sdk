@@ -1,3 +1,4 @@
+import {type Events} from '@sanity/message-protocol'
 import {type CurrentUser} from '@sanity/types'
 
 import {type AccessResourceType} from '../../access/checkPermissions'
@@ -92,12 +93,31 @@ export interface DocumentActivity {
 export type ApplicationActivity = DocumentActivity
 
 /**
- * A document a user favorited, addressed like {@link DocumentActivity}'s document.
+ * A document a user favorited, addressed like Comlink's favorite messages.
  * @public
  * @category Types
  * @category Message Bus
  */
-export type FavoriteDocument = DocumentActivity['document']
+export interface FavoriteDocument {
+  /** ID of the stored favorite. */
+  readonly id: string
+  /** The favorited document and the resource it lives in. */
+  readonly document: Events.DashboardDocumentReference & {
+    readonly resource: NonNullable<Events.DashboardDocumentReference['resource']>
+  }
+  /** Where the document was favorited. */
+  readonly application:
+    | {readonly type: 'studio'; readonly id: string; readonly workspaceName: string}
+    | {readonly type: 'media-library' | 'canvas'; readonly id: string}
+  readonly metadata?: {
+    /** The application path the document was favorited at. */
+    readonly path?: string
+  }
+  /** When the document was favorited, as an ISO 8601 timestamp. */
+  readonly createdAt: string
+  /** When the favorite last changed, as an ISO 8601 timestamp. */
+  readonly updatedAt: string
+}
 
 /**
  * A label rendered for an application interface; `null` clears it.
@@ -247,6 +267,14 @@ export interface DashboardTopics {
   'applications.list': StateTopicDef<TopicResult<
     (Application<ApplicationInclude> | LocalApplication | Installation<InstallationInclude>)[]
   > | null>
+  /**
+   * Asks the dashboard to reload the sending application with its latest code, without reloading
+   * the dashboard. Replies before the application is unmounted.
+   *
+   * `ok: false` reasons:
+   * - `unsupported`: the dashboard can't reload the sending application
+   */
+  'applications.reload': EventTopicDef<void, {ok: true} | {ok: false; reason: 'unsupported'}>
   'applications.status.update': EventTopicDef<ApplicationStatusUpdate>
   /**
    * The session token for the reading connection, or `null` while signed out. The host
@@ -262,7 +290,10 @@ export interface DashboardTopics {
    * the change, so a read after the reply sees it. A favorite is identified by its published
    * document ID, type, resource and `schemaName` (workspace).
    */
-  'favorites.update': EventTopicDef<{document: FavoriteDocument; favorited: boolean}, void>
+  'favorites.update': EventTopicDef<
+    {document: FavoriteDocument['document']; favorited: boolean},
+    void
+  >
   /** The current dashboard location and active navigation. */
   'navigation.location': StateTopicDef<NavigationLocation | null>
   /**
@@ -298,6 +329,17 @@ export interface DashboardTopics {
   'preferences.dock-locked': StateTopicDef<boolean>
   /** The signed-in user, or `null` while signed out. */
   'users.current': StateTopicDef<CurrentUser | null>
+  /**
+   * A worker messages its own application's views. Only that application's views receive it;
+   * they read it with `useWorker`.
+   */
+  'workers.message': EventTopicDef<unknown>
+  /**
+   * A view posts to one of its own application's workers by service name. The dashboard passes
+   * the payload to that worker and returns its reply, or refuses with `NO_RESPONDER` when the
+   * worker isn't running. Views send it with `useWorker`.
+   */
+  'workers.post': EventTopicDef<{name: string; payload: unknown}, unknown>
 }
 
 /**
@@ -363,6 +405,7 @@ export const DASHBOARD_TOPIC_MANIFEST: DashboardTopicManifest = {
   'applications.context.update': dashboardEvent,
   'applications.foreground': stateTopic(undefined),
   'applications.list': stateTopic(undefined),
+  'applications.reload': dashboardEvent,
   'applications.status.update': dashboardEvent,
   'auth.token': stateTopic(undefined),
   'auth.token.refresh': dashboardEvent,
@@ -376,6 +419,8 @@ export const DASHBOARD_TOPIC_MANIFEST: DashboardTopicManifest = {
   'preferences.color-scheme': stateTopic(undefined),
   'preferences.dock-locked': stateTopic(undefined),
   'users.current': stateTopic(undefined),
+  'workers.message': dashboardEvent,
+  'workers.post': dashboardEvent,
 }
 
 /**

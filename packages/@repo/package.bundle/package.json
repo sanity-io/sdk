@@ -6,17 +6,17 @@
   "main": "./src/package.bundle.ts",
   "types": "./src/package.bundle.ts",
   "scripts": {
-    "lint": "eslint .",
-    "ts:check": "tsc --noEmit --skipLibCheck"
+    "lint": "oxlint",
+    "ts:check": "${TSC:-tsc} --noEmit --skipLibCheck"
   },
   "devDependencies": {
-    "@repo/config-eslint": "workspace:*",
+    "@repo/config-oxlint": "workspace:*",
     "@rolldown/plugin-babel": "^0.2.4",
     "@types/lodash-es": "catalog:",
     "@vitejs/plugin-react": "catalog:",
     "babel-plugin-react-compiler": "^1.0.0",
-    "eslint": "catalog:",
     "lodash-es": "catalog:",
+    "oxlint": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:"
   }

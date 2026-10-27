@@ -179,6 +179,7 @@ export type ApiErrorBody = {
   type?: string
   description?: string
   message?: string
+  code?: string
 }
 
 /** @internal Extracts the structured API error body from a ClientError, if present. */

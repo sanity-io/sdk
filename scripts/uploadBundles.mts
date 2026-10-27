@@ -116,54 +116,71 @@ interface Manifest {
   packages: Record<string, ManifestPackage>
 }
 
+const MANIFEST_PATH = 'modules/v1/manifest-v1.json'
+const MANIFEST_WRITE_ATTEMPTS = 5
+
+async function readManifest(): Promise<{manifest: Manifest; generation: string | number}> {
+  try {
+    const file = bucket.file(MANIFEST_PATH)
+    const [metadata] = await file.getMetadata()
+    const [buffer] = await file.download()
+    return {manifest: JSON.parse(buffer.toString()), generation: metadata.generation ?? 0}
+  } catch (error) {
+    if ((error as {code?: number}).code !== 404) throw error
+    console.log('Existing manifest not found')
+    // Generation 0 only lets the write create the manifest, not overwrite one made meanwhile
+    return {manifest: {packages: {}}, generation: 0}
+  }
+}
+
+// sanity-io/sanity writes the same manifest, so a write only lands if the manifest is unchanged since it was read
 async function updateManifest(newVersions: Map<string, string>) {
   console.log('**Updating manifest**')
 
-  let existingManifest: Manifest = {packages: {}}
+  for (let attempt = 1; ; attempt++) {
+    const {manifest: existingManifest, generation} = await readManifest()
+    const timestamp = Math.floor(Date.now() / 1000)
 
-  try {
-    // Download the manifest
-    const buffer = await bucket.file('modules/v1/manifest-v1.json').download()
-    existingManifest = JSON.parse(buffer.toString())
-  } catch (error) {
-    console.log('Existing manifest not found', error)
-  }
+    // Add the new version to the manifest with timestamp
+    const newManifest = Array.from(newVersions).reduce((initial, [key, value]) => {
+      const dirName = cleanDirName(key)
 
-  const timestamp = Math.floor(Date.now() / 1000)
-
-  // Add the new version to the manifest with timestamp
-  const newManifest = Array.from(newVersions).reduce((initial, [key, value]) => {
-    const dirName = cleanDirName(key)
-
-    return {
-      ...initial,
-      packages: {
-        ...initial.packages,
-        [dirName]: {
-          ...initial.packages[dirName],
-          default: value,
-          versions: [...(initial.packages[dirName]?.versions || []), {version: value, timestamp}],
+      return {
+        ...initial,
+        packages: {
+          ...initial.packages,
+          [dirName]: {
+            ...initial.packages[dirName],
+            // Only stable releases become the default version; prereleases never do
+            ...(value.includes('-') ? {} : {default: value}),
+            versions: [...(initial.packages[dirName]?.versions || []), {version: value, timestamp}],
+          },
         },
-      },
+      }
+    }, existingManifest)
+
+    await writeFile('./manifest-v1.json', JSON.stringify(newManifest), {encoding: 'utf-8'})
+
+    try {
+      const options: UploadOptions = {
+        destination: MANIFEST_PATH,
+        contentType: 'application/json',
+        metadata: {
+          // no-cache to help with consistency across pods when this manifest
+          // is downloaded in the module-server
+          cacheControl: 'no-cache, max-age=0',
+        },
+        preconditionOpts: {ifGenerationMatch: generation},
+      }
+
+      await bucket.upload('manifest-v1.json', options)
+      return
+    } catch (error) {
+      if ((error as {code?: number}).code !== 412 || attempt === MANIFEST_WRITE_ATTEMPTS) {
+        throw new Error('Error copying manifest file', {cause: error})
+      }
+      console.log('Manifest changed since it was read, retrying')
     }
-  }, existingManifest)
-
-  await writeFile('./manifest-v1.json', JSON.stringify(newManifest), {encoding: 'utf-8'})
-
-  try {
-    const options = {
-      destination: 'modules/v1/manifest-v1.json',
-      contentType: 'application/json',
-      metadata: {
-        // no-cache to help with consistency across pods when this manifest
-        // is downloaded in the module-server
-        cacheControl: 'no-cache, max-age=0',
-      },
-    }
-
-    await bucket.upload('manifest-v1.json', options)
-  } catch (error) {
-    throw new Error('Error copying manifest file', {cause: error})
   }
 }
 

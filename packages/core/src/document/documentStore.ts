@@ -1,11 +1,4 @@
-import {
-  type Action,
-  ClientError,
-  CorsOriginError,
-  type Mutation,
-  type SanityClient,
-  ServerError,
-} from '@sanity/client'
+import {type Action, type Mutation, type SanityClient} from '@sanity/client'
 import {DocumentId, getDraftId} from '@sanity/id-utils'
 import {jsonMatch} from '@sanity/json-match'
 import {type ExprNode} from 'groq-js'
@@ -38,6 +31,7 @@ import {
 
 import {getCurrentUserState} from '../auth/authStore'
 import {type ClientOptions, getClientState} from '../client/clientStore'
+import {retryRead} from '../client/retry'
 import {
   type DocumentHandle,
   type DocumentResource,
@@ -60,9 +54,6 @@ import {
   ACL_RETRY_MAX_DELAY,
   API_VERSION,
   INITIAL_OUTGOING_THROTTLE_TIME,
-  OUT_OF_SYNC_RETRY_BASE_DELAY,
-  OUT_OF_SYNC_RETRY_COUNT,
-  OUT_OF_SYNC_RETRY_MAX_DELAY,
   SUBMISSION_RETRY_BASE_DELAY,
   SUBMISSION_RETRY_MAX_DELAY,
 } from './documentConstants'
@@ -71,7 +62,7 @@ import {
   type DocumentTransactionSubmissionResult,
   getDocumentEvents,
 } from './events'
-import {listen, OutOfSyncError} from './listen'
+import {listen} from './listen'
 import {type JsonMatch} from './patchOperations'
 import {
   calculatePermissions,
@@ -93,6 +84,7 @@ import {
   type QueuedTransaction,
   removeQueuedTransaction,
   revertOutgoingTransaction,
+  throwDocumentError,
   transitionAppliedTransactionsToOutgoing,
   type UnverifiedDocumentRevision,
 } from './reducers'
@@ -110,10 +102,13 @@ export interface DocumentStoreState {
    */
   identity?: string
   error?: unknown
+  aclError?: unknown
   sharedListener: SharedListener
   fetchDocument: (documentId: string) => Observable<ResolveDocument | null>
   events: Subject<DocumentEvent>
 }
+
+export const getStoreError = ({error, aclError}: DocumentStoreState): unknown => error ?? aclError
 
 export interface DocumentState {
   id: string
@@ -236,16 +231,6 @@ export function getDocumentState(
   return _getDocumentState(...args)
 }
 
-function throwDocumentError(
-  documentStates: DocumentStoreState['documentStates'],
-  documentIds: string[],
-): void {
-  for (const documentId of documentIds) {
-    const documentError = documentStates[documentId]?.error
-    if (documentError) throw documentError
-  }
-}
-
 /** Version wins over draft, and draft over published. Undefined until every read has arrived. */
 function selectLocalDocument(
   documentStates: DocumentStoreState['documentStates'],
@@ -272,10 +257,14 @@ function hasEveryDocumentArrived(
 const _getDocumentState = bindActionByResource(
   documentStore,
   createStateSourceAction({
-    selector: ({state: {error, documentStates}}, options: DocumentOptions<string | undefined>) => {
+    selector: ({state}, options: DocumentOptions<string | undefined>) => {
       const {path} = options
+      const error = getStoreError(state)
       if (error) throw error
-      const document = selectLocalDocument(documentStates, getDocumentIdsFromHandleLikes([options]))
+      const document = selectLocalDocument(
+        state.documentStates,
+        getDocumentIdsFromHandleLikes([options]),
+      )
       if (document === undefined) return undefined
 
       if (!path) return document
@@ -325,11 +314,10 @@ const _resolveDocument = bindActionByResource(
 export const getDocumentSyncStatus = bindActionByResource(
   documentStore,
   createStateSourceAction({
-    selector: (
-      {state: {error, documentStates: documents, outgoing, applied, queued}},
-      doc: DocumentHandle,
-    ) => {
+    selector: ({state}, doc: DocumentHandle) => {
+      const error = getStoreError(state)
       if (error) throw error
+      const {documentStates: documents, outgoing, applied, queued} = state
       if (!hasEveryDocumentArrived(documents, getDocumentIdsFromHandleLikes([doc])))
         return undefined
       return !queued.length && !applied.length && !outgoing
@@ -544,8 +532,12 @@ const subscribeToAppliedAndSubmitNextTransaction = ({
 const subscribeToSubscriptionsAndListenToDocuments = (
   context: StoreContext<DocumentStoreState, BoundResourceKey>,
 ) => {
-  const {state} = context
+  const {state, instance, key} = context
   const {events} = state.get()
+  const clients$ = getClientState(instance, {
+    apiVersion: API_VERSION,
+    resource: key.resource,
+  }).observable
 
   return state.observable
     .pipe(
@@ -589,24 +581,7 @@ const subscribeToSubscriptionsAndListenToDocuments = (
           switchMap((e) => {
             if (!e.add) return EMPTY
             return listen(context, e.id).pipe(
-              retry({
-                count: OUT_OF_SYNC_RETRY_COUNT,
-                resetOnSuccess: true,
-                delay: (error, retryCount) => {
-                  const isTransient =
-                    error instanceof OutOfSyncError ||
-                    error instanceof ServerError ||
-                    (error instanceof ClientError &&
-                      (error.statusCode === 408 || error.statusCode === 429))
-                  if (!isTransient) return throwError(() => error)
-                  const backoff = Math.min(
-                    OUT_OF_SYNC_RETRY_BASE_DELAY * 2 ** (retryCount - 1),
-                    OUT_OF_SYNC_RETRY_MAX_DELAY,
-                  )
-                  return timer(backoff)
-                },
-              }),
-              catchError((error) => {
+              retryRead(clients$, (error) =>
                 state.set('setDocumentError', (prev) => {
                   const documentState = prev.documentStates[e.id]
                   if (!documentState) return prev
@@ -614,9 +589,8 @@ const subscribeToSubscriptionsAndListenToDocuments = (
                     ...prev,
                     documentStates: {...prev.documentStates, [e.id]: {...documentState, error}},
                   }
-                })
-                return EMPTY
-              }),
+                }),
+              ),
               tap((remote) =>
                 state.set('applyRemoteDocument', (prev) =>
                   applyRemoteDocument(prev, remote, events),
@@ -648,43 +622,15 @@ const subscribeToClientAndFetchDatasetAcl = ({
     throw new Error(`Received invalid resource: ${JSON.stringify(resource)}`)
   }
 
-  return getClientState(instance, clientOptions)
-    .observable.pipe(
-      switchMap((client) =>
-        client.observable
-          .request<DatasetAcl>({
-            url,
-            tag: 'acl.get',
-          })
-          .pipe(
-            retry({
-              delay: (error, retryCount) => {
-                // 4xx responses and CORS misconfigurations are not transient —
-                // the server will keep rejecting the request, so rethrow to
-                // surface them as a fatal store error. 408 (request timeout)
-                // and 429 (rate limit) are the exceptions: they resolve on
-                // their own, so they are retried like network errors
-                const isTransientClientError =
-                  error instanceof ClientError &&
-                  (error.statusCode === 408 || error.statusCode === 429)
-                if (
-                  (error instanceof ClientError && !isTransientClientError) ||
-                  error instanceof CorsOriginError
-                ) {
-                  return throwError(() => error)
-                }
-                // network errors (no status code), 408/429 responses, and 5xx
-                // responses are retried with exponential backoff so a transient
-                // failure during startup doesn't permanently brick the store
-                const backoff = Math.min(
-                  ACL_RETRY_BASE_DELAY * 2 ** (retryCount - 1),
-                  ACL_RETRY_MAX_DELAY,
-                )
-                return timer(backoff)
-              },
-            }),
-          ),
-      ),
+  const clients$ = getClientState(instance, clientOptions).observable
+
+  return clients$
+    .pipe(
+      switchMap((client) => client.observable.request<DatasetAcl>({url, tag: 'acl.get'})),
+      retryRead(clients$, (aclError) => state.set('setAclError', {aclError}), {
+        baseDelay: ACL_RETRY_BASE_DELAY,
+        maxDelay: ACL_RETRY_MAX_DELAY,
+      }),
       tap((datasetAcl) => state.set('setGrants', {grants: createGrantsLookup(datasetAcl)})),
     )
     .subscribe({

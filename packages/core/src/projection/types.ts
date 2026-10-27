@@ -3,7 +3,8 @@
  * The result of a projection query
  */
 export interface ProjectionValuePending<TValue extends object> {
-  data: TValue | null
+  /** The projected fields, plus the `_status` the projection store adds to every result */
+  data: (TValue & {_status?: DocumentStatus}) | null
   isPending: boolean
 }
 
@@ -21,12 +22,19 @@ interface DocumentProjectionSubscriptions {
   }
 }
 
+/**
+ * @public
+ * When each version of a document was last edited, as returned in `_status` on projection results
+ */
 export interface DocumentStatus {
+  /** The `_updatedAt` of the draft, if one exists */
   lastEditedDraftAt?: string
+  /** The `_updatedAt` of the published document, if one exists */
   lastEditedPublishedAt?: string
+  /** The `_updatedAt` of the version in the current release perspective, if one exists */
   lastEditedVersionAt?: string
 }
-export interface ProjectionStoreState<TValue extends object = object> {
+export interface ProjectionStoreState<TValue extends object = Record<string, unknown>> {
   /**
    * A map of document IDs to their projection values, organized by projection hash
    */

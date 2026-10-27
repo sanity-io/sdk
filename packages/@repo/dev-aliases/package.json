@@ -9,9 +9,10 @@
     "./vitest": "./vitest.mjs"
   },
   "scripts": {
-    "lint": "eslint ."
+    "lint": "oxlint"
   },
   "devDependencies": {
-    "@repo/config-eslint": "workspace:*"
+    "@repo/config-oxlint": "workspace:*",
+    "oxlint": "catalog:"
   }
 }

@@ -18,6 +18,7 @@ import {type DocumentResource} from '../config/sanityConfig'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {UPSTREAM_CLOSE_DELAY_MS} from '../store/createStoreInstance'
 import {cleanupTimer} from '../utils/setCleanupTimeout'
+import {DocumentInaccessibleError} from './documentInaccessibleError'
 import {dedupeListenerEvents, groupTransactionEvents} from './listenerEventOperators'
 
 const API_VERSION = 'v2025-05-06'
@@ -105,7 +106,7 @@ export function createFetchDocument(instance: SanityInstance, resource?: Documen
       map((result) => {
         if (!result.accessible) {
           if (result.reason === 'existence') return null
-          throw new Error(`Document with ID \`${documentId}\` is inaccessible due to permissions.`)
+          throw new DocumentInaccessibleError(documentId)
         }
         return result.document as SanityDocument
       }),

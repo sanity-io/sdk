@@ -33,6 +33,14 @@ const config: KnipConfig = {
       ignoreDependencies: ['@testing-library/react', 'react-compiler-runtime'],
       project,
     },
+    'apps/auto-updates-react': {
+      entry: ['src/App.tsx'],
+      playwright: false,
+      typescript: {
+        config: 'tsconfig.json',
+      },
+      project,
+    },
     'apps/*': {
       typescript: {
         config: 'tsconfig.json',
@@ -69,7 +77,7 @@ const config: KnipConfig = {
         config: 'tsconfig.json',
       },
       project,
-      entry: ['src/setup/**/*.ts', 'src/teardown/**/*.ts'],
+      entry: ['src/setup/**/*.ts', 'src/setup-standalone/**/*.ts', 'src/teardown/**/*.ts'],
     },
     'packages/core': {
       typescript: {

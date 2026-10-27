@@ -46,7 +46,7 @@ jobs:
 
       - name: Upload blob report to GitHub Actions Artifacts
         if: ${{ !cancelled() && matrix.node-version == 22 }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: blob-report-${{ github.run_id }}-${{ matrix.node-version }}
           path: '.vitest/blob/*'
@@ -69,7 +69,7 @@ jobs:
           node-version: 22
 
       - name: 'Download coverage artifacts'
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           path: .vitest/blob
           pattern: blob-report-${{ github.run_id }}-*
@@ -80,4 +80,4 @@ jobs:
           pnpm vitest run --merge-reports --coverage
 
       - name: Report coverage
-        uses: davelosert/vitest-coverage-report-action@c4bbc33a89b7ace0e63d35f1f7d4bcee31155a73 # v2
+        uses: davelosert/vitest-coverage-report-action@8f86cfb56ed6d5613ea8cdc5259f207fbfd51ece # v2

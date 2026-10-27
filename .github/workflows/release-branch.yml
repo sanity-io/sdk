@@ -1,0 +1,94 @@
+name: Release - Branch
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'npm dist-tag to publish under, e.g. experimental or experimental-my-feature'
+        required: true
+        default: experimental
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read # for checkout
+
+jobs:
+  release-branch:
+    permissions:
+      contents: read # for checkout
+      id-token: write # to enable use of OIDC for npm provenance
+    runs-on: ubuntu-latest
+    env:
+      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+      TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+      TAG: ${{ inputs.tag }}
+    steps:
+      # main already publishes `next` snapshots on every push.
+      - name: Guard against dispatch on main
+        if: github.ref_name == 'main'
+        run: |
+          echo "::error::Branch releases must be cut from a branch, not main. Dispatch this workflow from your feature branch."
+          exit 1
+      # The tag doubles as the semver prerelease identifier, so keep it to
+      # lowercase letters, digits and hyphens. Starting with a letter also keeps
+      # npm from rejecting it as a semver range. The reserved tags belong to the
+      # stable, snapshot and rc release flows.
+      - name: Validate the tag
+        run: |
+          if ! [[ "$TAG" =~ ^[a-z][a-z0-9-]*$ ]]; then
+            echo "::error::Invalid tag '$TAG'. Use lowercase letters, digits and hyphens, starting with a letter."
+            exit 1
+          fi
+          case "$TAG" in
+            latest|next|rc)
+              echo "::error::'$TAG' is reserved for another release flow. Pick a different tag."
+              exit 1
+              ;;
+          esac
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          # fetch-depth: 0 so @changesets/changelog-github can look up the commit
+          # that added each changeset file.
+          fetch-depth: 0
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          cache: pnpm
+          # devEngines.runtime pins node; npm 11 refuses to run under a mismatched version.
+          node-version-file: package.json
+      - run: pnpm install --ignore-scripts --no-runtime
+      # Without a changeset `changeset version --snapshot` bumps nothing and
+      # publish would try to republish the current stable version. Fail early.
+      - name: Require a changeset
+        run: |
+          if [ -z "$(find .changeset -maxdepth 1 -name '*.md' ! -name 'README.md' -print -quit)" ]; then
+            echo "::error::No changeset found. Add a changeset first (pnpm changeset)."
+            exit 1
+          fi
+      # Calculate the snapshot version from the pending changesets, e.g.
+      # 3.3.0-experimental.20261021103000. Nothing is committed back, so the
+      # version bump and changelog edits are thrown away with the runner.
+      - name: Version snapshot
+        run: pnpm changeset version --snapshot "$TAG"
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+      - name: Guard against empty snapshot
+        run: |
+          VERSION=$(node -p "require('./packages/core/package.json').version")
+          case "$VERSION" in
+            *-"$TAG".*) echo "Publishing $VERSION under the $TAG dist-tag" ;;
+            *) echo "::error::Expected a -$TAG snapshot version, got $VERSION."; exit 1 ;;
+          esac
+      - name: Build packages
+        run: pnpm build:packages
+      - name: Smoke test packed tarballs
+        run: pnpm test:pack
+      # Publishes in dependency order so `@sanity/sdk-react@<tag>` never points
+      # at an sdk snapshot npm is not serving yet. No npm token on purpose: pnpm
+      # silently falls back to it and skips provenance when trusted publishing
+      # (OIDC) fails.
+      - name: Publish snapshot to npm
+        run: pnpm release:publish "$TAG"

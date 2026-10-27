@@ -194,7 +194,7 @@ describe('useUpdateFavorite (message bus)', () => {
         document: {
           id: 'doc',
           type: 'movie',
-          resource: {id: 'test.test', type: 'dataset', schemaName: 'production'},
+          resource: {id: 'test.test', type: 'studio', schemaName: 'production'},
         },
         favorited: false,
       },

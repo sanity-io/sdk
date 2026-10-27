@@ -27,7 +27,7 @@ jobs:
         run: |
           echo "::error::Release candidates must be cut from a branch, not main. Dispatch this workflow from your feature branch."
           exit 1
-      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
+      - uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3
         id: generate-token
         with:
           client-id: ${{ secrets.ECOSPARK_APP_ID }}
@@ -42,7 +42,7 @@ jobs:
           fetch-depth: 0
           token: ${{ steps.generate-token.outputs.token }}
       - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           cache: pnpm
           node-version: lts/*
@@ -76,12 +76,12 @@ jobs:
         run: pnpm build:packages
       - name: Smoke test packed tarballs
         run: pnpm test:pack
-      # In pre mode publish targets the dist-tag named in pre.json (`rc`), so no
-      # --tag is needed. --no-git-tag stops the per-package tags.
+      # Publish to the dist-tag named in pre.json (`rc`), in dependency order so
+      # `@sanity/sdk-react@rc` never points at an sdk version npm is not serving yet.
       # No npm token on purpose: pnpm silently falls back to it and skips provenance
       # when trusted publishing (OIDC) fails.
       - name: Publish to npm
-        run: pnpm changeset publish --no-git-tag
+        run: pnpm release:publish "$(node -p "require('./.changeset/pre.json').tag")"
       # Commit pre.json, the bumped package.json files and CHANGELOGs back to the
       # dispatched branch. [skip ci] so the push does not retrigger workflows.
       - name: Commit and push the rc versions

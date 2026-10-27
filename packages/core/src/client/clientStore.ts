@@ -201,6 +201,7 @@ export const getClient = bindActionGlobally(
 
     const effectiveOptions: ClientConfig & {apiVersion: string} = {
       ...DEFAULT_CLIENT_CONFIG,
+      useProjectHostname: instance.config.useProjectHostname !== false,
       ...((options.scope === 'global' || !projectId || resource) && {useProjectHostname: false}),
       token: authMethod === 'cookie' ? undefined : (tokenFromState ?? undefined),
       ...options,

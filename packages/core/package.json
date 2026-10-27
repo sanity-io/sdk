@@ -78,19 +78,19 @@
     "dev": "pkg watch",
     "docs": "typedoc --json docs/typedoc.json --tsconfig ./tsconfig.dist.json",
     "format": "oxfmt",
-    "lint": "eslint .",
+    "lint": "oxlint",
     "prepublishOnly": "pnpm run build",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
-    "ts:check": "tsc --noEmit"
+    "ts:check": "${TSC:-tsc} --noEmit"
   },
   "dependencies": {
-    "@sanity/bifur-client": "^1.0.0",
+    "@sanity/bifur-client": "^2.0.2",
     "@sanity/client": "catalog:",
     "@sanity/comlink": "catalog:",
     "@sanity/diff-match-patch": "^3.2.1",
-    "@sanity/diff-patch": "^6.0.0",
+    "@sanity/diff-patch": "^7.0.0",
     "@sanity/id-utils": "^1.1.0",
     "@sanity/image-url": "^2.1.1",
     "@sanity/json-match": "^1.0.5",
@@ -105,7 +105,7 @@
     "zustand": "^5.0.15"
   },
   "devDependencies": {
-    "@repo/config-eslint": "workspace:*",
+    "@repo/config-oxlint": "workspace:*",
     "@repo/config-test": "workspace:*",
     "@repo/package.bundle": "workspace:*",
     "@repo/package.config": "workspace:*",
@@ -114,13 +114,13 @@
     "@sanity/pkg-utils": "catalog:",
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",
-    "eslint": "catalog:",
     "oxfmt": "catalog:",
+    "oxlint": "catalog:",
     "rolldown": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:",
     "vitest": "catalog:"
   },
   "browserslist": "extends @sanity/browserslist-config",
-  "packageManager": "pnpm@12.9.1"
+  "packageManager": "pnpm@12.14.0"
 }

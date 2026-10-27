@@ -1,33 +1,12 @@
 version: 2.1
 
-parameters:
-  GHA_Actor:
-    type: string
-    default: ''
-  GHA_Action:
-    type: string
-    default: ''
-  GHA_Event:
-    type: string
-    default: ''
-  GHA_Meta:
-    type: string
-    default: ''
-
+# Kept until the CircleCI project is disconnected: without a config, every push errors.
 workflows:
   # Needed for https://github.com/CircleCI-Public/circleci-cli/issues/577
   # If not the job will be marked as failed for skipped
   noopworkflow:
     jobs:
       - noop:
-          filters:
-            branches:
-              only: main
-  build-and-deploy:
-    when:
-      equal: ['push', << pipeline.parameters.GHA_Event >>]
-    jobs:
-      - build:
           filters:
             branches:
               only: main
@@ -42,43 +21,3 @@ jobs:
       - run:
           command: |
             echo "do nothing"
-  build:
-    docker:
-      - image: cimg/node:24.21.0
-    steps:
-      - checkout
-      - restore_cache:
-          name: Restore pnpm Package Cache
-          keys:
-            - pnpm-packages-{{ checksum "pnpm-lock.yaml" }}
-      - run:
-          name: Install pnpm package manager
-          command: |
-            corepack enable --install-directory ~/bin
-      - run:
-          name: Install Dependencies
-          command: |
-            pnpm install --frozen-lockfile --no-runtime --store-dir .pnpm-store
-      - save_cache:
-          name: Save pnpm Package Cache
-          key: pnpm-packages-{{ checksum "pnpm-lock.yaml" }}
-          paths:
-            - .pnpm-store
-      - run:
-          name: Build bundle
-          command: pnpm run build:bundle
-      - run:
-          name: Copy to staging bucket
-          command: |
-            export GOOGLE_PROJECT_ID=$GCS_STAGING_PROJECT_ID
-            export GCLOUD_SERVICE_KEY=$GCS_STAGING_SERVICE_KEY
-            export GCLOUD_BUCKET=$GCS_STAGING_BUCKET
-            pnpm run upload:bundles
-
-      - run:
-          name: Copy to production bucket
-          command: |
-            export GOOGLE_PROJECT_ID=$GCS_PRODUCTION_PROJECT_ID
-            export GCLOUD_SERVICE_KEY=$GCS_PRODUCTION_SERVICE_KEY
-            export GCLOUD_BUCKET=$GCS_PRODUCTION_BUCKET
-            pnpm run upload:bundles

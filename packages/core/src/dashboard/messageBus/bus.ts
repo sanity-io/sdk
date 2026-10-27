@@ -96,10 +96,12 @@ export interface MessageBusMessage<T, R = never, K extends PropertyKey = TopicNa
   reply(value: R): void
   /**
    * Refuses the message: the sender's awaited `emit()` rejects with a
-   * {@link MessageBusError} whose `code` is `'REFUSED'`. Ignored, with a warning,
-   * once the reply has already settled.
+   * {@link MessageBusError} whose `code` is `code`, `'REFUSED'` by default. A host that
+   * passes the message on refuses with `'NO_RESPONDER'` when nothing can answer it, and with
+   * `'HANDLER_THREW'` when what it passed the message to threw. Ignored, with a warning, once
+   * the reply has already settled.
    */
-  reject(message?: string): void
+  reject(message?: string, code?: 'HANDLER_THREW' | 'NO_RESPONDER' | 'REFUSED'): void
   /** Aborts when the sender stops waiting for a reply. */
   readonly signal: AbortSignal
 }
@@ -194,7 +196,11 @@ export interface MessageBus<TTopics = MessageBusTopics> {
   ): void
   /** Returns a state topic as a `MessageBusStateSource`. */
   subscribe<K extends StateTopic<TTopics>>(type: K): MessageBusStateSource<ValueOf<K, TTopics>>
-  /** Returns an event topic as an observable of its payloads. */
+  /**
+   * Returns an event topic as an observable of its payloads. On a topic only the host can
+   * answer, an application receives only events its own application sent, never another
+   * application's.
+   */
   subscribe<K extends EventTopic<TTopics>>(type: K): Observable<PayloadOf<K, TTopics>>
 }
 
@@ -268,6 +274,7 @@ const MESSAGE_BUS_KEY = Symbol.for('sanity.os.bus')
 const MESSAGE_BUS_PROTOCOL_KEY = Symbol.for('sanity.os.protocol')
 const MESSAGE_BUS_REGISTRY_KEY = Symbol.for('sanity.os.registry')
 const MESSAGE_BUS_PENDING_REPLY_KEY = Symbol.for('sanity.os.request')
+const MESSAGE_BUS_EVENT_MESSAGES_KEY = Symbol.for('sanity.os.event-messages')
 
 const MESSAGE_BUS_PROTOCOL = 1
 
@@ -317,6 +324,10 @@ interface MessageBusRegistry {
 type InternalMessageBus = MessageBus & {
   [MESSAGE_BUS_REGISTRY_KEY]: MessageBusRegistry
   [MESSAGE_BUS_PROTOCOL_KEY]: number
+  // The connection's event stream with each message's `meta`, which the public stream drops.
+  [MESSAGE_BUS_EVENT_MESSAGES_KEY]: (
+    type: string,
+  ) => Observable<MessageBusMessage<unknown, unknown>>
 }
 
 // A connection's box for a state topic, created on first use from the topic's manifest seed.
@@ -423,14 +434,14 @@ function createEventMessage(
       }
       settleReply(pendingReply, {ok: true, value})
     },
-    reject: (reason) => {
+    reject: (reason, code = 'REFUSED') => {
       if (pendingReply.settled) {
         console.warn(
           `[sanity-sdk:message-bus] reject ignored for "${type}": no waiting caller or already replied`,
         )
         return
       }
-      settleReply(pendingReply, {ok: false, error: new MessageBusError('REFUSED', reason)})
+      settleReply(pendingReply, {ok: false, error: new MessageBusError(code, reason)})
     },
     get signal() {
       return pendingReply.responderSignal
@@ -776,19 +787,19 @@ function migrationTransformAt(
 function migrateVersionedValue(
   steps: readonly TopicMigration[] | undefined,
   value: unknown,
-  from: number,
-  to: number,
+  fromVersion: number,
+  toVersion: number,
   select: (step: TopicMigration) => TopicMigrationTransform | undefined,
 ): unknown {
-  if (from === to) return value
+  if (fromVersion === toVersion) return value
 
   let current = value
-  if (from < to) {
-    for (let version = from; version < to; version++) {
+  if (fromVersion < toVersion) {
+    for (let version = fromVersion; version < toVersion; version++) {
       current = migrationTransformAt(steps, version, select).up(current)
     }
   } else {
-    for (let version = from; version > to; version--) {
+    for (let version = fromVersion; version > toVersion; version--) {
       current = migrationTransformAt(steps, version - 1, select).down(current)
     }
   }
@@ -887,7 +898,7 @@ function migrateEventMessage(
     payload: payload(message.payload),
     meta: message.meta,
     reply: (value) => message.reply(reply(value)),
-    reject: (reason) => message.reject(reason),
+    reject: (reason, code) => message.reject(reason, code),
     get signal() {
       return message.signal
     },
@@ -1090,11 +1101,21 @@ function createConnection(
         connectionAborted$,
       ),
     )
+  // A topic this connection can't answer is addressed to the host, so the connection reads
+  // only its own application's events on it, never another application's.
+  const eventMessages = (type: string) => {
+    const topic = registry.topics.get(type)
+    const messages = resolveEventSubject(registry, type)
+    return (
+      topic?.kind === 'event' && !canRespond(registry, topic.ownership, appId)
+        ? messages.pipe(filter((message) => message.meta.appId === appId))
+        : messages
+    ).pipe(takeUntil(connectionAborted$))
+  }
   const eventStream = (type: string) =>
     cachedStream(type, () =>
-      resolveEventSubject(registry, type).pipe(
+      eventMessages(type).pipe(
         map((message) => compatibility.toApplicationEventPayload(type, message.payload)),
-        takeUntil(connectionAborted$),
       ),
     )
 
@@ -1184,11 +1205,34 @@ function createConnection(
   const instance = connection as unknown as InternalMessageBus
   instance[MESSAGE_BUS_REGISTRY_KEY] = registry
   instance[MESSAGE_BUS_PROTOCOL_KEY] = MESSAGE_BUS_PROTOCOL
+  instance[MESSAGE_BUS_EVENT_MESSAGES_KEY] = (type) => {
+    throwIfDisconnected()
+    return eventMessages(type)
+  }
 
   // Announce last: a host subscriber may write to the new client synchronously.
   registry.connections.add(record)
   registry.connected$.next(record)
   return instance as unknown as MessageBusConnection
+}
+
+/**
+ * The messages one of the connection's own application's workers posts, by its service name.
+ * The dashboard stamps a worker's connection `<appId>/services/<name>`, so a message can't
+ * claim to come from another worker.
+ * @internal
+ */
+export function workerMessages(
+  connection: MessageBusConnection,
+  name: string,
+): Observable<unknown> {
+  const moduleId = `${connection.appId}/services/${name}`
+  return (connection as unknown as InternalMessageBus)
+    [MESSAGE_BUS_EVENT_MESSAGES_KEY]('workers.message')
+    .pipe(
+      filter((message) => message.meta.moduleId === moduleId),
+      map((message) => message.payload),
+    )
 }
 
 function reset(registry: MessageBusRegistry): void {
