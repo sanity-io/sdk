@@ -1,5 +1,49 @@
 # Changelog
 
+## 3.10.0
+
+### Minor Changes
+
+- [#1412](https://github.com/sanity-io/sdk/pull/1412) [`7c3bf20`](https://github.com/sanity-io/sdk/commit/7c3bf206667386a21943088c749aabe2938dd359) Thanks [@gu-stav](https://github.com/gu-stav)! - Add the `applications.reload` dashboard topic, so an application can ask the dashboard to reload it with its latest code without reloading the dashboard.
+
+- [#1428](https://github.com/sanity-io/sdk/pull/1428) [`907d914`](https://github.com/sanity-io/sdk/commit/907d9147d8f06b7d8913f1a7e93d4c0e43d5286e) Thanks [@gu-stav](https://github.com/gu-stav)! - Each favorite in `favorites.documents` carries the favorite's `id`, `createdAt`, `updatedAt`, `metadata.path` and the `application` it was favorited in (with `workspaceName` for studios), with the document under `document`, addressed like Comlink's favorite messages. A studio document's resource type is `studio` on the bus, as over Comlink.
+
+- [#1406](https://github.com/sanity-io/sdk/pull/1406) [`4f6e947`](https://github.com/sanity-io/sdk/commit/4f6e9473e73f0aec7365233d1175d6e1b2bf9756) Thanks [@joshuaellis](https://github.com/joshuaellis)! - The `application` fetcher and `useApplication` accept an `organizationId`, so an application can be looked up by its slug, which is only unique within an organization.
+
+- [#1416](https://github.com/sanity-io/sdk/pull/1416) [`dd2a1ae`](https://github.com/sanity-io/sdk/commit/dd2a1ae6a6e49a321f3b06e0bc066f6d4b06365f) Thanks [@joshuaellis](https://github.com/joshuaellis)! - A dashboard view can post to its application's workers and listen to their messages with `useWorker`. On a topic only the dashboard can answer, an application now receives only its own application's events.
+
+- [#1467](https://github.com/sanity-io/sdk/pull/1467) [`97da49f`](https://github.com/sanity-io/sdk/commit/97da49f139d6e3f38913d7678d02fd5b91c96ad4) Thanks [@gu-stav](https://github.com/gu-stav)! - Add a `useProjectHostname` option to send project requests to `auth.apiHost` without a project subdomain.
+
+### Patch Changes
+
+- [#1430](https://github.com/sanity-io/sdk/pull/1430) [`510874b`](https://github.com/sanity-io/sdk/commit/510874b4cb53152f52a4e5ddf31f5de23298cd9d) Thanks [@ryanbonial](https://github.com/ryanbonial)! - Projection results from `useDocumentProjection`, `getProjectionState`, and `resolveProjection` now type the `_status` field the SDK adds to every result. `DocumentStatus` is exported for typing it.
+
+- [#1479](https://github.com/sanity-io/sdk/pull/1479) [`ddf390b`](https://github.com/sanity-io/sdk/commit/ddf390ba6e63ba3f87ecf41af58762379f42a42b) Thanks [@squiggler-app](https://github.com/apps/squiggler-app)! - Update dependencies: `groq-js@2.0.1`
+
+- [#1448](https://github.com/sanity-io/sdk/pull/1448) [`0ce5d32`](https://github.com/sanity-io/sdk/commit/0ce5d32d11b64b94f3bb5dab606d82316a3a131e) Thanks [@squiggler-app](https://github.com/apps/squiggler-app)! - Update dependencies: `@sanity/bifur-client@2.0.2`
+
+- [#1441](https://github.com/sanity-io/sdk/pull/1441) [`852404b`](https://github.com/sanity-io/sdk/commit/852404b6c3f5060b9d866a8b9c9fbe7d69e5c1cc) Thanks [@squiggler-app](https://github.com/apps/squiggler-app)! - Update dependencies: `@sanity/diff-patch@7.0.0`
+
+- [#1375](https://github.com/sanity-io/sdk/pull/1375) [`8cf8c0e`](https://github.com/sanity-io/sdk/commit/8cf8c0ecfeefafb171611050e3f41c072af81903) Thanks [@squiggler-app](https://github.com/apps/squiggler-app)! - Update dependencies: `groq@6.20.0`, `sanity@6.20.0`
+
+- [#1451](https://github.com/sanity-io/sdk/pull/1451) [`7287d11`](https://github.com/sanity-io/sdk/commit/7287d11e7150f36b42f4dc93fb3957885b68c8b2) Thanks [@squiggler-app](https://github.com/apps/squiggler-app)! - Update dependencies: `@sanity/client@8.11.0`
+
+- [#1432](https://github.com/sanity-io/sdk/pull/1432) [`ccb67c6`](https://github.com/sanity-io/sdk/commit/ccb67c6a12df0bde98c8d54675077b63c01c2b62) Thanks [@joshuaellis](https://github.com/joshuaellis)! - Checking permissions on a document the user cannot read now fails with the read error instead of loading forever.
+
+- [#1419](https://github.com/sanity-io/sdk/pull/1419) [`dbaee66`](https://github.com/sanity-io/sdk/commit/dbaee668d5458c8a247d39a05f76ffcb96d89ba5) Thanks [@joshuaellis](https://github.com/joshuaellis)! - `useApplication` and the `application` fetcher find an application by its slug again when given an `organizationId`.
+
+- [#1425](https://github.com/sanity-io/sdk/pull/1425) [`85a87d9`](https://github.com/sanity-io/sdk/commit/85a87d99db0d7b0ec311f5c13e79b3beb85bf5e3) Thanks [@gu-stav](https://github.com/gu-stav)! - Retry fetching releases after a 401 once the token changes, instead of failing until reload.
+
+- [#1422](https://github.com/sanity-io/sdk/pull/1422) [`ea0c3bc`](https://github.com/sanity-io/sdk/commit/ea0c3bca0f8a3d1316c168197f5a5b02ff3e1dd6) Thanks [@gu-stav](https://github.com/gu-stav)! - Retry failed user lookups once the token changes, and stop refetching a loaded users list on every token change.
+
+- [#1418](https://github.com/sanity-io/sdk/pull/1418) [`f944cc9`](https://github.com/sanity-io/sdk/commit/f944cc956984d861eed81cd2353464357c1bf78f) Thanks [@gu-stav](https://github.com/gu-stav)! - Retry reads that failed with a 401 once the token changes, and retry network and server errors before reporting them.
+
+- [#1431](https://github.com/sanity-io/sdk/pull/1431) [`dc2c984`](https://github.com/sanity-io/sdk/commit/dc2c9846a74037908abdbcae54de3e2be19efc28) Thanks [@joshuaellis](https://github.com/joshuaellis)! - `useWorker` returns the same client when a component's first render suspends, so a view that suspends on a worker's reply no longer posts to the worker again on every retry.
+
+- [#1475](https://github.com/sanity-io/sdk/pull/1475) [`f0cb568`](https://github.com/sanity-io/sdk/commit/f0cb568ab1ece1bb3650190ad1f2aa82dd0055fc) Thanks [@gu-stav](https://github.com/gu-stav)! - Auto-updating apps can load `@sanity/sdk` and `@sanity/sdk-react` subpaths from the module CDN again.
+
+- [#1468](https://github.com/sanity-io/sdk/pull/1468) [`9fa66b1`](https://github.com/sanity-io/sdk/commit/9fa66b102cee4cf8ebb12ac733c4e3639f239953) Thanks [@gu-stav](https://github.com/gu-stav)! - Retry the current user request after a network error, 408, 429 or 5xx before showing an authentication error.
+
 ## 3.9.1
 
 ### Patch Changes
