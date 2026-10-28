@@ -174,6 +174,16 @@ describe('clientStore', () => {
         }),
       )
     })
+
+    it('uses the new token before the client store hears of the change', () => {
+      const tokenState = getTokenState(instance)
+      getClient(instance, {apiVersion: '2024-11-12'})
+
+      // the auth store has the new token, but has not notified the client store yet
+      vi.mocked(tokenState.getCurrent).mockReturnValue('new-token')
+
+      expect(getClient(instance, {apiVersion: '2024-11-12'}).config().token).toBe('new-token')
+    })
   })
 
   describe('getClientState', () => {

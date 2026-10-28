@@ -15,6 +15,7 @@ import {
   isMediaLibraryResource,
 } from '../config/sanityConfig'
 import {bindActionGlobally} from '../store/createActionBinder'
+import {type SanityInstance} from '../store/createSanityInstance'
 import {createStateSourceAction} from '../store/createStateSourceAction'
 import {defineStore, type StoreContext} from '../store/defineStore'
 import {getStagingApiHost} from '../utils/getStagingApiHost'
@@ -155,6 +156,13 @@ type ClientInstanceCacheKeyInput = ClientConfig &
 const getClientConfigKey = (options: ClientInstanceCacheKeyInput) =>
   JSON.stringify(pickProperties(options, allowedKeys))
 
+// Reads the auth store, not `state.token`: a retry woken by a token change can
+// get here before `listenToToken` has updated the copy.
+function getStaticToken(instance: SanityInstance, {authMethod, auth}: ClientStoreState) {
+  if (authMethod === 'cookie' || auth) return undefined
+  return getTokenState(instance).getCurrent() ?? undefined
+}
+
 /**
  * Retrieves a Sanity client instance configured with the provided options.
  *
@@ -188,7 +196,6 @@ export const getClient = bindActionGlobally(
       )
     }
 
-    const tokenFromState = state.get().token
     const {clients, authMethod, auth} = state.get()
     let projectId = options.projectId ?? instance.config.projectId
     let dataset = options.dataset ?? instance.config.dataset
@@ -213,7 +220,7 @@ export const getClient = bindActionGlobally(
       ...DEFAULT_CLIENT_CONFIG,
       useProjectHostname: instance.config.useProjectHostname !== false,
       ...((options.scope === 'global' || !projectId || resource) && {useProjectHostname: false}),
-      token: authMethod === 'cookie' ? undefined : (tokenFromState ?? undefined),
+      token: getStaticToken(instance, state.get()),
       auth,
       ...options,
       ...(projectId && {projectId}),
