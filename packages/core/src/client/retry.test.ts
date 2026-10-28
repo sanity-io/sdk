@@ -5,7 +5,7 @@ import {
   type SanityClient,
   ServerError,
 } from '@sanity/client'
-import {BehaviorSubject, concat, defer, Observable, of, throwError} from 'rxjs'
+import {BehaviorSubject, concat, defer, NEVER, Observable, of, throwError} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {OUT_OF_SYNC_RETRY_COUNT, OUT_OF_SYNC_RETRY_MAX_DELAY} from '../document/documentConstants'
@@ -73,6 +73,25 @@ describe('retryRead', () => {
     expect(read.setError).toHaveBeenLastCalledWith(undefined)
   })
 
+  it('clears a session error once the client changes, before the retry responds', () => {
+    const error = clientError(401)
+    const read = startRead([error, NEVER])
+
+    read.clients.next(createClient())
+
+    expect(read.attempts()).toBe(2)
+    expect(read.setError.mock.calls).toEqual([[error], [undefined]])
+  })
+
+  it('reports a session error again when the new client is rejected too', () => {
+    const error = clientError(401)
+    const read = startRead([error, error])
+
+    read.clients.next(createClient())
+
+    expect(read.setError.mock.calls).toEqual([[error], [undefined], [error]])
+  })
+
   it.each([
     ['a 400', clientError(400)],
     ['a 403', clientError(403)],
@@ -100,6 +119,15 @@ describe('retryRead', () => {
 
     expect(read.setError.mock.calls).toEqual([[error], [undefined]])
     expect(read.values).toEqual(['ok'])
+  })
+
+  it.each(missingAccess)('clears %s once the client changes during its backoff', (_, error) => {
+    const read = startRead([error, NEVER])
+
+    read.clients.next(createClient())
+
+    expect(read.attempts()).toBe(2)
+    expect(read.setError.mock.calls).toEqual([[error], [undefined]])
   })
 
   it.each(missingAccess)(
