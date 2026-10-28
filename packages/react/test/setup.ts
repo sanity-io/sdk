@@ -6,8 +6,8 @@ import {afterEach, vi} from 'vitest'
 
 const renderedInstances = new Set<SanityInstance>()
 
-// ResourceProvider never disposes its instance, so without this every test in a file would share
-// the stores left behind by the tests before it.
+// Outside a dashboard root ResourceProvider never disposes its instance, so without this every
+// test in a file would share the stores left behind by the tests before it.
 vi.mock('../src/context/SanityInstanceProvider', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../src/context/SanityInstanceProvider')>()
   return {
