@@ -7,6 +7,7 @@ export type {
   MessageBusEmitOptions,
   MessageBusEmitResult,
   MessageBusErrorCode,
+  MessageBusErrorDetails,
   MessageBusHost,
   MessageBusMessage,
   MessageBusMeta,
