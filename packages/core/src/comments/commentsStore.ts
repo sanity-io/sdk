@@ -1,7 +1,7 @@
 import {DocumentId, getPublishedId} from '@sanity/id-utils'
 import {type Path} from '@sanity/types'
 import {
-  catchError,
+  defer,
   distinctUntilChanged,
   EMPTY,
   first,
@@ -18,6 +18,8 @@ import {
   tap,
 } from 'rxjs'
 
+import {getClientAuthState} from '../auth/authStore'
+import {retryOnCredentialChange} from '../client/retry'
 import {type DocumentHandle} from '../config/sanityConfig'
 import {isReleasePerspective} from '../releases/utils/isReleasePerspective'
 import {bindActionByResource, type BoundResourceKey} from '../store/createActionBinder'
@@ -207,14 +209,13 @@ const watchSubscribedDocuments = ({
                   return EMPTY
                 }
 
-                return observeComments({client, documentId, documentVersionId}).pipe(
+                return defer(() => observeComments({client, documentId, documentVersionId})).pipe(
                   tap((commentsEvent) => applyEvent(state, group$.key, commentsEvent)),
-                  // Keep following the addon client after one listener fails.
-                  // A token refresh or reconnect can then supply a new client.
-                  catchError((error: unknown) => {
-                    state.set('setCommentsError', setCommentsError(group$.key, error))
-                    return EMPTY
-                  }),
+                  // Keep following the addon client after one listener fails,
+                  // and listen again once the credential changes.
+                  retryOnCredentialChange(getClientAuthState(instance), (error) =>
+                    state.set('setCommentsError', setCommentsError(group$.key, error)),
+                  ),
                 )
               }),
             )

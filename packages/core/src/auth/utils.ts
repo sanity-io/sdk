@@ -1,10 +1,20 @@
-import {type ClientError} from '@sanity/client'
+import {type Auth as ClientAuth, type ClientError} from '@sanity/client'
 import {type CurrentUser} from '@sanity/types'
 import {EMPTY, fromEvent, Observable} from 'rxjs'
 
 import {AUTH_CODE_PARAM, DEFAULT_BASE} from './authConstants'
 import {AuthStateType} from './authStateType'
-import {type LoggedInAuthState} from './authStore'
+import {type AuthMethodOptions, type LoggedInAuthState} from './authStore'
+
+/**
+ * The credential a `@sanity/client` should send for a token and auth method.
+ *
+ * @internal
+ */
+export function toCredential(token: string | null, authMethod: AuthMethodOptions): ClientAuth {
+  if (authMethod === 'cookie') return {withCredentials: true}
+  return token ? {token} : undefined
+}
 
 /**
  * Creates a properly initialized {@link LoggedInAuthState}.

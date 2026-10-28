@@ -24,6 +24,7 @@ import {
   withLatestFrom,
 } from 'rxjs'
 
+import {getClientAuthState} from '../auth/authStore'
 import {getClient, getClientState} from '../client/clientStore'
 import {retryRead} from '../client/retry'
 import {getDashboardOrganizationId} from '../dashboard/messageBus/topicStore'
@@ -164,7 +165,7 @@ const listenForLoadMoreAndFetch = ({state, instance}: StoreContext<UsersStoreSta
                       nextCursor: null,
                     }
                   }),
-                  retryRead(getClientState(instance, clientOptions).observable, setError),
+                  retryRead(getClientAuthState(instance), setError),
                   tap((response) => state.set('setUsersData', setUsersData(group$.key, response))),
                 )
               }
@@ -200,7 +201,7 @@ const listenForLoadMoreAndFetch = ({state, instance}: StoreContext<UsersStoreSta
                   }
                   return response as SanityUserResponse
                 }),
-                retryRead(getClientState(instance, clientOptions).observable, setError),
+                retryRead(getClientAuthState(instance), setError),
                 tap((response) => state.set('setUsersData', setUsersData(group$.key, response))),
               )
             }
@@ -261,7 +262,7 @@ const listenForLoadMoreAndFetch = ({state, instance}: StoreContext<UsersStoreSta
                     : {limit: batchSize.toString()},
                 }),
               ),
-              retryRead(client$, setError),
+              retryRead(getClientAuthState(instance), setError),
               tap((response) => state.set('setUsersData', setUsersData(group$.key, response))),
             )
           }),

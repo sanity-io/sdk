@@ -171,8 +171,8 @@ catalogs:
       specifier: ^1.0.5
       version: 1.0.5
     '@sanity/client':
-      specifier: ^8.11.0
-      version: 8.11.0
+      specifier: ^8.12.0
+      version: 8.12.0
     '@sanity/comlink':
       specifier: ^4.0.3
       version: 4.0.3
@@ -603,7 +603,7 @@ importers:
     dependencies:
       '@sanity/client':
         specifier: 'catalog:'
-        version: 8.11.0(vitest@5.0.5)
+        version: 8.12.0(vitest@5.0.5)
       dotenv:
         specifier: ^18.0.8
         version: 18.0.8
@@ -697,7 +697,7 @@ importers:
         version: 2.0.2
       '@sanity/client':
         specifier: 'catalog:'
-        version: 8.11.0(vitest@5.0.5)
+        version: 8.12.0(vitest@5.0.5)
       '@sanity/comlink':
         specifier: 'catalog:'
         version: 4.0.3
@@ -797,7 +797,7 @@ importers:
         version: 2.9.2
       '@sanity/client':
         specifier: 'catalog:'
-        version: 8.11.0(vitest@5.0.5)
+        version: 8.12.0(vitest@5.0.5)
       '@sanity/message-protocol':
         specifier: 'catalog:'
         version: 0.24.0
@@ -3416,6 +3416,10 @@ packages:
 
   '@sanity/client@8.11.0':
     resolution: {integrity: sha512-veR3k1ZKFqfB0QbmqNSVYedGb9WTwux2ifF+Xy5V5Uef/iMo79LSQCtPPliPUAM1XgOz/u1uyrHxH/1BC/MAPA==}
+    engines: {node: '>=22.12.0'}
+
+  '@sanity/client@8.12.0':
+    resolution: {integrity: sha512-QzsrzE4Vckzix06fkrHrhfrSLoaL/3b7mHa1va4VTR64C83BKV2f5T9zX1bzXtjLL3tppZiiqD3kaZD4Z0uVJw==}
     engines: {node: '>=22.12.0'}
 
   '@sanity/codegen@8.2.0':
@@ -10677,6 +10681,15 @@ snapshots:
       rxjs: 7.8.2
 
   '@sanity/client@8.11.0(vitest@5.0.5)':
+    dependencies:
+      eventsource: 5.1.3
+      get-it: 9.6.2(vitest@5.0.5)
+      obug: 3.0.0
+      rxjs: 7.8.2
+    transitivePeerDependencies:
+      - vitest
+
+  '@sanity/client@8.12.0(vitest@5.0.5)':
     dependencies:
       eventsource: 5.1.3
       get-it: 9.6.2(vitest@5.0.5)

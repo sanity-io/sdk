@@ -1,6 +1,13 @@
-import {type ClientConfig, createClient, type SanityClient} from '@sanity/client'
+import {
+  type Auth as ClientAuth,
+  type ClientConfig,
+  createClient,
+  type SanityClient,
+} from '@sanity/client'
+import {type Observable} from 'rxjs'
 
-import {getAuthMethodState, getTokenState} from '../auth/authStore'
+import {isStudioConfig} from '../auth/authMode'
+import {getAuthMethodState, getClientAuthState, getTokenState} from '../auth/authStore'
 import {
   type DocumentResource,
   isCanvasResource,
@@ -64,6 +71,8 @@ export interface ClientStoreState {
   token: string | null
   clients: {[TKey in string]?: SanityClient}
   authMethod?: 'localstorage' | 'cookie'
+  /** Credential stream shared by every client in an OAuth app, which has no `token` here. */
+  auth?: Observable<Promise<ClientAuth>>
 }
 
 /**
@@ -104,16 +113,19 @@ export interface ClientOptions extends Pick<ClientConfig, AllowedClientConfigKey
 const clientStore = defineStore<ClientStoreState>({
   name: 'clientStore',
 
-  getInitialState: (instance) => ({
-    clients: {},
-    token: getTokenState(instance).getCurrent(),
-  }),
+  // OAuth refreshes its token before it expires, so OAuth clients follow it
+  // through `auth` instead of being rebuilt on every refresh. Studio config
+  // wins over `auth.oauth`, as in `resolveAuthMode`.
+  getInitialState: (instance) =>
+    instance.config.auth?.oauth && !isStudioConfig(instance.config)
+      ? {clients: {}, token: null, auth: getClientAuthState(instance).observable}
+      : {clients: {}, token: getTokenState(instance).getCurrent()},
 
   initialize(context) {
-    const subscription = listenToToken(context)
+    const subscription = context.state.get().auth ? undefined : listenToToken(context)
     const authMethodSubscription = listenToAuthMethod(context)
     return () => {
-      subscription.unsubscribe()
+      subscription?.unsubscribe()
       authMethodSubscription.unsubscribe()
     }
   },
@@ -177,7 +189,7 @@ export const getClient = bindActionGlobally(
     }
 
     const tokenFromState = state.get().token
-    const {clients, authMethod} = state.get()
+    const {clients, authMethod, auth} = state.get()
     let projectId = options.projectId ?? instance.config.projectId
     let dataset = options.dataset ?? instance.config.dataset
 
@@ -202,6 +214,7 @@ export const getClient = bindActionGlobally(
       useProjectHostname: instance.config.useProjectHostname !== false,
       ...((options.scope === 'global' || !projectId || resource) && {useProjectHostname: false}),
       token: authMethod === 'cookie' ? undefined : (tokenFromState ?? undefined),
+      auth,
       ...options,
       ...(projectId && {projectId}),
       ...(dataset && {dataset}),
@@ -217,12 +230,17 @@ export const getClient = bindActionGlobally(
       delete effectiveOptions.dataset
     }
 
-    if (effectiveOptions.token === null || typeof effectiveOptions.token === 'undefined') {
+    if (!effectiveOptions.token) {
       delete effectiveOptions.token
       if (authMethod === 'cookie') {
         effectiveOptions.withCredentials = true
+      } else if (auth) {
+        // the client rejects `withCredentials` alongside `auth`
+        delete effectiveOptions.withCredentials
       }
     } else {
+      // a caller's own token stays static; the client rejects it alongside `auth`
+      delete effectiveOptions.auth
       delete effectiveOptions.withCredentials
     }
 
@@ -242,6 +260,7 @@ export const getClient = bindActionGlobally(
  *
  * This function provides a subscribable state source that emits updated client
  * instances whenever relevant configurations change (such as authentication tokens).
+ * In an OAuth app the client follows token changes itself, so none is emitted for them.
  * Use this when you need to react to client configuration changes in your application.
  *
  * @public

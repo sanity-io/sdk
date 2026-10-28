@@ -12,6 +12,7 @@ import {
   authStore,
   getAuthMethodState,
   getAuthState,
+  getClientAuthState,
   getCurrentUserState,
   getLoginUrlState,
   getTokenState,
@@ -792,6 +793,60 @@ describe('authStore', () => {
 
       // pureness check
       expect(tokenState.getCurrent()).toBe(tokenState.getCurrent())
+    })
+  })
+
+  describe('getClientAuthState', () => {
+    let instance: ReturnType<typeof createSanityInstance>
+
+    afterEach(() => {
+      instance?.dispose()
+    })
+
+    it('gives clients the token when logged in', async () => {
+      instance = createSanityInstance({projectId: 'p', dataset: 'd', auth: {token: 'token'}})
+      expect(await getClientAuthState(instance).getCurrent()).toEqual({token: 'token'})
+    })
+
+    it('gives clients no credential when logged out', async () => {
+      instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+      expect(await getClientAuthState(instance).getCurrent()).toBeUndefined()
+    })
+
+    it('gives clients cookies in cookie mode', async () => {
+      instance = createSanityInstance({
+        projectId: 'p',
+        dataset: 'd',
+        studio: {
+          authenticated: true,
+          auth: {token: {subscribe: (observer) => (observer.next(null), {unsubscribe() {}})}},
+        },
+      })
+      getAuthState(instance)
+
+      expect(await getClientAuthState(instance).getCurrent()).toEqual({withCredentials: true})
+    })
+
+    it('does not emit when the current user loads, so clients keep their streams', () => {
+      let loadUser!: () => void
+      vi.mocked(subscribeToStateAndFetchCurrentUser).mockImplementation(({state}) => {
+        loadUser = () =>
+          state.set('setCurrentUser', {
+            authState: createLoggedInAuthState('token', {id: 'user'} as CurrentUser),
+          })
+        return NEVER.subscribe()
+      })
+      instance = createSanityInstance({projectId: 'p', dataset: 'd', auth: {token: 'token'}})
+      const emissions: unknown[] = []
+      const subscription = getClientAuthState(instance).observable.subscribe((credential) =>
+        emissions.push(credential),
+      )
+
+      loadUser()
+
+      expect(getCurrentUserState(instance).getCurrent()).toEqual({id: 'user'})
+      expect(emissions).toHaveLength(1)
+      subscription.unsubscribe()
     })
   })
 

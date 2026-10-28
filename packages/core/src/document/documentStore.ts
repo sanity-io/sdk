@@ -5,7 +5,6 @@ import {type ExprNode} from 'groq-js'
 import {
   catchError,
   concatMap,
-  defer,
   distinctUntilChanged,
   EMPTY,
   filter,
@@ -18,7 +17,6 @@ import {
   of,
   pairwise,
   race,
-  retry,
   startWith,
   Subject,
   switchMap,
@@ -26,12 +24,11 @@ import {
   throttle,
   throwError,
   timer,
-  withLatestFrom,
 } from 'rxjs'
 
-import {getCurrentUserState} from '../auth/authStore'
+import {getClientAuthState, getCurrentUserState} from '../auth/authStore'
 import {type ClientOptions, getClientState} from '../client/clientStore'
-import {retryRead} from '../client/retry'
+import {retryRead, retryWithCredential} from '../client/retry'
 import {
   type DocumentHandle,
   type DocumentResource,
@@ -448,6 +445,7 @@ const subscribeToAppliedAndSubmitNextTransaction = ({
 }: StoreContext<DocumentStoreState, BoundResourceKey>) => {
   const {events} = state.get()
   const clients$ = getClientState(instance, {apiVersion: API_VERSION, resource}).observable
+  const credential = getClientAuthState(instance)
 
   return state.observable
     .pipe(
@@ -466,44 +464,37 @@ const subscribeToAppliedAndSubmitNextTransaction = ({
       tap((next) => state.set('transitionAppliedTransactionsToOutgoing', next)),
       map((s) => s.outgoing),
       distinctUntilChanged(),
-      withLatestFrom(clients$),
-      concatMap(([outgoing, initialClient]) => {
+      concatMap((outgoing) => {
         if (!outgoing) return EMPTY
 
-        // the client that made the latest attempt. the client store rebuilds
-        // its clients when the token changes, so a different client means
-        // different credentials and a retry after a 401 can go right away
-        let attemptClient: SanityClient | undefined
+        // once the credential changes, a retry after a 401 can go right away
+        // instead of waiting out the backoff
+        return retryWithCredential(
+          clients$.pipe(
+            first(),
+            concatMap((client) => submitOutgoingTransaction(client, outgoing)),
+          ),
+          credential,
+          (error, retryCount, credentialChanged) => {
+            if (classifySubmissionError(error) !== 'retry') return throwError(() => error)
 
-        return defer(() => (attemptClient ? clients$.pipe(first()) : of(initialClient))).pipe(
-          concatMap((client) => {
-            attemptClient = client
-            return submitOutgoingTransaction(client, outgoing)
-          }),
-          retry({
-            delay: (error: unknown, retryCount) => {
-              if (classifySubmissionError(error) !== 'retry') return throwError(() => error)
-
-              // keep the transaction and its optimistic local state. the
-              // document stays out of sync (see `getDocumentSyncStatus`) and
-              // later edits queue behind this transaction until it lands
-              events.next({
-                type: 'submission-failed',
-                message: getErrorMessage(error),
-                error,
-                outgoing,
-                attempt: retryCount,
-              })
-              const backoff = Math.min(
-                SUBMISSION_RETRY_BASE_DELAY * 2 ** (retryCount - 1),
-                SUBMISSION_RETRY_MAX_DELAY,
-              )
-              return race(
-                timer(backoff),
-                clients$.pipe(first((client) => client !== attemptClient)),
-              )
-            },
-          }),
+            // keep the transaction and its optimistic local state. the
+            // document stays out of sync (see `getDocumentSyncStatus`) and
+            // later edits queue behind this transaction until it lands
+            events.next({
+              type: 'submission-failed',
+              message: getErrorMessage(error),
+              error,
+              outgoing,
+              attempt: retryCount,
+            })
+            const backoff = Math.min(
+              SUBMISSION_RETRY_BASE_DELAY * 2 ** (retryCount - 1),
+              SUBMISSION_RETRY_MAX_DELAY,
+            )
+            return race(timer(backoff), credentialChanged)
+          },
+        ).pipe(
           catchError((error: unknown) => {
             if (classifySubmissionError(error) === 'accepted') {
               // an earlier attempt was committed and only its response was
@@ -532,12 +523,9 @@ const subscribeToAppliedAndSubmitNextTransaction = ({
 const subscribeToSubscriptionsAndListenToDocuments = (
   context: StoreContext<DocumentStoreState, BoundResourceKey>,
 ) => {
-  const {state, instance, key} = context
+  const {state, instance} = context
   const {events} = state.get()
-  const clients$ = getClientState(instance, {
-    apiVersion: API_VERSION,
-    resource: key.resource,
-  }).observable
+  const credential = getClientAuthState(instance)
 
   return state.observable
     .pipe(
@@ -581,7 +569,7 @@ const subscribeToSubscriptionsAndListenToDocuments = (
           switchMap((e) => {
             if (!e.add) return EMPTY
             return listen(context, e.id).pipe(
-              retryRead(clients$, (error) =>
+              retryRead(credential, (error) =>
                 state.set('setDocumentError', (prev) => {
                   const documentState = prev.documentStates[e.id]
                   if (!documentState) return prev
@@ -627,7 +615,7 @@ const subscribeToClientAndFetchDatasetAcl = ({
   return clients$
     .pipe(
       switchMap((client) => client.observable.request<DatasetAcl>({url, tag: 'acl.get'})),
-      retryRead(clients$, (aclError) => state.set('setAclError', {aclError}), {
+      retryRead(getClientAuthState(instance), (aclError) => state.set('setAclError', {aclError}), {
         baseDelay: ACL_RETRY_BASE_DELAY,
         maxDelay: ACL_RETRY_MAX_DELAY,
       }),
