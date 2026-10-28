@@ -159,8 +159,9 @@ export function retryOnCredentialChange<T>(
  * retried the way the error inside it would be.
  *
  * `setError` receives a failure once, and again only when the kind of failure
- * changes. It receives `undefined` once the read recovers, or when it moves on
- * to a transient failure that isn't reported yet.
+ * changes. It receives `undefined` once the read recovers, when it moves on
+ * to a transient failure that isn't reported yet, or once `credential` changes,
+ * so a boundary that resets on the token doesn't catch it again.
  *
  * @internal
  */
@@ -176,17 +177,16 @@ export function retryRead<T>(
   return (source) =>
     defer(() => {
       let shown: ReturnType<typeof classify> | undefined
+      const clearError = () => {
+        if (!shown) return
+        shown = undefined
+        setError(undefined)
+      }
+      const recovering = source.pipe(tap(clearError))
 
-      const recovering = source.pipe(
-        tap(() => {
-          if (!shown) return
-          shown = undefined
-          setError(undefined)
-        }),
-      )
-
-      return retryWithCredential(recovering, credential, (error, retryCount, credentialChanged) => {
+      return retryWithCredential(recovering, credential, (error, retryCount, changed) => {
         const failure = classify(error)
+        const credentialChanged = changed.pipe(tap(clearError))
 
         if (failure === 'terminal') {
           setError(error)
