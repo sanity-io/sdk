@@ -6,34 +6,19 @@ title: Collaboration
 
 Collaboration features let your app take part in the same workflows people already have in Sanity Studio. Today that means comments.
 
-The SDK reads and writes the same comments the studio shows. A comment hangs off a field of a document, comments with the same `threadId` form a thread, and everything is live: a comment written in the studio appears in your app without a refetch, and the other way around.
+The SDK reads and writes the same comments the Studio shows. A comment belongs to a document, and optionally to one field of it. Comments with the same `threadId` form a thread, and everything is live: a comment written in the Studio appears in your app without a refetch, and the other way around.
 
-This API is in beta. The hooks and types are exported from `@sanity/sdk-react/collaboration`, and the framework-agnostic half from `@sanity/sdk/collaboration`. These APIs move to the package roots in the next major, once the deprecated add-on dataset ones are out of the way. `/collaboration` keeps re-exporting them in that major, marked `@deprecated`, and is removed in the major after.
+This API is in beta. The hooks and types are exported from `@sanity/sdk-react/collaboration`, and the framework-agnostic half from `@sanity/sdk/collaboration`. These APIs move to the package roots in the next major; the [Migration guide](./0-Migration-Guide.md) has the timeline.
 
-Still on the comment hooks exported from the `@sanity/sdk-react` root? Those are deprecated. They are named the same as the ones here, so the move is a change of import. The [Migration guide](./0-Migration-Guide.md) covers it.
+Still on the comment hooks exported from the `@sanity/sdk-react` root? Those are deprecated. The ones here have the same names, but moving over takes a little more than a new import: the [Migration guide](./0-Migration-Guide.md) lists what else changes.
 
 ## Setup
 
-Comments are stored per organization rather than per dataset, so reading or writing one needs to know which organization. Usually you do not have to say:
+Comments are stored per organization rather than per dataset. You don't configure which one: comments use the organization that owns the project you're reading.
 
-- In the Sanity Dashboard, the app is told which organization it was opened in, and comments follow that.
-- Outside it, comments fall back to the organization that owns the project you are reading.
+If the app also names an organization, the SDK checks it against the project's organization, and a mismatch is an error rather than a silent read from another organization. Inside the Sanity Dashboard, that's the organization the app was opened in. Outside it, that's `organizationId` on the config, if you set it.
 
-Set `organizationId` on the config when neither of those is right — a standalone app whose project belongs to one organization but whose comments belong to another:
-
-```tsx
-import {type SanityConfig} from '@sanity/sdk-react'
-
-const config: SanityConfig = {
-  projectId: 'abc123',
-  dataset: 'production',
-  organizationId: 'oQCq2WEnk',
-}
-```
-
-This is unrelated to `auth.oauth.organizationId`, which restricts what the OAuth flow issues tokens for. Setting one does not set the other.
-
-Naming an organization the project does not belong to is an error rather than a silent cross-organization read, and the comment call reporting it says so.
+`organizationId` is for standalone apps that read other organization-scoped data, such as organization user lists. Comments don't need it. It's unrelated to `auth.oauth.organizationId`, which restricts the tokens the OAuth flow issues.
 
 Writing also requires a logged-in user, since the server records the author.
 
@@ -82,7 +67,7 @@ function Threads({documentId}: {documentId: string}) {
 }
 ```
 
-Unlike the studio, the SDK returns every thread it finds. The studio hides threads whose field has left the schema or is hidden by a conditional, which it can do because it has the schema. Check `fieldPath` yourself if you want the same behavior.
+Unlike the Studio, the SDK returns every thread it finds. The Studio hides threads whose field has left the schema or is hidden by a conditional, which it can do because it has the schema. Check `fieldPath` yourself if you want the same behavior.
 
 Comments arrive over a live connection, and that connection can drop, usually because a token expired. A list that has already loaded is not thrown away when that happens: it stays on screen exactly as it last stood, and `error` is set to say that it has stopped following the server. Show whatever suits your app, from nothing at all to a banner, but know that the list under it is no longer live:
 
@@ -146,7 +131,17 @@ const {comments} = useCommentsQuery({
 })
 ```
 
-Writes show here before the server confirms them, the same as they do on a document's comments: the filter is matched against the written comment locally, so a new comment that answers it appears straight away. That holds for writes made through the resource the query is bound to: a query reaches across the organization, so it also gets comments written through another dataset, but those arrive once the server confirms them. Some filters cannot be answered that way, since they need more than the one comment to evaluate: one that dereferences with `->`, one that runs a `*[...]` of its own, and one that calls a context-dependent function such as `sanity::dataset()`, `releases::all()` or `now()`. Those still work and still stay up to date, but only once the server says so, and they cost a connection of their own rather than sharing the one every other list reads from. For a time window, pass the cutoff as a parameter, as in `_createdAt > $since`, rather than comparing with `now()`.
+Writes show here before the server confirms them, the same as they do on a document's comments: the filter is matched against the written comment locally, so a new comment that answers it appears straight away. That holds for writes made through the resource the query is bound to. A query reaches across the organization, so it also gets comments written through another dataset, but those arrive once the server confirms them.
+
+Some filters can't be matched locally, because they need more than the one comment to evaluate:
+
+- one that dereferences with `->`
+- one that runs a `*[...]` query of its own
+- one that calls a context-dependent function such as `sanity::dataset()`, `releases::all()` or `now()`
+
+Those still work and still stay up to date, but only once the server says so, and they cost a connection of their own rather than sharing the one every other list reads from.
+
+For a time window, pass the cutoff as a parameter, as in `_createdAt > $since`, rather than comparing with `now()`.
 
 ## Writing comments
 
@@ -185,37 +180,42 @@ Creating is the exception, and `replyToComment` counts as creating. A comment th
 import {type Comment, useCommentActions} from '@sanity/sdk-react/collaboration'
 
 function Retry({comment}: {comment: Comment}) {
-  const {createComment} = useCommentActions()
+  const {createComment, replyToComment} = useCommentActions()
   if (comment.state?.type !== 'createError') return null
 
-  return (
-    <button
-      onClick={() =>
-        createComment({
+  const retry = () =>
+    comment.parentCommentId
+      ? replyToComment({
+          commentId: comment.id,
+          parentCommentId: comment.parentCommentId,
+          message: comment.message,
+          context: comment.context,
+        })
+      : createComment({
           commentId: comment.id,
           threadId: comment.threadId,
-          documentId: comment.documentId,
+          documentId: comment.sourceDocumentId,
           documentType: comment.documentType,
           fieldPath: comment.fieldPath,
           message: comment.message,
+          context: comment.context,
         })
-      }
-    >
-      Retry
-    </button>
-  )
+
+  return <button onClick={retry}>Retry</button>
 }
 ```
+
+Pass `sourceDocumentId` rather than `documentId`, which is always the published id: a retry should land on the draft or version the comment was first written against. `context` is passed again so the retry keeps it.
 
 ### Comments on the whole document
 
 `fieldPath` accepts a string or a `Path` array. Leave it out, or pass `''` or `[]`, to comment on the document as a whole. The comment is written without a path and reads back with `fieldPath: ''`, so `useCommentThreads({...handle, fieldPath: ''})` lists only those threads. An `anchor` still needs a field, since it's a run of text inside one.
 
-The Studio only shows field comments, so it leaves document-level comments out of its comments inspector.
+The Studio's comments inspector lists field comments only, so document-level comments don't show there. They're still stored, and every SDK read returns them.
 
 ## Messages
 
-A `CommentMessage` is Portable Text, meaning `PortableTextBlock[]`, because that is what the studio stores. There is no composer helper, so plain text has to be wrapped:
+A `CommentMessage` is Portable Text, meaning `PortableTextBlock[]`, because that is what the Studio stores. There is no composer helper, so plain text has to be wrapped:
 
 ```tsx
 import {type CommentMessage} from '@sanity/sdk-react/collaboration'
@@ -233,7 +233,7 @@ function toMessage(text: string): CommentMessage {
 }
 ```
 
-Mentions appear in a message as inline objects of type `mention` carrying a `userId`. The SDK stores and returns them untouched, so a mention written in the studio survives a round trip, but there is no API for composing one yet.
+Mentions appear in a message as inline objects of type `mention` carrying a `userId`. The SDK stores and returns them untouched, so a mention written in the Studio survives a round trip, but there is no API for composing one yet.
 
 ## Inline comments
 
@@ -291,7 +291,6 @@ const anchor = {
 updateCommentAnchor({commentId, anchor})
 updateCommentAnchor({commentId, anchor: {...anchor, fieldValue: editorValue}})
 updateCommentAnchor({commentId, anchor: null}) // leaves a field-level comment
-updateCommentAnchor({commentId}) // legal, and does nothing
 ```
 
 ## Multiple resources and perspectives

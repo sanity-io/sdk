@@ -121,7 +121,7 @@ describe('observeOrganizationVerificationState', () => {
   it('should emit an error if project fetch returns null when dashboard orgId is present', () => {
     const comparisonError = {
       error:
-        'Project proj-1 belongs to Organization unknown, but the Dashboard has Organization org-dash selected',
+        'Project proj-1 belongs to Organization unknown, but the app is configured for Organization org-dash',
     }
 
     testScheduler.run(({hot, expectObservable}) => {

@@ -6,9 +6,9 @@ title: Migration guide
 
 Nothing here is breaking yet. These APIs still work as they always have, and will be removed in the next major.
 
-### The comment hooks on `@sanity/sdk-react`
+### The comment APIs on `@sanity/sdk` and `@sanity/sdk-react`
 
-`useComments`, `useCommentThreads`, and the `useCommentActions` exported from the package root read and write comments in a per-dataset add-on dataset. Comments are moving to an organization-level store reached through the Comments API, which is where the Studio is heading too.
+`useComments`, `useCommentThreads`, and the `useCommentActions` exported from the `@sanity/sdk-react` root read and write comments in a per-dataset add-on dataset. Comments are moving to an organization-level store reached through the Comments API, which is where the Studio is heading too.
 
 The replacement ships alongside them, under a subpath, with the same names:
 
@@ -16,7 +16,16 @@ The replacement ships alongside them, under a subpath, with the same names:
 import {useCommentActions, useComments, useCommentThreads} from '@sanity/sdk-react/collaboration'
 ```
 
-The subpath exists only so both sets can ship at once. In the next major these become the root exports, and `/collaboration` keeps re-exporting them marked `@deprecated` until the major after, so an import written today keeps working through that release.
+The framework-agnostic exports on the `@sanity/sdk` root (`getCommentsState`, `getCommentThreadsState`, `resolveComments`, `resolveCommentThreads`, the write actions such as `createComment`, and the comment types) move the same way, to `@sanity/sdk/collaboration`, under the same names.
+
+The names are the same, but a few things change besides the import:
+
+- `createComment` takes `anchor` instead of `selection` to attach a comment to a run of text. Code that passes `selection` stops compiling.
+- Reads take a `scope`, which defaults to `'perspective'`: while a release is in view you get that release's comments, not draft and published pooled together.
+- Read results gain an `error` field, set when a list that has already loaded stops following the server.
+- Comments use the organization that owns the project you're reading, and an organization named by the Dashboard or by `organizationId` on the config has to match it.
+
+The subpath exists only so both sets can ship at once. In the next major these become the root exports, and `/collaboration` keeps re-exporting them marked `@deprecated` until the major after, when it's removed. An import written today keeps working through that release.
 
 Do not switch until the Studio serving your project reads the Comments API and your existing comments have been migrated into the organization store, or your app and your Studio will be looking at different sets of comments. Upgrading the SDK itself is safe at any time.
 

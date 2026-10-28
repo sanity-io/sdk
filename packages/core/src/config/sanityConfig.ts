@@ -137,8 +137,8 @@ export interface SanityConfig extends DatasetHandle, PerspectiveHandle {
    *
    * Only needed outside the Sanity Dashboard, which tells the app which
    * organization it was opened in; that always wins over this. Set it when
-   * running standalone and something organization-scoped — comments, an
-   * organization user list — needs to know. Left unset, features that can fall
+   * running standalone and something organization-scoped, such as an
+   * organization user list, needs to know. Left unset, features that can fall
    * back to the organization owning the project do so.
    *
    * Unrelated to `auth.oauth.organizationId`, which restricts the tokens the
