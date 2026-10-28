@@ -72,8 +72,9 @@ function classify(error: unknown): 'session' | 'access' | 'transient' | 'termina
  * - a CORS error or any other 4xx reaches `setError` and isn't retried
  *
  * `setError` receives a failure once, and again only when the kind of failure
- * changes. It receives `undefined` once the read recovers, or when it moves on
- * to a transient failure that isn't reported yet.
+ * changes. It receives `undefined` once the read recovers, when it moves on
+ * to a transient failure that isn't reported yet, or once `clients` emits a
+ * new client, so a boundary that resets on the token doesn't catch it again.
  *
  * @internal
  */
@@ -89,19 +90,20 @@ export function retryRead<T>(
   return (source) =>
     defer(() => {
       let shown: ReturnType<typeof classify> | undefined
+      const clearError = () => {
+        if (!shown) return
+        shown = undefined
+        setError(undefined)
+      }
 
       return source.pipe(
-        tap(() => {
-          if (!shown) return
-          shown = undefined
-          setError(undefined)
-        }),
+        tap(clearError),
         retry({
           resetOnSuccess: true,
           delay: (error: unknown, retryCount) => {
             const failure = classify(error)
             // skips the current client, which `clients` replays on subscribe
-            const nextClient = clients.pipe(skip(1), take(1))
+            const nextClient = clients.pipe(skip(1), take(1), tap(clearError))
 
             if (failure === 'terminal') {
               setError(error)

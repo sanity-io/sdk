@@ -393,6 +393,7 @@ describe('queryStore', () => {
     expect(fetch).toHaveBeenCalledTimes(1)
 
     clients.next({...clients.getValue()} as SanityClient)
+    expect(() => state.getCurrent()).not.toThrow()
     await vi.advanceTimersByTimeAsync(0)
 
     expect(fetch).toHaveBeenCalledTimes(2)
