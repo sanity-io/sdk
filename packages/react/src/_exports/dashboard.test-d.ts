@@ -11,6 +11,7 @@ import {
   type MessageBusEmitResult,
   type MessageBusError,
   type MessageBusErrorCode,
+  type MessageBusErrorDetails,
   type MessageBusHost,
   type MessageBusMessage,
   type MessageBusMeta,
@@ -54,6 +55,8 @@ test('dashboard entrypoint exposes the message bus public types', () => {
 
   // The error code can be named when switching on `MessageBusError.code`.
   expectTypeOf<MessageBusError['code']>().toEqualTypeOf<MessageBusErrorCode>()
+  // A refusal's fix and docs link can be typed when passing them to `reject`.
+  expectTypeOf<MessageBusErrorDetails['fix']>().toEqualTypeOf<string | undefined>()
 
   // Event handlers and operation options can be typed explicitly.
   expectTypeOf<MessageBusMessage<{n: number}, string>['payload']>().toEqualTypeOf<{n: number}>()
