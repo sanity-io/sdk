@@ -18,41 +18,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # shared setup: install deps and warm Playwright browser cache for downstream jobs
-  setup:
-    runs-on: ubuntu-latest
-    env:
-      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
-      TURBO_TEAM: ${{ vars.TURBO_TEAM }}
-    steps:
-      - name: 📥 Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-
-      - name: 🔧 Setup Environment
-        uses: ./.github/actions/setup
-        with:
-          node-version: 22
-
-      # see if the Playwright version we're using is already cached -- skip download if so
-      - name: 🔍 Determine Playwright version
-        id: pw-version
-        run: |
-          version="$(pnpm exec playwright --version)"
-          echo "version=${version#Version }" >> "$GITHUB_OUTPUT"
-
-      - name: 💾 Cache Playwright browsers
-        id: cache-playwright-browsers
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
-        with:
-          path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-${{ steps.pw-version.outputs.version }}-playwright-browsers
-
-      - name: Install Playwright browsers
-        if: steps.cache-playwright-browsers.outputs.cache-hit != 'true'
-        run: pnpm exec playwright install --with-deps
-
   playwright-tests:
-    needs: setup
     timeout-minutes: 30
     runs-on: ubuntu-latest
 
@@ -92,26 +58,13 @@ jobs:
         with:
           node-version: 22
 
-      - name: 🔍 Determine Playwright version
-        id: pw-version
-        run: |
-          version="$(pnpm exec playwright --version)"
-          echo "version=${version#Version }" >> "$GITHUB_OUTPUT"
-
-      - name: 💾 Restore cached Playwright browsers
-        id: cache-playwright-browsers
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+      - name: 🎭 Setup Playwright
+        id: playwright
+        uses: ./.github/actions/setup-playwright
+        background: true
         with:
-          path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-${{ steps.pw-version.outputs.version }}-playwright-browsers
-
-      - name: Install Playwright browsers
-        if: steps.cache-playwright-browsers.outputs.cache-hit != 'true'
-        run: pnpm exec playwright install --with-deps
-
-      - name: Install WebKit Dependencies
-        if: matrix.browser == 'webkit'
-        run: pnpm exec playwright install-deps webkit
+          app: '@sanity/kitchensink-react'
+          browser: ${{ matrix.browser }}
 
       # Kitchensink must be built per browser because Vite bakes browser-specific
       # dataset names (SANITY_APP_E2E_DATASET_0/1) into the bundle at compile time.
@@ -121,6 +74,9 @@ jobs:
           cd apps/kitchensink-react && pnpm run preview --port 3333 &
           timeout 60 bash -c 'until curl -f -s http://localhost:3333 > /dev/null; do echo "Waiting for server..."; sleep 2; done'
           echo "Server is ready!"
+
+      - name: ⏳ Wait for Playwright
+        wait: playwright
 
       - name: 🧪 Run E2E tests
         run: pnpm test:e2e -- --project ${{ matrix.browser }}

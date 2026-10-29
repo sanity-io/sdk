@@ -38,6 +38,13 @@ jobs:
         with:
           node-version: 22
 
+      - id: playwright
+        uses: ./.github/actions/setup-playwright
+        background: true
+        with:
+          app: '@sanity/auto-updates-react'
+          browser: chromium
+
       # The Version PR's own version isn't uploaded until it merges, so test the latest snapshot of the same code.
       - name: Use the latest next snapshot
         if: github.event_name == 'pull_request'
@@ -60,7 +67,7 @@ jobs:
           SANITY_AUTH_TOKEN: ${{ secrets.SDK_E2E_STAGING_DEPLOY_TOKEN }}
         run: pnpm exec sanity deploy --yes
 
-      - run: pnpm exec playwright install --with-deps chromium
+      - wait: playwright
 
       - run: pnpm test:e2e:auto-updates -- --project chromium
 
