@@ -9,6 +9,7 @@ import {
 import {initTelemetry} from '@sanity/sdk/_internal'
 import {useContext, useEffect, useMemo, useState} from 'react'
 
+import {getDashboardRootContext} from '../dashboard/module'
 import {ResourceContext} from './DefaultResourceContext'
 import {PerspectiveContext} from './PerspectiveContext'
 import {ProjectContext} from './ProjectContext'
@@ -43,8 +44,9 @@ export interface ResourceProviderProps extends SanityConfig {
 /**
  * Provides Sanity configuration to child components through React Context.
  *
- * The instance it creates lives as long as the page and is never disposed, because React also runs
- * effect cleanups when `<Activity>` hides a tree, and a hidden app must come back with a live instance.
+ * The instance it creates lives until the host disposes the root it renders in, or as long as the
+ * page outside a dashboard root. It is not disposed on unmount, because React also runs effect
+ * cleanups when `<Activity>` hides a tree, and a hidden app must come back with a live instance.
  *
  * @internal
  *
@@ -68,10 +70,16 @@ export function ResourceProvider({
   const parentResource = useContext(ResourceContext)
   const parentInstance = useContext(SanityInstanceContext)
   const parentProjectId = useContext(ProjectContext)
+  const root = useContext(getDashboardRootContext())
 
   const {projectId, dataset, perspective} = config
 
-  const [instance] = useState<SanityInstance>(() => parentInstance ?? createSanityInstance(config))
+  const [instance] = useState<SanityInstance>(() => {
+    if (parentInstance) return parentInstance
+    const created = createSanityInstance(config)
+    root?.signal.addEventListener('abort', () => created.dispose(), {once: true})
+    return created
+  })
 
   const configResource: DatasetResource | undefined = useMemo(() => {
     // Historically, we allowed asymmetric merging: If you provided JUST a dataset, we'd merge it with the parent projectId.

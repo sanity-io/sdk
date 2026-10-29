@@ -119,6 +119,15 @@ describe('dashboard message bus store', () => {
     expect(busB.disconnected).toBe(true)
   })
 
+  it('refuses to connect a disposed instance, since nothing would close the connection', () => {
+    const instance = createSanityInstance(config)
+    getDashboardMessageBus(instance)
+    instance.dispose()
+
+    expect(() => getDashboardMessageBus(instance)).toThrow(/disposed/)
+    expect(bus.connect).toHaveBeenCalledOnce()
+  })
+
   it('returns undefined without caching when no bus is installed, then connects later', () => {
     const instance = createSanityInstance(config)
     bus.installed.mockReturnValue(false)
