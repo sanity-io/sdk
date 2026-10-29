@@ -516,6 +516,25 @@ describe('event topics', () => {
     },
   )
 
+  it("carries a refusal's fix and docs link to the sender", async () => {
+    const messageBus = createMessageBus()
+    messageBus.subscribe('test.echo', (message) =>
+      message.reject('Worker "sync" is not running.', 'NO_RESPONDER', {
+        fix: 'Start the worker before posting to it.',
+        docsUrl: 'https://www.sanity.io/docs/dashboard-beta/dash1003',
+      }),
+    )
+
+    const error = await messageBus.emit('test.echo', {n: 1}).catch((caught) => caught)
+    expect(error).toBeInstanceOf(MessageBusError)
+    expect(error).toMatchObject({
+      code: 'NO_RESPONDER',
+      message: 'Worker "sync" is not running.',
+      fix: 'Start the worker before posting to it.',
+      docsUrl: 'https://www.sanity.io/docs/dashboard-beta/dash1003',
+    })
+  })
+
   it('warns and ignores a reply or reject after a reject', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
     const messageBus = createMessageBus()
@@ -563,6 +582,41 @@ describe('state topic rejections', () => {
 
     client.emit('test.suspending', 'ready')
     await expect(app.query('test.suspending')).resolves.toBe('ready')
+  })
+
+  it("carries a state topic refusal's fix and docs link to pending and later queries", async () => {
+    const host = createMessageBus()
+    registerStateTopics(host, {'test.suspending': undefined})
+    const {app, client} = connect(host, {appId: 'favorites'})
+    const refusal = {
+      code: 'REFUSED',
+      message: 'The application is not on screen.',
+      fix: 'Bring the application to the foreground first.',
+      docsUrl: 'https://www.sanity.io/docs/dashboard-beta/dash1004',
+    }
+
+    const pending = app.query('test.suspending', {timeout: null})
+    client.reject('test.suspending', refusal.message, {fix: refusal.fix, docsUrl: refusal.docsUrl})
+
+    await expect(pending).rejects.toMatchObject(refusal)
+    await expect(app.query('test.suspending', {timeout: null})).rejects.toMatchObject(refusal)
+  })
+
+  it('carries no fix or docs link from an earlier refusal to a later one without them', async () => {
+    const host = createMessageBus()
+    registerStateTopics(host, {'test.suspending': undefined})
+    const {app, client} = connect(host, {appId: 'favorites'})
+    client.reject('test.suspending', 'The application is not on screen.', {
+      fix: 'Bring the application to the foreground first.',
+      docsUrl: 'https://www.sanity.io/docs/dashboard-beta/dash1004',
+    })
+    client.emit('test.suspending', 'ready')
+    client.reject('test.suspending', 'hidden')
+
+    const error = await app.query('test.suspending').catch((caught) => caught)
+    expect(error).toMatchObject({code: 'REFUSED', message: 'hidden'})
+    expect(error.fix).toBeUndefined()
+    expect(error.docsUrl).toBeUndefined()
   })
 
   it('rejects a query for a topic the connection already holds once rejected', async () => {

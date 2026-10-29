@@ -11,6 +11,7 @@ import {
   tap,
 } from 'rxjs'
 
+import {getClientAuthState} from '../auth/authStore'
 import {getClientState} from '../client/clientStore'
 import {observeLiveEvents} from '../client/liveEvents'
 import {retryRead} from '../client/retry'
@@ -96,6 +97,6 @@ export function observeReleases(
         map((response) => response.result),
       )
     }),
-    retryRead(client$, onError),
+    retryRead(getClientAuthState(instance), onError),
   )
 }

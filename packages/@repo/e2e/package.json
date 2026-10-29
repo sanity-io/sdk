@@ -39,7 +39,7 @@
   },
   "dependencies": {
     "@sanity/client": "catalog:",
-    "dotenv": "^18.0.8",
+    "dotenv": "^18.0.9",
     "lodash-es": "catalog:",
     "ora": "^7.0.1"
   },

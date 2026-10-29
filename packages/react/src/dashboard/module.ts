@@ -1,9 +1,27 @@
 import * as React from 'react'
 
 const MODULE_SLOT_KEY = Symbol.for('sanity.os.module')
+const ROOT_SLOT_KEY = Symbol.for('sanity.os.root')
 
-type ModuleContext = React.Context<string | undefined>
-type ModuleSlot = WeakMap<typeof React.createContext, ModuleContext>
+/** The root a CLI-generated wrapper rendered the app into. */
+interface DashboardRoot {
+  /** Aborts when the host disposes the root, never when it hides it. */
+  signal: AbortSignal
+}
+
+type ContextSlot<T> = WeakMap<typeof React.createContext, React.Context<T | undefined>>
+
+function getSlotContext<T>(slotKey: symbol): React.Context<T | undefined> {
+  const globals = globalThis as Record<symbol, ContextSlot<T> | undefined>
+  const slot = (globals[slotKey] ??= new WeakMap())
+  const key = React.createContext
+  let context = slot.get(key)
+  if (!context) {
+    context = React.createContext<T | undefined>(undefined)
+    slot.set(key, context)
+  }
+  return context
+}
 
 /**
  * Returns the React context that carries the current federation module id.
@@ -26,14 +44,19 @@ type ModuleSlot = WeakMap<typeof React.createContext, ModuleContext>
  * wraps `App` in the context's `Provider`. Nothing in this repo exports it.
  * @internal
  */
-export function getDashboardModuleContext(): ModuleContext {
-  const globals = globalThis as {[MODULE_SLOT_KEY]?: ModuleSlot}
-  const slot = (globals[MODULE_SLOT_KEY] ??= new WeakMap())
-  const key = React.createContext
-  let context = slot.get(key)
-  if (!context) {
-    context = React.createContext<string | undefined>(undefined)
-    slot.set(key, context)
-  }
-  return context
+export function getDashboardModuleContext(): React.Context<string | undefined> {
+  return getSlotContext<string>(MODULE_SLOT_KEY)
+}
+
+/**
+ * Returns the React context that carries the {@link DashboardRoot} the app renders in.
+ *
+ * @remarks
+ * Shared with the CLI-generated wrapper the same way as
+ * {@link getDashboardModuleContext}, under `Symbol.for('sanity.os.root')`. It is a
+ * separate context because older SDKs read the module context as a plain string.
+ * @internal
+ */
+export function getDashboardRootContext(): React.Context<DashboardRoot | undefined> {
+  return getSlotContext<DashboardRoot>(ROOT_SLOT_KEY)
 }

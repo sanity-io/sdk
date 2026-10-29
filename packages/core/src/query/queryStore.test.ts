@@ -8,18 +8,10 @@ import {
   ServerError,
   type SyncTag,
 } from '@sanity/client'
-import {
-  BehaviorSubject,
-  delay,
-  filter,
-  firstValueFrom,
-  Observable,
-  of,
-  Subject,
-  throwError,
-} from 'rxjs'
+import {delay, filter, firstValueFrom, Observable, of, Subject, throwError} from 'rxjs'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
+import {setAuthToken} from '../auth/authStore'
 import {getClientState} from '../client/clientStore'
 import {LIVE_EVENTS_RETRY_DELAY} from '../client/liveEvents'
 import {isCanvasResource} from '../config/sanityConfig'
@@ -67,7 +59,6 @@ describe('queryStore', () => {
   let liveEvents: Subject<LiveEvent>
   let fetch: SanityClient['observable']['fetch']
   let listen: SanityClient['observable']['listen']
-  let clients: BehaviorSubject<SanityClient>
   // Mock data for testing
   const mockData = {
     movies: [
@@ -94,13 +85,12 @@ describe('queryStore', () => {
 
     const config = vi.fn().mockReturnValue({token: 'token'}) as SanityClient['config']
 
-    clients = new BehaviorSubject({
-      config,
-      live: {events},
-      observable: {fetch, listen},
-    } as SanityClient)
     vi.mocked(getClientState).mockReturnValue({
-      observable: clients.asObservable(),
+      observable: of({
+        config,
+        live: {events},
+        observable: {fetch, listen},
+      } as SanityClient),
     } as StateSource<SanityClient>)
   })
 
@@ -392,7 +382,7 @@ describe('queryStore', () => {
     await vi.advanceTimersByTimeAsync(QUERY_STATE_CLEAR_DELAY - 1)
     expect(fetch).toHaveBeenCalledTimes(1)
 
-    clients.next({...clients.getValue()} as SanityClient)
+    setAuthToken(instance, 'renewed-token')
     await vi.advanceTimersByTimeAsync(0)
 
     expect(fetch).toHaveBeenCalledTimes(2)

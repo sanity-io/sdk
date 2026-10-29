@@ -4,9 +4,10 @@ import {
   type ReleaseDocument,
   type SanityClient,
 } from '@sanity/client'
-import {BehaviorSubject, of, Subject, throwError} from 'rxjs'
+import {of, Subject, throwError} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
+import {setAuthToken} from '../auth/authStore'
 import {getClientState} from '../client/clientStore'
 import {observeLiveEvents} from '../client/liveEvents'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
@@ -133,12 +134,7 @@ describe('observeReleases', () => {
       headers: {},
       body: {error: 'Unauthorized', message: 'Session not found'},
     })
-    const clients = new BehaviorSubject({
-      observable: {fetch: () => throwError(() => unauthorized)},
-    } as unknown as SanityClient)
-    vi.mocked(getClientState).mockReturnValue({
-      observable: clients.asObservable(),
-    } as StateSource<SanityClient>)
+    vi.mocked(fetch).mockReturnValueOnce(throwError(() => unauthorized))
     const onError = vi.fn()
     const emissions: (ReleaseDocument[] | undefined)[] = []
 
@@ -147,7 +143,7 @@ describe('observeReleases', () => {
     )
     expect(onError).toHaveBeenLastCalledWith(unauthorized)
 
-    clients.next({observable: {fetch}} as unknown as SanityClient)
+    setAuthToken(instance, 'renewed-token')
 
     expect(emissions).toEqual([[release]])
     expect(onError).toHaveBeenLastCalledWith(undefined)

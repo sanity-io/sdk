@@ -3,7 +3,7 @@ import {BehaviorSubject, map, of, Subject} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {AuthStateType} from '../auth/authStateType'
-import {type AuthState} from '../auth/authStore'
+import {type AuthState, setAuthToken} from '../auth/authStore'
 import {type DocumentResource} from '../config/sanityConfig'
 import {bindActionByResource} from '../store/createActionBinder'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
@@ -964,6 +964,18 @@ describe('listener recovery', () => {
     listeners.clear()
 
     client$.next(client)
+
+    expect(listeners.size).toBe(1)
+  })
+
+  it('starts listening again when the credential changes after a listener error', () => {
+    getCommentThreadsState(instance, HANDLE).subscribe()
+
+    sharedListener().error(new Error('connection failed'))
+    listeners.clear()
+
+    // An OAuth refresh keeps the client, so the credential is all that changes.
+    setAuthToken(instance, 'renewed-token')
 
     expect(listeners.size).toBe(1)
   })

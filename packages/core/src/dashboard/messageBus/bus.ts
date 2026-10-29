@@ -46,6 +46,19 @@ export type MessageBusErrorCode =
   | 'REFUSED'
 
 /**
+ * How to resolve a refusal, when the host knows: the Dashboard sends these with its coded
+ * errors.
+ * @public
+ * @category Message Bus
+ */
+export interface MessageBusErrorDetails {
+  /** What to do about the refusal. */
+  fix?: string
+  /** A page that explains the refusal. */
+  docsUrl?: string
+}
+
+/**
  * An error raised by the message bus protocol.
  * @public
  * @category Message Bus
@@ -53,12 +66,22 @@ export type MessageBusErrorCode =
 export class MessageBusError extends Error {
   /** The machine-readable protocol error code. */
   readonly code: MessageBusErrorCode
+  /** What to do about the refusal, when the host sent it. */
+  readonly fix?: string
+  /** A page that explains the refusal, when the host sent it. */
+  readonly docsUrl?: string
 
   /** Creates a message bus protocol error. */
-  constructor(code: MessageBusErrorCode, message?: string, options?: {cause?: unknown}) {
+  constructor(
+    code: MessageBusErrorCode,
+    message?: string,
+    options?: {cause?: unknown} & MessageBusErrorDetails,
+  ) {
     super(message ?? code, options)
     this.name = 'MessageBusError'
     this.code = code
+    this.fix = options?.fix
+    this.docsUrl = options?.docsUrl
   }
 }
 
@@ -99,9 +122,15 @@ export interface MessageBusMessage<T, R = never, K extends PropertyKey = TopicNa
    * {@link MessageBusError} whose `code` is `code`, `'REFUSED'` by default. A host that
    * passes the message on refuses with `'NO_RESPONDER'` when nothing can answer it, and with
    * `'HANDLER_THREW'` when what it passed the message to threw. Ignored, with a warning, once
-   * the reply has already settled.
+   * the reply has already settled. `details` reach the sender as the error's `fix` and
+   * `docsUrl`, when the sender's copy of the SDK knows them; an older one gets the code and
+   * message only.
    */
-  reject(message?: string, code?: 'HANDLER_THREW' | 'NO_RESPONDER' | 'REFUSED'): void
+  reject(
+    message?: string,
+    code?: 'HANDLER_THREW' | 'NO_RESPONDER' | 'REFUSED',
+    details?: MessageBusErrorDetails,
+  ): void
   /** Aborts when the sender stops waiting for a reply. */
   readonly signal: AbortSignal
 }
@@ -245,8 +274,10 @@ export interface MessageBusClient {
    * it: `query` consults it before awaiting, and {@link MessageBus.subscribe} and the topic's
    * {@link MessageBusStateSource} stay silent (they never error) until a value is written.
    * Ignored once the connection has closed, the same as {@link MessageBusClient.emit}.
+   * `details` reach the rejected queries as the error's `fix` and `docsUrl`, when the
+   * application's copy of the SDK knows them; an older one gets the message only.
    */
-  reject<K extends StateTopic>(type: K, message?: string): void
+  reject<K extends StateTopic>(type: K, message?: string, details?: MessageBusErrorDetails): void
 }
 
 /**
@@ -306,6 +337,10 @@ interface ConnectionRecord {
   readonly rejections: Map<string, string | undefined>
   // Fires the rejected topic name so pending queries on that topic can reject at once.
   readonly rejected$: Subject<string>
+  // A rejection's fix and docs link, beside `rejections` because copies of protocol 1 read its
+  // values as the message. Created by the copy that first writes one, as the record may come
+  // from a copy that predates it.
+  rejectionDetails?: Map<string, MessageBusErrorDetails>
   readonly abort: AbortController
 }
 
@@ -434,14 +469,14 @@ function createEventMessage(
       }
       settleReply(pendingReply, {ok: true, value})
     },
-    reject: (reason, code = 'REFUSED') => {
+    reject: (reason, code = 'REFUSED', details) => {
       if (pendingReply.settled) {
         console.warn(
           `[sanity-sdk:message-bus] reject ignored for "${type}": no waiting caller or already replied`,
         )
         return
       }
-      settleReply(pendingReply, {ok: false, error: new MessageBusError(code, reason)})
+      settleReply(pendingReply, {ok: false, error: new MessageBusError(code, reason, details)})
     },
     get signal() {
       return pendingReply.responderSignal
@@ -577,6 +612,7 @@ function emitState(
 ): void {
   // A written value clears any rejection so later queries resolve normally.
   connection.rejections.delete(type)
+  connection.rejectionDetails?.delete(type)
   const subject = resolveStateSubject(registry, connection, type)
   if (!Object.is(subject.getValue(), value)) subject.next(value)
 }
@@ -589,7 +625,12 @@ function query(
   resetSignal: AbortSignal,
   connection: ConnectionRecord,
 ): Promise<unknown> {
-  const rejection = () => new MessageBusError('REFUSED', connection.rejections.get(type))
+  const rejection = () =>
+    new MessageBusError(
+      'REFUSED',
+      connection.rejections.get(type),
+      connection.rejectionDetails?.get(type),
+    )
   // A rejection outranks any earlier value: it is cleared only when the host writes a new one.
   if (connection.rejections.has(type)) return Promise.reject(rejection())
   const current = source.getCurrent()
@@ -898,7 +939,7 @@ function migrateEventMessage(
     payload: payload(message.payload),
     meta: message.meta,
     reply: (value) => message.reply(reply(value)),
-    reject: (reason, code) => message.reject(reason, code),
+    reject: (reason, code, details) => message.reject(reason, code, details),
     get signal() {
       return message.signal
     },
@@ -1013,9 +1054,11 @@ function createClient(
       }
       emitState(registry, record, type, compatibility.toInstalledEmission(type, value))
     },
-    reject: (type: string, message?: string) => {
+    reject: (type: string, message?: string, details?: MessageBusErrorDetails) => {
       if (record.abort.signal.aborted) return
       record.rejections.set(type, message)
+      if (details) (record.rejectionDetails ??= new Map()).set(type, details)
+      else record.rejectionDetails?.delete(type)
       record.rejected$.next(type)
     },
   } as MessageBusClient
@@ -1241,6 +1284,7 @@ function reset(registry: MessageBusRegistry): void {
     for (const subject of connection.stateSubjects.values()) subject.complete()
     connection.stateSubjects.clear()
     connection.rejections.clear()
+    connection.rejectionDetails?.clear()
   }
   for (const subject of registry.eventSubjects.values()) subject.complete()
 

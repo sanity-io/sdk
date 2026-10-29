@@ -1,8 +1,8 @@
 import {createClient, type SanityClient} from '@sanity/client'
-import {Subject} from 'rxjs'
+import {BehaviorSubject, Subject} from 'rxjs'
 import {beforeEach, describe, expect, it, onTestFinished, vi} from 'vitest'
 
-import {getAuthMethodState, getTokenState} from '../auth/authStore'
+import {getAuthMethodState, getClientAuthState, getTokenState} from '../auth/authStore'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {getClient, getClientState} from './clientStore'
 
@@ -174,6 +174,16 @@ describe('clientStore', () => {
         }),
       )
     })
+
+    it('uses the new token before the client store hears of the change', () => {
+      const tokenState = getTokenState(instance)
+      getClient(instance, {apiVersion: '2024-11-12'})
+
+      // the auth store has the new token, but has not notified the client store yet
+      vi.mocked(tokenState.getCurrent).mockReturnValue('new-token')
+
+      expect(getClient(instance, {apiVersion: '2024-11-12'}).config().token).toBe('new-token')
+    })
   })
 
   describe('getClientState', () => {
@@ -315,6 +325,81 @@ describe('clientStore', () => {
 
       expect(client1).toBe(client2)
       expect(vi.mocked(createClient)).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  describe('in an OAuth app', () => {
+    let auth$: BehaviorSubject<Promise<{token: string} | undefined>>
+    let oauthInstance: SanityInstance
+
+    beforeEach(() => {
+      auth$ = new BehaviorSubject(
+        Promise.resolve<{token: string} | undefined>({token: 'initial-token'}),
+      )
+      vi.mocked(getClientAuthState).mockReturnValue({
+        getCurrent: () => auth$.value,
+        subscribe: vi.fn(),
+        observable: auth$,
+      })
+      oauthInstance = createSanityInstance({
+        projectId: 'test-project',
+        dataset: 'test-dataset',
+        auth: {oauth: {clientId: 'client', redirectUri: 'https://app.example.com/callback'}},
+      })
+      onTestFinished(() => oauthInstance.dispose())
+    })
+
+    it('gives clients the credential stream instead of the token', () => {
+      getClient(oauthInstance, {apiVersion: '2024-11-12'})
+
+      const [config] = vi.mocked(createClient).mock.calls[0]
+      expect(config.auth).toBe(auth$)
+      expect(config).not.toHaveProperty('token')
+    })
+
+    it('keeps the same client when the token changes', () => {
+      const state = getClientState(oauthInstance, {apiVersion: '2024-11-12'})
+      const nextSpy = vi.fn()
+      const subscription = state.observable.subscribe(nextSpy)
+
+      const token$ = getTokenState(oauthInstance).observable as Subject<string>
+      token$.next('new-token')
+
+      expect(nextSpy).toHaveBeenCalledTimes(1)
+      expect(vi.mocked(createClient)).toHaveBeenCalledTimes(1)
+      subscription.unsubscribe()
+    })
+
+    it('drops withCredentials, which the client rejects alongside the credential stream', () => {
+      getClient(oauthInstance, {apiVersion: '2024-11-12', withCredentials: true})
+
+      const [config] = vi.mocked(createClient).mock.calls[0]
+      expect(config.auth).toBe(auth$)
+      expect(config).not.toHaveProperty('withCredentials')
+    })
+
+    it('keeps the token when Studio config is also present, since Studio auth wins', () => {
+      const studioInstance = createSanityInstance({
+        projectId: 'test-project',
+        dataset: 'test-dataset',
+        studio: {},
+        auth: {oauth: {clientId: 'client', redirectUri: 'https://app.example.com/callback'}},
+      })
+      onTestFinished(() => studioInstance.dispose())
+
+      getClient(studioInstance, {apiVersion: '2024-11-12'})
+
+      const [config] = vi.mocked(createClient).mock.calls[0]
+      expect(config).toMatchObject({token: 'initial-token'})
+      expect(config).not.toHaveProperty('auth')
+    })
+
+    it('uses a caller-supplied token instead of the credential stream', () => {
+      getClient(oauthInstance, {apiVersion: '2024-11-12', token: 'caller-token'})
+
+      const [config] = vi.mocked(createClient).mock.calls[0]
+      expect(config).toMatchObject({token: 'caller-token'})
+      expect(config).not.toHaveProperty('auth')
     })
   })
 })

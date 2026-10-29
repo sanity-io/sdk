@@ -2,6 +2,7 @@ import {type ListenEvent, type SanityClient} from '@sanity/client'
 import {BehaviorSubject, Subject} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
+import {setAuthToken} from '../../auth/authStore'
 import {type DocumentResource} from '../../config/sanityConfig'
 import {bindActionByResource} from '../../store/createActionBinder'
 import {createSanityInstance, type SanityInstance} from '../../store/createSanityInstance'
@@ -404,7 +405,7 @@ describe('resolveComments', () => {
 })
 
 describe('listener recovery', () => {
-  it('starts listening again when the addon client changes after a listener error', () => {
+  it('starts listening again when the credential changes after a listener error', () => {
     const source = getCommentsState(instance, HANDLE)
     source.subscribe()
 
@@ -412,7 +413,7 @@ describe('listener recovery', () => {
     failedListener.error(new Error('connection failed'))
     listeners.clear()
 
-    client$.next(client)
+    setAuthToken(instance, 'renewed-token')
 
     expect(listeners.size).toBe(1)
   })

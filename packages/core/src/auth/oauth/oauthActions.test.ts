@@ -1,10 +1,10 @@
 import {type ClientConfig, ClientError, type SanityClient} from '@sanity/client'
 import {NEVER} from 'rxjs'
-import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
+import {afterEach, beforeEach, describe, expect, it, onTestFinished, vi} from 'vitest'
 
 import {createSanityInstance, type SanityInstance} from '../../store/createSanityInstance'
 import {AuthStateType} from '../authStateType'
-import {getAuthState} from '../authStore'
+import {getAuthState, getClientAuthState} from '../authStore'
 import {subscribeToStateAndFetchCurrentUser} from '../subscribeToStateAndFetchCurrentUser'
 import {
   getOAuthTokensState,
@@ -16,8 +16,8 @@ import {
   revokeOAuthTokens,
   startOAuthAuthorization,
 } from './oauthActions'
-import {deserializeTokens, OAUTH_TOKENS_KEY} from './oauthAuth'
-import {serializeTokens} from './oauthClient'
+import {OAUTH_TOKENS_KEY} from './oauthAuth'
+import {deserializeTokens, serializeTokens} from './oauthClient'
 import {type OAuthTokens} from './types'
 
 const readStored = (storage: Storage) => deserializeTokens(storage.getItem(OAUTH_TOKENS_KEY))
@@ -473,6 +473,16 @@ describe('refreshOAuthTokens', () => {
     })
   })
 
+  it('rejects rather than throws when OAuth is not configured', async () => {
+    instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+
+    let refresh: Promise<unknown> | undefined
+    expect(() => {
+      refresh = refreshOAuthTokens(instance!)
+    }).not.toThrow()
+    await expect(refresh).rejects.toThrow(/OAuth is not configured/)
+  })
+
   it('omits the resource param when no organizationId is configured', async () => {
     const {request} = setup({
       oauthConfig: oauthConfigNoOrg,
@@ -581,6 +591,218 @@ describe('refreshOAuthTokens', () => {
 
     await expect(refreshOAuthTokens(instance!)).rejects.toBe(rateLimited)
     expect(readStored(storageArea)).toMatchObject({accessToken: 'stored-access'})
+  })
+
+  describe('across tabs', () => {
+    // Node 22 has no `navigator.locks`; tabs on one origin share one queue per lock name.
+    beforeEach(() => {
+      const queues = new Map<string, Promise<unknown>>()
+      vi.stubGlobal('navigator', {
+        locks: {
+          request: (name: string, ...args: unknown[]) => {
+            const callback = args.at(-1) as () => Promise<unknown>
+            const result = (queues.get(name) ?? Promise.resolve()).then(() => callback())
+            queues.set(
+              name,
+              result.catch(() => {}),
+            )
+            return result
+          },
+        },
+      })
+    })
+
+    const otherTabTokens = (expiresAt: Date): OAuthTokens => ({
+      ...seededTokens,
+      accessToken: 'other-tab-access',
+      refreshToken: 'other-tab-refresh',
+      expiresAt,
+    })
+
+    it('waits for another tab’s refresh and adopts the tokens it stored', async () => {
+      const {request, storageArea} = setup({
+        storageSeed: {[OAUTH_TOKENS_KEY]: serializeTokens(seededTokens)},
+      })
+      // another tab is mid-refresh, holding the lock
+      const otherTabDone = deferred<void>()
+      await new Promise<void>((granted) => {
+        void navigator.locks.request('sanity-oauth-refresh:client-abc', () => {
+          granted()
+          return otherTabDone.promise
+        })
+      })
+
+      const refresh = refreshOAuthTokens(instance!)
+      await new Promise((resolve) => setTimeout(resolve, 0))
+      expect(request).not.toHaveBeenCalled()
+
+      // it rotates the refresh token, then releases the lock
+      storageArea.setItem(
+        OAUTH_TOKENS_KEY,
+        serializeTokens(otherTabTokens(new Date(Date.now() + 3600_000))),
+      )
+      otherTabDone.resolve()
+
+      expect(await refresh).toMatchObject({accessToken: 'other-tab-access'})
+      expect(request).not.toHaveBeenCalled()
+      expect(getOAuthTokensState(instance!).getCurrent()).toMatchObject({
+        accessToken: 'other-tab-access',
+      })
+    })
+
+    it('adopts the tokens another tab stored when its storage event arrives while waiting', async () => {
+      vi.stubGlobal('window', new EventTarget())
+      const {request, storageArea} = setup({
+        storageSeed: {[OAUTH_TOKENS_KEY]: serializeTokens(seededTokens)},
+      })
+      const otherTabDone = deferred<void>()
+      await new Promise<void>((granted) => {
+        void navigator.locks.request('sanity-oauth-refresh:client-abc', () => {
+          granted()
+          return otherTabDone.promise
+        })
+      })
+
+      const refresh = refreshOAuthTokens(instance!)
+      await new Promise((resolve) => setTimeout(resolve, 0))
+      storageArea.setItem(
+        OAUTH_TOKENS_KEY,
+        serializeTokens(otherTabTokens(new Date(Date.now() + 3600_000))),
+      )
+      window.dispatchEvent(
+        Object.assign(new Event('storage'), {storageArea, key: OAUTH_TOKENS_KEY}),
+      )
+      otherTabDone.resolve()
+
+      expect(await refresh).toMatchObject({accessToken: 'other-tab-access'})
+      expect(request).not.toHaveBeenCalled()
+    })
+
+    it('keeps the current session while refreshing with tokens another tab stored that have expired', async () => {
+      const pending = deferred<typeof tokenResponse>()
+      onTestFinished(() => pending.resolve(tokenResponse))
+      const {storageArea} = setup({
+        request: vi.fn().mockReturnValue(pending.promise),
+        storageSeed: {[OAUTH_TOKENS_KEY]: serializeTokens(seededTokens)},
+      })
+      expect(getAuthState(instance!).getCurrent()).toMatchObject({token: 'stored-access'})
+      storageArea.setItem(
+        OAUTH_TOKENS_KEY,
+        serializeTokens(otherTabTokens(new Date('2020-01-01T00:00:00.000Z'))),
+      )
+
+      const refresh = refreshOAuthTokens(instance!)
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      // an expired token in the auth state would refetch the current user and fail with a 401
+      expect(getAuthState(instance!).getCurrent()).toMatchObject({token: 'stored-access'})
+      pending.resolve(tokenResponse)
+      await refresh
+      expect(getAuthState(instance!).getCurrent()).toMatchObject({token: 'new-access'})
+    })
+
+    it('refreshes with the refresh token another tab stored when that access token has expired too', async () => {
+      const {request, storageArea} = setup({
+        storageSeed: {[OAUTH_TOKENS_KEY]: serializeTokens(seededTokens)},
+      })
+      expect(getOAuthTokensState(instance!).getCurrent()).toMatchObject({
+        accessToken: 'stored-access',
+      })
+      storageArea.setItem(
+        OAUTH_TOKENS_KEY,
+        serializeTokens(otherTabTokens(new Date('2020-01-01T00:00:00.000Z'))),
+      )
+
+      await refreshOAuthTokens(instance!)
+
+      expect(parseBody(request.mock.calls[0][0].body).get('refresh_token')).toBe(
+        'other-tab-refresh',
+      )
+    })
+  })
+
+  describe('client credential', () => {
+    const isSettled = async (promise: Promise<unknown>) =>
+      Promise.race([promise.then(() => true), new Promise((r) => setTimeout(r, 0, false))])
+
+    it('holds client requests until the refresh lands, then hands them the new token', async () => {
+      const pending = deferred<typeof tokenResponse>()
+      onTestFinished(() => pending.resolve(tokenResponse))
+      setup({
+        request: vi.fn().mockReturnValue(pending.promise),
+        storageSeed: {[OAUTH_TOKENS_KEY]: serializeTokens(seededTokens)},
+      })
+      const credential = getClientAuthState(instance!)
+      expect(await credential.getCurrent()).toEqual({token: 'stored-access'})
+
+      const refresh = refreshOAuthTokens(instance!)
+      const duringRefresh = credential.getCurrent()
+      expect(await isSettled(duringRefresh)).toBe(false)
+
+      pending.resolve(tokenResponse)
+      await refresh
+      expect(await duringRefresh).toEqual({token: 'new-access'})
+      expect(await credential.getCurrent()).toEqual({token: 'new-access'})
+    })
+
+    it('hands client requests the current token after a transient failure', async () => {
+      setup({
+        request: vi.fn().mockRejectedValue(new Error('network down')),
+        storageSeed: {[OAUTH_TOKENS_KEY]: serializeTokens(seededTokens)},
+      })
+      const refresh = refreshOAuthTokens(instance!)
+      const duringRefresh = getClientAuthState(instance!).getCurrent()
+
+      await expect(refresh).rejects.toThrow('network down')
+      expect(await duringRefresh).toEqual({token: 'stored-access'})
+    })
+
+    it('follows later changes after a refresh, through to signing out', async () => {
+      setup({storageSeed: {[OAUTH_TOKENS_KEY]: serializeTokens(seededTokens)}})
+      await refreshOAuthTokens(instance!)
+
+      await revokeOAuthTokens(instance!)
+
+      expect(await getClientAuthState(instance!).getCurrent()).toBeUndefined()
+    })
+
+    it('sends client requests anonymously after a refresh logs the user out', async () => {
+      const invalidGrant = new ClientError({statusCode: 400, headers: {}, body: {}})
+      setup({
+        request: vi.fn().mockRejectedValue(invalidGrant),
+        storageSeed: {[OAUTH_TOKENS_KEY]: serializeTokens(seededTokens)},
+      })
+      const refresh = refreshOAuthTokens(instance!)
+      const duringRefresh = getClientAuthState(instance!).getCurrent()
+
+      await expect(refresh).rejects.toBe(invalidGrant)
+      expect(await duringRefresh).toBeUndefined()
+    })
+  })
+})
+
+describe('scheduled refresh', () => {
+  it('refreshes the access token a minute before it expires, with no app code', async () => {
+    vi.useFakeTimers({
+      toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'],
+    })
+    onTestFinished(() => {
+      vi.useRealTimers()
+    })
+    const expiresInAnHour = {
+      ...seededTokens,
+      expiresIn: 3600,
+      expiresAt: new Date(Date.now() + 3600_000),
+    }
+    const {request} = setup({storageSeed: {[OAUTH_TOKENS_KEY]: serializeTokens(expiresInAnHour)}})
+    expect(getAuthState(instance!).getCurrent()).toMatchObject({token: 'stored-access'})
+
+    await vi.advanceTimersByTimeAsync(3540_000 - 1)
+    expect(request).not.toHaveBeenCalled()
+    await vi.advanceTimersByTimeAsync(1)
+
+    expect(request).toHaveBeenCalledTimes(1)
+    expect(getAuthState(instance!).getCurrent()).toMatchObject({token: 'new-access'})
   })
 })
 

@@ -1,7 +1,8 @@
 import {type SanityClient} from '@sanity/client'
-import {BehaviorSubject, firstValueFrom, NEVER, of, throwError} from 'rxjs'
+import {firstValueFrom, NEVER, of, throwError} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
+import {setAuthToken} from '../../auth/authStore'
 import {getClient, getClientState} from '../../client/clientStore'
 import {createSanityInstance, type SanityInstance} from '../../store/createSanityInstance'
 import {type StateSource} from '../../store/createStateSourceAction'
@@ -78,25 +79,15 @@ describe('getAddonDatasetState', () => {
     await vi.waitFor(() => expect(getAddonDatasetState(instance, {}).getCurrent()).toBe(null))
   })
 
-  it('recovers when a new authenticated client arrives after a transient failure', async () => {
-    const firstClient = {
-      observable: {request: vi.fn(() => throwError(() => ({statusCode: 500})))},
-    } as unknown as SanityClient
-    const secondClient = {
-      observable: {request: vi.fn(() => of([{name: 'd-comments'}]))},
-    } as unknown as SanityClient
-    const clients = new BehaviorSubject(firstClient)
-
-    vi.mocked(getClientState).mockReturnValue({
-      observable: clients,
-      getCurrent: () => clients.getValue(),
-      subscribe: () => () => {},
-    } as unknown as StateSource<SanityClient>)
+  it('retries discovery when the credential changes after a transient failure', async () => {
+    observableRequest
+      .mockReturnValueOnce(throwError(() => ({statusCode: 500})))
+      .mockReturnValue(of([{name: 'd-comments'}]))
 
     const state = getAddonDatasetState(instance, {})
     expect(state.getCurrent()).toBe(undefined)
 
-    clients.next(secondClient)
+    setAuthToken(instance, 'renewed-token')
 
     await vi.waitFor(() => expect(state.getCurrent()).toBe('d-comments'))
   })

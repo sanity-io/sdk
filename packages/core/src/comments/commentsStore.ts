@@ -1,6 +1,7 @@
 import {DocumentId, getVersionId, isVersionId} from '@sanity/id-utils'
 import {
   catchError,
+  defer,
   distinctUntilChanged,
   EMPTY,
   filter as filterEvents,
@@ -20,7 +21,8 @@ import {
 } from 'rxjs'
 
 import {AuthStateType} from '../auth/authStateType'
-import {getAuthState, getCurrentUserState} from '../auth/authStore'
+import {getAuthState, getClientAuthState, getCurrentUserState} from '../auth/authStore'
+import {retryOnCredentialChange} from '../client/retry'
 import {type DocumentHandle, type DocumentResource} from '../config/sanityConfig'
 import {isReleasePerspective} from '../releases/utils/isReleasePerspective'
 import {bindActionByResource, type BoundResourceKey} from '../store/createActionBinder'
@@ -273,28 +275,30 @@ const watchSubscribedQueries = ({
             return ready$.pipe(
               switchMap(() => observeCommentsClientForResource(instance, key.resource)),
               switchMap((client) =>
-                observeComments({
-                  client,
-                  // Sharing the organization's listener means answering locally
-                  // which of its comments belong here. A filter the evaluator
-                  // cannot answer for keeps a listener of its own, where the
-                  // server has already answered it.
-                  events$: matcher
-                    ? getSharedCommentsListener(instance, key.resource)
-                    : getDedicatedCommentsListener(client, filter, params),
-                  filter,
-                  params,
-                  matches: matcher
-                    ? (comment) => matcher(comment, params, currentUser.getCurrent()?.id)
-                    : () => true,
-                }).pipe(
-                  tap((commentsEvent) => applyEvent(state, group$.key, commentsEvent)),
-                  // Keep following the client after one listener fails. A token
-                  // refresh or reconnect can then supply a new one.
-                  catchError((error: unknown) => {
-                    state.set('setCommentsError', setCommentsError(group$.key, error))
-                    return EMPTY
+                defer(() =>
+                  observeComments({
+                    client,
+                    // Sharing the organization's listener means answering locally
+                    // which of its comments belong here. A filter the evaluator
+                    // cannot answer for keeps a listener of its own, where the
+                    // server has already answered it.
+                    events$: matcher
+                      ? getSharedCommentsListener(instance, key.resource)
+                      : getDedicatedCommentsListener(client, filter, params),
+                    filter,
+                    params,
+                    matches: matcher
+                      ? (comment) => matcher(comment, params, currentUser.getCurrent()?.id)
+                      : () => true,
                   }),
+                ).pipe(
+                  tap((commentsEvent) => applyEvent(state, group$.key, commentsEvent)),
+                  // Keep following the client after one listener fails, and
+                  // listen again once the credential changes. A refreshed OAuth
+                  // token keeps the client, so a new client alone won't come.
+                  retryOnCredentialChange(getClientAuthState(instance), (error) =>
+                    state.set('setCommentsError', setCommentsError(group$.key, error)),
+                  ),
                 ),
               ),
               // Resolving the organization can fail too — an unreachable project
