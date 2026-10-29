@@ -1,8 +1,8 @@
 import {type SanityClient} from '@sanity/client'
 import {
   catchError,
+  defer,
   distinctUntilChanged,
-  EMPTY,
   filter,
   firstValueFrom,
   map,
@@ -12,7 +12,9 @@ import {
   take,
 } from 'rxjs'
 
+import {getClientAuthState} from '../auth/authStore'
 import {getClient, getClientState} from '../client/clientStore'
+import {retryOnCredentialChange} from '../client/retry'
 import {
   type DatasetResource,
   type DocumentResource,
@@ -82,11 +84,15 @@ function discover(
     projectId: resource.projectId,
   }).observable.pipe(
     switchMap((client) =>
-      requestAddonDataset(client, resource).pipe(
+      defer(() => requestAddonDataset(client, resource)).pipe(
         // A missing dataset and a dataset this user cannot see both mean there
-        // are no comments to read. Transient failures stay pending so a new
-        // authenticated client can retry discovery.
-        catchError((error: unknown) => (isMissingOrForbidden(error) ? of(undefined) : EMPTY)),
+        // are no comments to read. Other failures stay pending until the
+        // credential changes, then retry discovery.
+        catchError((error: unknown) => {
+          if (isMissingOrForbidden(error)) return of(undefined)
+          throw error
+        }),
+        retryOnCredentialChange(getClientAuthState(instance)),
       ),
     ),
   )
@@ -214,10 +220,8 @@ export const provisionAddonDataset: (
 /**
  * A client pointed at the addon dataset, or `null` while the project has none.
  *
- * Emits again whenever the dataset is discovered or provisioned, and whenever
- * the auth token changes. Long-lived readers must follow it rather than holding
- * a client, because the client store drops every cached client on a token
- * change.
+ * Emits again whenever the dataset is discovered or provisioned. Long-lived
+ * readers must follow it rather than holding a client.
  *
  * @internal
  */

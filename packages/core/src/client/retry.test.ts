@@ -1,23 +1,21 @@
-import {
-  ClientError,
-  ConnectionFailedError,
-  CorsOriginError,
-  type SanityClient,
-  ServerError,
-} from '@sanity/client'
+import {ClientError, ConnectionFailedError, CorsOriginError, ServerError} from '@sanity/client'
 import {BehaviorSubject, concat, defer, Observable, of, throwError} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {OUT_OF_SYNC_RETRY_COUNT, OUT_OF_SYNC_RETRY_MAX_DELAY} from '../document/documentConstants'
 import {DocumentInaccessibleError} from '../document/documentInaccessibleError'
-import {retryRead} from './retry'
+import {retryOnCredentialChange, retryRead} from './retry'
 
-const createClient = () => ({}) as SanityClient
 const clientError = (statusCode: number, body: object = {}) =>
   new ClientError({statusCode, headers: {}, body})
 
-function startRead(failures: unknown[]) {
-  const clients = new BehaviorSubject(createClient())
+const renew = (credentials: BehaviorSubject<unknown>) =>
+  credentials.next(Promise.resolve({token: 'renewed'}))
+
+function startRead(
+  failures: unknown[],
+  credentials = new BehaviorSubject<unknown>(Promise.resolve({token: 'initial'})),
+) {
   const setError = vi.fn()
   const values: string[] = []
   let attempts = 0
@@ -29,10 +27,10 @@ function startRead(failures: unknown[]) {
 
     return failure ? throwError(() => failure) : of('ok')
   })
-    .pipe(retryRead(clients, setError))
+    .pipe(retryRead({getCurrent: () => credentials.value, observable: credentials}, setError))
     .subscribe((value) => values.push(value))
 
-  return {clients, setError, values, attempts: () => attempts}
+  return {renewCredential: () => renew(credentials), setError, values, attempts: () => attempts}
 }
 
 describe('retryRead', () => {
@@ -60,14 +58,14 @@ describe('retryRead', () => {
     ['an expired session', clientError(401, {errorCode: 'SIO-401-AEX'})],
     ['a rejected listener', new ConnectionFailedError('rejected', {status: 401})],
     ['an unreadable document', new DocumentInaccessibleError('doc')],
-  ])('reports %s and retries it only once the client changes', async (_, error) => {
+  ])('reports %s and retries it only once the credential changes', async (_, error) => {
     const read = startRead([error])
     expect(read.setError).toHaveBeenCalledWith(error)
 
     await vi.advanceTimersByTimeAsync(OUT_OF_SYNC_RETRY_MAX_DELAY * 10)
     expect(read.attempts()).toBe(1)
 
-    read.clients.next(createClient())
+    read.renewCredential()
 
     expect(read.values).toEqual(['ok'])
     expect(read.setError).toHaveBeenLastCalledWith(undefined)
@@ -81,7 +79,7 @@ describe('retryRead', () => {
     const read = startRead([error])
     expect(read.setError).toHaveBeenCalledWith(error)
 
-    read.clients.next(createClient())
+    read.renewCredential()
     await vi.advanceTimersByTimeAsync(OUT_OF_SYNC_RETRY_MAX_DELAY * 10)
 
     expect(read.attempts()).toBe(1)
@@ -103,14 +101,14 @@ describe('retryRead', () => {
   })
 
   it.each(missingAccess)(
-    'retries %s only once the client changes after its retry budget',
+    'retries %s only once the credential changes after its retry budget',
     async (_, error) => {
       const read = startRead(Array.from({length: OUT_OF_SYNC_RETRY_COUNT + 1}, () => error))
 
       await vi.advanceTimersByTimeAsync(OUT_OF_SYNC_RETRY_MAX_DELAY * (OUT_OF_SYNC_RETRY_COUNT + 2))
       expect(read.attempts()).toBe(OUT_OF_SYNC_RETRY_COUNT + 1)
 
-      read.clients.next(createClient())
+      read.renewCredential()
 
       expect(read.values).toEqual(['ok'])
       expect(read.setError.mock.calls).toEqual([[error], [undefined]])
@@ -169,7 +167,7 @@ describe('retryRead', () => {
     expect(read.attempts()).toBe(OUT_OF_SYNC_RETRY_COUNT + 2)
   })
 
-  it('clears a session error once a new client hits a server error, then reports it after its retries', async () => {
+  it('clears a session error once the renewed credential hits a server error, then reports it after its retries', async () => {
     const sessionError = clientError(401)
     const serverError = new ServerError({statusCode: 503, headers: {}, body: {}})
     const read = startRead([
@@ -177,7 +175,7 @@ describe('retryRead', () => {
       ...Array.from({length: OUT_OF_SYNC_RETRY_COUNT + 1}, () => serverError),
     ])
 
-    read.clients.next(createClient())
+    read.renewCredential()
     await vi.advanceTimersByTimeAsync(OUT_OF_SYNC_RETRY_MAX_DELAY * (OUT_OF_SYNC_RETRY_COUNT + 2))
 
     expect(read.setError.mock.calls).toEqual([
@@ -189,11 +187,49 @@ describe('retryRead', () => {
     expect(read.values).toEqual(['ok'])
   })
 
-  it('retries a transient failure right away when the client changes', () => {
-    const read = startRead([new ServerError({statusCode: 503, headers: {}, body: {}})])
-
-    read.clients.next(createClient())
+  it('retries a 401 right away when the credential changed while the attempt was in flight', () => {
+    const credentials = new BehaviorSubject<unknown>(Promise.resolve({token: 'initial'}))
+    const read = startRead(
+      [
+        defer(() => {
+          renew(credentials)
+          return throwError(() => clientError(401))
+        }),
+      ],
+      credentials,
+    )
 
     expect(read.values).toEqual(['ok'])
   })
+
+  it('retries a transient failure right away when the credential changes', () => {
+    const read = startRead([new ServerError({statusCode: 503, headers: {}, body: {}})])
+
+    read.renewCredential()
+
+    expect(read.values).toEqual(['ok'])
+  })
+})
+
+it('retryOnCredentialChange reports each failure, then retries once the credential changes', () => {
+  const credentials = new BehaviorSubject<unknown>(Promise.resolve({token: 'initial'}))
+  const error = new Error('connection failed')
+  const onError = vi.fn()
+  const values: string[] = []
+  let attempts = 0
+
+  defer(() => (attempts++ === 0 ? throwError(() => error) : of('ok')))
+    .pipe(
+      retryOnCredentialChange(
+        {getCurrent: () => credentials.value, observable: credentials},
+        onError,
+      ),
+    )
+    .subscribe((value) => values.push(value))
+  expect(onError).toHaveBeenCalledWith(error)
+  expect(attempts).toBe(1)
+
+  renew(credentials)
+
+  expect(values).toEqual(['ok'])
 })

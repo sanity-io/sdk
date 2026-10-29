@@ -21,6 +21,7 @@ import {
   tap,
 } from 'rxjs'
 
+import {getClientAuthState} from '../auth/authStore'
 import {withProjectAccessMessage} from '../auth/projectAccessError'
 import {getClientState} from '../client/clientStore'
 import {observeLiveEvents} from '../client/liveEvents'
@@ -202,7 +203,7 @@ const listenForNewSubscribersAndFetch = ({state, instance}: StoreContext<QuerySt
               // complete the group's subscription, and since `groupBy` above never
               // removes its group subjects, re-adding the key would emit into a
               // subject with no subscribers — the key could never be fetched again.
-              retryRead(client$, (error) =>
+              retryRead(getClientAuthState(instance), (error) =>
                 state.set(
                   'setQueryError',
                   setQueryError(group$.key, withProjectAccessMessage(instance, error)),
