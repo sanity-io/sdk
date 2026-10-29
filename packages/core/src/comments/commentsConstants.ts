@@ -1,16 +1,11 @@
-import {type ListenOptions} from '@sanity/client'
-
-/** Data API version used for reading and writing comments in the addon dataset. */
-export const COMMENTS_API_VERSION = 'v2025-05-06'
-
-/** Projects API version used to discover and provision the addon dataset. */
-export const ADDON_DATASET_API_VERSION = 'v2025-02-19'
+import {type CollaborationCommentsListenOptions} from '@sanity/client'
 
 /**
- * The dataset profile the Studio tags its comments dataset with. Discovery
- * matches on it, so changing it stops the SDK and the Studio sharing comments.
+ * Data API version used for reading and writing comments. The collaboration
+ * API only serves `vX` while it's experimental; switch to a dated version once
+ * the API commits to one.
  */
-export const ADDON_DATASET_PROFILE = 'comments'
+export const COMMENTS_API_VERSION = 'vX'
 
 /**
  * How long a comment list outlives its last subscriber before being dropped.
@@ -21,60 +16,107 @@ export const ADDON_DATASET_PROFILE = 'comments'
 export const COMMENTS_STATE_CLEAR_DELAY = 5000
 
 /**
- * Kept identical to the Studio's own listener options
- * (`packages/sanity/src/core/comments/store/useCommentsStore.ts:29-35`), apart
- * from the request tag. `includeResult` is what lets a mutation event carry the
- * changed comment, which is what makes per-comment reconciliation possible
- * rather than refetching the list.
+ * `includeResult` is what lets a mutation event carry the changed comment, which
+ * is what makes per-comment reconciliation possible rather than refetching the
+ * list. `welcome` drives the initial snapshot and `reconnect` restarts it.
  */
-export const LISTEN_OPTIONS: ListenOptions = {
+export const LISTEN_OPTIONS: CollaborationCommentsListenOptions = {
   events: ['welcome', 'mutation', 'reconnect'],
   includeResult: true,
-  includeAllVersions: true,
   visibility: 'query',
   tag: 'comments.listen',
 }
 
-const QUERY_PROJECTION = `{
-  _createdAt,
-  _id,
-  _rev,
-  authorId,
-  contentSnapshot,
-  context,
-  lastEditedAt,
-  message,
-  parentCommentId,
-  reactions,
-  status,
-  target,
-  threadId
-}`
-
-const BASE_FILTERS = [`_type == "comment"`, `target.document._ref == $documentId`]
-const VERSION_FILTER = `target.documentVersionId == $documentVersionId`
-const NO_VERSION_FILTER = `!defined(target.documentVersionId)`
-
 /**
- * Which comments belong to a document, matching the Studio's filter.
+ * The comment store holds more than comments, so every query says so.
  *
- * A release's comments are kept apart from the default ones: asking for a
- * release returns only that release's comments, and asking without one returns
- * only comments with no version at all.
+ * On its own it is also the shared listener's whole filter: which comments
+ * belong in which list is decided per list, against the comment the listener
+ * carried.
+ *
+ * @internal
  */
-function buildCommentsFilter(documentVersionId?: string): string {
-  return [...BASE_FILTERS, documentVersionId ? VERSION_FILTER : NO_VERSION_FILTER].join(' && ')
-}
+export const TYPE_FILTER = '_type == "sanity.comment"'
 
-/** The snapshot query. Newest comment first, as the Studio orders it. */
-export function buildCommentsQuery(documentVersionId?: string): string {
-  return `*[${buildCommentsFilter(documentVersionId)}] ${QUERY_PROJECTION} | order(_createdAt desc)`
+/**
+ * Comments on a document, whichever version of it they were written against.
+ *
+ * `target.document._ref` is a global document reference built from the published
+ * id, so it is the one filter that spans a document's draft, published, release,
+ * and content variant forms.
+ */
+const TARGET_FILTER = 'target.document._ref == $targetRef'
+
+/** Comments written against one precise document id. */
+const SOURCE_FILTER = 'target.sourceDocumentId == $sourceDocumentId'
+
+/**
+ * Everything stored without a `versions.` prefix: a draft id and a published id
+ * both fail the prefix test, which is what pools them into one list.
+ *
+ * Content variants are stored as version documents too — `versions.{scopeId}`,
+ * where the scope is a hash rather than a release name — so this leaves their
+ * comments out along with a release's.
+ */
+const NO_VERSION_FILTER = '!string::startsWith(target.sourceDocumentId, "versions.")'
+
+/** A GROQ filter over comment documents, and the parameters it reads. */
+export interface CommentsQuery {
+  filter: string
+  params: Record<string, string>
 }
 
 /**
- * The listener query. Unprojected on purpose: mutation events carry the whole
- * comment, so there is nothing to trim.
+ * Which of a document's comments a query covers, once a caller's `scope`
+ * choice has been read against the perspective and document id in play.
+ *
+ * @internal
  */
-export function buildCommentsListenQuery(documentVersionId?: string): string {
-  return `*[${buildCommentsFilter(documentVersionId)}]`
+export type CommentsScope =
+  /** Only comments written against this exact id, version or otherwise. */
+  | {type: 'exact'; sourceDocumentId: string}
+  /** Draft and published pooled together, version documents left out. */
+  | {type: 'draft-and-published'}
+  /** Every comment on the document. */
+  | {type: 'any'}
+
+/**
+ * The filter for one document's comments.
+ *
+ * @internal
+ */
+export function buildDocumentCommentsQuery(targetRef: string, scope: CommentsScope): CommentsQuery {
+  if (scope.type === 'exact') {
+    return {
+      filter: [TYPE_FILTER, TARGET_FILTER, SOURCE_FILTER].join(' && '),
+      params: {targetRef, sourceDocumentId: scope.sourceDocumentId},
+    }
+  }
+
+  const filters = [TYPE_FILTER, TARGET_FILTER]
+  if (scope.type === 'draft-and-published') filters.push(NO_VERSION_FILTER)
+
+  return {filter: filters.join(' && '), params: {targetRef}}
+}
+
+/**
+ * A caller's own filter, still constrained to comments.
+ *
+ * @internal
+ */
+export function buildCommentsQueryFilter(filter: string): string {
+  return `${TYPE_FILTER} && (${filter})`
+}
+
+/** The snapshot query. Newest comment first. */
+export function buildSnapshotQuery(filter: string): string {
+  return `*[${filter}] | order(_createdAt desc)`
+}
+
+/**
+ * The listener query. Unprojected and unordered, as a listener filter must be:
+ * mutation events carry the whole comment anyway.
+ */
+export function buildListenQuery(filter: string): string {
+  return `*[${filter}]`
 }

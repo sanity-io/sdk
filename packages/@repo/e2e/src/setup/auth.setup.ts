@@ -3,50 +3,12 @@ import {fileURLToPath} from 'node:url'
 
 import {type BrowserContext, test as setup} from '@playwright/test'
 
+import {authenticateUser} from '../helpers/authenticateUser'
 import {getE2EEnv} from '../helpers/getE2EEnv'
 
 const __filename = fileURLToPath(import.meta.url)
 const AUTH_FILE = path.join(path.dirname(__filename), '..', '..', '.auth', 'user.json')
 const env = getE2EEnv()
-
-interface AuthConfig {
-  origin: string
-  expectedRedirectUrl: string
-}
-
-/**
- * Used to authenticate the user with the Sanity API
- * @param context - The browser context to use for authentication
- * @param config - Configuration for the authentication flow
- */
-const authenticateUser = async (context: BrowserContext, config: AuthConfig) => {
-  const response = await context.request.post('https://accounts.sanity.work/api/v1/login', {
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    data: {
-      username: env.SDK_E2E_USER_ID,
-      password: env.SDK_E2E_USER_PASSWORD,
-      reCaptchaToken: env.RECAPTCHA_E2E_STAGING_KEY,
-    },
-  })
-
-  if (!response.ok()) {
-    throw new Error(`Failed to authenticate: ${response.statusText()}`)
-  }
-
-  const page = await context.newPage()
-
-  const loginUrl = new URL('https://api.sanity.work/v1/auth/login/sanity')
-  loginUrl.searchParams.set('origin', config.origin)
-  loginUrl.searchParams.set('type', 'token')
-
-  await page.goto(loginUrl.toString())
-
-  // Wait for the redirect to complete AND network to be idle
-  await page.waitForURL(config.expectedRedirectUrl)
-  await page.close()
-}
 
 const setDashboardRedirectCookie = async (context: BrowserContext) => {
   const page = await context.newPage()
@@ -88,11 +50,6 @@ setup('setup authentication', async ({browser}) => {
   })
 
   try {
-    // Authenticate for standalone (webkit)
-    await authenticateUser(context, {
-      origin: 'http://localhost:3333',
-      expectedRedirectUrl: 'http://localhost:3333',
-    })
     // Authenticate for Dashboard (restore for every browser but webkit when we get secrets)
     await authenticateUser(context, {
       origin: 'https://www.sanity.work/api/dashboard/authenticate',

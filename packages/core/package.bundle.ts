@@ -6,11 +6,11 @@ export default defineConfig(() => {
     build: {
       lib: {
         entry: {
-          'index': './src/_exports/index.ts',
-          '_exports/_internal': './src/_exports/_internal.ts',
-          '_exports/agent': './src/_exports/agent.ts',
-          '_exports/comlink': './src/_exports/comlink.ts',
-          '_exports/dashboard': './src/_exports/dashboard.ts',
+          index: './src/_exports/index.ts',
+          _internal: './src/_exports/_internal.ts',
+          agent: './src/_exports/agent.ts',
+          comlink: './src/_exports/comlink.ts',
+          dashboard: './src/_exports/dashboard.ts',
         },
       },
     },

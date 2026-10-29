@@ -50,6 +50,48 @@ export function serializeTokens(tokens: OAuthTokens): string {
   })
 }
 
+/** The persisted JSON shape of {@link OAuthTokens}, `expiresAt` as an ISO string. */
+interface SerializedOAuthTokens extends Omit<OAuthTokens, 'expiresAt'> {
+  expiresAt: string
+}
+
+/**
+ * Parses persisted token JSON back into {@link OAuthTokens}. Returns `null`
+ * when the value is missing or malformed, including an `expiresAt` that does
+ * not parse to a valid date (an `Invalid Date` would otherwise read as never
+ * expiring, since `NaN <= now` is always `false`).
+ *
+ * @internal
+ */
+export function deserializeTokens(raw: string | null): OAuthTokens | null {
+  if (!raw) return null
+  try {
+    const parsed: unknown = JSON.parse(raw)
+    if (
+      typeof parsed !== 'object' ||
+      parsed === null ||
+      !('accessToken' in parsed) ||
+      typeof (parsed as SerializedOAuthTokens).accessToken !== 'string' ||
+      !('expiresAt' in parsed) ||
+      typeof (parsed as SerializedOAuthTokens).expiresAt !== 'string'
+    ) {
+      return null
+    }
+    const value = parsed as SerializedOAuthTokens
+    const expiresAt = new Date(value.expiresAt)
+    if (Number.isNaN(expiresAt.getTime())) return null
+    return {
+      accessToken: value.accessToken,
+      tokenType: 'bearer',
+      expiresIn: value.expiresIn,
+      expiresAt,
+      ...(value.refreshToken !== undefined && {refreshToken: value.refreshToken}),
+    }
+  } catch {
+    return null
+  }
+}
+
 /**
  * Reads the store options, throwing when the instance was not configured for
  * OAuth.

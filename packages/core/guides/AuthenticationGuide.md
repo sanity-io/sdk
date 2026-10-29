@@ -147,6 +147,10 @@ The primary interactive authentication flow involves redirecting the user to `sa
 
   - Listens to `getTokenState` changes (`listenToToken`). When the token updates, it clears the client cache (`clients: {}`), forcing regeneration of clients with the new token upon next request.
 
+  - In OAuth apps, clients get the auth store's credential stream (`getClientAuthState`) as the client's `auth` option instead of a token. They are created once and read the current token on each request. A refresh reconnects open listeners where they left off instead of starting them again, and cached results are not refetched. `client.config().token` is `undefined`.
+
+  - Reads that failed with a 401 retry once the credential changes (`retryRead`).
+
   - **Client Scope:**
     - `scope: 'global'` or missing `projectId` results in a client configured with `useProjectHostname: false`, targeting global APIs (e.g., `api.sanity.io`). Requires a global token.
 
@@ -168,3 +172,5 @@ The primary interactive authentication flow involves redirecting the user to `sa
     dashboard each tab/host has its own `sid` and therefore its own stamped
     token, and in standalone mode tabs share the refreshed token through
     localStorage storage events.
+
+  - OAuth access tokens refresh one minute before they expire (or at half their lifetime if shorter), retrying transient failures. Tabs on the same origin take turns through a Web Lock, and a tab that waited uses the tokens the other tab stored. Client requests made during a refresh wait for the new token.

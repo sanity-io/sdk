@@ -23,6 +23,7 @@ import {
 } from 'rxjs'
 import {exhaustMapWithTrailing} from 'rxjs-exhaustmap-with-trailing'
 
+import {getClientAuthState} from '../auth/authStore'
 import {withProjectAccessMessage} from '../auth/projectAccessError'
 import {getClientState} from '../client/clientStore'
 import {observeQueryChanges} from '../client/observeQueryChanges'
@@ -216,7 +217,7 @@ const listenForNewSubscribersAndFetch = ({
                       // A failed refresh must not terminate this query's subscription, so it
                       // retries under the shared read policy instead of erroring. Keep results
                       // only after this client and perspective fetched successfully.
-                      retryRead(client$, (error) => {
+                      retryRead(getClientAuthState(instance), (error) => {
                         if (error !== undefined && hasCurrentResult) return
                         state.set(
                           'setQueryError',
@@ -258,7 +259,10 @@ const listenForQueryChanges = ({
     getClientState(instance, {apiVersion: QUERY_STORE_API_VERSION, resource})
       .observable.pipe(
         switchMap((client) =>
-          observeQueryChanges(client, {tag: 'query.listen'}).pipe(
+          observeQueryChanges(client, {
+            tag: 'query.listen',
+            credential: getClientAuthState(instance),
+          }).pipe(
             tap(() =>
               state.set('invalidateQueries', (prev) => ({
                 ...prev,
@@ -267,7 +271,7 @@ const listenForQueryChanges = ({
               })),
             ),
             // The client reconnects transient failures. Keep observing client changes
-            // after a terminal error so refreshed credentials can open a new listener.
+            // after a terminal error so a rebuilt client can open a new listener.
             catchError((error: unknown) => {
               state.set('setError', {error})
               return EMPTY

@@ -1,4 +1,5 @@
 import {
+  type DocumentStatus,
   getProjectionState,
   isDatasetResource,
   isMediaLibraryResource,
@@ -38,8 +39,8 @@ export interface useDocumentProjectionOptions<
  * @category Documents
  */
 export interface useDocumentProjectionResults<TData> {
-  /** The projected data */
-  data: TData
+  /** The projected data, plus the document's `_status` */
+  data: TData & {_status?: DocumentStatus}
   /** True if the projection is currently being resolved */
   isPending: boolean
 }

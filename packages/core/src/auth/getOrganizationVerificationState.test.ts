@@ -16,6 +16,10 @@ import {observeOrganizationVerificationState} from './getOrganizationVerificatio
 vi.mock('../dashboard/messageBus/topicStore', () => ({
   getDashboardOrganizationId: vi.fn(),
 }))
+// No bus connection, so the organization comes from `getDashboardOrganizationId` above
+vi.mock('../dashboard/messageBus/store', () => ({
+  getDashboardMessageBus: vi.fn(),
+}))
 vi.mock('../project/project', () => ({
   project: {getState: vi.fn()},
 }))
@@ -117,7 +121,7 @@ describe('observeOrganizationVerificationState', () => {
   it('should emit an error if project fetch returns null when dashboard orgId is present', () => {
     const comparisonError = {
       error:
-        'Project proj-1 belongs to Organization unknown, but the Dashboard has Organization org-dash selected',
+        'Project proj-1 belongs to Organization unknown, but the app is configured for Organization org-dash',
     }
 
     testScheduler.run(({hot, expectObservable}) => {
@@ -193,5 +197,29 @@ describe('observeOrganizationVerificationState', () => {
     })
     expect(compareProjectOrganization).toHaveBeenCalledTimes(1)
     expect(compareProjectOrganization).toHaveBeenCalledWith('proj-1', 'org-proj', 'org-dash')
+  })
+
+  it('checks a standalone app against the organization it names', () => {
+    // No Dashboard to supply one, so `organizationId` on the config is what the
+    // project is measured against. Without this a standalone app gets no check.
+    const standalone = {
+      config: {projectId: 'proj-1', dataset: 'd', organizationId: 'org-configured'},
+    } as SanityInstance
+
+    testScheduler.run(({hot, expectObservable}) => {
+      const dashboardOrgId$ = hot('-a-', {a: undefined})
+      const projectOrgId$ = hot('--b', {b: {organizationId: 'org-proj'}})
+      const comparisonResult = {error: 'Mismatch detected'}
+
+      mockDashboardOrgId(dashboardOrgId$)
+      mockProjectOrgId(projectOrgId$)
+      mockComparisonResult(comparisonResult)
+
+      expectObservable(
+        observeOrganizationVerificationState(standalone, [standalone.config.projectId!]),
+      ).toBe('--r', {r: comparisonResult})
+    })
+
+    expect(compareProjectOrganization).toHaveBeenCalledWith('proj-1', 'org-proj', 'org-configured')
   })
 })

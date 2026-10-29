@@ -8,6 +8,7 @@ import {
 import {BehaviorSubject, of, Subject, Subscription, throwError} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
+import {setAuthToken} from '../auth/authStore'
 import {getClientState} from '../client/clientStore'
 import {QUERY_CHANGE_INTERVAL} from '../client/observeQueryChanges'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
@@ -260,10 +261,10 @@ describe('observeReleases', () => {
     const emissions = observe(vi.fn(), onFetchError)
     await settle()
     expect(onFetchError).toHaveBeenLastCalledWith(unauthorized)
-    clients.next({observable: {fetch, listen: () => new Subject()}} as unknown as SanityClient)
+    setAuthToken(instance, 'renewed-token')
     await settle()
     expect(emissions).toEqual([[release]])
-    expect(onFetchError).toHaveBeenCalledOnce()
+    expect(onFetchError).toHaveBeenLastCalledWith(undefined)
   })
 
   it('cancels a trailing fetch on unsubscribe', async () => {

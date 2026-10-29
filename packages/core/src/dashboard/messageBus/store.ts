@@ -22,17 +22,7 @@ const dashboardMessageBusStore = defineStore<DashboardMessageBusState>({
       state.get().connection?.disconnect(),
 })
 
-/**
- * Returns the message bus connection for this instance, connecting on first call.
- *
- * @remarks
- * One connection is made per {@link SanityInstance}, carrying that window's
- * module identity. The first caller wins; later callers get the cached
- * connection. When no host bus is installed it returns `undefined` without
- * caching, so a later call retries once a host installs the bus.
- * @internal
- */
-export const getDashboardMessageBus = bindActionByInstance(
+const connectDashboardMessageBus = bindActionByInstance(
   dashboardMessageBusStore,
   ({state}, moduleId?: string): MessageBusConnection | undefined => {
     const current = state.get().connection
@@ -44,6 +34,30 @@ export const getDashboardMessageBus = bindActionByInstance(
     return connection
   },
 )
+
+/**
+ * Returns the message bus connection for this instance, connecting on first call.
+ *
+ * @remarks
+ * One connection is made per {@link SanityInstance}, carrying that window's
+ * module identity. The first caller wins; later callers get the cached
+ * connection. When no host bus is installed it returns `undefined` without
+ * caching, so a later call retries once a host installs the bus. It throws for
+ * a disposed instance: its dispose has already run, so nothing would close a
+ * new connection.
+ * @internal
+ */
+export function getDashboardMessageBus(
+  instance: SanityInstance,
+  moduleId?: string,
+): MessageBusConnection | undefined {
+  if (instance.isDisposed()) {
+    throw new Error(
+      'Cannot connect to the Dashboard message bus: this Sanity instance was disposed when the Dashboard removed the app. Stop pending work, such as timers or awaited calls, when the app unmounts.',
+    )
+  }
+  return connectDashboardMessageBus(instance, moduleId)
+}
 
 /**
  * Returns the instance's message bus connection, or throws when no dashboard host has

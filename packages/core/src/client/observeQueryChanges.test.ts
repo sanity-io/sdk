@@ -8,7 +8,7 @@ import {
   MessageParseError,
   type SanityClient,
 } from '@sanity/client'
-import {concat, of, Subject, Subscription, throwError} from 'rxjs'
+import {BehaviorSubject, concat, of, Subject, Subscription, throwError} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {
@@ -22,6 +22,8 @@ describe('observeQueryChanges', () => {
   let listen: ReturnType<typeof vi.fn>
   let events: Subject<ListenEvent>
   let client: SanityClient
+  let token: BehaviorSubject<string>
+  let credential: {getCurrent: () => string; observable: BehaviorSubject<string>}
 
   beforeEach(() => {
     vi.useFakeTimers()
@@ -29,6 +31,8 @@ describe('observeQueryChanges', () => {
     events = new Subject<ListenEvent>()
     listen = vi.fn().mockReturnValue(events)
     client = {observable: {listen}} as unknown as SanityClient
+    token = new BehaviorSubject('token')
+    credential = {getCurrent: () => token.value, observable: token}
   })
 
   afterEach(() => {
@@ -44,7 +48,9 @@ describe('observeQueryChanges', () => {
     listen.mockReturnValueOnce(throwError(() => error))
     const next = vi.fn()
     const onError = vi.fn()
-    subscription.add(observeQueryChanges(client, {tag: 'test'}).subscribe({next, error: onError}))
+    subscription.add(
+      observeQueryChanges(client, {tag: 'test', credential}).subscribe({next, error: onError}),
+    )
     await vi.advanceTimersByTimeAsync(999)
     expect(listen).toHaveBeenCalledTimes(1)
     await vi.advanceTimersByTimeAsync(1)
@@ -57,7 +63,7 @@ describe('observeQueryChanges', () => {
 
   it('backs off repeated server errors and cancels the retry on unsubscribe', async () => {
     listen.mockReturnValue(throwError(() => new MessageError('server error', {})))
-    subscription.add(observeQueryChanges(client, {tag: 'test'}).subscribe())
+    subscription.add(observeQueryChanges(client, {tag: 'test', credential}).subscribe())
     for (const delay of [1000, 2000, 4000, 8000, 16000, 30000, 30000]) {
       const previousCalls = listen.mock.calls.length
       await vi.advanceTimersByTimeAsync(delay - 1)
@@ -80,7 +86,7 @@ describe('observeQueryChanges', () => {
           throwError(() => error),
         ),
       )
-      subscription.add(observeQueryChanges(client, {tag: 'test'}).subscribe())
+      subscription.add(observeQueryChanges(client, {tag: 'test', credential}).subscribe())
       for (const delay of [1000, 2000, 4000, 8000, 16000, 30000, 30000]) {
         const previousCalls = listen.mock.calls.length
         await vi.advanceTimersByTimeAsync(delay - 1)
@@ -93,7 +99,7 @@ describe('observeQueryChanges', () => {
 
   it('resets backoff after a stable connection, including an idle dataset', async () => {
     listen.mockReturnValueOnce(throwError(() => new MessageError('server error', {})))
-    subscription.add(observeQueryChanges(client, {tag: 'test'}).subscribe())
+    subscription.add(observeQueryChanges(client, {tag: 'test', credential}).subscribe())
     await vi.advanceTimersByTimeAsync(1000)
     events.next({type: 'welcome'} as ListenEvent)
     await vi.advanceTimersByTimeAsync(30000)
@@ -106,7 +112,7 @@ describe('observeQueryChanges', () => {
 
   it('does not count time disconnected as a stable connection', async () => {
     listen.mockReturnValueOnce(throwError(() => new MessageError('server error', {})))
-    subscription.add(observeQueryChanges(client, {tag: 'test'}).subscribe())
+    subscription.add(observeQueryChanges(client, {tag: 'test', credential}).subscribe())
     await vi.advanceTimersByTimeAsync(1000)
     events.next({type: 'welcome'} as ListenEvent)
     events.next({type: 'reconnect'} as ListenEvent)
@@ -122,32 +128,51 @@ describe('observeQueryChanges', () => {
     const error = new CorsOriginError({projectId: 'test'})
     listen.mockReturnValue(throwError(() => error))
     const onError = vi.fn()
-    subscription.add(observeQueryChanges(client, {tag: 'test'}).subscribe({error: onError}))
+    subscription.add(
+      observeQueryChanges(client, {tag: 'test', credential}).subscribe({error: onError}),
+    )
     await vi.advanceTimersByTimeAsync(60000)
     expect(listen).toHaveBeenCalledTimes(1)
     expect(onError).toHaveBeenCalledExactlyOnceWith(error)
   })
 
-  it.each([
-    new ConnectionFailedError('expired token', {status: 401}),
-    new ConnectionFailedError('forbidden', {status: 403}),
-    new DisconnectError('dataset removed'),
-  ])('ends invalidation after $name without failing readable query data', async (error) => {
-    listen.mockReturnValue(throwError(() => error))
+  it('ends invalidation after a DisconnectError without failing readable query data', async () => {
+    listen.mockReturnValue(throwError(() => new DisconnectError('dataset removed')))
     const onError = vi.fn()
     const complete = vi.fn()
     subscription.add(
-      observeQueryChanges(client, {tag: 'test'}).subscribe({error: onError, complete}),
+      observeQueryChanges(client, {tag: 'test', credential}).subscribe({error: onError, complete}),
     )
     await vi.advanceTimersByTimeAsync(60000)
+    token.next('renewed-token')
     expect(listen).toHaveBeenCalledTimes(1)
     expect(onError).not.toHaveBeenCalled()
     expect(complete).toHaveBeenCalledTimes(1)
   })
 
+  it.each([
+    new ConnectionFailedError('expired token', {status: 401}),
+    new ConnectionFailedError('forbidden', {status: 403}),
+  ])('reopens after $name only once the credential changes', async (error) => {
+    listen.mockReturnValueOnce(throwError(() => error))
+    const next = vi.fn()
+    const onError = vi.fn()
+    subscription.add(
+      observeQueryChanges(client, {tag: 'test', credential}).subscribe({next, error: onError}),
+    )
+    await vi.advanceTimersByTimeAsync(60000)
+    expect(listen).toHaveBeenCalledTimes(1)
+    expect(onError).not.toHaveBeenCalled()
+    token.next('renewed-token')
+    expect(listen).toHaveBeenCalledTimes(2)
+    events.next({type: 'welcome'} as ListenEvent)
+    await vi.advanceTimersByTimeAsync(QUERY_CHANGE_INTERVAL)
+    expect(next).toHaveBeenCalledTimes(1)
+  })
+
   it('cancels a pending indexing refresh on unsubscribe', async () => {
     const next = vi.fn()
-    subscription.add(observeQueryChanges(client, {tag: 'test'}).subscribe(next))
+    subscription.add(observeQueryChanges(client, {tag: 'test', credential}).subscribe(next))
     events.next({type: 'mutation', visibility: 'transaction'} as ListenEvent)
     subscription.unsubscribe()
     await vi.advanceTimersByTimeAsync(QUERY_INDEXING_DELAY + QUERY_CHANGE_INTERVAL)

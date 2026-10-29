@@ -1,17 +1,12 @@
-import {
-  ClientError,
-  ConnectionFailedError,
-  CorsOriginError,
-  type SanityClient,
-} from '@sanity/client'
+import {ClientError, ConnectionFailedError, CorsOriginError} from '@sanity/client'
 import {
   defer,
   EMPTY,
+  filter,
   type MonoTypeOperatorFunction,
   type Observable,
   race,
   retry,
-  skip,
   take,
   tap,
   timer,
@@ -24,6 +19,7 @@ import {
   OUT_OF_SYNC_RETRY_MAX_DELAY,
 } from '../document/documentConstants'
 import {DocumentInaccessibleError} from '../document/documentInaccessibleError'
+import {type StateSource} from '../store/createStateSourceAction'
 
 function getStatusCode(error: unknown): number | undefined {
   if (error instanceof ClientError) return error.statusCode
@@ -60,11 +56,68 @@ function classify(error: unknown): 'session' | 'access' | 'transient' | 'termina
   return isTransientError(error) ? 'transient' : 'terminal'
 }
 
+type CredentialSource = Pick<StateSource<unknown>, 'getCurrent' | 'observable'>
+
+/**
+ * Retries `source` after `delay` emits. `delay` also gets an observable that
+ * emits once `credential` differs from the one the failed attempt went out
+ * with, including a change made while the attempt was in flight.
+ *
+ * @internal
+ */
+export function retryWithCredential<T>(
+  source: Observable<T>,
+  credential: CredentialSource,
+  delay: (
+    error: unknown,
+    retryCount: number,
+    credentialChanged: Observable<unknown>,
+  ) => Observable<unknown>,
+): Observable<T> {
+  return defer(() => {
+    let attemptCredential: unknown
+
+    return defer(() => {
+      attemptCredential = credential.getCurrent()
+      return source
+    }).pipe(
+      retry({
+        resetOnSuccess: true,
+        delay: (error: unknown, retryCount) =>
+          delay(
+            error,
+            retryCount,
+            credential.observable.pipe(
+              filter((current) => current !== attemptCredential),
+              take(1),
+            ),
+          ),
+      }),
+    )
+  })
+}
+
+/**
+ * Hands each error to `onError`, then retries once `credential` changes.
+ *
+ * @internal
+ */
+export function retryOnCredentialChange<T>(
+  credential: CredentialSource,
+  onError: (error: unknown) => void = () => {},
+): MonoTypeOperatorFunction<T> {
+  return (source) =>
+    retryWithCredential(source, credential, (error, _, credentialChanged) => {
+      onError(error)
+      return credentialChanged
+    })
+}
+
 /**
  * Retries a failed read:
  *
- * - a 401 or a {@link DocumentInaccessibleError} retries once `clients` emits a
- *   new client, which happens when the token changes
+ * - a 401 or a {@link DocumentInaccessibleError} retries once `credential`
+ *   differs from the one the failed attempt went out with
  * - a 401 for a missing project membership or grant also retries after a
  *   backoff for the first {@link OUT_OF_SYNC_RETRY_COUNT} retries
  * - a network error, 408, 429 or 5xx retries after a backoff, and reaches
@@ -78,7 +131,7 @@ function classify(error: unknown): 'session' | 'access' | 'transient' | 'termina
  * @internal
  */
 export function retryRead<T>(
-  clients: Observable<SanityClient>,
+  credential: CredentialSource,
   setError: (error: unknown) => void,
   {baseDelay, maxDelay, count = Infinity}: {baseDelay: number; maxDelay: number; count?: number} = {
     baseDelay: OUT_OF_SYNC_RETRY_BASE_DELAY,
@@ -90,41 +143,37 @@ export function retryRead<T>(
     defer(() => {
       let shown: ReturnType<typeof classify> | undefined
 
-      return source.pipe(
+      const recovering = source.pipe(
         tap(() => {
           if (!shown) return
           shown = undefined
           setError(undefined)
         }),
-        retry({
-          resetOnSuccess: true,
-          delay: (error: unknown, retryCount) => {
-            const failure = classify(error)
-            // skips the current client, which `clients` replays on subscribe
-            const nextClient = clients.pipe(skip(1), take(1))
-
-            if (failure === 'terminal') {
-              setError(error)
-              return EMPTY
-            }
-
-            const visible = failure !== 'transient' || retryCount > count ? failure : undefined
-
-            if (visible !== shown) {
-              shown = visible
-              setError(visible ? error : undefined)
-            }
-
-            if (
-              failure === 'session' ||
-              (failure === 'access' && retryCount > OUT_OF_SYNC_RETRY_COUNT)
-            ) {
-              return nextClient
-            }
-
-            return race(timer(Math.min(baseDelay * 2 ** (retryCount - 1), maxDelay)), nextClient)
-          },
-        }),
       )
+
+      return retryWithCredential(recovering, credential, (error, retryCount, credentialChanged) => {
+        const failure = classify(error)
+
+        if (failure === 'terminal') {
+          setError(error)
+          return EMPTY
+        }
+
+        const visible = failure !== 'transient' || retryCount > count ? failure : undefined
+
+        if (visible !== shown) {
+          shown = visible
+          setError(visible ? error : undefined)
+        }
+
+        if (
+          failure === 'session' ||
+          (failure === 'access' && retryCount > OUT_OF_SYNC_RETRY_COUNT)
+        ) {
+          return credentialChanged
+        }
+
+        return race(timer(Math.min(baseDelay * 2 ** (retryCount - 1), maxDelay)), credentialChanged)
+      })
     })
 }

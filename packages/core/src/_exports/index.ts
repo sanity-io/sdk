@@ -70,15 +70,14 @@ export {
   type SetCommentStatusOptions,
   updateComment,
   type UpdateCommentOptions,
-} from '../comments/commentActions'
+} from '../comments/legacy/commentActions'
+export {type CommentsOptions, type ResolveCommentsOptions} from '../comments/legacy/commentsOptions'
 export {
-  type CommentsOptions,
   getCommentsState,
   getCommentThreadsState,
   resolveComments,
-  type ResolveCommentsOptions,
   resolveCommentThreads,
-} from '../comments/commentsStore'
+} from '../comments/legacy/commentsStore'
 export {
   type Comment,
   type CommentLocalState,
@@ -88,7 +87,7 @@ export {
   type CommentTextSelection,
   type CommentTextSelectionItem,
   type CommentThread,
-} from '../comments/types'
+} from '../comments/legacy/types'
 export {type AuthConfig, type AuthProvider} from '../config/authConfig'
 export {
   createDatasetHandle,
@@ -251,7 +250,7 @@ export {
 } from '../project/project'
 export {getProjectionState} from '../projection/getProjectionState'
 export {resolveProjection} from '../projection/resolveProjection'
-export {type ProjectionValuePending} from '../projection/types'
+export {type DocumentStatus, type ProjectionValuePending} from '../projection/types'
 export {projects} from '../projects/projects'
 export {type ProjectsOptions} from '../projects/projects'
 export {getQueryState, type QueryOptions, resolveQuery} from '../query/queryStore'

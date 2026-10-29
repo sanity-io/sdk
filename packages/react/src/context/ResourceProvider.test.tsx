@@ -8,11 +8,14 @@ import {act, render, screen} from '@testing-library/react'
 import {Activity, StrictMode, use, useEffect} from 'react'
 import {describe, expect, it, vi} from 'vitest'
 
+import {contextLikeTheCliWrapper} from '../../test/dashboardSlots'
 import {ResourceContext} from './DefaultResourceContext'
 import {ProjectContext} from './ProjectContext'
 import {ResourceProvider} from './ResourceProvider'
 import {SanityInstanceContext} from './SanityInstanceContext'
 import {SanityInstanceProvider} from './SanityInstanceProvider'
+
+const RootContext = contextLikeTheCliWrapper<{signal: AbortSignal}>('sanity.os.root')
 
 const testConfig: SanityConfig = {
   projectId: 'test-project',
@@ -151,6 +154,74 @@ describe('ResourceProvider', () => {
     expect(instance?.isDisposed()).toBe(false)
   })
 
+  it('disposes the instance it created when the host disposes its root', async () => {
+    const {promise, resolve} = promiseWithResolvers<SanityInstance | null>()
+    const CaptureInstance = () => {
+      const instance = use(SanityInstanceContext)
+      useEffect(() => resolve(instance), [instance])
+      return null
+    }
+    const root = new AbortController()
+
+    render(
+      <RootContext.Provider value={{signal: root.signal}}>
+        <ResourceProvider {...testConfig} fallback={null}>
+          <CaptureInstance />
+        </ResourceProvider>
+      </RootContext.Provider>,
+    )
+
+    const instance = await promise
+    expect(instance?.isDisposed()).toBe(false)
+    root.abort()
+    expect(instance?.isDisposed()).toBe(true)
+  })
+
+  it('disposes the instance it created when the host disposes its root while hidden', async () => {
+    const {promise, resolve} = promiseWithResolvers<SanityInstance | null>()
+    const CaptureInstance = () => {
+      const instance = use(SanityInstanceContext)
+      useEffect(() => resolve(instance), [instance])
+      return null
+    }
+    const root = new AbortController()
+    const value = {signal: root.signal}
+    const inRoot = (mode: 'visible' | 'hidden') => (
+      <RootContext.Provider value={value}>
+        <Activity mode={mode}>
+          <ResourceProvider {...testConfig} fallback={null}>
+            <CaptureInstance />
+          </ResourceProvider>
+        </Activity>
+      </RootContext.Provider>
+    )
+
+    const {rerender} = render(inRoot('visible'))
+    const instance = await promise
+    rerender(inRoot('hidden'))
+    root.abort()
+
+    expect(instance?.isDisposed()).toBe(true)
+  })
+
+  it('leaves an instance its caller owns alive when the host disposes the root', async () => {
+    const owned = createSanityInstance(testConfig)
+    const root = new AbortController()
+
+    render(
+      <RootContext.Provider value={{signal: root.signal}}>
+        <SanityInstanceProvider instance={owned} fallback={null}>
+          <ResourceProvider {...testConfig} fallback={null}>
+            <div />
+          </ResourceProvider>
+        </SanityInstanceProvider>
+      </RootContext.Provider>,
+    )
+
+    root.abort()
+    expect(owned.isDisposed()).toBe(false)
+  })
+
   it('uses an instance its caller owns through SanityInstanceProvider', async () => {
     const owned = createSanityInstance(testConfig)
     const {promise, resolve} = promiseWithResolvers<SanityInstance | null>()
@@ -171,7 +242,7 @@ describe('ResourceProvider', () => {
     expect(await promise).toBe(owned)
   })
 
-  it('keeps the same live instance when an <Activity> hides and shows it', async () => {
+  it('keeps the same live instance when an <Activity> hides and shows its root', async () => {
     const seen: (SanityInstance | null)[] = []
     const CaptureInstance = () => {
       const instance = use(SanityInstanceContext)
@@ -180,17 +251,22 @@ describe('ResourceProvider', () => {
       }, [instance])
       return null
     }
-    const tree = (
-      <ResourceProvider {...testConfig} fallback={null}>
-        <CaptureInstance />
-      </ResourceProvider>
+    const root = {signal: new AbortController().signal}
+    const inRoot = (mode: 'visible' | 'hidden') => (
+      <RootContext.Provider value={root}>
+        <Activity mode={mode}>
+          <ResourceProvider {...testConfig} fallback={null}>
+            <CaptureInstance />
+          </ResourceProvider>
+        </Activity>
+      </RootContext.Provider>
     )
 
-    const {rerender} = render(<Activity mode="visible">{tree}</Activity>)
-    rerender(<Activity mode="hidden">{tree}</Activity>)
+    const {rerender} = render(inRoot('visible'))
+    rerender(inRoot('hidden'))
     // Longer than a tick, so a deferred dispose from the hide would have run.
     await act(() => new Promise((r) => setTimeout(r, 10)))
-    rerender(<Activity mode="visible">{tree}</Activity>)
+    rerender(inRoot('visible'))
 
     const [before] = seen
     const after = seen.at(-1)

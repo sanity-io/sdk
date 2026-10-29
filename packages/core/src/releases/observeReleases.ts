@@ -2,6 +2,7 @@ import {type ReleaseDocument} from '@sanity/client'
 import {catchError, defer, EMPTY, map, type Observable, startWith, switchMap, tap} from 'rxjs'
 import {exhaustMapWithTrailing} from 'rxjs-exhaustmap-with-trailing'
 
+import {getClientAuthState} from '../auth/authStore'
 import {getClientState} from '../client/clientStore'
 import {observeQueryChanges} from '../client/observeQueryChanges'
 import {retryRead} from '../client/retry'
@@ -43,6 +44,7 @@ export function observeReleases(
       return observeQueryChanges(client, {
         query: RELEASES_LISTEN_QUERY,
         tag: 'releases.listen',
+        credential: getClientAuthState(instance),
       }).pipe(
         // Completing the listener must allow an in-flight fetch to finish.
         catchError((error: unknown) => {
@@ -70,7 +72,7 @@ export function observeReleases(
             }),
             // A failed refresh must not end the listener, so it retries under the shared
             // read policy. Keep releases fetched with this client instead of an error.
-            retryRead(client$, (error) => {
+            retryRead(getClientAuthState(instance), (error) => {
               if (error !== undefined && hasCurrentResult) return
               onFetchError(error)
             }),

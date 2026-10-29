@@ -1,6 +1,6 @@
 {
   "name": "@sanity/sdk",
-  "version": "3.9.1",
+  "version": "3.11.0",
   "private": false,
   "description": "Sanity SDK",
   "keywords": [
@@ -46,6 +46,10 @@
       "source": "./src/_exports/agent.ts",
       "default": "./dist/_exports/agent.js"
     },
+    "./collaboration": {
+      "source": "./src/_exports/collaboration.ts",
+      "default": "./dist/_exports/collaboration.js"
+    },
     "./comlink": {
       "source": "./src/_exports/comlink.ts",
       "default": "./dist/_exports/comlink.js"
@@ -61,6 +65,7 @@
       "./package.json": "./package.json",
       "./_internal": "./dist/_exports/_internal.js",
       "./agent": "./dist/_exports/agent.js",
+      "./collaboration": "./dist/_exports/collaboration.js",
       "./comlink": "./dist/_exports/comlink.js",
       "./dashboard": "./dist/_exports/dashboard.js"
     },
@@ -98,7 +103,7 @@
     "reselect": "^5.3.0",
     "rxjs": "catalog:",
     "rxjs-exhaustmap-with-trailing": "^2.1.1",
-    "zustand": "^5.0.15"
+    "zustand": "^5.0.16"
   },
   "devDependencies": {
     "@repo/config-oxlint": "workspace:*",

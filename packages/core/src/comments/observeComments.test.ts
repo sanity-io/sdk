@@ -2,175 +2,231 @@ import {type ListenEvent, type SanityClient} from '@sanity/client'
 import {Subject} from 'rxjs'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
+import {commentTarget, storedComment, TARGET_REF} from './__fixtures__/comments'
+import {type CommentsMatch} from './commentsFilterMatcher'
 import {type CommentsEvent, observeComments} from './observeComments'
 import {type StoredComment} from './types'
 
-function comment(overrides: Partial<StoredComment> & Pick<StoredComment, '_id'>) {
-  return {
-    _type: 'comment',
-    _createdAt: '2026-01-01T00:00:00Z',
-    _rev: 'rev',
-    authorId: 'user-1',
-    message: null,
-    threadId: 'thread-1',
-    status: 'open',
-    reactions: null,
-    target: {documentType: 'author', document: {_ref: 'doc-1', _type: 'reference', _weak: true}},
-    ...overrides,
-  } satisfies StoredComment as StoredComment
-}
-
 const WELCOME = {type: 'welcome'} as ListenEvent<StoredComment>
 
-let listen$: Subject<ListenEvent<StoredComment>>
+const FILTER = '_type == "sanity.comment" && target.document._ref == $targetRef'
+const PARAMS = {targetRef: TARGET_REF}
+
+/** What the shared listener carries, which is every comment for the resource. */
+let events$: Subject<ListenEvent<StoredComment>>
 let fetches: Subject<StoredComment[]>[]
+let comments: {fetch: ReturnType<typeof vi.fn>}
 let client: SanityClient
 
 beforeEach(() => {
-  listen$ = new Subject()
+  events$ = new Subject()
   fetches = []
+  comments = {
+    fetch: vi.fn(() => {
+      const fetch$ = new Subject<StoredComment[]>()
+      fetches.push(fetch$)
+      return fetch$
+    }),
+  }
+
   client = {
-    observable: {
-      listen: vi.fn(() => listen$),
-      fetch: vi.fn(() => {
-        const fetch$ = new Subject<StoredComment[]>()
-        fetches.push(fetch$)
-        return fetch$
-      }),
-    },
+    observable: {collaboration: {comments}},
   } as unknown as SanityClient
 })
 
-function collect(documentVersionId?: string) {
+/** Stands in for the compiled filter: this list holds comments on `doc-1`. */
+function onTargetDocument(comment: StoredComment): boolean {
+  return comment.target.document._ref === TARGET_REF
+}
+
+function collect(matches: (comment: StoredComment) => CommentsMatch = onTargetDocument) {
   const events: CommentsEvent[] = []
-  const subscription = observeComments({client, documentId: 'doc-1', documentVersionId}).subscribe(
-    (event) => events.push(event),
-  )
+  const subscription = observeComments({
+    client,
+    events$,
+    filter: FILTER,
+    params: PARAMS,
+    matches,
+  }).subscribe((event) => events.push(event))
   return {events, subscription}
+}
+
+function mutation(
+  transition: 'appear' | 'update' | 'disappear',
+  documentId: string,
+  result?: StoredComment,
+): ListenEvent<StoredComment> {
+  return {
+    type: 'mutation',
+    transition,
+    documentId,
+    result,
+    transactionId: `tx-${documentId}`,
+  } as ListenEvent<StoredComment>
+}
+
+/** A comment on a document this list does not cover. */
+function elsewhere(id: string): StoredComment {
+  return storedComment({
+    _id: id,
+    target: commentTarget({
+      document: {_ref: 'dataset:p.d:other', _type: 'globalDocumentReference', _weak: true},
+    }),
+  })
 }
 
 describe('observeComments', () => {
   it('fetches a snapshot when the listener connects', () => {
     const {events} = collect()
 
-    listen$.next(WELCOME)
-    fetches[0].next([comment({_id: 'a'})])
+    events$.next(WELCOME)
+    fetches[0].next([storedComment({_id: 'a'})])
 
-    expect(events).toEqual([{type: 'snapshot', comments: [comment({_id: 'a'})]}])
-    expect(client.observable.fetch).toHaveBeenCalledWith(
-      expect.stringContaining('_type == "comment"'),
-      {documentId: 'doc-1'},
-      {tag: 'comments.list'},
-    )
-  })
-
-  it('passes the release id when reading a release', () => {
-    collect('summer')
-
-    expect(client.observable.listen).toHaveBeenCalledWith(
-      expect.stringContaining('target.documentVersionId == $documentVersionId'),
-      {documentId: 'doc-1', documentVersionId: 'summer'},
-      expect.objectContaining({tag: 'comments.listen'}),
-    )
+    expect(events).toEqual([{type: 'snapshot', comments: [storedComment({_id: 'a'})]}])
+    expect(comments.fetch).toHaveBeenCalledWith(`*[${FILTER}] | order(_createdAt desc)`, PARAMS, {
+      tag: 'comments.list',
+    })
   })
 
   it('maps appear, update, and disappear events', () => {
     const {events} = collect()
-    listen$.next(WELCOME)
+    events$.next(WELCOME)
     fetches[0].next([])
     fetches[0].complete()
 
-    const created = comment({_id: 'a'})
-    const edited = comment({_id: 'a', status: 'resolved'})
+    const created = storedComment({_id: 'a'})
+    const edited = storedComment({_id: 'a', status: 'resolved'})
 
-    listen$.next({
-      type: 'mutation',
-      transition: 'appear',
-      documentId: 'a',
-      result: created,
-      transactionId: 'tx-1',
-    } as ListenEvent<StoredComment>)
-    listen$.next({
-      type: 'mutation',
-      transition: 'update',
-      documentId: 'a',
-      result: edited,
-      transactionId: 'tx-2',
-    } as ListenEvent<StoredComment>)
-    listen$.next({
-      type: 'mutation',
-      transition: 'disappear',
-      documentId: 'a',
-    } as ListenEvent<StoredComment>)
+    events$.next(mutation('appear', 'a', created))
+    events$.next(mutation('update', 'a', edited))
+    events$.next(mutation('disappear', 'a'))
 
     expect(events.slice(1)).toEqual([
-      {type: 'appear', comment: created},
-      {type: 'update', comment: edited, transactionId: 'tx-2'},
+      {type: 'appear', comment: created, transactionId: 'tx-a'},
+      {type: 'update', comment: edited, transactionId: 'tx-a'},
       {type: 'disappear', commentId: 'a'},
     ])
   })
 
-  it('ignores a mutation that carries no document', () => {
+  it('ignores a comment that belongs to another list', () => {
     const {events} = collect()
-    listen$.next(WELCOME)
+    events$.next(WELCOME)
     fetches[0].next([])
 
-    listen$.next({
-      type: 'mutation',
-      transition: 'update',
-      documentId: 'a',
-      transactionId: 'tx-1',
-    } as ListenEvent<StoredComment>)
+    events$.next(mutation('appear', 'b', elsewhere('b')))
+    events$.next(mutation('update', 'b', elsewhere('b')))
 
     expect(events).toHaveLength(1)
   })
 
-  it('keeps a mutation that arrives while the snapshot is still loading', () => {
-    // The Studio loses this one: it awaits the fetch inside the event handler,
-    // so the older snapshot overwrites the newer comment.
+  it('reports a comment edited out of the filter as gone from this list', () => {
     const {events} = collect()
-    listen$.next(WELCOME)
+    events$.next(WELCOME)
+    fetches[0].next([storedComment({_id: 'a'})])
 
-    const created = comment({_id: 'late'})
-    listen$.next({
-      type: 'mutation',
-      transition: 'appear',
-      documentId: 'late',
-      result: created,
-      transactionId: 'tx-1',
-    } as ListenEvent<StoredComment>)
+    // Still a comment, just no longer one of ours.
+    events$.next(mutation('update', 'a', elsewhere('a')))
+
+    // Carrying its transaction, so that a stale one can be told apart.
+    expect(events.slice(1)).toEqual([
+      {type: 'leave', comment: elsewhere('a'), transactionId: 'tx-a'},
+    ])
+  })
+
+  it('keeps a held comment when local evaluation is unevaluable', () => {
+    const {events} = collect(() => undefined)
+    events$.next(WELCOME)
+    fetches[0].next([storedComment({_id: 'a'})])
+
+    const edited = storedComment({_id: 'a', status: 'resolved'})
+    events$.next(mutation('update', 'a', edited))
+
+    expect(events.slice(1)).toEqual([{type: 'update', comment: edited, transactionId: 'tx-a'}])
+  })
+
+  it('does not add an unheld comment when local evaluation is unevaluable', () => {
+    const {events} = collect(() => undefined)
+    events$.next(WELCOME)
+    fetches[0].next([])
+
+    events$.next(mutation('appear', 'a', storedComment({_id: 'a'})))
+
+    expect(events).toHaveLength(1)
+  })
+
+  it('reports a comment edited into the filter as newly arrived', () => {
+    const {events} = collect()
+    events$.next(WELCOME)
+    fetches[0].next([])
+
+    const arrived = storedComment({_id: 'a'})
+    events$.next(mutation('update', 'a', arrived))
+
+    expect(events.slice(1)).toEqual([{type: 'appear', comment: arrived, transactionId: 'tx-a'}])
+  })
+
+  it('ignores a mutation that carries no document', () => {
+    const {events} = collect()
+    events$.next(WELCOME)
+    fetches[0].next([])
+
+    events$.next(mutation('update', 'a'))
+
+    expect(events).toHaveLength(1)
+  })
+
+  it('reads a mutation that arrives while the snapshot is still loading', () => {
+    // The Studio loses this one: it awaits the fetch inside the event handler,
+    // so the older snapshot overwrites the newer comment. Held unread until the
+    // snapshot says what the list holds, because that is what decides whether a
+    // mutation is an arrival or a change.
+    const {events} = collect()
+    events$.next(WELCOME)
+
+    const created = storedComment({_id: 'late'})
+    events$.next(mutation('appear', 'late', created))
 
     expect(events).toEqual([])
 
-    fetches[0].next([comment({_id: 'a'})])
+    fetches[0].next([storedComment({_id: 'a'})])
 
     expect(events).toEqual([
-      {type: 'snapshot', comments: [comment({_id: 'a'})]},
-      {type: 'appear', comment: created},
+      {type: 'snapshot', comments: [storedComment({_id: 'a'})]},
+      {type: 'appear', comment: created, transactionId: 'tx-late'},
     ])
+  })
+
+  it('reads a delete that races the snapshot carrying the comment', () => {
+    const {events} = collect()
+    events$.next(WELCOME)
+
+    events$.next(mutation('disappear', 'a'))
+    fetches[0].next([storedComment({_id: 'a'})])
+
+    expect(events.slice(1)).toEqual([{type: 'disappear', commentId: 'a'}])
   })
 
   it('abandons an in-flight fetch when the listener reconnects', () => {
     const {events} = collect()
-    listen$.next(WELCOME)
+    events$.next(WELCOME)
     expect(fetches).toHaveLength(1)
 
-    listen$.next(WELCOME)
+    events$.next(WELCOME)
     expect(fetches).toHaveLength(2)
 
     // The first connection's snapshot is stale by now and must not be applied.
     expect(fetches[0].observed).toBe(false)
 
-    fetches[0].next([comment({_id: 'stale'})])
+    fetches[0].next([storedComment({_id: 'stale'})])
     expect(events).toEqual([])
 
-    fetches[1].next([comment({_id: 'fresh'})])
-    expect(events).toEqual([{type: 'snapshot', comments: [comment({_id: 'fresh'})]}])
+    fetches[1].next([storedComment({_id: 'fresh'})])
+    expect(events).toEqual([{type: 'snapshot', comments: [storedComment({_id: 'fresh'})]}])
   })
 
   it('reports a failed snapshot without killing the stream', () => {
     const {events} = collect()
-    listen$.next(WELCOME)
+    events$.next(WELCOME)
 
     const error = new Error('boom')
     fetches[0].error(error)
@@ -178,16 +234,16 @@ describe('observeComments', () => {
     expect(events).toEqual([{type: 'error', error}])
 
     // A later reconnect still recovers.
-    listen$.next(WELCOME)
+    events$.next(WELCOME)
     fetches[1].next([])
     expect(events).toHaveLength(2)
   })
 
-  it('stops listening when unsubscribed', () => {
+  it('stops reading the listener when unsubscribed', () => {
     const {subscription} = collect()
-    listen$.next(WELCOME)
+    events$.next(WELCOME)
     subscription.unsubscribe()
 
-    expect(listen$.observed).toBe(false)
+    expect(events$.observed).toBe(false)
   })
 })

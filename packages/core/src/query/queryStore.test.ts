@@ -21,6 +21,7 @@ import {
 } from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
+import {setAuthToken} from '../auth/authStore'
 import {getClientState} from '../client/clientStore'
 import {QUERY_CHANGE_INTERVAL, QUERY_INDEXING_DELAY} from '../client/observeQueryChanges'
 import {isCanvasResource} from '../config/sanityConfig'
@@ -302,7 +303,7 @@ describe('queryStore', () => {
     await vi.advanceTimersByTimeAsync(QUERY_STATE_CLEAR_DELAY - 30)
     expect(fetch).toHaveBeenCalledTimes(1)
 
-    clients.next({...clients.getValue()} as SanityClient)
+    setAuthToken(instance, 'renewed-token')
     await vi.advanceTimersByTimeAsync(10)
 
     expect(fetch).toHaveBeenCalledTimes(2)

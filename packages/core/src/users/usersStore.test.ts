@@ -1,7 +1,8 @@
 import {ClientError, type SanityClient} from '@sanity/client'
-import {BehaviorSubject, delay, filter, firstValueFrom, Observable, of, throwError} from 'rxjs'
+import {delay, filter, firstValueFrom, Observable, of, throwError} from 'rxjs'
 import {beforeEach, describe, expect, it, onTestFinished, vi} from 'vitest'
 
+import {setAuthToken} from '../auth/authStore'
 import {getClient, getClientState} from '../client/clientStore'
 import {uninstallTestMessageBus} from '../dashboard/messageBus/__fixtures__/uninstallTestMessageBus'
 import {installMessageBus} from '../dashboard/messageBus/bus'
@@ -30,12 +31,8 @@ const clientError = (statusCode: number, message = 'Request failed') =>
 const clientWith = (request: unknown) => ({observable: {request}}) as unknown as SanityClient
 
 function mockClients(client: SanityClient) {
-  const clients = new BehaviorSubject(client)
-  vi.mocked(getClientState).mockReturnValue({
-    observable: clients.asObservable(),
-  } as StateSource<SanityClient>)
-  vi.mocked(getClient).mockImplementation(() => clients.getValue())
-  return clients
+  vi.mocked(getClientState).mockReturnValue({observable: of(client)} as StateSource<SanityClient>)
+  vi.mocked(getClient).mockReturnValue(client)
 }
 
 describe('usersStore', () => {
@@ -133,6 +130,20 @@ describe('usersStore', () => {
 
     // Verify state is cleared
     expect(state.getCurrent()).toBeUndefined()
+
+    instance.dispose()
+  })
+
+  it('reads an organization list against the organization the app names', async () => {
+    // Outside the Dashboard there is nothing else to scope the request to, so
+    // an app that names its organization can still read its users.
+    const instance = createSanityInstance({organizationId: 'org-configured'})
+
+    await resolveUsers(instance, {resourceType: 'organization'})
+
+    expect(request).toHaveBeenCalledWith(
+      expect.objectContaining({url: 'access/organization/org-configured/users'}),
+    )
 
     instance.dispose()
   })
@@ -438,15 +449,20 @@ describe('usersStore', () => {
         vi.useRealTimers()
       })
       const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
-      const clients = mockClients(
-        clientWith(() => throwError(() => clientError(401, 'Session not found'))),
+      mockClients(
+        clientWith(
+          vi
+            .fn()
+            .mockReturnValueOnce(throwError(() => clientError(401, 'Session not found')))
+            .mockReturnValue(of(response)),
+        ),
       )
 
       const state = getUsersState(instance, options)
       const unsubscribe = state.subscribe()
       expect(() => state.getCurrent()).toThrow('Session not found')
 
-      clients.next(clientWith(() => of(response)))
+      setAuthToken(instance, 'renewed-token')
       await vi.advanceTimersByTimeAsync(0)
 
       expect(() => state.getCurrent()).not.toThrow()
@@ -466,14 +482,14 @@ describe('usersStore', () => {
       })
       const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
       const loadedRequest = vi.fn().mockReturnValue(of(response))
-      const clients = mockClients(clientWith(loadedRequest))
+      mockClients(clientWith(loadedRequest))
 
       const state = getUsersState(instance, options)
       const unsubscribe = state.subscribe()
       const loaded = state.getCurrent()
       expect(loaded).toBeDefined()
 
-      clients.next(clientWith(loadedRequest))
+      setAuthToken(instance, 'renewed-token')
       await vi.advanceTimersByTimeAsync(0)
 
       expect(loadedRequest).toHaveBeenCalledTimes(1)
@@ -491,24 +507,22 @@ describe('usersStore', () => {
     })
     const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
     const options: GetUsersOptions = {resourceType: 'project', projectId: 'project1'}
-    const expiredRequest = vi
+    const pageRequest = vi
       .fn()
       .mockReturnValueOnce(of({data: [mockUsers[0]], totalCount: 2, nextCursor: 'page-2'}))
-      .mockReturnValue(throwError(() => clientError(401, 'Session not found')))
-    const freshRequest = vi
-      .fn()
+      .mockReturnValueOnce(throwError(() => clientError(401, 'Session not found')))
       .mockReturnValue(of({data: [mockUsers[1]], totalCount: 2, nextCursor: null}))
-    const clients = mockClients(clientWith(expiredRequest))
+    mockClients(clientWith(pageRequest))
 
     const state = getUsersState(instance, options)
     const unsubscribe = state.subscribe()
     await expect(loadMoreUsers(instance, options)).rejects.toThrow('Session not found')
 
-    clients.next(clientWith(freshRequest))
+    setAuthToken(instance, 'renewed-token')
     await vi.advanceTimersByTimeAsync(0)
 
-    expect(freshRequest).toHaveBeenCalledTimes(1)
-    expect(freshRequest.mock.calls[0][0].query).toMatchObject({nextCursor: 'page-2'})
+    expect(pageRequest).toHaveBeenCalledTimes(3)
+    expect(pageRequest.mock.calls[2][0].query).toMatchObject({nextCursor: 'page-2'})
     expect(state.getCurrent()).toEqual({data: mockUsers, totalCount: 2, hasMore: false})
 
     unsubscribe()

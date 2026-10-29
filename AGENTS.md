@@ -8,6 +8,7 @@ This is the `@sanity/sdk` monorepo, the SDK for building Sanity-powered apps.
 - `packages/e2e` is the end-to-end test package.
 - `apps/kitchensink-react` is an internal testing and examples app. It is not published.
 - `apps/standalone-react` is a smaller standalone example app.
+- `apps/auto-updates-react` is an app with auto-updates on, deployed to staging so e2e tests load the SDK from the module server in the Dashboard.
 
 Per-path conventions live in `.claude/rules/` and load automatically when Claude reads files matching their `paths:` frontmatter. Read the file under `.claude/rules/` that matches the package you are editing before making changes there.
 
@@ -47,3 +48,4 @@ You are working in a TypeScript codebase with React 19, Vitest, and Sanity.io as
 - All exported members need TSDoc comments. oxlint runs the TSDoc plugin to enforce this.
 - Do not edit files under `dist/` or `node_modules/`.
 - Do not introduce React-specific dependencies into `packages/core`. Keep it framework-agnostic.
+- When naming an API, reuse the SDK's existing word if the concept already exists. Borrow a term only for a new concept, and prefer a standard's word over one library's.

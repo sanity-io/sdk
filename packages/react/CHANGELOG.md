@@ -1,5 +1,67 @@
 # Changelog
 
+## 3.11.0
+
+### Minor Changes
+
+- [#1181](https://github.com/sanity-io/sdk/pull/1181) [`1ce1a00`](https://github.com/sanity-io/sdk/commit/1ce1a0059fa01e928fabafef1e784cf28619dca2) Thanks [@pepahlavacek](https://github.com/pepahlavacek)! - Add comments backed by the organization Comments API under `@sanity/sdk/collaboration` and `@sanity/sdk-react/collaboration`, in beta. The hooks keep the root names (`useComments`, `useCommentThreads`, `useCommentActions`) and add `useCommentsQuery` and `buildCommentThreads` for comments across documents, reactions, `updateCommentAnchor`, and comments on a whole document. See the [Collaboration guide](https://github.com/sanity-io/sdk/blob/main/packages/react/guides/Collaboration.md).
+  
+  The comment APIs on the package roots, which read the add-on dataset, are deprecated and will be removed in the next major. Don't switch until your Studio reads the Comments API and your existing comments are migrated, or your app and your Studio will show different comments. See the [Migration guide](https://github.com/sanity-io/sdk/blob/main/packages/react/guides/0-Migration-Guide.md).
+
+- [#1181](https://github.com/sanity-io/sdk/pull/1181) [`1ce1a00`](https://github.com/sanity-io/sdk/commit/1ce1a0059fa01e928fabafef1e784cf28619dca2) Thanks [@pepahlavacek](https://github.com/pepahlavacek)! - Add `organizationId` to the Sanity config for apps running outside the Dashboard. Organization user lists use it, and `AuthBoundary` checks it against each project's organization the way it already checks the Dashboard's.
+
+- [#1492](https://github.com/sanity-io/sdk/pull/1492) [`02495b5`](https://github.com/sanity-io/sdk/commit/02495b524fa0c4776c023aa692c87ff622c21965) Thanks [@joshuaellis](https://github.com/joshuaellis)! - When the Dashboard removes an app it rendered, `ResourceProvider` disposes the Sanity instance it created, which closes the app's message bus connection. An app the Dashboard only hides keeps its instance and connection. An SDK action that reaches the message bus after the app was removed now throws instead of opening a connection that never closes.
+
+- [#1489](https://github.com/sanity-io/sdk/pull/1489) [`9aa8763`](https://github.com/sanity-io/sdk/commit/9aa8763a041fc407bd7c8a1ed3d20b8ed51e361d) Thanks [@joshuaellis](https://github.com/joshuaellis)! - A message bus refusal can say how to fix it. `message.reject` and `MessageBusClient.reject` take an optional `{fix, docsUrl}`, and the `MessageBusError` an `emit()` or `query()` rejects with carries them as `fix` and `docsUrl`.
+
+### Patch Changes
+
+- [#1488](https://github.com/sanity-io/sdk/pull/1488) [`dd01d63`](https://github.com/sanity-io/sdk/commit/dd01d633bb3a773789e3cb3c4e2affd6827b605c) Thanks [@squiggler-app](https://github.com/apps/squiggler-app)! - Update dependencies: `@sanity/client@8.13.0`, `@sanity/types@6.21.0`
+
+- [#1493](https://github.com/sanity-io/sdk/pull/1493) [`17d127a`](https://github.com/sanity-io/sdk/commit/17d127add5ee859eb0ea580b0db71a10d5ec5475) Thanks [@squiggler-app](https://github.com/apps/squiggler-app)! - Update dependencies: `zustand@5.0.16`
+- Updated dependencies [[`1ce1a00`](https://github.com/sanity-io/sdk/commit/1ce1a0059fa01e928fabafef1e784cf28619dca2), [`1ce1a00`](https://github.com/sanity-io/sdk/commit/1ce1a0059fa01e928fabafef1e784cf28619dca2), [`dd01d63`](https://github.com/sanity-io/sdk/commit/dd01d633bb3a773789e3cb3c4e2affd6827b605c), [`17d127a`](https://github.com/sanity-io/sdk/commit/17d127add5ee859eb0ea580b0db71a10d5ec5475), [`8cf17ca`](https://github.com/sanity-io/sdk/commit/8cf17cacc64b53c8423d4345aa77ee4955349f05), [`02495b5`](https://github.com/sanity-io/sdk/commit/02495b524fa0c4776c023aa692c87ff622c21965), [`9aa8763`](https://github.com/sanity-io/sdk/commit/9aa8763a041fc407bd7c8a1ed3d20b8ed51e361d)]:
+  - @sanity/sdk@3.11.0
+
+## 3.10.0
+
+### Minor Changes
+
+- [#1413](https://github.com/sanity-io/sdk/pull/1413) [`8fab095`](https://github.com/sanity-io/sdk/commit/8fab095b9ccfde6cdc19e59f32ffc20780b73887) Thanks [@gu-stav](https://github.com/gu-stav)! - `createRemoteInstance`'s `registerRemotes` accepts `{force: true}` to replace a registered remote, so a host can load an application's latest code without reloading the page.
+
+- [#1406](https://github.com/sanity-io/sdk/pull/1406) [`4f6e947`](https://github.com/sanity-io/sdk/commit/4f6e9473e73f0aec7365233d1175d6e1b2bf9756) Thanks [@joshuaellis](https://github.com/joshuaellis)! - The `application` fetcher and `useApplication` accept an `organizationId`, so an application can be looked up by its slug, which is only unique within an organization.
+
+- [#1416](https://github.com/sanity-io/sdk/pull/1416) [`dd2a1ae`](https://github.com/sanity-io/sdk/commit/dd2a1ae6a6e49a321f3b06e0bc066f6d4b06365f) Thanks [@joshuaellis](https://github.com/joshuaellis)! - A dashboard view can post to its application's workers and listen to their messages with `useWorker`. On a topic only the dashboard can answer, an application now receives only its own application's events.
+
+- [#1427](https://github.com/sanity-io/sdk/pull/1427) [`357a04d`](https://github.com/sanity-io/sdk/commit/357a04d8f3b8771cb4cfc59d97ca217ce315328f) Thanks [@gu-stav](https://github.com/gu-stav)! - `urlFor.studios(id).workspace()` takes the workspace and links to its `basePath` instead of its name, so a workspace whose base path differs from its name, such as `default` at `/`, links to the right path.
+
+- [#1435](https://github.com/sanity-io/sdk/pull/1435) [`6c5f3ee`](https://github.com/sanity-io/sdk/commit/6c5f3ee2730f815e58af785ef659adadd8bb1dc6) Thanks [@gu-stav](https://github.com/gu-stav)! - `useNavigateToStudioDocument` opens the studio at its slug in the Dashboard.
+
+### Patch Changes
+
+- [#1430](https://github.com/sanity-io/sdk/pull/1430) [`510874b`](https://github.com/sanity-io/sdk/commit/510874b4cb53152f52a4e5ddf31f5de23298cd9d) Thanks [@ryanbonial](https://github.com/ryanbonial)! - Projection results from `useDocumentProjection`, `getProjectionState`, and `resolveProjection` now type the `_status` field the SDK adds to every result. `DocumentStatus` is exported for typing it.
+
+- [#1479](https://github.com/sanity-io/sdk/pull/1479) [`ddf390b`](https://github.com/sanity-io/sdk/commit/ddf390ba6e63ba3f87ecf41af58762379f42a42b) Thanks [@squiggler-app](https://github.com/apps/squiggler-app)! - Update dependencies: `groq-js@2.0.1`
+
+- [#1448](https://github.com/sanity-io/sdk/pull/1448) [`0ce5d32`](https://github.com/sanity-io/sdk/commit/0ce5d32d11b64b94f3bb5dab606d82316a3a131e) Thanks [@squiggler-app](https://github.com/apps/squiggler-app)! - Update dependencies: `@sanity/bifur-client@2.0.2`
+
+- [#1441](https://github.com/sanity-io/sdk/pull/1441) [`852404b`](https://github.com/sanity-io/sdk/commit/852404b6c3f5060b9d866a8b9c9fbe7d69e5c1cc) Thanks [@squiggler-app](https://github.com/apps/squiggler-app)! - Update dependencies: `@sanity/diff-patch@7.0.0`
+
+- [#1375](https://github.com/sanity-io/sdk/pull/1375) [`8cf8c0e`](https://github.com/sanity-io/sdk/commit/8cf8c0ecfeefafb171611050e3f41c072af81903) Thanks [@squiggler-app](https://github.com/apps/squiggler-app)! - Update dependencies: `groq@6.20.0`, `sanity@6.20.0`
+
+- [#1451](https://github.com/sanity-io/sdk/pull/1451) [`7287d11`](https://github.com/sanity-io/sdk/commit/7287d11e7150f36b42f4dc93fb3957885b68c8b2) Thanks [@squiggler-app](https://github.com/apps/squiggler-app)! - Update dependencies: `@sanity/client@8.11.0`
+
+- [#1432](https://github.com/sanity-io/sdk/pull/1432) [`ccb67c6`](https://github.com/sanity-io/sdk/commit/ccb67c6a12df0bde98c8d54675077b63c01c2b62) Thanks [@joshuaellis](https://github.com/joshuaellis)! - Checking permissions on a document the user cannot read now fails with the read error instead of loading forever.
+
+- [#1419](https://github.com/sanity-io/sdk/pull/1419) [`dbaee66`](https://github.com/sanity-io/sdk/commit/dbaee668d5458c8a247d39a05f76ffcb96d89ba5) Thanks [@joshuaellis](https://github.com/joshuaellis)! - `useApplication` and the `application` fetcher find an application by its slug again when given an `organizationId`.
+
+- [#1431](https://github.com/sanity-io/sdk/pull/1431) [`dc2c984`](https://github.com/sanity-io/sdk/commit/dc2c9846a74037908abdbcae54de3e2be19efc28) Thanks [@joshuaellis](https://github.com/joshuaellis)! - `useWorker` returns the same client when a component's first render suspends, so a view that suspends on a worker's reply no longer posts to the worker again on every retry.
+
+- [#1475](https://github.com/sanity-io/sdk/pull/1475) [`f0cb568`](https://github.com/sanity-io/sdk/commit/f0cb568ab1ece1bb3650190ad1f2aa82dd0055fc) Thanks [@gu-stav](https://github.com/gu-stav)! - Auto-updating apps can load `@sanity/sdk` and `@sanity/sdk-react` subpaths from the module CDN again.
+
+- [#1305](https://github.com/sanity-io/sdk/pull/1305) [`560e927`](https://github.com/sanity-io/sdk/commit/560e9278702259b481f5ca26d5207ccc8a671b74) Thanks [@ryanbonial](https://github.com/ryanbonial)! - `useDocumentProjection` keeps its subscription when a component re-renders with a handle that has the same values, such as handles from a refetched `useDocuments` list.
+- Updated dependencies [[`7c3bf20`](https://github.com/sanity-io/sdk/commit/7c3bf206667386a21943088c749aabe2938dd359), [`907d914`](https://github.com/sanity-io/sdk/commit/907d9147d8f06b7d8913f1a7e93d4c0e43d5286e), [`510874b`](https://github.com/sanity-io/sdk/commit/510874b4cb53152f52a4e5ddf31f5de23298cd9d), [`ddf390b`](https://github.com/sanity-io/sdk/commit/ddf390ba6e63ba3f87ecf41af58762379f42a42b), [`0ce5d32`](https://github.com/sanity-io/sdk/commit/0ce5d32d11b64b94f3bb5dab606d82316a3a131e), [`852404b`](https://github.com/sanity-io/sdk/commit/852404b6c3f5060b9d866a8b9c9fbe7d69e5c1cc), [`8cf8c0e`](https://github.com/sanity-io/sdk/commit/8cf8c0ecfeefafb171611050e3f41c072af81903), [`7287d11`](https://github.com/sanity-io/sdk/commit/7287d11e7150f36b42f4dc93fb3957885b68c8b2), [`ccb67c6`](https://github.com/sanity-io/sdk/commit/ccb67c6a12df0bde98c8d54675077b63c01c2b62), [`dbaee66`](https://github.com/sanity-io/sdk/commit/dbaee668d5458c8a247d39a05f76ffcb96d89ba5), [`4f6e947`](https://github.com/sanity-io/sdk/commit/4f6e9473e73f0aec7365233d1175d6e1b2bf9756), [`dd2a1ae`](https://github.com/sanity-io/sdk/commit/dd2a1ae6a6e49a321f3b06e0bc066f6d4b06365f), [`85a87d9`](https://github.com/sanity-io/sdk/commit/85a87d99db0d7b0ec311f5c13e79b3beb85bf5e3), [`ea0c3bc`](https://github.com/sanity-io/sdk/commit/ea0c3bca0f8a3d1316c168197f5a5b02ff3e1dd6), [`f944cc9`](https://github.com/sanity-io/sdk/commit/f944cc956984d861eed81cd2353464357c1bf78f), [`dc2c984`](https://github.com/sanity-io/sdk/commit/dc2c9846a74037908abdbcae54de3e2be19efc28), [`f0cb568`](https://github.com/sanity-io/sdk/commit/f0cb568ab1ece1bb3650190ad1f2aa82dd0055fc), [`97da49f`](https://github.com/sanity-io/sdk/commit/97da49f139d6e3f38913d7678d02fd5b91c96ad4), [`9fa66b1`](https://github.com/sanity-io/sdk/commit/9fa66b102cee4cf8ebb12ac733c4e3639f239953)]:
+  - @sanity/sdk@3.10.0
+
 ## 3.9.1
 
 ### Patch Changes
