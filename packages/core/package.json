@@ -97,7 +97,7 @@
     "groq-js": "catalog:",
     "reselect": "^5.3.0",
     "rxjs": "catalog:",
-    "zustand": "^5.0.15"
+    "zustand": "^5.0.16"
   },
   "devDependencies": {
     "@repo/config-oxlint": "workspace:*",
