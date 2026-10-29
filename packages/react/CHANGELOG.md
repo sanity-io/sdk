@@ -1,5 +1,27 @@
 # Changelog
 
+## 3.11.0
+
+### Minor Changes
+
+- [#1181](https://github.com/sanity-io/sdk/pull/1181) [`1ce1a00`](https://github.com/sanity-io/sdk/commit/1ce1a0059fa01e928fabafef1e784cf28619dca2) Thanks [@pepahlavacek](https://github.com/pepahlavacek)! - Add comments backed by the organization Comments API under `@sanity/sdk/collaboration` and `@sanity/sdk-react/collaboration`, in beta. The hooks keep the root names (`useComments`, `useCommentThreads`, `useCommentActions`) and add `useCommentsQuery` and `buildCommentThreads` for comments across documents, reactions, `updateCommentAnchor`, and comments on a whole document. See the [Collaboration guide](https://github.com/sanity-io/sdk/blob/main/packages/react/guides/Collaboration.md).
+  
+  The comment APIs on the package roots, which read the add-on dataset, are deprecated and will be removed in the next major. Don't switch until your Studio reads the Comments API and your existing comments are migrated, or your app and your Studio will show different comments. See the [Migration guide](https://github.com/sanity-io/sdk/blob/main/packages/react/guides/0-Migration-Guide.md).
+
+- [#1181](https://github.com/sanity-io/sdk/pull/1181) [`1ce1a00`](https://github.com/sanity-io/sdk/commit/1ce1a0059fa01e928fabafef1e784cf28619dca2) Thanks [@pepahlavacek](https://github.com/pepahlavacek)! - Add `organizationId` to the Sanity config for apps running outside the Dashboard. Organization user lists use it, and `AuthBoundary` checks it against each project's organization the way it already checks the Dashboard's.
+
+- [#1492](https://github.com/sanity-io/sdk/pull/1492) [`02495b5`](https://github.com/sanity-io/sdk/commit/02495b524fa0c4776c023aa692c87ff622c21965) Thanks [@joshuaellis](https://github.com/joshuaellis)! - When the Dashboard removes an app it rendered, `ResourceProvider` disposes the Sanity instance it created, which closes the app's message bus connection. An app the Dashboard only hides keeps its instance and connection. An SDK action that reaches the message bus after the app was removed now throws instead of opening a connection that never closes.
+
+- [#1489](https://github.com/sanity-io/sdk/pull/1489) [`9aa8763`](https://github.com/sanity-io/sdk/commit/9aa8763a041fc407bd7c8a1ed3d20b8ed51e361d) Thanks [@joshuaellis](https://github.com/joshuaellis)! - A message bus refusal can say how to fix it. `message.reject` and `MessageBusClient.reject` take an optional `{fix, docsUrl}`, and the `MessageBusError` an `emit()` or `query()` rejects with carries them as `fix` and `docsUrl`.
+
+### Patch Changes
+
+- [#1488](https://github.com/sanity-io/sdk/pull/1488) [`dd01d63`](https://github.com/sanity-io/sdk/commit/dd01d633bb3a773789e3cb3c4e2affd6827b605c) Thanks [@squiggler-app](https://github.com/apps/squiggler-app)! - Update dependencies: `@sanity/client@8.13.0`, `@sanity/types@6.21.0`
+
+- [#1493](https://github.com/sanity-io/sdk/pull/1493) [`17d127a`](https://github.com/sanity-io/sdk/commit/17d127add5ee859eb0ea580b0db71a10d5ec5475) Thanks [@squiggler-app](https://github.com/apps/squiggler-app)! - Update dependencies: `zustand@5.0.16`
+- Updated dependencies [[`1ce1a00`](https://github.com/sanity-io/sdk/commit/1ce1a0059fa01e928fabafef1e784cf28619dca2), [`1ce1a00`](https://github.com/sanity-io/sdk/commit/1ce1a0059fa01e928fabafef1e784cf28619dca2), [`dd01d63`](https://github.com/sanity-io/sdk/commit/dd01d633bb3a773789e3cb3c4e2affd6827b605c), [`17d127a`](https://github.com/sanity-io/sdk/commit/17d127add5ee859eb0ea580b0db71a10d5ec5475), [`8cf17ca`](https://github.com/sanity-io/sdk/commit/8cf17cacc64b53c8423d4345aa77ee4955349f05), [`02495b5`](https://github.com/sanity-io/sdk/commit/02495b524fa0c4776c023aa692c87ff622c21965), [`9aa8763`](https://github.com/sanity-io/sdk/commit/9aa8763a041fc407bd7c8a1ed3d20b8ed51e361d)]:
+  - @sanity/sdk@3.11.0
+
 ## 3.10.0
 
 ### Minor Changes
