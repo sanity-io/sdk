@@ -16,20 +16,20 @@ describe('compareProjectOrganization', () => {
     const projectOrgId = 'org-xyz' // Mismatch
     const result = compareProjectOrganization(projectId, projectOrgId, expectedOrgId)
     expect(result.error).toContain('belongs to Organization org-xyz')
-    expect(result.error).toContain('Dashboard has Organization org-abc selected')
+    expect(result.error).toContain('but the app is configured for Organization org-abc')
   })
 
   it('should return an error message when project orgId is null', () => {
     const projectOrgId = null
     const result = compareProjectOrganization(projectId, projectOrgId, expectedOrgId)
     expect(result.error).toContain('belongs to Organization unknown')
-    expect(result.error).toContain('Dashboard has Organization org-abc selected')
+    expect(result.error).toContain('but the app is configured for Organization org-abc')
   })
 
   it('should return an error message when project orgId is undefined', () => {
     const projectOrgId = undefined
     const result = compareProjectOrganization(projectId, projectOrgId, expectedOrgId)
     expect(result.error).toContain('belongs to Organization unknown')
-    expect(result.error).toContain('Dashboard has Organization org-abc selected')
+    expect(result.error).toContain('but the app is configured for Organization org-abc')
   })
 })

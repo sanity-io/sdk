@@ -12,18 +12,18 @@ import {
   take,
 } from 'rxjs'
 
-import {getClientAuthState} from '../auth/authStore'
-import {getClient, getClientState} from '../client/clientStore'
-import {retryOnCredentialChange} from '../client/retry'
+import {getClientAuthState} from '../../auth/authStore'
+import {getClient, getClientState} from '../../client/clientStore'
+import {retryOnCredentialChange} from '../../client/retry'
 import {
   type DatasetResource,
   type DocumentResource,
   isDatasetResource,
-} from '../config/sanityConfig'
-import {bindActionByResource, type BoundResourceKey} from '../store/createActionBinder'
-import {type SanityInstance} from '../store/createSanityInstance'
-import {createStateSourceAction, type StateSource} from '../store/createStateSourceAction'
-import {defineStore, type StoreContext} from '../store/defineStore'
+} from '../../config/sanityConfig'
+import {bindActionByResource, type BoundResourceKey} from '../../store/createActionBinder'
+import {type SanityInstance} from '../../store/createSanityInstance'
+import {createStateSourceAction, type StateSource} from '../../store/createStateSourceAction'
+import {defineStore, type StoreContext} from '../../store/defineStore'
 import {
   ADDON_DATASET_API_VERSION,
   ADDON_DATASET_PROFILE,

@@ -13,13 +13,13 @@ export interface OrgVerificationResult {
 export function compareProjectOrganization(
   projectId: string,
   projectOrganizationId: string | null | undefined,
-  currentDashboardOrgId: string,
+  appOrganizationId: string,
 ): OrgVerificationResult {
-  if (projectOrganizationId !== currentDashboardOrgId) {
+  if (projectOrganizationId !== appOrganizationId) {
     return {
       error:
         `Project ${projectId} belongs to Organization ${projectOrganizationId ?? 'unknown'}, ` +
-        `but the Dashboard has Organization ${currentDashboardOrgId} selected`,
+        `but the app is configured for Organization ${appOrganizationId}`,
     }
   }
   return {error: null}

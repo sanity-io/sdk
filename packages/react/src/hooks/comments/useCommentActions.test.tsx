@@ -1,10 +1,13 @@
 import {
+  addReaction,
   createComment,
   removeComment,
+  removeReaction,
   replyToComment,
   setCommentStatus,
   updateComment,
-} from '@sanity/sdk'
+  updateCommentAnchor,
+} from '@sanity/sdk/collaboration'
 import {renderHook} from '@testing-library/react'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
@@ -12,15 +15,18 @@ import {ResourceProvider} from '../../context/ResourceProvider'
 import {ResourcesContext} from '../../context/ResourcesContext'
 import {useCommentActions} from './useCommentActions'
 
-vi.mock('@sanity/sdk', async (importOriginal) => {
-  const original = await importOriginal<typeof import('@sanity/sdk')>()
+vi.mock('@sanity/sdk/collaboration', async (importOriginal) => {
+  const original = await importOriginal<typeof import('@sanity/sdk/collaboration')>()
   return {
     ...original,
     createComment: vi.fn(),
     replyToComment: vi.fn(),
     updateComment: vi.fn(),
+    updateCommentAnchor: vi.fn(),
     setCommentStatus: vi.fn(),
     removeComment: vi.fn(),
+    addReaction: vi.fn(),
+    removeReaction: vi.fn(),
   }
 })
 
@@ -28,6 +34,14 @@ const HANDLE = {documentId: 'doc-1', documentType: 'author'}
 
 /** Creates name a field, since a comment with no path is refused. */
 const CREATE = {...HANDLE, fieldPath: 'name'}
+
+const MESSAGE = [{_type: 'block', _key: 'b1', children: [{_type: 'span', text: 'hi'}]}]
+
+const ANCHOR = {
+  type: 'portable-text',
+  start: {_key: 'b1', offset: 0},
+  end: {_key: 'b1', offset: 5},
+} as const
 
 // Hoisted: an inline object here would be a new value on every render, and the
 // callbacks are memoised against it.
@@ -73,23 +87,29 @@ describe('useCommentActions', () => {
   it('forwards each action to the store', () => {
     const {result} = setup()
 
-    result.current.createComment({...CREATE, message: null})
-    result.current.replyToComment({...HANDLE, parentCommentId: 'p1', message: null})
-    result.current.updateComment({commentId: 'c1', message: null})
+    result.current.createComment({...CREATE, message: MESSAGE})
+    result.current.replyToComment({...HANDLE, parentCommentId: 'p1', message: MESSAGE})
+    result.current.updateComment({commentId: 'c1', message: MESSAGE})
+    result.current.updateCommentAnchor({commentId: 'c1', anchor: ANCHOR})
     result.current.setCommentStatus({commentId: 'c1', status: 'resolved'})
     result.current.removeComment({commentId: 'c1'})
+    result.current.addReaction({commentId: 'c1', shortName: ':+1:'})
+    result.current.removeReaction({commentId: 'c1', shortName: ':+1:'})
 
     expect(createComment).toHaveBeenCalledOnce()
     expect(replyToComment).toHaveBeenCalledOnce()
     expect(updateComment).toHaveBeenCalledOnce()
+    expect(updateCommentAnchor).toHaveBeenCalledOnce()
     expect(setCommentStatus).toHaveBeenCalledOnce()
     expect(removeComment).toHaveBeenCalledOnce()
+    expect(addReaction).toHaveBeenCalledOnce()
+    expect(removeReaction).toHaveBeenCalledOnce()
   })
 
   it('fills in the resource from context', () => {
     const {result} = setup()
 
-    result.current.createComment({...CREATE, message: null})
+    result.current.createComment({...CREATE, message: MESSAGE})
 
     expect(createComment).toHaveBeenCalledWith(
       expect.anything(),
@@ -119,13 +139,13 @@ describe('useCommentActions', () => {
   })
 
   it('fills in the perspective from context', () => {
-    // Core turns a release perspective into `target.documentVersionId`, so
-    // losing it here files the comment against the wrong release and nothing
-    // reports an error.
+    // Core turns a release perspective into the source document id the comment
+    // is written against, so losing it here files the comment against the wrong
+    // release and nothing reports an error.
     const {result} = setup(PerspectiveWrapper)
 
-    result.current.createComment({...CREATE, message: null})
-    result.current.replyToComment({...HANDLE, parentCommentId: 'p1', message: null})
+    result.current.createComment({...CREATE, message: MESSAGE})
+    result.current.replyToComment({...HANDLE, parentCommentId: 'p1', message: MESSAGE})
 
     expect(createComment).toHaveBeenCalledWith(
       expect.anything(),
@@ -140,7 +160,7 @@ describe('useCommentActions', () => {
   it('lets a call override the perspective from context', () => {
     const {result} = setup(PerspectiveWrapper)
 
-    result.current.createComment({...CREATE, message: null, perspective: 'published'})
+    result.current.createComment({...CREATE, message: MESSAGE, perspective: 'published'})
 
     expect(createComment).toHaveBeenCalledWith(
       expect.anything(),

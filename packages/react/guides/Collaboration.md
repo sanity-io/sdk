@@ -1,0 +1,326 @@
+---
+title: Collaboration
+---
+
+# Collaboration
+
+Collaboration features let your app take part in the same workflows people already have in Sanity Studio. Today that means comments.
+
+The SDK reads and writes the same comments the Studio shows. A comment belongs to a document, and optionally to one field of it. Comments with the same `threadId` form a thread, and everything is live: a comment written in the Studio appears in your app without a refetch, and the other way around.
+
+This API is in beta. The hooks and types are exported from `@sanity/sdk-react/collaboration`, and the framework-agnostic half from `@sanity/sdk/collaboration`. These APIs move to the package roots in the next major; the [Migration guide](./0-Migration-Guide.md) has the timeline.
+
+Still on the comment hooks exported from the `@sanity/sdk-react` root? Those are deprecated. The ones here have the same names, but moving over takes a little more than a new import: the [Migration guide](./0-Migration-Guide.md) lists what else changes.
+
+## Setup
+
+Comments are stored per organization rather than per dataset. You don't configure which one: comments use the organization that owns the project you're reading.
+
+If the app also names an organization, the SDK checks it against the project's organization, and a mismatch is an error rather than a silent read from another organization. Inside the Sanity Dashboard, that's the organization the app was opened in. Outside it, that's `organizationId` on the config, if you set it.
+
+`organizationId` is for standalone apps that read other organization-scoped data, such as organization user lists. Comments don't need it. It's unrelated to `auth.oauth.organizationId`, which restricts the tokens the OAuth flow issues.
+
+Writing also requires a logged-in user, since the server records the author.
+
+## Reading a document's comments
+
+`useComments` returns a document's comments, newest first, replies included. `useCommentThreads` returns the same comments grouped: a thread carries its first comment plus its replies, so filtering by `status` or `fieldPath` selects whole threads rather than individual comments. Both take the same options and read the same list, so using them side by side costs one connection, not two.
+
+```tsx
+import {useCommentThreads} from '@sanity/sdk-react/collaboration'
+
+function OpenTitleThreads({documentId}: {documentId: string}) {
+  const {threads} = useCommentThreads({
+    documentId,
+    documentType: 'article',
+    fieldPath: 'title',
+    status: 'open',
+  })
+
+  return <span>{threads.length}</span>
+}
+```
+
+| Option      | Description                                                             |
+| ----------- | ----------------------------------------------------------------------- |
+| `fieldPath` | Narrow to one field. Omit for every comment on the document.            |
+| `status`    | `'open'` or `'resolved'`. Omit for both.                                |
+| `scope`     | Which of the document's comments to cover. Defaults to `'perspective'`. |
+
+`status` and `fieldPath` mean slightly different things to the two hooks. Read as threads they select whole threads, so a resolved parent brings its replies with it. Read flat there is nothing to bring along, and each comment is judged on its own.
+
+`scope` decides which document ids the comments are gathered from:
+
+- `'perspective'` follows what you are viewing: a release shows that release's comments, anything else pools draft and published
+- `'exact'` matches only the document id you passed
+- `'all'` returns every comment on the document
+
+To read the pooled draft and published list while a release is in view, pass a non-release `perspective` alongside, such as `perspective: 'drafts'`. A content variant is stored as a version document, so under `'perspective'` its comments form a list of their own the way a release's do, and its draft and published comments stay separate.
+
+The hook suspends until the comments have loaded, so wrap it in a Suspense boundary like any other data hook. Switching document or filter happens in a transition instead: the list already on screen stays put and `isPending` goes true.
+
+```tsx
+function Threads({documentId}: {documentId: string}) {
+  const {threads, isPending} = useCommentThreads({documentId, documentType: 'article'})
+
+  return <ul data-pending={isPending}>{threads.map(/* ... */)}</ul>
+}
+```
+
+Unlike the Studio, the SDK returns every thread it finds. The Studio hides threads whose field has left the schema or is hidden by a conditional, which it can do because it has the schema. Check `fieldPath` yourself if you want the same behavior.
+
+Comments arrive over a live connection, and that connection can drop, usually because a token expired. A list that has already loaded is not thrown away when that happens: it stays on screen exactly as it last stood, and `error` is set to say that it has stopped following the server. Show whatever suits your app, from nothing at all to a banner, but know that the list under it is no longer live:
+
+```tsx
+function Threads({documentId}: {documentId: string}) {
+  const {threads, error} = useCommentThreads({documentId, documentType: 'article'})
+
+  return (
+    <>
+      {error && <Banner>Comments are not up to date</Banner>}
+      <ul>{threads.map(/* ... */)}</ul>
+    </>
+  )
+}
+```
+
+`error` clears on its own once a connection comes back, which follows the next token refresh. A connection that fails before the first comments have loaded is different: there is nothing to keep showing, so it throws to the nearest error boundary instead.
+
+## Querying comments
+
+`useCommentsQuery` is the escape hatch for anything that is not "comments on this document": cross-document views, per-user views, organization-wide activity. It takes a GROQ filter, applies `_type == "sanity.comment"` for you, and returns a flat list with replies included.
+
+```tsx
+import {useCommentsQuery} from '@sanity/sdk-react/collaboration'
+
+function Mentions({userId}: {userId: string}) {
+  const {comments} = useCommentsQuery({
+    filter: 'count(message[].children[_type == "mention" && userId == $userId]) > 0',
+    params: {userId},
+  })
+
+  return <span>{comments.length}</span>
+}
+```
+
+Suspense, `isPending`, and `error` work the same as in `useCommentThreads`.
+
+The list is flat. To read it as threads, pass it to `buildCommentThreads`, which groups comments exactly as `useCommentThreads` does. Thread first and group by anything else afterwards, since a thread needs its replies in the same input as its parent:
+
+```tsx
+import {buildCommentThreads, useCommentsQuery} from '@sanity/sdk-react/collaboration'
+import {useMemo} from 'react'
+
+function OpenThreadsAcross({refs}: {refs: string[]}) {
+  const {comments} = useCommentsQuery({filter: 'target.document._ref in $refs', params: {refs}})
+  const threads = useMemo(
+    () => buildCommentThreads(comments).filter((thread) => thread.status === 'open'),
+    [comments],
+  )
+
+  return <span>{threads.length}</span>
+}
+```
+
+The filter runs over every comment the organization can read, not only the ones in the dataset you are reading. Comment queries are routed by organization and the project and dataset are not sent with them, so they pick the organization but do not narrow the results. To keep to one dataset, add a `target.document._ref` prefix condition yourself. Refs are `dataset:{projectId}.{dataset}:{documentId}`:
+
+```tsx
+const {comments} = useCommentsQuery({
+  filter: 'string::startsWith(target.document._ref, $prefix) && status == "open"',
+  params: {prefix: 'dataset:abc123.production:'},
+})
+```
+
+Writes show here before the server confirms them, the same as they do on a document's comments: the filter is matched against the written comment locally, so a new comment that answers it appears straight away. That holds for writes made through the resource the query is bound to. A query reaches across the organization, so it also gets comments written through another dataset, but those arrive once the server confirms them.
+
+Some filters can't be matched locally, because they need more than the one comment to evaluate:
+
+- one that dereferences with `->`
+- one that runs a `*[...]` query of its own
+- one that calls a context-dependent function such as `sanity::dataset()`, `releases::all()` or `now()`
+
+Those still work and still stay up to date, but only once the server says so, and they cost a connection of their own rather than sharing the one every other list reads from.
+
+For a time window, pass the cutoff as a parameter, as in `_createdAt > $since`, rather than comparing with `now()`.
+
+## Writing comments
+
+`useCommentActions` returns the write actions, bound to the current instance.
+
+```tsx
+import {useCommentActions} from '@sanity/sdk-react/collaboration'
+
+function ResolveButton({commentId}: {commentId: string}) {
+  const {setCommentStatus} = useCommentActions()
+
+  return <button onClick={() => setCommentStatus({commentId, status: 'resolved'})}>Resolve</button>
+}
+```
+
+| Action                | Key options                                         | Notes                                                                                    |
+| --------------------- | --------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `createComment`       | document handle, `fieldPath?`, `message`, `anchor?` | Starts a thread. Returns the new `Comment`.                                              |
+| `replyToComment`      | `parentCommentId`, `message`                        | Placement comes from the parent, which has to be loaded.                                 |
+| `updateComment`       | `commentId`, `message`                              | Rewrites the message and marks the comment edited.                                       |
+| `updateCommentAnchor` | `commentId`, `anchor`                               | Re-anchors without marking it edited. `null` drops the anchor; omitting it does nothing. |
+| `setCommentStatus`    | `commentId`, `status`                               | Pass the thread's first comment; replies follow it.                                      |
+| `removeComment`       | `commentId`                                         | Removes replies too when it starts a thread.                                             |
+| `addReaction`         | `commentId`, `shortName`                            | Adds the current user's reaction.                                                        |
+| `removeReaction`      | `commentId`, `shortName`                            | Removes the current user's reaction.                                                     |
+
+`createComment` also takes `commentId` and `threadId` to write against ids you chose, `documentRevisionId` to record which revision the comment was written about, and `context` for free-form data of your own. `replyToComment` takes `context` too, and both hand it back on the comment's `context`, so whatever you store there is readable wherever you read comments.
+
+### Optimistic writes and failed creates
+
+Every action writes optimistically: the change shows immediately and rolls back if the server rejects it, so you can render straight from `useCommentThreads` without tracking pending state. Creates and replies reach every matching list, whichever one you wrote them from, so a document's comments and a query that matches them stay in step.
+
+Creating is the exception, and `replyToComment` counts as creating. A comment that fails to post stays on screen carrying `state.createError` rather than disappearing, so nobody loses what they typed. Passing the same `commentId` again retries it:
+
+```tsx
+import {type Comment, useCommentActions} from '@sanity/sdk-react/collaboration'
+
+function Retry({comment}: {comment: Comment}) {
+  const {createComment, replyToComment} = useCommentActions()
+  if (comment.state?.type !== 'createError') return null
+
+  const retry = () =>
+    comment.parentCommentId
+      ? replyToComment({
+          commentId: comment.id,
+          parentCommentId: comment.parentCommentId,
+          message: comment.message,
+          context: comment.context,
+        })
+      : createComment({
+          commentId: comment.id,
+          threadId: comment.threadId,
+          documentId: comment.sourceDocumentId,
+          documentType: comment.documentType,
+          fieldPath: comment.fieldPath,
+          message: comment.message,
+          context: comment.context,
+        })
+
+  return <button onClick={retry}>Retry</button>
+}
+```
+
+Pass `sourceDocumentId` rather than `documentId`, which is always the published id: a retry should land on the draft or version the comment was first written against. `context` is passed again so the retry keeps it.
+
+### Comments on the whole document
+
+`fieldPath` accepts a string or a `Path` array. Leave it out, or pass `''` or `[]`, to comment on the document as a whole. The comment is written without a path and reads back with `fieldPath: ''`, so `useCommentThreads({...handle, fieldPath: ''})` lists only those threads. An `anchor` still needs a field, since it's a run of text inside one.
+
+The Studio's comments inspector lists field comments only, so document-level comments don't show there. They're still stored, and every SDK read returns them.
+
+## Messages
+
+A `CommentMessage` is Portable Text, meaning `PortableTextBlock[]`, because that is what the Studio stores. There is no composer helper, so plain text has to be wrapped:
+
+```tsx
+import {type CommentMessage} from '@sanity/sdk-react/collaboration'
+
+function toMessage(text: string): CommentMessage {
+  return [
+    {
+      _type: 'block',
+      _key: crypto.randomUUID(),
+      style: 'normal',
+      markDefs: [],
+      children: [{_type: 'span', _key: crypto.randomUUID(), text, marks: []}],
+    },
+  ]
+}
+```
+
+Mentions appear in a message as inline objects of type `mention` carrying a `userId`. The SDK stores and returns them untouched, so a mention written in the Studio survives a round trip, but there is no API for composing one yet.
+
+## Inline comments
+
+A comment can be anchored to a run of text inside a Portable Text field. Pass an `anchor`, an offset into each end of the run, when creating it:
+
+```tsx
+createComment({
+  documentId,
+  documentType: 'article',
+  fieldPath: 'body',
+  message: toMessage('Tighten this up'),
+  anchor: {
+    type: 'portable-text',
+    start: {_key: 'b1', offset: 0},
+    end: {_key: 'b1', offset: 12},
+  },
+})
+```
+
+The API resolves the anchor and the comment comes back with:
+
+- `selection`, the blocks the comment covers, each carrying the block's entire text with sentinel characters marking where the selection starts and ends. Storing marked-up text rather than offsets is what lets a highlight survive edits elsewhere in the same block.
+- `contentSnapshot`, a copy of the content the comment was written about.
+
+Resolving a selection back to a position in a live editor needs the editor's current value, so that lives in [`@portabletext/plugin-sdk-value`](https://github.com/portabletext/editor/tree/main/packages/plugin-sdk-value) rather than in the SDK.
+
+### Anchors into unsaved text
+
+The anchor is resolved against the document the API holds, which is a problem when the offsets count into text nobody has saved yet: the comment lands on the wrong words, or on nothing. Set the anchor's `fieldValue` to the blocks the offsets belong to, and it is resolved against those instead:
+
+```tsx
+createComment({
+  documentId,
+  documentType: 'article',
+  fieldPath: 'body',
+  message: toMessage('Tighten this up'),
+  anchor: {
+    type: 'portable-text',
+    start: {_key: 'b1', offset: 0},
+    end: {_key: 'b1', offset: 12},
+    fieldValue: editorValue, // the blocks `b1` through `b1`, or the whole field
+  },
+})
+```
+
+When the anchored text moves, re-anchor with `updateCommentAnchor`. It exists precisely so that a mechanical move does not come back marked as edited, and it takes a `fieldValue` for the same reason `createComment` does:
+
+```tsx
+const anchor = {
+  type: 'portable-text',
+  start: {_key: 'b1', offset: 4},
+  end: {_key: 'b1', offset: 16},
+} as const
+
+updateCommentAnchor({commentId, anchor})
+updateCommentAnchor({commentId, anchor: {...anchor, fieldValue: editorValue}})
+updateCommentAnchor({commentId, anchor: null}) // leaves a field-level comment
+```
+
+## Multiple resources and perspectives
+
+The read hooks resolve their resource the way every other hook does: from the options, or from the surrounding `ResourceProvider`.
+
+The actions resolve theirs when the action is called rather than when the hook runs, so one set of callbacks works across several resources:
+
+```tsx
+const {createComment} = useCommentActions()
+
+createComment({resourceName: 'secondary', documentId, documentType: 'article', fieldPath, message})
+```
+
+Perspective works the same way: pass `perspective` per call, or let the surrounding provider decide.
+
+## Types
+
+Exported from `@sanity/sdk-react/collaboration` and `@sanity/sdk/collaboration`:
+
+| Type                       | Description                                                                                                                                |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `Comment`                  | A single comment, with `threadId`, `fieldPath`, `status`, `reactions`, whatever `context` it was written with, and the local-only `state`. |
+| `CommentThread`            | A parent comment plus its `replies`, with `commentsCount` and `lastActivityAt`.                                                            |
+| `CommentStatus`            | `'open' \| 'resolved'`.                                                                                                                    |
+| `CommentMessage`           | The Portable Text body.                                                                                                                    |
+| `CommentAnchor`            | The write side of an inline anchor: an offset into each end of a run of text, plus the `fieldValue` to resolve it against.                 |
+| `CommentTextSelection`     | The read side of an inline anchor: the covered blocks, with sentinels marking the run.                                                     |
+| `CommentFieldValue`        | Portable Text a `CommentAnchor` is resolved against.                                                                                       |
+| `CommentReaction`          | One reaction on a comment.                                                                                                                 |
+| `CommentReactionShortName` | An emoji short name such as `':+1:'`. The set is closed, and the API rejects anything else.                                                |
+| `CommentsReadScope`        | Which of a document's comments a read covers.                                                                                              |
+| `CommentLocalState`        | Why a comment is not yet on the server.                                                                                                    |
