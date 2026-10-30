@@ -8,7 +8,7 @@ import {
 import {isMessageBusEnvironment, requireDashboardMessageBus} from '@sanity/sdk/_internal'
 import {type NavigationLocation, TopicError} from '@sanity/sdk/dashboard'
 import {useCallback, useEffect, useEffectEvent, useRef} from 'react'
-import {pairwise} from 'rxjs'
+import {pairwise, startWith} from 'rxjs'
 
 import {useWindowConnection} from '../comlink/useWindowConnection'
 import {useSanityInstance} from '../context/useSanityInstance'
@@ -75,24 +75,27 @@ export type NavigateToDashboardPath = (options: {
  * Optional. Omit it when the app only sends the user somewhere and has no router of its own;
  * inbound navigations are then ignored. An app with its own router must pass it, or the router
  * stops following the Dashboard's back and forward navigation and links into the app.
- * @returns A function the app calls to report its own in-app navigations to the Dashboard. Call it
- * from an effect after `useNavigate` in the same component, so it never reports a stale location.
+ * @returns A function the app calls to report its own in-app navigations to the Dashboard.
  *
  * @example
  * ```tsx
  * import {useNavigate} from '@sanity/sdk-react/dashboard'
  * import {useEffect} from 'react'
- * import {useLocation, useNavigate as useRouterNavigate} from 'react-router'
+ * import {useLocation, useNavigate as useRouterNavigate, useNavigationType} from 'react-router'
  *
  * function DashboardNavigationSync() {
  *   const routerNavigate = useRouterNavigate()
+ *   const navigationType = useNavigationType()
  *   const {pathname, search, hash} = useLocation()
  *   const navigate = useNavigate(({path, type}) => {
- *     routerNavigate(path, {replace: type === 'replace'})
+ *     routerNavigate(`/${path}`, {replace: type === 'replace'})
  *   })
  *   useEffect(() => {
- *     navigate({path: `${pathname.slice(1)}${search}${hash}`})
- *   }, [navigate, pathname, search, hash])
+ *     navigate({
+ *       path: `${pathname.slice(1)}${search}${hash}`,
+ *       type: navigationType === 'REPLACE' ? 'replace' : 'push',
+ *     })
+ *   }, [navigate, navigationType, pathname, search, hash])
  *   return null
  * }
  * ```
@@ -152,44 +155,40 @@ function useBusNavigate(
   const instance = useSanityInstance()
   const bus = requireDashboardMessageBus(instance, 'navigate')
   const navigate = useEffectEvent(navigateFn)
-  // Where the app's router is, as either side last said. `undefined` until the first subscription.
-  const appPath = useRef<string | null | undefined>(undefined)
-  // The path the router is leaving. The app may still report it while its router catches up.
+  // The app's path as the host last showed it; `undefined` before the first subscription.
+  const hostPath = useRef<string | null | undefined>(undefined)
+  // Where the app's router is, as the app last reported or this hook last followed.
+  const appPath = useRef<string | null>(null)
+  // Reports of this path are stale until the router catches up.
   const staleReportPath = useRef<string | null>(null)
 
   useEffect(() => {
-    const committedPath = (location: NavigationLocation | null | undefined) =>
-      location?.appId === bus.appId && location.transition === null ? location.path : null
+    const pathOf = (location: NavigationLocation | null | undefined) =>
+      location?.appId === bus.appId ? location.path : null
+    const locations = bus.subscribe('navigation.location')
+    // The app starts where the host is.
+    if (hostPath.current === undefined) hostPath.current = pathOf(locations.getCurrent())
 
-    const follow = (path: string | null, type: 'push' | 'replace') => {
-      if (path === null || path === appPath.current) return
+    // Each subscription replays the current location first, which catches up on missed navigations.
+    const sub = locations.pipe(startWith(null), pairwise()).subscribe(([previous, location]) => {
+      const path = pathOf(location)
+      if (path === null || path === hostPath.current) return
 
-      staleReportPath.current = appPath.current ?? null
-      // Only reports from effects that already ran with the old path are stale.
+      hostPath.current = path
+      if (path === appPath.current) return
+
+      staleReportPath.current = appPath.current
+      // Only effects of the current commit can still report the old path.
       queueMicrotask(() => {
         staleReportPath.current = null
       })
       appPath.current = path
-      navigate({path, type})
-    }
-
-    const locations = bus.subscribe('navigation.location')
-
-    // The app starts where the host is. After that, a commit seen on resubscribing, e.g. once
-    // the host shows an app it hid in an `<Activity>`, is a navigation this hook missed.
-    if (appPath.current === undefined) {
-      appPath.current = committedPath(locations.getCurrent())
-    } else {
-      follow(committedPath(locations.getCurrent()), 'replace')
-    }
-
-    const sub = locations.pipe(pairwise()).subscribe(([previous, location]) => {
       // Back and forward commit without a transition (SDK-2901); the host already moved history.
-      const type =
-        previous?.transition?.to.appId === bus.appId
-          ? previous.transition.navigationType
-          : 'replace'
-      follow(committedPath(location), type)
+      const transition = location?.transition ?? previous?.transition
+      navigate({
+        path,
+        type: transition?.to.appId === bus.appId ? transition.navigationType : 'replace',
+      })
     })
 
     return () => sub.unsubscribe()
@@ -197,34 +196,38 @@ function useBusNavigate(
 
   return useCallback<NavigateToDashboardPath>(
     ({path, type = 'push', scope = 'in-app'}) => {
-      // The host commits paths without a leading slash. A dashboard-scoped report never moved our
-      // router, so its commit must reach navigateFn.
-      const own = scope === 'in-app' ? path.replace(/^\//, '') : null
+      const report = (url: string | Promise<string>) =>
+        Promise.resolve(url)
+          .then((resolved) =>
+            bus.emit('navigation.location.update', {url: resolved, history: type}),
+          )
+          .catch((error: unknown) => {
+            // eslint-disable-next-line no-console
+            console.warn('Failed to report navigation to the Dashboard', error)
+          })
 
-      if (own !== null) {
-        // Sent before the router caught up; forwarding it would undo the host's navigation.
-        if (own === staleReportPath.current) return
-        // Already where the host has the app, e.g. once the router followed a back navigation.
-        if (own === appPath.current) return
-
-        appPath.current = own
+      // A dashboard-scoped report never moved our router.
+      if (scope === 'dashboard') {
+        report(path)
+        return
       }
+
+      // Host paths have no leading slash.
+      const own = path.replace(/^\//, '')
+      // Sent before the router caught up; forwarding it would undo the host's navigation.
+      if (own === staleReportPath.current) return
+
+      appPath.current = own
+      if (own === hostPath.current) return
 
       // The base path is read per call, not in render, so a host that has not published it only
       // loses outbound reporting; the inbound subscription above still installs.
-      const url =
-        own === null
-          ? Promise.resolve(path)
-          : bus.query('applications.base-path').then((base) => {
-              if (!base.ok) throw new TopicError('applications.base-path')
-              return joinPath(base.value, own)
-            })
-      url
-        .then((resolved) => bus.emit('navigation.location.update', {url: resolved, history: type}))
-        .catch((error: unknown) => {
-          // eslint-disable-next-line no-console
-          console.warn('Failed to report navigation to the Dashboard', error)
-        })
+      report(
+        bus.query('applications.base-path').then((base) => {
+          if (!base.ok) throw new TopicError('applications.base-path')
+          return joinPath(base.value, own)
+        }),
+      )
     },
     [bus],
   )
