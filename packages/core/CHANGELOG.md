@@ -1,5 +1,19 @@
 # Changelog
 
+## 3.12.0
+
+### Minor Changes
+
+- [#1503](https://github.com/sanity-io/sdk/pull/1503) [`db8fa49`](https://github.com/sanity-io/sdk/commit/db8fa49ba31241710c8f4d33c246f2e4110a42ad) Thanks [@joshuaellis](https://github.com/joshuaellis)! - Each message bus connection has a `key`, sent with every message, and can name the key of the connection that rendered it as its `parentKey`. When the Dashboard renders an app inside another app, the app connects with that parent, and the Dashboard hears it only while it hears the parent.
+  
+  The SDK now reads an app's module id from the root context the Sanity CLI provides, not the separate module context. Update the Sanity CLI and the SDK together: with only one of them updated, an app connects with its app id instead of its module id.
+
+### Patch Changes
+
+- [#1501](https://github.com/sanity-io/sdk/pull/1501) [`aea75c5`](https://github.com/sanity-io/sdk/commit/aea75c53e47023ca96e3e8b104a4c256854192cc) Thanks [@squiggler-app](https://github.com/apps/squiggler-app)! - Update dependencies: `groq@6.21.0`, `sanity@6.21.0`
+
+- [#1500](https://github.com/sanity-io/sdk/pull/1500) [`f39479f`](https://github.com/sanity-io/sdk/commit/f39479f1c0986f1df358302cfcfddc6750150568) Thanks [@squiggler-app](https://github.com/apps/squiggler-app)! - Update dependencies: `@sanity/client@8.14.1`
+
 ## 3.11.0
 
 ### Minor Changes
