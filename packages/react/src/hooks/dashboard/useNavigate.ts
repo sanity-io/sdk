@@ -153,11 +153,9 @@ function useBusNavigate(
   const navigate = useEffectEvent(navigateFn)
   // The path of this app's latest outbound request, used to suppress the echo of our own commit.
   const ownRequest = useRef<string | null>(null)
-  // This app's last committed path. Outlives the subscription, which the host's `<Activity>` tears
-  // down while the app is in the background.
+  // Survives the subscription teardown while the host hides the app.
   const committedPath = useRef<string | null>(null)
-  // The path the host moved the app away from while it was hidden. The app's router still reports
-  // it from the effects that run on show, and sending that report would move the host back.
+  // The app reports its old path once more after a catch-up; dropping it keeps the host in place.
   const staleReportPath = useRef<string | null>(null)
 
   useEffect(() => {
@@ -170,8 +168,7 @@ function useBusNavigate(
     // `{to, transition}` -> `{to, transition: null}` pair. The observable delivers every emission.
     const locations = bus.subscribe('navigation.location')
 
-    // A host navigation while the app was hidden left no transition to see, only a new commit.
-    // The host has already moved the browser history, so the app follows without adding to it.
+    // The host navigated here while the app was hidden. It already moved history, so replace.
     const current = locations.getCurrent()
     if (
       isOwnCommit(current) &&
@@ -179,7 +176,7 @@ function useBusNavigate(
       current.path !== committedPath.current
     ) {
       staleReportPath.current = committedPath.current
-      // Effects of one commit flush synchronously, so a report after this microtask is not stale.
+      // Only reports from this commit's effects are stale.
       queueMicrotask(() => {
         staleReportPath.current = null
       })

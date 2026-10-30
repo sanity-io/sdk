@@ -531,11 +531,11 @@ describe('useNavigate (message bus)', () => {
     expect(result.current).toBe(first)
   })
 
-  // The host keeps a backgrounded app alive in a hidden `<Activity>`, which stops its effects.
+  // The host hides background apps in an `<Activity>`, which unmounts their effects.
   describe('while the app is in the background', () => {
     const startPath = 'documents/abc'
 
-    // Lets the app's async reports reach the host.
+    // Flushes async reports.
     const settle = () => act(async () => {})
 
     const hostNavigatesTo = (path: string) => {
@@ -561,7 +561,7 @@ describe('useNavigate (message bus)', () => {
       return {result, hide: () => setMode('hidden'), show: () => setMode('visible')}
     }
 
-    // An app with its own router that reports every location, as in the `useNavigate` example.
+    // The `useNavigate` example: a router that reports every location.
     function useRoutedApp(initialPath: string) {
       const [path, setPath] = useState(initialPath)
       const report = useNavigate((navigation) => setPath(navigation.path))
