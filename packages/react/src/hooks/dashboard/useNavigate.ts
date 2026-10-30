@@ -155,18 +155,16 @@ function useBusNavigate(
   const instance = useSanityInstance()
   const bus = requireDashboardMessageBus(instance, 'navigate')
   const navigate = useEffectEvent(navigateFn)
-  // The app's path as the host last showed it; `undefined` before the first subscription.
+  // The app's path as dashboard last showed it; `undefined` before the first subscription.
   const hostPath = useRef<string | null | undefined>(undefined)
   // Where the app's router is, as the app last reported or this hook last followed.
   const appPath = useRef<string | null>(null)
-  // Reports of this path are stale until the router catches up.
   const staleReportPath = useRef<string | null>(null)
 
   useEffect(() => {
     const pathOf = (location: NavigationLocation | null | undefined) =>
       location?.appId === bus.appId ? location.path : null
     const locations = bus.subscribe('navigation.location')
-    // The app starts where the host is.
     if (hostPath.current === undefined) hostPath.current = pathOf(locations.getCurrent())
 
     // Each subscription replays the current location first, which catches up on missed navigations.
@@ -213,19 +211,19 @@ function useBusNavigate(
       }
 
       // Host paths have no leading slash.
-      const own = path.replace(/^\//, '')
+      const reportedPath = path.replace(/^\//, '')
       // Sent before the router caught up; forwarding it would undo the host's navigation.
-      if (own === staleReportPath.current) return
+      if (reportedPath === staleReportPath.current) return
 
-      appPath.current = own
-      if (own === hostPath.current) return
+      appPath.current = reportedPath
+      if (reportedPath === hostPath.current) return
 
       // The base path is read per call, not in render, so a host that has not published it only
       // loses outbound reporting; the inbound subscription above still installs.
       report(
         bus.query('applications.base-path').then((base) => {
           if (!base.ok) throw new TopicError('applications.base-path')
-          return joinPath(base.value, own)
+          return joinPath(base.value, reportedPath)
         }),
       )
     },

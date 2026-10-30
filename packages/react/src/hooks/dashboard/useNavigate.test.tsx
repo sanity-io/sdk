@@ -99,7 +99,6 @@ describe('useNavigate (message bus)', () => {
       client.emit('applications.base-path', {ok: true, value: '/applications/app'}),
     )
 
-  // The `useNavigate` example: a router that reports every location.
   function useRoutedApp(initialPath: string) {
     const [path, setPath] = useState(initialPath)
     const report = useNavigate((navigation) => setPath(navigation.path))
