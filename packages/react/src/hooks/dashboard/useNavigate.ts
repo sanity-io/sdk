@@ -158,7 +158,7 @@ function useBusNavigate(
   const committedPath = useRef<string | null>(null)
   // The path the host moved the app away from while it was hidden. The app's router still reports
   // it from the effects that run on show, and sending that report would move the host back.
-  const leftPath = useRef<string | null>(null)
+  const staleReportPath = useRef<string | null>(null)
 
   useEffect(() => {
     const isOwnCommit = (
@@ -178,10 +178,10 @@ function useBusNavigate(
       committedPath.current !== null &&
       current.path !== committedPath.current
     ) {
-      leftPath.current = committedPath.current
+      staleReportPath.current = committedPath.current
       // Effects of one commit flush synchronously, so a report after this microtask is not stale.
       queueMicrotask(() => {
-        leftPath.current = null
+        staleReportPath.current = null
       })
       navigate({path: current.path, type: 'replace'})
     }
@@ -227,7 +227,7 @@ function useBusNavigate(
       // The host commits paths without a leading slash; store the same form so the echo matches.
       // A dashboard-scoped report never moved our router, so its commit must reach navigateFn.
       const own = scope === 'in-app' ? path.replace(/^\//, '') : null
-      if (own !== null && own === leftPath.current) return
+      if (own !== null && own === staleReportPath.current) return
       if (own !== null) ownRequest.current = own
       // A request that never landed must drop its suppression, or a later host navigation to the
       // same path would be dropped. Best-effort: never throws.

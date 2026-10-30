@@ -533,7 +533,7 @@ describe('useNavigate (message bus)', () => {
 
   // The host keeps a backgrounded app alive in a hidden `<Activity>`, which stops its effects.
   describe('while the app is in the background', () => {
-    const leftAt = 'documents/abc'
+    const startPath = 'documents/abc'
 
     // Lets the app's async reports reach the host.
     const settle = () => act(async () => {})
@@ -571,7 +571,7 @@ describe('useNavigate (message bus)', () => {
 
     beforeEach(() => {
       publishBasePath()
-      emitLocation({appId: 'app', path: leftAt, transition: null})
+      emitLocation({appId: 'app', path: startPath, transition: null})
     })
 
     it('follows a host navigation into the app once it is shown again', () => {
@@ -591,14 +591,14 @@ describe('useNavigate (message bus)', () => {
       const app = renderInBackgroundableApp(() => useNavigate(navigateFn))
 
       app.hide()
-      hostNavigatesTo(leftAt)
+      hostNavigatesTo(startPath)
       app.show()
 
       expect(navigateFn).not.toHaveBeenCalled()
     })
 
     it('does not report the location the app had before it was hidden', async () => {
-      const app = renderInBackgroundableApp(() => useRoutedApp(leftAt))
+      const app = renderInBackgroundableApp(() => useRoutedApp(startPath))
       await settle()
       updates = []
 
@@ -618,7 +618,7 @@ describe('useNavigate (message bus)', () => {
       hostNavigatesTo('documents/def')
       app.show()
       await settle()
-      app.result.current({path: leftAt})
+      app.result.current({path: startPath})
       await settle()
 
       expect(updates).toEqual([{url: '/applications/app/documents/abc', history: 'push'}])
