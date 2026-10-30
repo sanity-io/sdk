@@ -88,6 +88,16 @@ describe('dashboard message bus store', () => {
     instance.dispose()
   })
 
+  it('connects with the parent key the host rendered the instance under', () => {
+    const instance = createSanityInstance(config)
+
+    getDashboardMessageBus(instance, 'app/views/tile', 'parent-key')
+
+    expect(bus.connect).toHaveBeenCalledWith({moduleId: 'app/views/tile', parentKey: 'parent-key'})
+
+    instance.dispose()
+  })
+
   it('does not cache a failed connection', () => {
     const instance = createSanityInstance(config)
     bus.connect.mockReturnValue(undefined)
