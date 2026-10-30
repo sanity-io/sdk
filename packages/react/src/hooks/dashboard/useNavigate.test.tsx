@@ -2,10 +2,11 @@ import {type PathChangeMessage} from '@sanity/message-protocol'
 import {installMessageBus, resetMessageBus} from '@sanity/sdk/_internal'
 import {type MessageBusHost, type NavigationLocation, type ValueOf} from '@sanity/sdk/dashboard'
 import {renderHook} from '@testing-library/react'
+import {Activity, type ReactNode, useEffect, useState} from 'react'
 import {config as rxjsConfig} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, onTestFinished, vi} from 'vitest'
 
-import {act, renderHook as renderHookWithInstance} from '../../../test/test-utils'
+import {act, AppProviders, renderHook as renderHookWithInstance} from '../../../test/test-utils'
 import {useNavigate} from './useNavigate'
 
 const mockSendMessage = vi.fn()
@@ -86,11 +87,8 @@ describe('useNavigate', () => {
 describe('useNavigate (message bus)', () => {
   const MESSAGE_BUS_KEY = Symbol.for('sanity.os.bus')
   let host: MessageBusHost
-  // The single navigation.location.update responder for the describe: it records every payload
-  // and replies with whatever `updateReply` currently holds, so a test can force a not-ok reply
-  // without registering a second competing responder.
+  // Every navigation.location.update the app sends to the host.
   let updates: {url: string; history?: string}[]
-  let updateReply: {ok: true} | {ok: false; reason: 'not-navigable' | 'interrupted' | 'failed'}
 
   const emitLocation = (value: NavigationLocation | null) =>
     host.connections.subscribe((client) =>
@@ -102,14 +100,21 @@ describe('useNavigate (message bus)', () => {
       client.emit('applications.base-path', {ok: true, value: '/applications/app'}),
     )
 
+  // The `useNavigate` example: a router that reports every location.
+  function useRoutedApp(initialPath: string) {
+    const [path, setPath] = useState(initialPath)
+    const report = useNavigate((navigation) => setPath(navigation.path))
+    useEffect(() => report({path}), [path, report])
+    return path
+  }
+
   beforeEach(() => {
     updates = []
-    updateReply = {ok: true}
     vi.stubGlobal('__SANITY_APP_ID__', 'app')
     host = installMessageBus({appId: 'dashboard'})
     host.subscribe('navigation.location.update', (message) => {
       updates.push(message.payload)
-      message.reply(updateReply)
+      message.reply({ok: true})
     })
   })
 
@@ -171,7 +176,7 @@ describe('useNavigate (message bus)', () => {
     expect(navigateFn).not.toHaveBeenCalled()
   })
 
-  it('ignores the app’s own in-app change with no prior transition', () => {
+  it('follows a back or forward navigation in the host', () => {
     publishBasePath()
     emitLocation({appId: 'app', path: 'documents/abc', transition: null})
 
@@ -182,7 +187,8 @@ describe('useNavigate (message bus)', () => {
       emitLocation({appId: 'app', path: 'documents/def', transition: null})
     })
 
-    expect(navigateFn).not.toHaveBeenCalled()
+    expect(navigateFn).toHaveBeenCalledTimes(1)
+    expect(navigateFn).toHaveBeenCalledWith({path: 'documents/def', type: 'replace'})
   })
 
   it('emits navigation.location.update with the joined path and history for an outbound report', async () => {
@@ -227,7 +233,7 @@ describe('useNavigate (message bus)', () => {
     expect(updates).toEqual([{url: '/applications/app/documents/def', history: 'push'}])
   })
 
-  it('does not echo the app’s own outbound report but still fires host-initiated commits', () => {
+  it('does not navigate the app to a location it reported itself, but follows the host after', () => {
     publishBasePath()
     emitLocation({appId: 'app', path: 'documents/abc', transition: null})
 
@@ -271,83 +277,35 @@ describe('useNavigate (message bus)', () => {
     expect(navigateFn).toHaveBeenCalledWith({path: 'documents/ghi', type: 'push'})
   })
 
-  it('fires a later host-mediated commit to the same path as a suppressed own report', () => {
+  it('does not navigate the app when the host commits the path it is already at', () => {
     publishBasePath()
     emitLocation({appId: 'app', path: 'documents/abc', transition: null})
 
     const navigateFn = vi.fn()
-    const {result} = renderHookWithInstance(() => useNavigate(navigateFn))
+    renderHookWithInstance(() => useNavigate(navigateFn))
 
-    const own = {appId: 'app', path: 'documents/def'}
+    const to = {appId: 'app', path: 'documents/abc'}
     act(() => {
-      result.current({path: 'documents/def'})
-      emitLocation({
-        appId: 'app',
-        path: 'documents/abc',
-        transition: {navigationType: 'push', to: own},
-      })
-      emitLocation({
-        appId: 'app',
-        path: 'documents/def',
-        transition: {navigationType: 'push', to: own},
-      })
-      emitLocation({appId: 'app', path: 'documents/def', transition: null})
+      emitLocation({appId: 'app', path: 'documents/abc', transition: {navigationType: 'push', to}})
+      emitLocation({appId: 'app', path: 'documents/abc', transition: null})
     })
 
     expect(navigateFn).not.toHaveBeenCalled()
-
-    const hostTo = {appId: 'app', path: 'documents/def'}
-    act(() => {
-      emitLocation({
-        appId: 'app',
-        path: 'documents/def',
-        transition: {navigationType: 'push', to: hostTo},
-      })
-      emitLocation({
-        appId: 'app',
-        path: 'documents/def',
-        transition: {navigationType: 'push', to: hostTo},
-      })
-      emitLocation({appId: 'app', path: 'documents/def', transition: null})
-    })
-
-    expect(navigateFn).toHaveBeenCalledTimes(1)
-    expect(navigateFn).toHaveBeenCalledWith({path: 'documents/def', type: 'push'})
   })
 
-  it('fires a host commit to a path whose own report was rejected by the host', async () => {
+  it('does not report a back or forward navigation back to the host', async () => {
     publishBasePath()
     emitLocation({appId: 'app', path: 'documents/abc', transition: null})
-    updateReply = {ok: false, reason: 'not-navigable'}
+    const {result} = renderHookWithInstance(() => useRoutedApp('documents/abc'))
 
-    const navigateFn = vi.fn()
-    const {result} = renderHookWithInstance(() => useNavigate(navigateFn))
+    act(() => emitLocation({appId: 'app', path: 'documents/def', transition: null}))
+    await act(async () => {})
 
-    await act(async () => {
-      result.current({path: 'documents/def'})
-      await Promise.resolve()
-    })
-
-    const hostTo = {appId: 'app', path: 'documents/def'}
-    act(() => {
-      emitLocation({
-        appId: 'app',
-        path: 'documents/abc',
-        transition: {navigationType: 'push', to: hostTo},
-      })
-      emitLocation({
-        appId: 'app',
-        path: 'documents/def',
-        transition: {navigationType: 'push', to: hostTo},
-      })
-      emitLocation({appId: 'app', path: 'documents/def', transition: null})
-    })
-
-    expect(navigateFn).toHaveBeenCalledTimes(1)
-    expect(navigateFn).toHaveBeenCalledWith({path: 'documents/def', type: 'push'})
+    expect(result.current).toBe('documents/def')
+    expect(updates).toEqual([])
   })
 
-  it('ignores a commit whose prior transition target path does not match', () => {
+  it('follows the path the host commits when it differs from the requested one', () => {
     publishBasePath()
     emitLocation({appId: 'app', path: 'documents/abc', transition: null})
 
@@ -360,10 +318,11 @@ describe('useNavigate (message bus)', () => {
       emitLocation({appId: 'app', path: 'b', transition: null})
     })
 
-    expect(navigateFn).not.toHaveBeenCalled()
+    expect(navigateFn).toHaveBeenCalledTimes(1)
+    expect(navigateFn).toHaveBeenCalledWith({path: 'b', type: 'push'})
   })
 
-  it('suppresses the echo of an own report made with a leading slash', () => {
+  it('does not navigate the app to a location it reported with a leading slash', () => {
     publishBasePath()
     emitLocation({appId: 'app', path: 'documents/abc', transition: null})
 
@@ -410,36 +369,17 @@ describe('useNavigate (message bus)', () => {
     expect(navigateFn).toHaveBeenCalledWith({path: 'documents/abc', type: 'push'})
   })
 
-  it('drops an outbound report when the base path is not ok and still fires a later host commit to that path', async () => {
+  it('drops an outbound report when the base path is not ok', async () => {
     host.connections.subscribe((client) => client.emit('applications.base-path', {ok: false}))
     emitLocation({appId: 'app', path: 'documents/abc', transition: null})
 
-    const navigateFn = vi.fn()
-    const {result} = renderHookWithInstance(() => useNavigate(navigateFn))
+    const {result} = renderHookWithInstance(() => useNavigate(vi.fn()))
 
     await act(async () => {
       result.current({path: 'documents/def'})
     })
 
     expect(updates).toEqual([])
-
-    const hostTo = {appId: 'app', path: 'documents/def'}
-    act(() => {
-      emitLocation({
-        appId: 'app',
-        path: 'documents/abc',
-        transition: {navigationType: 'push', to: hostTo},
-      })
-      emitLocation({
-        appId: 'app',
-        path: 'documents/def',
-        transition: {navigationType: 'push', to: hostTo},
-      })
-      emitLocation({appId: 'app', path: 'documents/def', transition: null})
-    })
-
-    expect(navigateFn).toHaveBeenCalledTimes(1)
-    expect(navigateFn).toHaveBeenCalledWith({path: 'documents/def', type: 'push'})
   })
 
   it('emits a dashboard-scoped URL as-is while the base path is unpublished and fires navigateFn when it lands in this app', async () => {
@@ -464,7 +404,7 @@ describe('useNavigate (message bus)', () => {
     expect(navigateFn).toHaveBeenCalledWith({path: 'documents/def', type: 'push'})
   })
 
-  it('keeps a pending in-app echo suppressed across a dashboard-scoped report', () => {
+  it('does not navigate the app to its reported location after a dashboard-scoped report', () => {
     publishBasePath()
     emitLocation({appId: 'app', path: 'documents/abc', transition: null})
 
@@ -528,5 +468,91 @@ describe('useNavigate (message bus)', () => {
     rerender()
 
     expect(result.current).toBe(first)
+  })
+
+  // The host hides background apps in an `<Activity>`, which unmounts their effects.
+  describe('while the app is in the background', () => {
+    const startPath = 'documents/abc'
+
+    // Flushes async reports.
+    const settle = () => act(async () => {})
+
+    const hostNavigatesTo = (path: string) => {
+      const to = {appId: 'app', path}
+      act(() => {
+        emitLocation({appId: 'other', path: 'other', transition: {navigationType: 'push', to}})
+        emitLocation({appId: 'app', path, transition: null})
+      })
+    }
+
+    function renderInBackgroundableApp<T>(hook: () => T) {
+      let mode: 'visible' | 'hidden' = 'visible'
+      const wrapper = ({children}: {children: ReactNode}) => (
+        <Activity mode={mode}>
+          <AppProviders>{children}</AppProviders>
+        </Activity>
+      )
+      const {result, rerender} = renderHookWithInstance(hook, {wrapper})
+      const setMode = (next: typeof mode) => {
+        mode = next
+        rerender()
+      }
+      return {result, hide: () => setMode('hidden'), show: () => setMode('visible')}
+    }
+
+    beforeEach(() => {
+      publishBasePath()
+      emitLocation({appId: 'app', path: startPath, transition: null})
+    })
+
+    it('follows a host navigation into the app once it is shown again', () => {
+      const navigateFn = vi.fn()
+      const app = renderInBackgroundableApp(() => useNavigate(navigateFn))
+
+      app.hide()
+      hostNavigatesTo('documents/def')
+      app.show()
+
+      expect(navigateFn).toHaveBeenCalledTimes(1)
+      expect(navigateFn).toHaveBeenCalledWith({path: 'documents/def', type: 'replace'})
+    })
+
+    it('does not navigate when the app is shown again where it was left', () => {
+      const navigateFn = vi.fn()
+      const app = renderInBackgroundableApp(() => useNavigate(navigateFn))
+
+      app.hide()
+      hostNavigatesTo(startPath)
+      app.show()
+
+      expect(navigateFn).not.toHaveBeenCalled()
+    })
+
+    it('does not report the location the app had before it was hidden', async () => {
+      const app = renderInBackgroundableApp(() => useRoutedApp(startPath))
+      await settle()
+      updates = []
+
+      app.hide()
+      hostNavigatesTo('documents/def')
+      app.show()
+      await settle()
+
+      expect(app.result.current).toBe('documents/def')
+      expect(updates).toEqual([])
+    })
+
+    it('reports a later navigation back to where the app was before it was hidden', async () => {
+      const app = renderInBackgroundableApp(() => useNavigate(vi.fn()))
+
+      app.hide()
+      hostNavigatesTo('documents/def')
+      app.show()
+      await settle()
+      app.result.current({path: startPath})
+      await settle()
+
+      expect(updates).toEqual([{url: '/applications/app/documents/abc', history: 'push'}])
+    })
   })
 })
