@@ -35,7 +35,7 @@ overrides:
 catalog:
   '@playwright/test': '^1.64.1'
   '@sanity/browserslist-config': '^1.0.5'
-  '@sanity/client': '^8.13.0'
+  '@sanity/client': '^8.14.1'
   '@sanity/comlink': '^4.0.3'
   '@sanity/message-protocol': '^0.24.0'
   '@sanity/pkg-utils': '^13.0.16'
