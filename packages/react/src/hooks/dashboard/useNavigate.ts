@@ -8,7 +8,7 @@ import {
 import {isMessageBusEnvironment, requireDashboardMessageBus} from '@sanity/sdk/_internal'
 import {type NavigationLocation, TopicError} from '@sanity/sdk/dashboard'
 import {useCallback, useEffect, useEffectEvent, useRef} from 'react'
-import {filter, map, pairwise} from 'rxjs'
+import {filter, map, pairwise, tap} from 'rxjs'
 
 import {useWindowConnection} from '../comlink/useWindowConnection'
 import {useSanityInstance} from '../context/useSanityInstance'
@@ -153,14 +153,44 @@ function useBusNavigate(
   const navigate = useEffectEvent(navigateFn)
   // The path of this app's latest outbound request, used to suppress the echo of our own commit.
   const ownRequest = useRef<string | null>(null)
+  // This app's last committed path. Outlives the subscription, which the host's `<Activity>` tears
+  // down while the app is in the background.
+  const committedPath = useRef<string | null>(null)
+  // The path the host moved the app away from while it was hidden. The app's router still reports
+  // it from the effects that run on show, and sending that report would move the host back.
+  const leftPath = useRef<string | null>(null)
 
   useEffect(() => {
+    const isOwnCommit = (
+      location: NavigationLocation | null | undefined,
+    ): location is NavigationLocation =>
+      location?.appId === bus.appId && location.transition === null
     // bus.subscribe, not useTopic: the rule needs the previous emission, and React coalesces
     // store notifications that land in one task, so a snapshot + ref could miss the
     // `{to, transition}` -> `{to, transition: null}` pair. The observable delivers every emission.
-    const sub = bus
-      .subscribe('navigation.location')
+    const locations = bus.subscribe('navigation.location')
+
+    // A host navigation while the app was hidden left no transition to see, only a new commit.
+    // The host has already moved the browser history, so the app follows without adding to it.
+    const current = locations.getCurrent()
+    if (
+      isOwnCommit(current) &&
+      committedPath.current !== null &&
+      current.path !== committedPath.current
+    ) {
+      leftPath.current = committedPath.current
+      // Effects of one commit flush synchronously, so a report after this microtask is not stale.
+      queueMicrotask(() => {
+        leftPath.current = null
+      })
+      navigate({path: current.path, type: 'replace'})
+    }
+
+    const sub = locations
       .pipe(
+        tap((location) => {
+          if (isOwnCommit(location)) committedPath.current = location.path
+        }),
         pairwise(),
         filter(
           (
@@ -197,6 +227,7 @@ function useBusNavigate(
       // The host commits paths without a leading slash; store the same form so the echo matches.
       // A dashboard-scoped report never moved our router, so its commit must reach navigateFn.
       const own = scope === 'in-app' ? path.replace(/^\//, '') : null
+      if (own !== null && own === leftPath.current) return
       if (own !== null) ownRequest.current = own
       // A request that never landed must drop its suppression, or a later host navigation to the
       // same path would be dropped. Best-effort: never throws.

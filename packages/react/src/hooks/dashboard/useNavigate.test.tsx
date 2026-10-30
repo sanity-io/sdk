@@ -2,10 +2,11 @@ import {type PathChangeMessage} from '@sanity/message-protocol'
 import {installMessageBus, resetMessageBus} from '@sanity/sdk/_internal'
 import {type MessageBusHost, type NavigationLocation, type ValueOf} from '@sanity/sdk/dashboard'
 import {renderHook} from '@testing-library/react'
+import {Activity, type ReactNode, useEffect, useState} from 'react'
 import {config as rxjsConfig} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, onTestFinished, vi} from 'vitest'
 
-import {act, renderHook as renderHookWithInstance} from '../../../test/test-utils'
+import {act, AppProviders, renderHook as renderHookWithInstance} from '../../../test/test-utils'
 import {useNavigate} from './useNavigate'
 
 const mockSendMessage = vi.fn()
@@ -528,5 +529,99 @@ describe('useNavigate (message bus)', () => {
     rerender()
 
     expect(result.current).toBe(first)
+  })
+
+  // The host keeps a backgrounded app alive in a hidden `<Activity>`, which stops its effects.
+  describe('while the app is in the background', () => {
+    const leftAt = 'documents/abc'
+
+    // Lets the app's async reports reach the host.
+    const settle = () => act(async () => {})
+
+    const hostNavigatesTo = (path: string) => {
+      const to = {appId: 'app', path}
+      act(() => {
+        emitLocation({appId: 'other', path: 'other', transition: {navigationType: 'push', to}})
+        emitLocation({appId: 'app', path, transition: null})
+      })
+    }
+
+    function renderInBackgroundableApp<T>(hook: () => T) {
+      let mode: 'visible' | 'hidden' = 'visible'
+      const wrapper = ({children}: {children: ReactNode}) => (
+        <Activity mode={mode}>
+          <AppProviders>{children}</AppProviders>
+        </Activity>
+      )
+      const {result, rerender} = renderHookWithInstance(hook, {wrapper})
+      const setMode = (next: typeof mode) => {
+        mode = next
+        rerender()
+      }
+      return {result, hide: () => setMode('hidden'), show: () => setMode('visible')}
+    }
+
+    // An app with its own router that reports every location, as in the `useNavigate` example.
+    function useRoutedApp(initialPath: string) {
+      const [path, setPath] = useState(initialPath)
+      const report = useNavigate((navigation) => setPath(navigation.path))
+      useEffect(() => report({path}), [path, report])
+      return path
+    }
+
+    beforeEach(() => {
+      publishBasePath()
+      emitLocation({appId: 'app', path: leftAt, transition: null})
+    })
+
+    it('follows a host navigation into the app once it is shown again', () => {
+      const navigateFn = vi.fn()
+      const app = renderInBackgroundableApp(() => useNavigate(navigateFn))
+
+      app.hide()
+      hostNavigatesTo('documents/def')
+      app.show()
+
+      expect(navigateFn).toHaveBeenCalledTimes(1)
+      expect(navigateFn).toHaveBeenCalledWith({path: 'documents/def', type: 'replace'})
+    })
+
+    it('does not navigate when the app is shown again where it was left', () => {
+      const navigateFn = vi.fn()
+      const app = renderInBackgroundableApp(() => useNavigate(navigateFn))
+
+      app.hide()
+      hostNavigatesTo(leftAt)
+      app.show()
+
+      expect(navigateFn).not.toHaveBeenCalled()
+    })
+
+    it('does not report the location the app had before it was hidden', async () => {
+      const app = renderInBackgroundableApp(() => useRoutedApp(leftAt))
+      await settle()
+      updates = []
+
+      app.hide()
+      hostNavigatesTo('documents/def')
+      app.show()
+      await settle()
+
+      expect(app.result.current).toBe('documents/def')
+      expect(updates).toEqual([{url: '/applications/app/documents/def', history: 'push'}])
+    })
+
+    it('reports a later navigation back to where the app was before it was hidden', async () => {
+      const app = renderInBackgroundableApp(() => useNavigate(vi.fn()))
+
+      app.hide()
+      hostNavigatesTo('documents/def')
+      app.show()
+      await settle()
+      app.result.current({path: leftAt})
+      await settle()
+
+      expect(updates).toEqual([{url: '/applications/app/documents/abc', history: 'push'}])
+    })
   })
 })
