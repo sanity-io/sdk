@@ -1,5 +1,5 @@
 import {type ReleaseDocument} from '@sanity/client'
-import {map} from 'rxjs'
+import {map, Subscription} from 'rxjs'
 
 import {type DocumentResource} from '../config/sanityConfig'
 import {bindActionByResource, type BoundResourceKey} from '../store/createActionBinder'
@@ -100,25 +100,33 @@ const subscribeToReleases = ({
 }: StoreContext<ReleasesStoreState, BoundResourceKey>) => {
   const releases$ = observeReleases(instance, {
     resource,
-    // Surface CORS errors as store state instead of erroring the stream so
-    // they can be handled by the Cors Error component
-    onCorsError: (error) => state.set('setError', {error}),
-    onError: (fetchError) => state.set('setFetchError', {fetchError}),
+    // Surface a listener failure while allowing later updates to recover.
+    onError: (error) => state.set('setError', {error}),
+    onFetchError: (fetchError) => state.set('setFetchError', {fetchError}),
   })
-  return releases$
-    .pipe(
-      map((releases) => {
-        // logic here mirrors that of studio:
-        // https://github.com/sanity-io/sanity/blob/156e8fa482703d99219f08da7bacb384517f1513/packages/sanity/src/core/releases/store/useActiveReleases.ts#L29
-        const sorted = sortReleases(releases ?? STABLE_EMPTY_RELEASES).reverse()
-        state.set('setReleases', {
-          allReleases: sorted,
-          activeReleases: sorted.filter(
-            (release) => !ARCHIVED_RELEASE_STATES.includes(release.state),
-          ),
-          fetchError: undefined,
-        })
-      }),
-    )
-    .subscribe({error: (error) => state.set('setError', {error})})
+  // Clear an upstream failure when demand closes so a later mount can retry.
+  const subscription = new Subscription(() =>
+    state.set('clearError', {error: undefined, fetchError: undefined}),
+  )
+  subscription.add(
+    releases$
+      .pipe(
+        map((releases) => {
+          // logic here mirrors that of studio:
+          // https://github.com/sanity-io/sanity/blob/156e8fa482703d99219f08da7bacb384517f1513/packages/sanity/src/core/releases/store/useActiveReleases.ts#L29
+          const sorted = sortReleases(releases ?? STABLE_EMPTY_RELEASES).reverse()
+          state.set('setReleases', {
+            error: undefined,
+            fetchError: undefined,
+            allReleases: sorted,
+            activeReleases: sorted.filter(
+              (release) => !ARCHIVED_RELEASE_STATES.includes(release.state),
+            ),
+          })
+        }),
+      )
+      // Client-state errors are surfaced here; listener and fetch errors are handled above.
+      .subscribe({error: (error) => state.set('setError', {error})}),
+  )
+  return subscription
 }

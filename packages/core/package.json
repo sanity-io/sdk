@@ -102,6 +102,7 @@
     "groq-js": "catalog:",
     "reselect": "^5.3.0",
     "rxjs": "catalog:",
+    "rxjs-exhaustmap-with-trailing": "^2.1.1",
     "zustand": "^5.0.16"
   },
   "devDependencies": {
