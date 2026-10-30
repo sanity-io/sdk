@@ -30,7 +30,7 @@ minimumReleaseAgeExclude:
 
 overrides:
   # rolldown 1.2.14 crashes api-extractor during `pkg build`; unpin once microsoft/rushstack#6156 is fixed
-  rolldown: 1.2.13
+  rolldown: 1.2.16
 
 catalog:
   '@playwright/test': '^1.64.1'
@@ -61,7 +61,7 @@ catalog:
   react-dom: '^19.3.1'
   react-error-boundary: '^6.1.6'
   rimraf: '^6.0.1'
-  rolldown: '^1.2.12'
+  rolldown: '^1.2.16'
   rxjs: '^7.8.2'
   tsx: '^4.23.15'
   typescript: '^7.0.2'
