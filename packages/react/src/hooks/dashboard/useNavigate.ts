@@ -224,6 +224,7 @@ function useBusNavigate(
       // The host commits paths without a leading slash; store the same form so the echo matches.
       // A dashboard-scoped report never moved our router, so its commit must reach navigateFn.
       const own = scope === 'in-app' ? path.replace(/^\//, '') : null
+      // Sent before the router caught up; forwarding it would undo the host's navigation.
       if (own !== null && own === staleReportPath.current) return
       if (own !== null) ownRequest.current = own
       // A request that never landed must drop its suppression, or a later host navigation to the
