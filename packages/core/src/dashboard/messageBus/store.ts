@@ -8,9 +8,10 @@ interface DashboardMessageBusState {
   connection?: MessageBusConnection
 }
 
-const bindActionByInstance = createActionBinder<{name: string}, [moduleId?: string]>(
-  (instance) => ({name: instance.instanceId}),
-)
+const bindActionByInstance = createActionBinder<
+  {name: string},
+  [moduleId?: string, parentKey?: string]
+>((instance) => ({name: instance.instanceId}))
 
 const dashboardMessageBusStore = defineStore<DashboardMessageBusState>({
   name: 'dashboardMessageBus',
@@ -24,11 +25,11 @@ const dashboardMessageBusStore = defineStore<DashboardMessageBusState>({
 
 const connectDashboardMessageBus = bindActionByInstance(
   dashboardMessageBusStore,
-  ({state}, moduleId?: string): MessageBusConnection | undefined => {
+  ({state}, moduleId?: string, parentKey?: string): MessageBusConnection | undefined => {
     const current = state.get().connection
     if (current) return current
     if (!isMessageBusInstalled()) return undefined
-    const connection = connectMessageBus({moduleId})
+    const connection = connectMessageBus({moduleId, parentKey})
     if (!connection) return undefined
     state.set('connect', {connection})
     return connection
@@ -40,23 +41,24 @@ const connectDashboardMessageBus = bindActionByInstance(
  *
  * @remarks
  * One connection is made per {@link SanityInstance}, carrying that window's
- * module identity. The first caller wins; later callers get the cached
- * connection. When no host bus is installed it returns `undefined` without
- * caching, so a later call retries once a host installs the bus. It throws for
- * a disposed instance: its dispose has already run, so nothing would close a
- * new connection.
+ * module identity and, when a host rendered it, its parent's key. The first
+ * caller wins; later callers get the cached connection. When no host bus is
+ * installed it returns `undefined` without caching, so a later call retries
+ * once a host installs the bus. It throws for a disposed instance: its dispose
+ * has already run, so nothing would close a new connection.
  * @internal
  */
 export function getDashboardMessageBus(
   instance: SanityInstance,
   moduleId?: string,
+  parentKey?: string,
 ): MessageBusConnection | undefined {
   if (instance.isDisposed()) {
     throw new Error(
       'Cannot connect to the Dashboard message bus: this Sanity instance was disposed when the Dashboard removed the app. Stop pending work, such as timers or awaited calls, when the app unmounts.',
     )
   }
-  return connectDashboardMessageBus(instance, moduleId)
+  return connectDashboardMessageBus(instance, moduleId, parentKey)
 }
 
 /**

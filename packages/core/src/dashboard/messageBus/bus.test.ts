@@ -779,6 +779,52 @@ describe('connection identity and lifetime', () => {
     expect(meta?.moduleId).toBe(meta?.appId)
   })
 
+  it('gives two mounts of one module different keys, stamped on their messages', async () => {
+    const host = createMessageBus('dashboard')
+    const a = connectApplicationToMessageBus(host, {appId: 'app', moduleId: 'app/views/tile'})
+    const b = connectApplicationToMessageBus(host, {appId: 'app', moduleId: 'app/views/tile'})
+    const seen: (string | undefined)[] = []
+    host.subscribe('test.mint', (message) => {
+      seen.push(message.meta.key)
+      message.reply('ok')
+    })
+
+    await a.emit('test.mint')
+    await b.emit('test.mint')
+
+    expect(a.key).toEqual(expect.any(String))
+    expect(a.key).not.toBe(b.key)
+    expect(seen).toEqual([a.key, b.key])
+  })
+
+  it('hands the host each connection’s key and the parent key it connected with', () => {
+    const host = createMessageBus('dashboard')
+    const parent = connect(host, {appId: 'home', moduleId: 'home/App'})
+    const child = connect(host, {
+      appId: 'app',
+      moduleId: 'app/views/tile',
+      parentKey: parent.app.key,
+    })
+
+    expect(parent.client).toMatchObject({key: parent.app.key, parentKey: undefined})
+    expect(child.client).toMatchObject({key: child.app.key, parentKey: parent.app.key})
+  })
+
+  it('connects with a parent through connectMessageBus', () => {
+    preserveMessageBusInstallation()
+    try {
+      const host = installMessageBus({appId: 'dashboard'})
+      const clients: MessageBusClient[] = []
+      host.connections.subscribe((client) => clients.push(client))
+
+      connectMessageBus({appId: 'app', moduleId: 'app/views/tile', parentKey: 'parent-key'})
+
+      expect(clients.map((client) => client.parentKey)).toEqual(['parent-key'])
+    } finally {
+      restoreMessageBusInstallation()
+    }
+  })
+
   it('returns a connection with disconnect from connectMessageBus', () => {
     preserveMessageBusInstallation()
     try {

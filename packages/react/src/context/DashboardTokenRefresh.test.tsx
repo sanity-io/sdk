@@ -1,14 +1,15 @@
-import {AuthStateType, setAuthToken} from '@sanity/sdk'
+import {AuthStateType, createSanityInstance, type SanityInstance, setAuthToken} from '@sanity/sdk'
 import {getDashboardMessageBus} from '@sanity/sdk/_internal'
 import {act, render} from '@testing-library/react'
 import {of} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, type Mock, vi} from 'vitest'
 
-import {getDashboardModuleContext} from '../dashboard/module'
+import {contextLikeTheCliWrapper} from '../../test/dashboardSlots'
 import {useAuthState} from '../hooks/auth/useAuthState'
 import {useSanityInstance} from '../hooks/context/useSanityInstance'
 import {DashboardTokenRefreshProvider} from './DashboardTokenRefresh'
 import {ResourceProvider} from './ResourceProvider'
+import {SanityInstanceProvider} from './SanityInstanceProvider'
 
 const messageBus = vi.hoisted(() => ({
   client: undefined as
@@ -38,6 +39,12 @@ vi.mock('@sanity/sdk/_internal', async (importOriginal) => ({
 }))
 
 const mockSetAuthToken = setAuthToken as Mock
+const RootContext = contextLikeTheCliWrapper<{
+  signal: AbortSignal
+  moduleId?: string
+  parentKey?: string
+}>('sanity.os.root')
+const signal = new AbortController().signal
 const mockUseAuthState = useAuthState as Mock
 
 const renderProvider = () =>
@@ -102,7 +109,6 @@ describe('DashboardTokenRefreshProvider', () => {
       // getDashboardMessageBus is first-caller-wins per instance. A hook reading the bus in
       // its render runs before any parent effect, so the provider must connect during render
       // or the connection is pinned to the app id.
-      const ModuleContext = getDashboardModuleContext()
       function ReadsBus() {
         getDashboardMessageBus(useSanityInstance())
         return null
@@ -110,41 +116,68 @@ describe('DashboardTokenRefreshProvider', () => {
 
       act(() => {
         render(
-          <ModuleContext.Provider value="favorites/views/list/panel">
+          <RootContext.Provider value={{signal, moduleId: 'favorites/views/list/panel'}}>
             <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
               <DashboardTokenRefreshProvider>
                 <ReadsBus />
               </DashboardTokenRefreshProvider>
             </ResourceProvider>
-          </ModuleContext.Provider>,
+          </RootContext.Provider>,
         )
       })
 
       expect(messageBus.getDashboardMessageBus.mock.calls[0]).toEqual([
         expect.anything(),
         'favorites/views/list/panel',
+        undefined,
       ])
     })
 
-    it('forwards the module id from the dashboard module context', () => {
-      const ModuleContext = getDashboardModuleContext()
-
+    it('forwards the module id and parent key the host rendered the root with', () => {
       act(() => {
         render(
-          <ModuleContext.Provider value="favorites/views/list/panel">
+          <RootContext.Provider
+            value={{signal, moduleId: 'favorites/views/inbox/tile', parentKey: 'home-key'}}
+          >
             <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
               <DashboardTokenRefreshProvider>
                 <div>Test</div>
               </DashboardTokenRefreshProvider>
             </ResourceProvider>
-          </ModuleContext.Provider>,
+          </RootContext.Provider>,
         )
       })
 
       expect(messageBus.getDashboardMessageBus).toHaveBeenCalledWith(
         expect.anything(),
-        'favorites/views/list/panel',
+        'favorites/views/inbox/tile',
+        'home-key',
       )
+    })
+
+    it('reads the bus of the instance it renders under now, not the first one', () => {
+      const first = createSanityInstance({projectId: 'p', dataset: 'd'})
+      const second = createSanityInstance({projectId: 'p', dataset: 'd'})
+      const under = (instance: SanityInstance) => (
+        <SanityInstanceProvider instance={instance} fallback={null}>
+          <DashboardTokenRefreshProvider>
+            <div>Test</div>
+          </DashboardTokenRefreshProvider>
+        </SanityInstanceProvider>
+      )
+
+      const {rerender} = render(under(first))
+      act(() => {
+        rerender(under(second))
+      })
+
+      expect(messageBus.getDashboardMessageBus).toHaveBeenLastCalledWith(
+        second,
+        undefined,
+        undefined,
+      )
+      first.dispose()
+      second.dispose()
     })
 
     it('treats subscription failures as a missing token', () => {

@@ -15,6 +15,7 @@ import {
 } from 'rxjs'
 
 import {type Application} from '../../applications/applications'
+import {randomId} from '../../utils/ids'
 import {
   DASHBOARD_TOPIC_MANIFEST,
   type EventTopic,
@@ -99,6 +100,11 @@ export interface MessageBusMeta {
    * supplied none, so readers normalise with `message.meta.moduleId ?? message.meta.appId`.
    */
   moduleId?: string
+  /**
+   * The {@link MessageBusConnection.key} of the connection that sent the message, so the host
+   * can look up who rendered it. Absent from older copies.
+   */
+  key?: string
   /** The Unix timestamp in milliseconds when the message was produced. */
   timestamp: number
 }
@@ -242,6 +248,11 @@ export interface MessageBusConnection<TTopics = MessageBusTopics> extends Messag
   /** The application this connection belongs to. */
   readonly appId: Application['id']
   /**
+   * Identifies this connection on the bus, unlike `moduleId`, which two mounts of one module
+   * share. A host passes it as the `parentKey` of the modules it renders.
+   */
+  readonly key: string
+  /**
    * Tears down this connection: pending requests reject `ABORTED`, subscriptions
    * complete, and later `emit`, `query`, and `subscribe` calls fail with `ABORTED`.
    * Siblings and the shared bus are untouched.
@@ -259,6 +270,10 @@ export interface MessageBusClient {
   readonly appId: Application['id']
   /** The federation module id of the connection. Equals `appId` when the host supplied none. */
   readonly moduleId: string
+  /** The connection's {@link MessageBusConnection.key}. Absent when its copy predates keys. */
+  readonly key?: string
+  /** The key of the connection whose module rendered this one, when the host named it. */
+  readonly parentKey?: string
   /** Aborts when the connection disconnects. Drop per-client state here. */
   readonly closed: AbortSignal
   /** Writes a state value to this connection only. Ignored once the connection has closed. */
@@ -332,6 +347,9 @@ interface PendingReply {
 interface ConnectionRecord {
   readonly appId: string
   readonly moduleId: string
+  // Absent on records from copies that predate keys.
+  readonly key?: string
+  readonly parentKey?: string
   readonly stateSubjects: Map<string, BehaviorSubject<unknown>>
   // Topics the host has rejected for this connection, with the reason, until the next write.
   readonly rejections: Map<string, string | undefined>
@@ -448,8 +466,7 @@ function settleReply(reply: PendingReply, outcome: ReplyOutcome): void {
 }
 
 function createEventMessage(
-  appId: string,
-  moduleId: string,
+  {appId, moduleId, key}: ConnectionRecord,
   type: string,
   payload: unknown,
   pendingReply: PendingReply,
@@ -459,7 +476,7 @@ function createEventMessage(
   } = {
     type: type as TopicName,
     payload,
-    meta: {appId, moduleId, timestamp: Date.now()},
+    meta: {appId, moduleId, key, timestamp: Date.now()},
     reply: (value) => {
       if (pendingReply.settled) {
         console.warn(
@@ -544,8 +561,7 @@ function emitEvent(
   type: string,
   payload: unknown,
   options: MessageBusEmitOptions | undefined,
-  appId: string,
-  moduleId: string,
+  sender: ConnectionRecord,
 ): MessageBusEmitResult<unknown> {
   const hadResponderAtEmission = (registry.responderCounts.get(type) ?? 0) > 0
   const responderAbort = new AbortController()
@@ -555,9 +571,7 @@ function emitEvent(
     settled: false,
   }
 
-  resolveEventSubject(registry, type).next(
-    createEventMessage(appId, moduleId, type, payload, pendingReply),
-  )
+  resolveEventSubject(registry, type).next(createEventMessage(sender, type, payload, pendingReply))
 
   const awaitReply = () =>
     (pendingReply.replyPromise ??= createReplyPromise(pendingReply, {
@@ -581,14 +595,13 @@ function emit(
   type: string,
   payload: unknown,
   options: MessageBusEmitOptions | undefined,
-  appId: string,
-  moduleId: string,
+  sender: ConnectionRecord,
   connectionSignal: AbortSignal,
 ): MessageBusEmitResult<unknown> {
   if (isStateTopic(registry, type)) {
     throw new MessageBusError(
       'OWNERSHIP_MISMATCH',
-      `Cannot emit state topic "${type}" from app "${appId}". The host writes state to each connection through its client handle. Read it with query() or subscribe().`,
+      `Cannot emit state topic "${type}" from app "${sender.appId}". The host writes state to each connection through its client handle. Read it with query() or subscribe().`,
     )
   }
   return emitEvent(
@@ -599,8 +612,7 @@ function emit(
       ...options,
       signal: scopeSignal(options?.signal, registry.resetAbort.signal, connectionSignal),
     },
-    appId,
-    moduleId,
+    sender,
   )
 }
 
@@ -980,6 +992,8 @@ export interface ConnectApplicationToMessageBusOptions {
   appId: string
   /** The federation module id stamped on emitted messages. Defaults to `appId`. */
   moduleId?: string
+  /** The key of the connection whose module rendered this one. */
+  parentKey?: string
   /** The topic migrations supported by the application. */
   migrations?: ReadonlyMap<string, readonly TopicMigration[]>
 }
@@ -1044,6 +1058,8 @@ function createClient(
   return {
     appId: record.appId,
     moduleId: record.moduleId,
+    key: record.key,
+    parentKey: record.parentKey,
     closed: record.abort.signal,
     emit: (type: string, value: unknown) => {
       if (record.abort.signal.aborted) {
@@ -1103,9 +1119,12 @@ function createConnection(
   const connectionAborted$ = new ReplaySubject<void>(1)
   connectionSignal.addEventListener('abort', () => connectionAborted$.next(), {once: true})
 
+  const key = randomId()
   const record: ConnectionRecord = {
     appId,
     moduleId,
+    key,
+    parentKey: config.parentKey,
     stateSubjects: new Map(),
     rejections: new Map(),
     rejected$: new Subject<string>(),
@@ -1170,6 +1189,7 @@ function createConnection(
 
   const connection = {
     appId,
+    key,
     emit: (type: string, payload: unknown, options?: MessageBusEmitOptions) => {
       throwIfDisconnected()
       return migrateEventReply(
@@ -1178,8 +1198,7 @@ function createConnection(
           type,
           compatibility.toInstalledEmission(type, payload),
           options,
-          appId,
-          moduleId,
+          record,
           connectionSignal,
         ),
         (value) => compatibility.toApplicationEventReply(type, value),
@@ -1353,6 +1372,11 @@ export interface ConnectMessageBusOptions {
   appId?: string
   /** The federation module id stamped on emitted messages. Defaults to `appId`. */
   moduleId?: string
+  /**
+   * The {@link MessageBusConnection.key} of the connection whose module rendered this one.
+   * The Dashboard hears a connection that names a parent only while it hears the parent.
+   */
+  parentKey?: string
 }
 
 /**
@@ -1377,6 +1401,7 @@ export function connectMessageBus(
   const connection = connectApplicationToMessageBus(installedMessageBus, {
     appId,
     moduleId: options.moduleId,
+    parentKey: options.parentKey,
   })
   return MESSAGE_BUS_REGISTRY_KEY in connection ? connection : undefined
 }
