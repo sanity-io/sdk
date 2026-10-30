@@ -8,7 +8,7 @@ import {
 import {isMessageBusEnvironment, requireDashboardMessageBus} from '@sanity/sdk/_internal'
 import {type NavigationLocation, TopicError} from '@sanity/sdk/dashboard'
 import {useCallback, useEffect, useEffectEvent, useRef} from 'react'
-import {filter, map, pairwise} from 'rxjs'
+import {pairwise, startWith} from 'rxjs'
 
 import {useWindowConnection} from '../comlink/useWindowConnection'
 import {useSanityInstance} from '../context/useSanityInstance'
@@ -81,17 +81,21 @@ export type NavigateToDashboardPath = (options: {
  * ```tsx
  * import {useNavigate} from '@sanity/sdk-react/dashboard'
  * import {useEffect} from 'react'
- * import {useLocation, useNavigate as useRouterNavigate} from 'react-router'
+ * import {useLocation, useNavigate as useRouterNavigate, useNavigationType} from 'react-router'
  *
  * function DashboardNavigationSync() {
  *   const routerNavigate = useRouterNavigate()
+ *   const navigationType = useNavigationType()
  *   const {pathname, search, hash} = useLocation()
  *   const navigate = useNavigate(({path, type}) => {
- *     routerNavigate(path, {replace: type === 'replace'})
+ *     routerNavigate(`/${path}`, {replace: type === 'replace'})
  *   })
  *   useEffect(() => {
- *     navigate({path: `${pathname.slice(1)}${search}${hash}`})
- *   }, [navigate, pathname, search, hash])
+ *     navigate({
+ *       path: `${pathname.slice(1)}${search}${hash}`,
+ *       type: navigationType === 'REPLACE' ? 'replace' : 'push',
+ *     })
+ *   }, [navigate, navigationType, pathname, search, hash])
  *   return null
  * }
  * ```
@@ -151,79 +155,77 @@ function useBusNavigate(
   const instance = useSanityInstance()
   const bus = requireDashboardMessageBus(instance, 'navigate')
   const navigate = useEffectEvent(navigateFn)
-  // The path of this app's latest outbound request, used to suppress the echo of our own commit.
-  const ownRequest = useRef<string | null>(null)
+  // The app's path as dashboard last showed it; `undefined` before the first subscription.
+  const hostPath = useRef<string | null | undefined>(undefined)
+  // Where the app's router is, as the app last reported or this hook last followed.
+  const appPath = useRef<string | null>(null)
+  const staleReportPath = useRef<string | null>(null)
 
   useEffect(() => {
-    // bus.subscribe, not useTopic: the rule needs the previous emission, and React coalesces
-    // store notifications that land in one task, so a snapshot + ref could miss the
-    // `{to, transition}` -> `{to, transition: null}` pair. The observable delivers every emission.
-    const sub = bus
-      .subscribe('navigation.location')
-      .pipe(
-        pairwise(),
-        filter(
-          (
-            pair,
-          ): pair is [
-            NavigationLocation & {transition: NonNullable<NavigationLocation['transition']>},
-            NavigationLocation & {transition: null},
-          ] => {
-            const [prev, curr] = pair
-            return (
-              curr?.transition === null &&
-              curr.appId === bus.appId &&
-              prev?.transition?.to.appId === bus.appId &&
-              prev.transition.to.path === curr.path
-            )
-          },
-        ),
-        filter(([, curr]) => {
-          // Loop suppression: any own-app host-mediated commit consumes the pending request, so
-          // a request that lands elsewhere (or never lands) can't strand its path and drop a
-          // later host navigation. Only the commit for our exact path is our own echo to drop.
-          const suppress = curr.path === ownRequest.current
-          ownRequest.current = null
-          return !suppress
-        }),
-        map(([prev, curr]) => ({path: curr.path, type: prev.transition.navigationType})),
-      )
-      .subscribe((change) => navigate(change))
+    const pathOf = (location: NavigationLocation | null | undefined) =>
+      location?.appId === bus.appId ? location.path : null
+    const locations = bus.subscribe('navigation.location')
+    if (hostPath.current === undefined) hostPath.current = pathOf(locations.getCurrent())
+
+    // Each subscription replays the current location first, which catches up on missed navigations.
+    const sub = locations.pipe(startWith(null), pairwise()).subscribe(([previous, location]) => {
+      const path = pathOf(location)
+      if (path === null || path === hostPath.current) return
+
+      hostPath.current = path
+      if (path === appPath.current) return
+
+      staleReportPath.current = appPath.current
+      // Only effects of the current commit can still report the old path.
+      queueMicrotask(() => {
+        staleReportPath.current = null
+      })
+      appPath.current = path
+      // Back and forward commit without a transition (SDK-2901); the host already moved history.
+      const transition = location?.transition ?? previous?.transition
+      navigate({
+        path,
+        type: transition?.to.appId === bus.appId ? transition.navigationType : 'replace',
+      })
+    })
+
     return () => sub.unsubscribe()
   }, [bus])
 
   return useCallback<NavigateToDashboardPath>(
     ({path, type = 'push', scope = 'in-app'}) => {
-      // The host commits paths without a leading slash; store the same form so the echo matches.
-      // A dashboard-scoped report never moved our router, so its commit must reach navigateFn.
-      const own = scope === 'in-app' ? path.replace(/^\//, '') : null
-      if (own !== null) ownRequest.current = own
-      // A request that never landed must drop its suppression, or a later host navigation to the
-      // same path would be dropped. Best-effort: never throws.
-      const clearIfStale = () => {
-        if (ownRequest.current === own) ownRequest.current = null
-      }
-      // The base path is read per call, not in render, so a host that has not published it only
-      // loses outbound reporting; the inbound subscription above still installs.
-      const url =
-        own === null
-          ? Promise.resolve(path)
-          : bus.query('applications.base-path').then((base) => {
-              if (!base.ok) throw new TopicError('applications.base-path')
-              return joinPath(base.value, own)
-            })
-      url
-        .then((resolved) => bus.emit('navigation.location.update', {url: resolved, history: type}))
-        .then(
-          (reply) => {
-            if (!reply.ok) clearIfStale()
-          },
-          (error) => {
+      const report = (url: string | Promise<string>) =>
+        Promise.resolve(url)
+          .then((resolved) =>
+            bus.emit('navigation.location.update', {url: resolved, history: type}),
+          )
+          .catch((error: unknown) => {
             // eslint-disable-next-line no-console
             console.warn('Failed to report navigation to the Dashboard', error)
-            clearIfStale()
-          },
-        )
+          })
+
+      // A dashboard-scoped report never moved our router.
+      if (scope === 'dashboard') {
+        report(path)
+        return
+      }
+
+      // Host paths have no leading slash.
+      const reportedPath = path.replace(/^\//, '')
+      // Sent before the router caught up; forwarding it would undo the host's navigation.
+      if (reportedPath === staleReportPath.current) return
+
+      appPath.current = reportedPath
+      if (reportedPath === hostPath.current) return
+
+      // The base path is read per call, not in render, so a host that has not published it only
+      // loses outbound reporting; the inbound subscription above still installs.
+      report(
+        bus.query('applications.base-path').then((base) => {
+          if (!base.ok) throw new TopicError('applications.base-path')
+          return joinPath(base.value, reportedPath)
+        }),
+      )
     },
     [bus],
   )
