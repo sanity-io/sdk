@@ -98,6 +98,7 @@
     "@sanity/mutate": "^0.18.2",
     "@sanity/telemetry": "^1.1.0",
     "@sanity/types": "catalog:",
+    "@sentry/browser": "^11.8.0",
     "groq": "catalog:",
     "groq-js": "catalog:",
     "reselect": "^5.3.0",

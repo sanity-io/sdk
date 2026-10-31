@@ -13,6 +13,7 @@ import {useVerifyOrgProjects} from '../../hooks/auth/useVerifyOrgProjects'
 import {useSanityInstance} from '../../hooks/context/useSanityInstance'
 import {ChunkLoadError} from '../errors/ChunkLoadError'
 import {CorsErrorComponent} from '../errors/CorsErrorComponent'
+import {reportBoundaryError} from '../errors/reportBoundaryError'
 import {isInIframe} from '../utils'
 import {AuthError} from './AuthError'
 import {ConfigurationError} from './ConfigurationError'
@@ -33,6 +34,8 @@ if (isInIframe() && !document.querySelector('[data-sanity-core]')) {
   script.async = true
   document.head.appendChild(script)
 }
+
+const reportAuthBoundaryError = reportBoundaryError('AuthBoundary')
 
 /**
  * @internal
@@ -145,7 +148,11 @@ export function AuthBoundary({
   return (
     <ComlinkTokenRefreshProvider>
       <DashboardTokenRefreshProvider>
-        <ErrorBoundary FallbackComponent={FallbackComponent} resetKeys={[sessionResetKey]}>
+        <ErrorBoundary
+          FallbackComponent={FallbackComponent}
+          resetKeys={[sessionResetKey]}
+          onError={reportAuthBoundaryError}
+        >
           <AuthSwitch {...props} />
         </ErrorBoundary>
       </DashboardTokenRefreshProvider>
