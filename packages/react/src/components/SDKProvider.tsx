@@ -13,6 +13,9 @@ import {ResourceProvider} from '../context/ResourceProvider'
 import {AuthBoundary, type AuthBoundaryProps} from './auth/AuthBoundary'
 import {ChunkLoadError} from './errors/ChunkLoadError'
 import {clearChunkReloadFlag} from './errors/chunkReloadStorage'
+import {reportBoundaryError} from './errors/reportBoundaryError'
+
+const reportSDKProviderError = reportBoundaryError('SDKProvider')
 
 /**
  * @internal
@@ -89,7 +92,7 @@ export function SDKProvider({
   )
 
   return (
-    <ErrorBoundary FallbackComponent={ChunkAwareFallback}>
+    <ErrorBoundary FallbackComponent={ChunkAwareFallback} onError={reportSDKProviderError}>
       <ResetChunkReloadFlagOnMount />
       {/* Spread the first config so SanityInstance can use the auth,
         perspective, and other config fields; `resource` lets an explicitly
