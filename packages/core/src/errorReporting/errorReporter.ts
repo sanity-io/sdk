@@ -149,7 +149,7 @@ export function createErrorReporter(options: ErrorReporterOptions = {}): {
   let loadFailures = 0
 
   function getScope(): Promise<Scope> {
-    scopePromise ??= import('@sentry/browser')
+    scopePromise ??= import('./sentryBrowser')
       .then((sentry) => {
         const client = new sentry.BrowserClient({
           dsn: SDK_DSN,
