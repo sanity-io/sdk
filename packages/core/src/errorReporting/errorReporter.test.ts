@@ -8,7 +8,6 @@ type SentPayload = {
   tags?: Record<string, string>
   extra?: Record<string, unknown>
   breadcrumbs?: unknown[]
-  contexts?: {react?: {componentStack?: string}}
   user?: {ip_address?: string}
 }
 
@@ -77,16 +76,12 @@ describe('createErrorReporter', () => {
     expect(sent).toHaveLength(0)
   })
 
-  it('sends a scrubbed event with tags and the component stack for an SDK error', async () => {
+  it('sends a scrubbed event with tags for an SDK error', async () => {
     const {sent, reportError, settle} = setup()
-    reportError(errorWithStack('boom', [SDK_FRAME, APP_FRAME]), {
-      errorBoundary: 'AuthBoundary',
-      componentStack: '\n    at Foo',
-    })
+    reportError(errorWithStack('boom', [SDK_FRAME, APP_FRAME]), {errorBoundary: 'AuthBoundary'})
     await settle()
     expect(sent).toHaveLength(1)
     expect(sent[0]?.tags).toMatchObject({handled: 'no', errorBoundary: 'AuthBoundary'})
-    expect(sent[0]?.contexts?.react?.componentStack).toBe('\n    at Foo')
     expect(sent[0]?.user).toEqual({ip_address: '0.0.0.0'})
     expect(sent[0]?.release).toEqual(expect.any(String))
   })

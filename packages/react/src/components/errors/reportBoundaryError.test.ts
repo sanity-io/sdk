@@ -1,6 +1,5 @@
 import {CorsOriginError} from '@sanity/client'
 import {reportError} from '@sanity/sdk/_internal'
-import {type ErrorInfo} from 'react'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {AuthError} from '../auth/AuthError'
@@ -9,20 +8,15 @@ import {reportBoundaryError} from './reportBoundaryError'
 
 vi.mock('@sanity/sdk/_internal', () => ({reportError: vi.fn()}))
 
-const info = {componentStack: '\n    at Foo'} as ErrorInfo
-
 describe('reportBoundaryError', () => {
   beforeEach(() => {
     vi.mocked(reportError).mockClear()
   })
 
-  it('reports an unexpected error with the boundary name and component stack', () => {
+  it('reports an unexpected error with the boundary name', () => {
     const error = new TypeError('boom')
-    reportBoundaryError('AuthBoundary')(error, info)
-    expect(reportError).toHaveBeenCalledWith(error, {
-      errorBoundary: 'AuthBoundary',
-      componentStack: '\n    at Foo',
-    })
+    reportBoundaryError('AuthBoundary')(error)
+    expect(reportError).toHaveBeenCalledWith(error, {errorBoundary: 'AuthBoundary'})
   })
 
   it.each([
@@ -38,7 +32,7 @@ describe('reportBoundaryError', () => {
       Object.assign(new Error('Loading chunk 5 failed.'), {name: 'ChunkLoadError'}),
     ],
   ])('does not report %s', (_name, error) => {
-    reportBoundaryError('AuthBoundary')(error, info)
+    reportBoundaryError('AuthBoundary')(error)
     expect(reportError).not.toHaveBeenCalled()
   })
 })

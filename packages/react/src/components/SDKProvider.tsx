@@ -92,7 +92,7 @@ export function SDKProvider({
   )
 
   return (
-    <ErrorBoundary FallbackComponent={ChunkAwareFallback} onError={reportSDKProviderError}>
+    <ErrorBoundary FallbackComponent={ChunkAwareFallback}>
       <ResetChunkReloadFlagOnMount />
       {/* Spread the first config so SanityInstance can use the auth,
         perspective, and other config fields; `resource` lets an explicitly
@@ -122,6 +122,8 @@ function ChunkAwareFallback(fallbackProps: FallbackProps): ReactElement {
   if (isImportError(fallbackProps.error)) {
     return <ChunkLoadError {...fallbackProps} />
   }
+  // Report here, not in `onError`: React skips `onError` on a boundary whose fallback rethrows
+  reportSDKProviderError(fallbackProps.error)
   // Re-throw so downstream boundaries (e.g. AuthBoundary) handle other errors.
   throw fallbackProps.error
 }

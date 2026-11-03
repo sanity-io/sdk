@@ -26,8 +26,6 @@ const MAX_LOAD_FAILURES = 3
 
 /** @internal */
 export interface ReportErrorInfo {
-  /** The component stack React gives an error boundary. */
-  componentStack?: string | null
   /** The name of the error boundary that caught the error. */
   errorBoundary?: string
 }
@@ -196,17 +194,14 @@ export function createErrorReporter(options: ErrorReporterOptions = {}): {
       }
 
       const capturable = toCapturable(error)
-      const {componentStack, errorBoundary} = info
+      const {errorBoundary} = info
       const tags = errorBoundary ? {handled: 'no', errorBoundary} : {handled: 'no'}
 
       getScope()
         .then((scope) => {
           scope.captureException(capturable, {
             mechanism: {handled: false, type: 'generic'},
-            captureContext: {
-              tags,
-              contexts: componentStack ? {react: {componentStack}} : undefined,
-            },
+            captureContext: {tags},
           })
         })
         .catch(() => {

@@ -1,19 +1,22 @@
 import {CorsOriginError} from '@sanity/client'
 import {isImportError} from '@sanity/sdk'
 import {reportError} from '@sanity/sdk/_internal'
-import {type ErrorInfo} from 'react'
 
 import {AuthError} from '../auth/AuthError'
 import {ConfigurationError} from '../auth/ConfigurationError'
 
 /**
- * Creates an `onError` handler for an `ErrorBoundary` that reports unexpected errors to Sentry.
- * The boundaries also catch errors thrown by the app rendered beneath them, so the reporter
- * keeps only errors whose throwing frame is in the SDK. Auth, configuration, CORS, and chunk
- * load errors are expected states and are never reported.
+ * Creates a function that reports an error an `ErrorBoundary` caught to Sentry. Call it from the
+ * boundary's `FallbackComponent`, not from `onError`: the SDK fallbacks rethrow errors they do not
+ * render, and React skips `onError` on a boundary whose fallback throws. Fallbacks render more
+ * than once for one error, which the reporter's deduplication absorbs.
+ *
+ * The boundaries also catch errors thrown by the app rendered beneath them, so the reporter keeps
+ * only errors whose throwing frame is in the SDK. Auth, configuration, CORS, and chunk load errors
+ * are expected states and are never reported.
  */
 export function reportBoundaryError(errorBoundary: string) {
-  return (error: unknown, info: ErrorInfo): void => {
+  return (error: unknown): void => {
     if (
       error instanceof AuthError ||
       error instanceof ConfigurationError ||
@@ -25,6 +28,6 @@ export function reportBoundaryError(errorBoundary: string) {
     ) {
       return
     }
-    reportError(error, {errorBoundary, componentStack: info.componentStack})
+    reportError(error, {errorBoundary})
   }
 }

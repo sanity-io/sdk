@@ -127,6 +127,9 @@ export function AuthBoundary({
 
   const FallbackComponent = useMemo(() => {
     return function LoginComponentWithLayoutProps(fallbackProps: FallbackProps) {
+      // `LoginError` rethrows errors it does not render, and React skips `onError` on a boundary
+      // whose fallback throws, so the report has to happen here
+      reportAuthBoundaryError(fallbackProps.error)
       // Chunk-load errors from any lazy-loaded code beneath this boundary
       // (typically the consumer's app) get the chunk-aware fallback instead
       // of being misreported as auth errors.
@@ -148,11 +151,7 @@ export function AuthBoundary({
   return (
     <ComlinkTokenRefreshProvider>
       <DashboardTokenRefreshProvider>
-        <ErrorBoundary
-          FallbackComponent={FallbackComponent}
-          resetKeys={[sessionResetKey]}
-          onError={reportAuthBoundaryError}
-        >
+        <ErrorBoundary FallbackComponent={FallbackComponent} resetKeys={[sessionResetKey]}>
           <AuthSwitch {...props} />
         </ErrorBoundary>
       </DashboardTokenRefreshProvider>

@@ -44,8 +44,6 @@ export function beforeSend(event: ErrorEvent): ErrorEvent {
     if (value !== undefined) tags[key] = value
   }
 
-  const react = event.contexts?.['react']
-
   return {
     type: undefined,
     event_id: event.event_id,
@@ -58,7 +56,6 @@ export function beforeSend(event: ErrorEvent): ErrorEvent {
     exception: event.exception,
     sdk: event.sdk,
     tags,
-    contexts: react ? {react} : undefined,
     user: {ip_address: '0.0.0.0'},
   }
 }

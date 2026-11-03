@@ -23,7 +23,7 @@ function makeEvent(overrides: Partial<ErrorEvent> = {}): ErrorEvent {
 }
 
 describe('beforeSend', () => {
-  it('keeps the error, its identifiers, the allowed tags, and the react context', () => {
+  it('keeps the error, its identifiers, and the allowed tags', () => {
     const event = beforeSend(makeEvent())
     expect(event).toMatchObject({
       event_id: 'abc123',
@@ -35,7 +35,6 @@ describe('beforeSend', () => {
       sdk: {name: 'sentry.javascript.browser', version: '11.8.0'},
       exception: {values: [{type: 'TypeError', value: 'x is not a function'}]},
       tags: {handled: 'no', errorBoundary: 'AuthBoundary'},
-      contexts: {react: {componentStack: '\n    at Foo'}},
     })
   })
 
@@ -60,14 +59,9 @@ describe('beforeSend', () => {
     expect(event.tags).toEqual({handled: 'no'})
     expect(event.extra).toBeUndefined()
     expect(event.breadcrumbs).toBeUndefined()
-    expect(event.contexts).toEqual({react: {componentStack: '\n    at Foo'}})
+    expect(event.contexts).toBeUndefined()
     expect(event.fingerprint).toBeUndefined()
     expect(event.transaction).toBeUndefined()
     expect(event.server_name).toBeUndefined()
-  })
-
-  it('omits the react context when there is none', () => {
-    const event = beforeSend(makeEvent({contexts: {device: {model: 'x'}}}))
-    expect(event.contexts).toBeUndefined()
   })
 })
