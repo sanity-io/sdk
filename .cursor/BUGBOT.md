@@ -52,6 +52,18 @@ Say whether the change is breaking under semver and whether the changeset accomp
 
 A change in `packages/core` can break `packages/react` consumers. When core behaviour, types or exports change, check whether `packages/react` needs a corresponding update, and flag it if the PR changes one without the other.
 
+### 5. Major dependency upgrades
+
+On a PR whose branch starts with `renovate/` and which raises a dependency by a major version, the diff is only `package.json` and `pnpm-lock.yaml`. The risk is in code the diff does not touch, so review the codebase rather than the diff:
+
+1. Identify which packages moved, and from which major version to which.
+2. Read the upgraded package's changelog or release notes for breaking changes, removed APIs, renamed exports and behavioural changes.
+3. Search the repo for every usage of each upgraded package — imports, calls, type references, config.
+4. Flag any usage that relies on something removed or changed in the new major.
+5. Check whether peer dependencies, config files or build tooling need matching updates.
+
+Report file paths and line numbers for each incompatibility. If every usage is compatible, say so in one line rather than listing them.
+
 ## Also worth flagging
 
 - Bugs and logic errors
@@ -75,4 +87,4 @@ Read the ones matching the changed files and treat violations as review issues. 
 
 ## Output
 
-Keep reviews short, direct and actionable. For each issue: state the problem in one or two sentences, give the fix, include line numbers. If there is no actionable feedback, post nothing.
+Keep reviews short, direct and actionable. For each issue: state the problem in one or two sentences, give the fix, include line numbers. If there is no actionable feedback, post nothing, except on a major dependency upgrade (section 5), where a one-line confirmation that usages were checked is itself useful.
