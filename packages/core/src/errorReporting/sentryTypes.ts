@@ -5,3 +5,4 @@ export type BrowserOptions = import('@sentry/browser').BrowserOptions
 export type ErrorEvent = import('@sentry/browser').ErrorEvent
 export type Event = import('@sentry/browser').Event
 export type Scope = import('@sentry/browser').Scope
+export type EventHint = import('@sentry/browser').EventHint

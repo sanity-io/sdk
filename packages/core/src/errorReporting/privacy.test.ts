@@ -14,7 +14,7 @@ function makeEvent(overrides: Partial<ErrorEvent> = {}): ErrorEvent {
     environment: 'production',
     sdk: {name: 'sentry.javascript.browser', version: '11.8.0'},
     exception: {values: [{type: 'TypeError', value: 'x is not a function'}]},
-    tags: {handled: 'no', errorBoundary: 'AuthBoundary'},
+    tags: {handled: 'no', delivery: 'bundled', errorBoundary: 'AuthBoundary'},
     contexts: {react: {componentStack: '\n    at Foo'}},
     user: {id: 'u1', email: 'a@b.c', ip_address: '1.2.3.4'},
     request: {url: 'https://app.example.com/page?token=secret', headers: {cookie: 'x'}},
@@ -34,7 +34,7 @@ describe('beforeSend', () => {
       environment: 'production',
       sdk: {name: 'sentry.javascript.browser', version: '11.8.0'},
       exception: {values: [{type: 'TypeError', value: 'x is not a function'}]},
-      tags: {handled: 'no', errorBoundary: 'AuthBoundary'},
+      tags: {handled: 'no', delivery: 'bundled', errorBoundary: 'AuthBoundary'},
     })
   })
 

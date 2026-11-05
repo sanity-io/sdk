@@ -2,6 +2,7 @@ import {type Fetcher, type FetcherSnapshot, isDeepEqual} from '@sanity/sdk/_inte
 import {useRef, useSyncExternalStore} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
+import {withSdkOrigin} from './withSdkOrigin'
 
 /**
  * The value returned by a fetcher-backed hook. The hook suspends until the
@@ -32,7 +33,7 @@ export interface FetcherHookResult<TData> {
 export function createFetcherHook<TParams extends unknown[], TData>(
   fetcher: Fetcher<TParams, TData>,
 ): (...params: TParams) => FetcherHookResult<TData> {
-  return function useFetcherHook(...params: TParams): FetcherHookResult<TData> {
+  return withSdkOrigin(function useFetcherHook(...params: TParams): FetcherHookResult<TData> {
     const instance = useSanityInstance()
     const source = fetcher.getState(instance, ...params)
 
@@ -67,5 +68,5 @@ export function createFetcherHook<TParams extends unknown[], TData>(
       error: snapshot.error,
       refetch: () => fetcher.refetch(instance, ...params),
     }
-  }
+  })
 }

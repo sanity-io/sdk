@@ -2,6 +2,7 @@ import {type SanityConfig, type SanityInstance, type StateSource} from '@sanity/
 import {useSyncExternalStore} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
+import {withSdkOrigin} from './withSdkOrigin'
 
 type StateSourceFactory<TParams extends unknown[], TState> = (
   instance: SanityInstance,
@@ -32,5 +33,5 @@ export function createStateSourceHook<TParams extends unknown[], TState>(
     return useSyncExternalStore(state.subscribe, state.getCurrent)
   }
 
-  return useHook
+  return withSdkOrigin(useHook)
 }
