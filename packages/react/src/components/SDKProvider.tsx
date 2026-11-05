@@ -13,6 +13,9 @@ import {ResourceProvider} from '../context/ResourceProvider'
 import {AuthBoundary, type AuthBoundaryProps} from './auth/AuthBoundary'
 import {ChunkLoadError} from './errors/ChunkLoadError'
 import {clearChunkReloadFlag} from './errors/chunkReloadStorage'
+import {reportBoundaryError} from './errors/reportBoundaryError'
+
+const reportSDKProviderError = reportBoundaryError('SDKProvider')
 
 /**
  * @internal
@@ -119,6 +122,8 @@ function ChunkAwareFallback(fallbackProps: FallbackProps): ReactElement {
   if (isImportError(fallbackProps.error)) {
     return <ChunkLoadError {...fallbackProps} />
   }
+  // Report here, not in `onError`: React skips `onError` on a boundary whose fallback rethrows
+  reportSDKProviderError(fallbackProps.error)
   // Re-throw so downstream boundaries (e.g. AuthBoundary) handle other errors.
   throw fallbackProps.error
 }

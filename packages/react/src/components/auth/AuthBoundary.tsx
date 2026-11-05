@@ -13,6 +13,7 @@ import {useVerifyOrgProjects} from '../../hooks/auth/useVerifyOrgProjects'
 import {useSanityInstance} from '../../hooks/context/useSanityInstance'
 import {ChunkLoadError} from '../errors/ChunkLoadError'
 import {CorsErrorComponent} from '../errors/CorsErrorComponent'
+import {reportBoundaryError} from '../errors/reportBoundaryError'
 import {isInIframe} from '../utils'
 import {AuthError} from './AuthError'
 import {ConfigurationError} from './ConfigurationError'
@@ -33,6 +34,8 @@ if (isInIframe() && !document.querySelector('[data-sanity-core]')) {
   script.async = true
   document.head.appendChild(script)
 }
+
+const reportAuthBoundaryError = reportBoundaryError('AuthBoundary')
 
 /**
  * @internal
@@ -124,6 +127,9 @@ export function AuthBoundary({
 
   const FallbackComponent = useMemo(() => {
     return function LoginComponentWithLayoutProps(fallbackProps: FallbackProps) {
+      // `LoginError` rethrows errors it does not render, and React skips `onError` on a boundary
+      // whose fallback throws, so the report has to happen here
+      reportAuthBoundaryError(fallbackProps.error)
       // Chunk-load errors from any lazy-loaded code beneath this boundary
       // (typically the consumer's app) get the chunk-aware fallback instead
       // of being misreported as auth errors.
