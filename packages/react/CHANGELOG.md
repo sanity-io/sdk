@@ -1,5 +1,23 @@
 # Changelog
 
+## 3.13.0
+
+### Minor Changes
+
+- [#1509](https://github.com/sanity-io/sdk/pull/1509) [`e513a93`](https://github.com/sanity-io/sdk/commit/e513a93ccad172cbb3aec7c6df48696f788e6228) Thanks [@ryanbonial](https://github.com/ryanbonial)! - Apps loaded through the module server (apps with `autoUpdates: true`) now send unexpected SDK errors to Sanity's error tracking, through the `api.sanity.io` intake tunnel. `@sanity/sdk` adds `@sentry/browser` as a dependency, loaded lazily only when reporting is on.
+  
+  Only errors thrown by SDK code that reach the `SDKProvider` or `AuthBoundary` error boundaries are reported. Errors from your own components, expected SDK errors (document actions, message bus, Sanity API 4xx and 5xx responses, network failures, aborted requests), authentication and configuration errors, and CORS errors are not. Each event carries the error, its stack, the SDK version, and the name of the boundary that caught it. It carries no cookies, headers, request bodies, user data, or IP address. A page sends at most 10 events.
+  
+  Apps that do not use auto-updates send nothing. To turn reporting on while debugging, set `localStorage.SANITY_DEBUG_ERROR_REPORTING`.
+
+### Patch Changes
+
+- [#1525](https://github.com/sanity-io/sdk/pull/1525) [`3fbddd7`](https://github.com/sanity-io/sdk/commit/3fbddd79735416d310eff5a57ceaa04bb94fa44d) Thanks [@squiggler-app](https://github.com/apps/squiggler-app)! - Update dependencies: `@module-federation/runtime@2.9.3`
+
+- [#1523](https://github.com/sanity-io/sdk/pull/1523) [`76cf050`](https://github.com/sanity-io/sdk/commit/76cf0501844def8f5c5e705d172bf34438570a9b) Thanks [@squiggler-app](https://github.com/apps/squiggler-app)! - Update dependencies: `groq@6.22.0`, `sanity@6.22.0`
+- Updated dependencies [[`3fbddd7`](https://github.com/sanity-io/sdk/commit/3fbddd79735416d310eff5a57ceaa04bb94fa44d), [`76cf050`](https://github.com/sanity-io/sdk/commit/76cf0501844def8f5c5e705d172bf34438570a9b), [`e513a93`](https://github.com/sanity-io/sdk/commit/e513a93ccad172cbb3aec7c6df48696f788e6228)]:
+  - @sanity/sdk@3.13.0
+
 ## 3.12.0
 
 ### Minor Changes
