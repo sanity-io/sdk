@@ -76,7 +76,7 @@
     "ts:check": "${TSC:-tsc} --noEmit"
   },
   "dependencies": {
-    "@module-federation/runtime": "^2.9.2",
+    "@module-federation/runtime": "^2.9.3",
     "@sanity/client": "catalog:",
     "@sanity/message-protocol": "catalog:",
     "@sanity/sdk": "workspace:*",
