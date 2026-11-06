@@ -311,8 +311,8 @@ importers:
         specifier: ^0.28.2
         version: 0.28.2
       fallow:
-        specifier: ^3.37.0
-        version: 3.37.0
+        specifier: ^3.39.0
+        version: 3.39.0
       husky:
         specifier: ^9.1.7
         version: 9.1.7
@@ -320,8 +320,8 @@ importers:
         specifier: 'catalog:'
         version: 30.1.3(@noble/hashes@2.4.0)
       knip:
-        specifier: ^6.43.0
-        version: 6.43.0
+        specifier: ^6.44.1
+        version: 6.44.1
       lint-staged:
         specifier: ^17.6.0
         version: 17.6.0
@@ -645,14 +645,14 @@ importers:
         specifier: workspace:*
         version: link:../config-oxlint
       '@rolldown/plugin-babel':
-        specifier: ^0.2.4
-        version: 0.2.4(@babel/core@7.29.7(supports-color@8.1.1))(@babel/runtime@7.29.10)(rolldown@1.2.13)(vite@8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
+        specifier: ^0.3.0
+        version: 0.3.0(@babel/core@7.29.7(supports-color@8.1.1))(@babel/runtime@7.29.10)(rolldown@1.2.13)(vite@8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
       '@types/lodash-es':
         specifier: 'catalog:'
         version: 4.17.12
       '@vitejs/plugin-react':
         specifier: 'catalog:'
-        version: 6.2.1(@rolldown/plugin-babel@0.2.4(@babel/core@7.29.7(supports-color@8.1.1))(@babel/runtime@7.29.10)(rolldown@1.2.13)(vite@8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))(babel-plugin-react-compiler@1.0.0)(vite@8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
+        version: 6.2.1(@rolldown/plugin-babel@0.3.0(@babel/core@7.29.7(supports-color@8.1.1))(@babel/runtime@7.29.10)(rolldown@1.2.13)(vite@8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))(babel-plugin-react-compiler@1.0.0)(vite@8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
       babel-plugin-react-compiler:
         specifier: ^1.0.0
         version: 1.0.0
@@ -2016,43 +2016,43 @@ packages:
       '@noble/hashes':
         optional: true
 
-  '@fallow-cli/darwin-arm64@3.37.0':
-    resolution: {integrity: sha512-J9JPc8lMF1ngLKx/MjPuVnBswQmdTdVoVYQaAJnTVvSsIyetTVUPEXy5TU6U+X5yAKJWQBDAUBjLOZOI141GZQ==}
+  '@fallow-cli/darwin-arm64@3.39.0':
+    resolution: {integrity: sha512-Lj/rUTjtm0pCfE5Mfs/rWmEj5jf8v80NZZet/jSe2B/qaAlvOkCj/xwHyuauxhlgokN4L8vmAtcbMNzO3SWG5g==}
     cpu: [arm64]
     os: [darwin]
 
-  '@fallow-cli/darwin-x64@3.37.0':
-    resolution: {integrity: sha512-nLAoyqrPQeIjvuJHXw4CV1QJEmSoPA0R6p6kNI7LcXupoFrffxbf0jXGLH5SsyXOR8fNn01EyRIJjuzp+D5DZQ==}
+  '@fallow-cli/darwin-x64@3.39.0':
+    resolution: {integrity: sha512-NjnoAfErmgFBKlGqm3LF+0hcas95MU+s3Me4LktjjVMWLpVS0knI4GCUSTJsrut3MPJ6O8y3N01DYs4Ksrqcog==}
     cpu: [x64]
     os: [darwin]
 
-  '@fallow-cli/linux-arm64-gnu@3.37.0':
-    resolution: {integrity: sha512-WVhhIQZGYLHTCVdVdTFc8vtuUZyBkZOE0n5Rft5YuJv9JNyjE1QP2GPMLWamx/zRueNYd9q4P+vdqzAfKnDUWA==}
+  '@fallow-cli/linux-arm64-gnu@3.39.0':
+    resolution: {integrity: sha512-RuMTv/81iFoPj2BqU0FtSiq9rr5VVQFvW+mYrAmJ9jGAcRBnnf3cO+Vjd5cdATTBpQ9TcTcRyiPAGvKnE3it+w==}
     cpu: [arm64]
     os: [linux]
 
-  '@fallow-cli/linux-arm64-musl@3.37.0':
-    resolution: {integrity: sha512-0VggUolqDwfezWPnN5BdWvYt4ZDvRTcVFQOQg0vTxTuE0pl9lGZzVQoVdaf+UqWzxnlgObQEIaYrTPELut7tBw==}
+  '@fallow-cli/linux-arm64-musl@3.39.0':
+    resolution: {integrity: sha512-u0Vid8JGTIRJyf+BDQEpOhK7o7hpCGZFNjg+Xi0EP7QmdSd7V/pMfd4x40WLCNGOhL+yNbEpwC1Nqv8+c8HPIA==}
     cpu: [arm64]
     os: [linux]
 
-  '@fallow-cli/linux-x64-gnu@3.37.0':
-    resolution: {integrity: sha512-yLjGY47UW00c8h7374yZhX10BTH/qAbs07SLI3B09bEfJ61PlWyYpY/qA0AtUEpLr5YEvZKYHw4InkUUnIKmgA==}
+  '@fallow-cli/linux-x64-gnu@3.39.0':
+    resolution: {integrity: sha512-d/3G4Ql4caNd8SAmwIPb3rJlxJmwHJwwnt3193joVreO7Zki+PQSIqO/CdTPXOlJ00+6Oux3JaxYxUXL1Tvb3g==}
     cpu: [x64]
     os: [linux]
 
-  '@fallow-cli/linux-x64-musl@3.37.0':
-    resolution: {integrity: sha512-SopK7lk7Fm1CUkKwOQGVEdyFRmziO0bdJ5bWRA/zyn37ETx3vPbuuuc5rFw8bEpvlNLXUQCT9D9Iu+QNALkItg==}
+  '@fallow-cli/linux-x64-musl@3.39.0':
+    resolution: {integrity: sha512-L7pguM9wA1fUGRJiU1H1LO25IUgqyFzUyNL6Di2h4DEhH3sFR0IMn+OEC6gSgSaN+X/h8/FoxTbb6L0CjSf60Q==}
     cpu: [x64]
     os: [linux]
 
-  '@fallow-cli/win32-arm64-msvc@3.37.0':
-    resolution: {integrity: sha512-S7sfUtHKF9203L2nMtBMdo69HMtzJGUhw+aqDTNtacRbjnVLUGkhwAyaxRA4r16WeFgKhwTsytb/DKTDAYff5Q==}
+  '@fallow-cli/win32-arm64-msvc@3.39.0':
+    resolution: {integrity: sha512-fiyu5Dn9UIH+3VzQLZuS9GBOMM25PGiyP1F4ZP3BfQLUl67Q9JDu1cY9KRv8qpC/GVMrB8sNQhuclhSibHoTyA==}
     cpu: [arm64]
     os: [win32]
 
-  '@fallow-cli/win32-x64-msvc@3.37.0':
-    resolution: {integrity: sha512-nNneEE31mlAGsgcgJvHfqAy921Tn/bWSRXb6yd5xK3A0TUdyQKcANAyKH8a/4g3G6rLwqkkWe+ZBSCdhYHTIPg==}
+  '@fallow-cli/win32-x64-msvc@3.39.0':
+    resolution: {integrity: sha512-WRaaSiT8adCpb6KkXInB9qfxs0WGnw6zqQiDsgPPSPHd2VIMAvo7ZK33jPI2Ph81VZAfsZpnZGgY6sJdhFCaSw==}
     cpu: [x64]
     os: [win32]
 
@@ -3286,6 +3286,23 @@ packages:
 
   '@rolldown/plugin-babel@0.2.4':
     resolution: {integrity: sha512-ygmm2j/mN+aCvstHo0x3IOu4uc6LqXT9SJ3q4kpfG/+Yhfz0B+E47FITcC0FljZADwUFARP6E2kiE+Lc26D8wg==}
+    engines: {node: '>=22.12.0 || ^24.0.0'}
+    peerDependencies:
+      '@babel/core': ^7.29.0 || ^8.0.0-rc.1
+      '@babel/plugin-transform-runtime': ^7.29.0 || ^8.0.0-rc.1
+      '@babel/runtime': ^7.27.0 || ^8.0.0-rc.1
+      rolldown: 1.2.13
+      vite: ^8.0.0
+    peerDependenciesMeta:
+      '@babel/plugin-transform-runtime':
+        optional: true
+      '@babel/runtime':
+        optional: true
+      vite:
+        optional: true
+
+  '@rolldown/plugin-babel@0.3.0':
+    resolution: {integrity: sha512-cB9Z6aqn7i8Zflv1D4tyIy/wvnWt+QVUPX2e3Jxq/4fvdX+Xk2gQyNN2sfYscfLIZN1LCQbCl4olpf9Ki+U1zw==}
     engines: {node: '>=22.12.0 || ^24.0.0'}
     peerDependencies:
       '@babel/core': ^7.29.0 || ^8.0.0-rc.1
@@ -4561,6 +4578,10 @@ packages:
     resolution: {integrity: sha512-tLkvA81vQG/XqE2mjDkGQHoOINtMHtysSnemrmoGe6PydDPMRbVugqyk4A6V/WDWEfm3l+0d8anA9r8cv/5Jaw==}
     engines: {node: '>=12'}
 
+  artichokie@0.4.5:
+    resolution: {integrity: sha512-ma9643oYgSgA6CeDvKIU0zxL1eKOkbgH8/v83xFpFYB2VOPFoEmmg1iC+ooHFjLIJ3qdtfwPbEKpIW3/YxPovg==}
+    engines: {node: ^18.0.0 || >=20.0.0}
+
   assertion-error@2.0.1:
     resolution: {integrity: sha512-Izi8RQcffqCeNVgFigKli1ssklIbpHnCYc6AknXGYoB6grJqyeby7jv12JUQgmTAnIDnbck1uxksT4dzN3PWBA==}
     engines: {node: '>=12'}
@@ -5313,18 +5334,18 @@ packages:
   extend@3.0.2:
     resolution: {integrity: sha512-fjquC59cD7CyW6urNXK0FBufkZcoiGG80wTuPujX590cB5Ttln20E2UB4S/WARVqhXffZl2LNgS+gQdPIIim/g==}
 
-  fallow-type-aware@3.37.0:
-    resolution: {integrity: sha512-g+lefbZEEtUxBPj4S9NkosD3rP//Gyi3HFR+sedhYOcHM4IsHAxhV1QcZ1B/ndad3j2YOMcGflTXnanpQdQGpg==}
+  fallow-type-aware@3.39.0:
+    resolution: {integrity: sha512-OLOQjU22q4xKRy0pEdbrVJwNinLS8q/MqEu1lQRVc5lrlpIxYrLjQSfhZL2buUbC2u24IuO6eVFrh/2brQbmPg==}
     engines: {node: '>=20'}
     hasBin: true
     peerDependencies:
-      tsrs: 0.18.0-ts7.1.0-dev.20260929
+      tsrs: '*'
     peerDependenciesMeta:
       tsrs:
         optional: true
 
-  fallow@3.37.0:
-    resolution: {integrity: sha512-j2SvFK77i1obTpN6I5S5I8WfJG4t9L/MpvFdt+9Pm65Uu99ABhU2JDGkPAQYD5jzjRRErMqQzImzWn7yvXHrtA==}
+  fallow@3.39.0:
+    resolution: {integrity: sha512-HztMoOjKKcQFUig74laRbvk5wF3zpR8y2hBrqJvvDiNdQbW8XMYMphr3Wn7gSPDqlssyL5SfBfdJHPcTT4mTjA==}
     engines: {node: '>=22'}
     hasBin: true
 
@@ -6026,8 +6047,8 @@ packages:
     resolution: {integrity: sha512-eTIzlVOSUR+JxdDFepEYcBMtZ9Qqdef+rnzWdRZuMbOywu5tO2w2N7rqjoANZ5k9vywhL6Br1VRjUIgTQx4E8w==}
     engines: {node: '>=6'}
 
-  knip@6.43.0:
-    resolution: {integrity: sha512-8l3cCOg/EXoILO0qcSoMra49yQM91+lEIR4fu5Ko8rrArGX8xKdKZiGI9psPiY6rhLmfLERcMfFEByF0wli5CA==}
+  knip@6.44.1:
+    resolution: {integrity: sha512-Hbd8nvkIsNgFfXgC7Jsb5LHv7jj6VwA3tmfHd53XPX2z9Vc9RnAZqV0BIiP4OrtYqKwCoLseFHQZerb1bNlbSw==}
     engines: {node: ^20.19.0 || >=22.12.0}
     hasBin: true
 
@@ -9379,28 +9400,28 @@ snapshots:
     optionalDependencies:
       '@noble/hashes': 2.4.0
 
-  '@fallow-cli/darwin-arm64@3.37.0':
+  '@fallow-cli/darwin-arm64@3.39.0':
     optional: true
 
-  '@fallow-cli/darwin-x64@3.37.0':
+  '@fallow-cli/darwin-x64@3.39.0':
     optional: true
 
-  '@fallow-cli/linux-arm64-gnu@3.37.0':
+  '@fallow-cli/linux-arm64-gnu@3.39.0':
     optional: true
 
-  '@fallow-cli/linux-arm64-musl@3.37.0':
+  '@fallow-cli/linux-arm64-musl@3.39.0':
     optional: true
 
-  '@fallow-cli/linux-x64-gnu@3.37.0':
+  '@fallow-cli/linux-x64-gnu@3.39.0':
     optional: true
 
-  '@fallow-cli/linux-x64-musl@3.37.0':
+  '@fallow-cli/linux-x64-musl@3.39.0':
     optional: true
 
-  '@fallow-cli/win32-arm64-msvc@3.37.0':
+  '@fallow-cli/win32-arm64-msvc@3.39.0':
     optional: true
 
-  '@fallow-cli/win32-x64-msvc@3.37.0':
+  '@fallow-cli/win32-x64-msvc@3.39.0':
     optional: true
 
   '@floating-ui/core@1.8.0':
@@ -10432,6 +10453,16 @@ snapshots:
   '@rolldown/plugin-babel@0.2.4(@babel/core@7.29.7(supports-color@8.1.1))(@babel/runtime@7.29.10)(rolldown@1.2.13)(vite@8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))':
     dependencies:
       '@babel/core': 7.29.7(supports-color@8.1.1)
+      picomatch: 4.0.7
+      rolldown: 1.2.13
+    optionalDependencies:
+      '@babel/runtime': 7.29.10
+      vite: 8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)
+
+  '@rolldown/plugin-babel@0.3.0(@babel/core@7.29.7(supports-color@8.1.1))(@babel/runtime@7.29.10)(rolldown@1.2.13)(vite@8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))':
+    dependencies:
+      '@babel/core': 7.29.7(supports-color@8.1.1)
+      artichokie: 0.4.5
       picomatch: 4.0.7
       rolldown: 1.2.13
     optionalDependencies:
@@ -11918,6 +11949,14 @@ snapshots:
       '@rolldown/plugin-babel': 0.2.4(@babel/core@7.29.7(supports-color@8.1.1))(@babel/runtime@7.29.10)(rolldown@1.2.13)(vite@8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
       babel-plugin-react-compiler: 1.0.0
 
+  '@vitejs/plugin-react@6.2.1(@rolldown/plugin-babel@0.3.0(@babel/core@7.29.7(supports-color@8.1.1))(@babel/runtime@7.29.10)(rolldown@1.2.13)(vite@8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))(babel-plugin-react-compiler@1.0.0)(vite@8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))':
+    dependencies:
+      '@rolldown/pluginutils': 1.0.1
+      vite: 8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)
+    optionalDependencies:
+      '@rolldown/plugin-babel': 0.3.0(@babel/core@7.29.7(supports-color@8.1.1))(@babel/runtime@7.29.10)(rolldown@1.2.13)(vite@8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
+      babel-plugin-react-compiler: 1.0.0
+
   '@vitest/coverage-v8@5.1.0(vitest@5.1.0)':
     dependencies:
       '@bcoe/v8-coverage': 1.0.2
@@ -12096,6 +12135,8 @@ snapshots:
   array-union@2.1.0: {}
 
   arrify@3.0.0: {}
+
+  artichokie@0.4.5: {}
 
   assertion-error@2.0.1: {}
 
@@ -12858,24 +12899,24 @@ snapshots:
 
   extend@3.0.2: {}
 
-  fallow-type-aware@3.37.0:
+  fallow-type-aware@3.39.0:
     dependencies:
       typescript: 7.0.2
     optional: true
 
-  fallow@3.37.0:
+  fallow@3.39.0:
     dependencies:
       detect-libc: 2.1.2
     optionalDependencies:
-      '@fallow-cli/darwin-arm64': 3.37.0
-      '@fallow-cli/darwin-x64': 3.37.0
-      '@fallow-cli/linux-arm64-gnu': 3.37.0
-      '@fallow-cli/linux-arm64-musl': 3.37.0
-      '@fallow-cli/linux-x64-gnu': 3.37.0
-      '@fallow-cli/linux-x64-musl': 3.37.0
-      '@fallow-cli/win32-arm64-msvc': 3.37.0
-      '@fallow-cli/win32-x64-msvc': 3.37.0
-      fallow-type-aware: 3.37.0
+      '@fallow-cli/darwin-arm64': 3.39.0
+      '@fallow-cli/darwin-x64': 3.39.0
+      '@fallow-cli/linux-arm64-gnu': 3.39.0
+      '@fallow-cli/linux-arm64-musl': 3.39.0
+      '@fallow-cli/linux-x64-gnu': 3.39.0
+      '@fallow-cli/linux-x64-musl': 3.39.0
+      '@fallow-cli/win32-arm64-msvc': 3.39.0
+      '@fallow-cli/win32-x64-msvc': 3.39.0
+      fallow-type-aware: 3.39.0
     transitivePeerDependencies:
       - tsrs
 
@@ -13592,7 +13633,7 @@ snapshots:
 
   kleur@3.0.3: {}
 
-  knip@6.43.0:
+  knip@6.44.1:
     dependencies:
       formatly: 0.11.4
       get-tsconfig: 4.14.3
