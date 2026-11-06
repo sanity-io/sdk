@@ -1,6 +1,7 @@
 import './groqCompat'
 
 import {
+  type ClientReturn,
   type SanityProjectionsByResource,
   type SanityQueriesByResource,
   type SanitySchemasByResource,
@@ -149,16 +150,28 @@ export type ResolveDocument<
 /**
  * Resolves a query result for one resource, selected by the exact query text.
  *
- * A key known only as a pattern gets the union of the query's result across the registered
- * resources it can match, plus the result saved by experimental Typegen for the same query
- * text, if any. See {@link ResolveDocument} for why a registered resource does not fall
- * through, and when the experimental Typegen declarations apply.
+ * A query carrying a `__groqResult` brand, such as the default export of a `.groq` file
+ * imported through `@sanity-labs/groq-content-mapper`, resolves to the branded result through
+ * the client's `ClientReturn`, whatever the resource. Reading the brand is experimental.
+ *
+ * Any other query is looked up by resource. A key known only as a pattern gets the union of the
+ * query's result across the registered resources it can match, plus the result saved by
+ * experimental Typegen for the same query text, if any. See {@link ResolveDocument} for why a
+ * registered resource does not fall through, and when the experimental Typegen declarations
+ * apply.
  *
  * @beta
  */
-export type ResolveQueryResult<
-  TQuery extends string = string,
-  TSchemaId extends string = string,
+export type ResolveQueryResult<TQuery extends string = string, TSchemaId extends string = string> = // The tuple form keeps the check from distributing over a union of unbranded query strings,
+  // which would change what that union resolves to.
+  [TQuery] extends [{readonly __groqResult?: unknown}]
+    ? ClientReturn<TQuery>
+    : ResolveRegisteredQueryResult<TQuery, TSchemaId>
+
+/** The result of an unbranded query, looked up by resource. */
+type ResolveRegisteredQueryResult<
+  TQuery extends string,
+  TSchemaId extends string,
 > = TSchemaId extends keyof SanityQueriesByResource
   ? QueryIn<TSchemaId, TQuery>
   : UsesLegacyLookup<TSchemaId, SanityQueriesByResource, TQuery> extends true
