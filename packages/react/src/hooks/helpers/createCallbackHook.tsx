@@ -2,6 +2,7 @@ import {type SanityInstance} from '@sanity/sdk'
 import {useCallback} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
+import {withSdkOrigin} from './withSdkOrigin'
 
 export function createCallbackHook<TParams extends unknown[], TReturn>(
   callback: (instance: SanityInstance, ...params: TParams) => TReturn,
@@ -11,5 +12,5 @@ export function createCallbackHook<TParams extends unknown[], TReturn>(
     return useCallback((...params: TParams) => callback(instance, ...params), [instance])
   }
 
-  return useHook
+  return withSdkOrigin(useHook)
 }

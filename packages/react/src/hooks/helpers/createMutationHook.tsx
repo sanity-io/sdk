@@ -3,6 +3,7 @@ import {type MutationResult} from '@sanity/sdk/_internal'
 import {useCallback, useRef, useState} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
+import {withSdkOrigin} from './withSdkOrigin'
 
 /**
  * The value returned by a mutation-backed hook. The write-side counterpart to
@@ -52,7 +53,7 @@ export function createMutationHook<TInput, TResult>(
 ): () => MutationHookResult<TInput, TResult> {
   const idle: MutationState<TResult> = {status: 'idle', data: undefined, error: undefined}
 
-  return function useMutationHook(): MutationHookResult<TInput, TResult> {
+  return withSdkOrigin(function useMutationHook(): MutationHookResult<TInput, TResult> {
     const instance = useSanityInstance()
     const [state, setState] = useState<MutationState<TResult>>(idle)
     // Increments per call; only the latest call is allowed to write state, so an
@@ -91,5 +92,5 @@ export function createMutationHook<TInput, TResult>(
       data: state.data,
       reset,
     }
-  }
+  })
 }

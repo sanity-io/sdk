@@ -31,6 +31,7 @@ export type {ApplicationStatus, ApplicationStatusUpdate} from '../dashboard/mess
 export {getTopicState, resolveTopic} from '../dashboard/messageBus/topicStore'
 export {getWorkerClient, type WorkerConnection} from '../dashboard/messageBus/workerStore'
 export {reportError} from '../errorReporting/errorReporter'
+export {markSdkError} from '../errorReporting/sdkErrorOrigin'
 export {getBusFavoriteState, resolveBusFavorite, setBusFavorite} from '../favorites/busFavorites'
 export {PREVIEW_PROJECTION} from '../preview/previewConstants'
 export {transformProjectionToPreview} from '../preview/previewProjectionUtils'

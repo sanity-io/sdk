@@ -2,9 +2,11 @@ import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {ActionError} from '../document/processActions/shared'
 import {createErrorReporter} from './errorReporter'
+import {markSdkError} from './sdkErrorOrigin'
 
 type SentPayload = {
   release?: string
+  environment?: string
   tags?: Record<string, string>
   extra?: Record<string, unknown>
   breadcrumbs?: unknown[]
@@ -14,6 +16,8 @@ type SentPayload = {
 const SDK_FRAME = 'https://sanity-cdn.com/v1/modules/@sanity__sdk-react/default/%5E1.0.0/index.js'
 const APP_FRAME = 'https://myapp.example.com/assets/main.js'
 const BUILTIN_FRAME = '<anonymous>'
+/** A frame in an app that bundles the SDK, so the URL does not name the SDK. */
+const BUNDLE_FRAME = 'https://myapp.example.com/assets/index-abc123.js'
 
 function errorWithStack(message: string, frames: string[]): Error {
   const error = new TypeError(message)
@@ -53,7 +57,7 @@ describe('createErrorReporter', () => {
   })
 
   it('sends nothing when error reporting is disabled', async () => {
-    vi.stubGlobal('document', {querySelectorAll: () => []})
+    vi.stubGlobal('window', {location: {hostname: 'localhost'}})
     const {sent, reportError, settle} = setup()
     reportError(errorWithStack('boom', [SDK_FRAME]))
     await settle()
@@ -176,7 +180,11 @@ describe('createErrorReporter', () => {
       await settle()
 
       expect(sent).toHaveLength(1)
-      expect(sent[0]?.tags).toEqual({handled: 'no', errorBoundary: 'AuthBoundary'})
+      expect(sent[0]?.tags).toEqual({
+        handled: 'no',
+        delivery: 'auto-updates',
+        errorBoundary: 'AuthBoundary',
+      })
       expect(sent[0]?.extra).toBeUndefined()
       expect(sent[0]?.breadcrumbs).toBeUndefined()
     } finally {
@@ -203,5 +211,65 @@ describe('createErrorReporter', () => {
     for (let i = 0; i < 20; i++) reportError(errorWithStack(`distinct ${i}`, [SDK_FRAME]))
     await settle()
     expect(sent).toHaveLength(10)
+  })
+
+  it('sends a marked error even when its frames are all in an app bundle', async () => {
+    const {sent, reportError, settle} = setup()
+    const error = errorWithStack('sdk bug in bundle', [BUNDLE_FRAME])
+    markSdkError(error)
+    reportError(error)
+    await settle()
+    expect(sent).toHaveLength(1)
+    expect(JSON.stringify(sent[0])).not.toContain('errorOrigin')
+  })
+
+  it('labels a local host as development when the debug flag turns reporting on', async () => {
+    vi.stubGlobal('window', {location: {hostname: 'my-app.localhost'}})
+    vi.stubGlobal('localStorage', {getItem: () => '1'})
+    const {sent, reportError, settle} = setup()
+    reportError(errorWithStack('local', [SDK_FRAME]))
+    await settle()
+    expect(sent[0]?.environment).toBe('development')
+  })
+
+  it('tags an app without an @sanity/sdk import map entry as bundled', async () => {
+    vi.stubGlobal('document', {querySelectorAll: () => []})
+    const {sent, reportError, settle} = setup()
+    const error = errorWithStack('sdk bug in bundle', [BUNDLE_FRAME])
+    markSdkError(error)
+    reportError(error)
+    await settle()
+    expect(sent[0]?.tags).toMatchObject({delivery: 'bundled'})
+  })
+
+  it('dedupes app errors that wrap the same SDK error by the SDK error message', async () => {
+    const {sent, reportError, settle} = setup()
+    for (const user of ['a@example.com', 'b@example.com', 'c@example.com']) {
+      const sdkError = errorWithStack('sdk root', [BUNDLE_FRAME])
+      markSdkError(sdkError)
+      const appError = errorWithStack(`failed for ${user}`, [BUNDLE_FRAME])
+      appError.cause = sdkError
+      reportError(appError)
+    }
+    await settle()
+    expect(sent).toHaveLength(1)
+  })
+
+  it('drops an unmarked error whose frames are all in an app bundle', async () => {
+    const {sent, reportError, settle} = setup()
+    reportError(errorWithStack('app bug in bundle', [BUNDLE_FRAME]))
+    await settle()
+    expect(sent).toHaveLength(0)
+  })
+
+  it('sends an app error whose cause is a marked SDK error', async () => {
+    const {sent, reportError, settle} = setup()
+    const sdkError = errorWithStack('sdk root', [BUNDLE_FRAME])
+    markSdkError(sdkError)
+    const appError = errorWithStack('app wrapper', [BUNDLE_FRAME])
+    appError.cause = sdkError
+    reportError(appError)
+    await settle()
+    expect(sent).toHaveLength(1)
   })
 })

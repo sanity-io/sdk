@@ -27,7 +27,7 @@ export const sdkSentryDataCollection = {
   queues: false,
 } satisfies NonNullable<BrowserOptions['dataCollection']>
 
-const KEPT_TAGS = ['handled', 'errorBoundary']
+const KEPT_TAGS = ['handled', 'delivery', 'errorBoundary']
 
 /**
  * Sentry `beforeSend` hook that rebuilds the event from an allowlist of fields. Sentry merges
