@@ -1,7 +1,7 @@
 import {useProjects} from '@sanity/sdk-react'
 import {TextInput} from '@sanity/ui'
 import {ChangeEvent, type JSX, Suspense, useState} from 'react'
-import {Box, Card, Checkbox, Flex, Text, VStack} from 'ui5'
+import {Box, Card, Checkbox, Flex, HStack, Text, VStack} from 'ui5'
 
 import {DocumentListLayout} from '../components/DocumentListLayout/DocumentListLayout'
 import {PageLayout} from '../components/PageLayout'
@@ -25,14 +25,18 @@ export function ProjectsRoute(): JSX.Element {
             }
           />
         </VStack>
-        <Checkbox
-          checked={includeMembers}
-          label="Include members"
-          id="includeMembers"
-          onChange={(e: ChangeEvent<HTMLInputElement>) => {
-            setIncludeMembers(e.currentTarget.checked)
-          }}
-        />
+        <HStack gap={2}>
+          <Checkbox
+            checked={includeMembers}
+            id="includeMembers"
+            onChange={(e: ChangeEvent<HTMLInputElement>) => {
+              setIncludeMembers(e.currentTarget.checked)
+            }}
+          />
+          <Text as="label" htmlFor="includeMembers">
+            Include members
+          </Text>
+        </HStack>
 
         <Suspense fallback={<Text size={1}>Loading projects...</Text>}>
           <ProjectsList organizationId={organizationId} includeMembers={includeMembers} />
