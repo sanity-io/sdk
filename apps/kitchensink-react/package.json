@@ -18,10 +18,10 @@
     "types:generate": "sanity typegen generate"
   },
   "dependencies": {
-    "@portabletext/editor": "8.2.10",
+    "@portabletext/editor": "8.2.11",
     "@portabletext/keyboard-shortcuts": "^3.0.0",
-    "@portabletext/plugin-sdk-value": "8.1.18",
-    "@portabletext/toolbar": "^9.0.24",
+    "@portabletext/plugin-sdk-value": "8.1.19",
+    "@portabletext/toolbar": "^9.0.25",
     "@sanity/icons": "^5.2.3",
     "@sanity/sdk": "workspace:*",
     "@sanity/sdk-react": "workspace:*",
@@ -38,7 +38,7 @@
     "refractor": "^5.0.0",
     "styled-components": "^6.6.0",
     "typescript": "catalog:",
-    "ui5": "npm:@sanity/ui@5.0.0-alpha.19"
+    "ui5": "npm:@sanity/ui@5.0.0-alpha.20"
   },
   "devDependencies": {
     "@playwright/test": "catalog:",
