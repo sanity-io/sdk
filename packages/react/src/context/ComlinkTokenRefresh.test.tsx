@@ -133,6 +133,31 @@ describe('ComlinkTokenRefresh', () => {
         expect(mockSetAuthToken).toHaveBeenCalledWith(expect.any(Object), 'new-token')
       })
 
+      it('keeps one rejected-token subscription across re-renders', async () => {
+        // The real hook returns a new connection object on every render
+        mockUseWindowConnection.mockImplementation(() => ({fetch: mockFetch}))
+        mockFetch.mockResolvedValue({token: 'new-token'})
+        const tree = () => (
+          <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+            <ComlinkTokenRefreshProvider>
+              <div>Test</div>
+            </ComlinkTokenRefreshProvider>
+          </ResourceProvider>
+        )
+        const {rerender} = render(tree())
+        act(() => rerender(tree()))
+        act(() => rerender(tree()))
+
+        expect(onTokenRejected).toHaveBeenCalledOnce()
+
+        const refresh = vi.mocked(onTokenRejected).mock.lastCall![1]
+        await act(async () => {
+          refresh()
+          await vi.advanceTimersByTimeAsync(0)
+        })
+        expect(mockFetch).toHaveBeenCalledExactlyOnceWith('dashboard/v1/auth/tokens/create')
+      })
+
       it('should handle received token when not in studio mode', async () => {
         mockUseAuthState.mockReturnValue({
           type: AuthStateType.ERROR,

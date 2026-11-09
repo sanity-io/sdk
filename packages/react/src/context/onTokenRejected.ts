@@ -10,26 +10,31 @@ import {EMPTY, type Subscription, switchMap, timer} from 'rxjs'
 const REJECTED_TOKEN_REFRESH_INTERVAL = 60_000
 
 /**
+ * When each instance last asked for a new token. Kept per instance rather than
+ * per subscription so the gap holds when a provider re-subscribes or remounts.
+ */
+const lastRefreshByInstance = new WeakMap<SanityInstance, number>()
+
+/**
  * Calls `refresh` when a request is rejected because the current token's
  * session expired, and again every minute until a new token is set.
  *
  * @internal
  */
 export function onTokenRejected(instance: SanityInstance, refresh: () => void): Subscription {
-  let lastRefresh = 0
   return getIsTokenRejectedState(instance)
     .observable.pipe(
-      switchMap((rejected) =>
-        rejected
-          ? timer(
-              Math.max(0, lastRefresh + REJECTED_TOKEN_REFRESH_INTERVAL - Date.now()),
-              REJECTED_TOKEN_REFRESH_INTERVAL,
-            )
-          : EMPTY,
-      ),
+      switchMap((rejected) => {
+        if (!rejected) return EMPTY
+        const lastRefresh = lastRefreshByInstance.get(instance) ?? 0
+        return timer(
+          Math.max(0, lastRefresh + REJECTED_TOKEN_REFRESH_INTERVAL - Date.now()),
+          REJECTED_TOKEN_REFRESH_INTERVAL,
+        )
+      }),
     )
     .subscribe(() => {
-      lastRefresh = Date.now()
+      lastRefreshByInstance.set(instance, Date.now())
       refresh()
     })
 }

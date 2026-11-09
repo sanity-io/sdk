@@ -12,10 +12,11 @@ vi.mock('@sanity/sdk/_internal', async (importOriginal) => ({
 
 describe('onTokenRejected', () => {
   let rejected: BehaviorSubject<boolean>
-  const instance = {} as SanityInstance
+  let instance: SanityInstance
 
   beforeEach(() => {
     vi.useFakeTimers()
+    instance = {} as SanityInstance
     rejected = new BehaviorSubject(false)
     vi.mocked(getIsTokenRejectedState).mockReturnValue({
       getCurrent: () => rejected.value,
@@ -74,6 +75,21 @@ describe('onTokenRejected', () => {
     expect(refresh).toHaveBeenCalledOnce()
 
     vi.advanceTimersByTime(50_000)
+    expect(refresh).toHaveBeenCalledTimes(2)
+  })
+
+  it('keeps the one-minute gap when subscribing again', () => {
+    const refresh = vi.fn()
+    rejected.next(true)
+    const first = onTokenRejected(instance, refresh)
+    vi.advanceTimersByTime(0)
+    first.unsubscribe()
+
+    onTokenRejected(instance, refresh)
+    vi.advanceTimersByTime(59_999)
+    expect(refresh).toHaveBeenCalledOnce()
+
+    vi.advanceTimersByTime(1)
     expect(refresh).toHaveBeenCalledTimes(2)
   })
 })

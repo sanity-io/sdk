@@ -8,7 +8,14 @@ import {
   type RequestNewTokenMessage,
   type WindowMessage,
 } from '@sanity/sdk/comlink'
-import React, {type PropsWithChildren, useCallback, useEffect, useMemo, useRef} from 'react'
+import React, {
+  type PropsWithChildren,
+  useCallback,
+  useEffect,
+  useEffectEvent,
+  useMemo,
+  useRef,
+} from 'react'
 
 import {useAuthState} from '../hooks/auth/useAuthState'
 import {useWindowConnection} from '../hooks/comlink/useWindowConnection'
@@ -95,11 +102,13 @@ function DashboardTokenRefresh({children}: PropsWithChildren) {
     }
   }, [clearRefreshTimeout])
 
-  // A query, listener or write rejected the token, usually because it expired
+  // A query, listener or write rejected the token, usually because it expired. `requestNewToken`
+  // changes on every render, so read it through an effect event to keep one subscription.
+  const onRejected = useEffectEvent(() => void requestNewToken())
   useEffect(() => {
-    const subscription = onTokenRejected(instance, () => void requestNewToken())
+    const subscription = onTokenRejected(instance, onRejected)
     return () => subscription.unsubscribe()
-  }, [instance, requestNewToken])
+  }, [instance])
 
   useEffect(() => {
     const has401Error =
