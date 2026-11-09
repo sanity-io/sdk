@@ -1,8 +1,20 @@
 import {CORE_SDK_VERSION} from '../version'
-import {hasDebugFlag, isErrorReportingEnabled} from './isErrorReportingEnabled'
+import {
+  getSdkDelivery,
+  hasDebugFlag,
+  isErrorReportingEnabled,
+  isLocalDevelopment,
+} from './isErrorReportingEnabled'
 import {isKnownSdkError} from './isKnownSdkError'
 import {beforeSend, sdkSentryDataCollection} from './privacy'
-import {type BrowserOptions, type ErrorEvent, type Event, type Scope} from './sentryTypes'
+import {findSdkErrorInChain, isSdkError, markSdkError} from './sdkErrorOrigin'
+import {
+  type BrowserOptions,
+  type ErrorEvent,
+  type Event,
+  type EventHint,
+  type Scope,
+} from './sentryTypes'
 
 /**
  * The DSN of the SDK project in Sentry. It is a public ingest key, not a secret.
@@ -45,7 +57,9 @@ function getThrownValue(event: Event): string | undefined {
 }
 
 /**
- * Caps the events per session and drops repeats of the same message inside a time window.
+ * Caps the events per session and drops repeats of the same message inside a time window. For an
+ * app error that wraps an SDK error, the SDK error's message is the key, so app messages that
+ * vary cannot spend the whole cap on one SDK bug.
  */
 function limitEventsIntegration() {
   const seen = new Map<string, number>()
@@ -53,10 +67,11 @@ function limitEventsIntegration() {
 
   return {
     name: 'SdkLimitEvents',
-    processEvent(event: Event): Event | null {
+    processEvent(event: Event, hint: EventHint): Event | null {
       if (sent >= MAX_EVENTS_PER_SESSION) return null
 
-      const message = getThrownValue(event) ?? ''
+      const message =
+        findSdkErrorInChain(hint.originalException)?.message ?? getThrownValue(event) ?? ''
       const now = Date.now()
       const previous = seen.get(message)
       if (previous !== undefined && now - previous < DUPLICATE_WINDOW_MS) return null
@@ -101,13 +116,16 @@ function getThrowingFilename(event: Event): string | undefined {
 
 /**
  * Keeps only events thrown by SDK code. Error boundaries also catch errors thrown by the app
- * rendered beneath them, so the frame that threw decides who owns the error. Events with no
- * usable frame cannot be attributed and are dropped.
+ * rendered beneath them, so ownership is decided in two ways. An error marked by an SDK hook, or
+ * with a marked error in its cause chain, is the SDK's. Otherwise the frame that threw decides,
+ * which works only when the SDK has its own URL, as with auto-updates or a dev server. Events
+ * with neither a mark nor a usable frame are dropped.
  */
 function sdkOriginIntegration() {
   return {
     name: 'SdkOrigin',
-    processEvent(event: Event): Event | null {
+    processEvent(event: Event, hint: EventHint): Event | null {
+      if (findSdkErrorInChain(hint.originalException)) return event
       const filename = getThrowingFilename(event)
       return filename && isSdkFilename(filename) ? event : null
     },
@@ -125,12 +143,12 @@ function toCapturable(error: Error): Error {
   )
   copy.name = error.name
   copy.stack = error.stack
+  if (isSdkError(error)) markSdkError(copy)
   return copy
 }
 
 function getEnvironment(): string {
-  const hostname = typeof window === 'undefined' ? '' : window.location?.hostname
-  return hostname === 'localhost' || hostname === '127.0.0.1' ? 'development' : 'production'
+  return isLocalDevelopment() ? 'development' : 'production'
 }
 
 /**
@@ -195,7 +213,10 @@ export function createErrorReporter(options: ErrorReporterOptions = {}): {
 
       const capturable = toCapturable(error)
       const {errorBoundary} = info
-      const tags = errorBoundary ? {handled: 'no', errorBoundary} : {handled: 'no'}
+      const delivery = getSdkDelivery()
+      const tags = errorBoundary
+        ? {handled: 'no', delivery, errorBoundary}
+        : {handled: 'no', delivery}
 
       getScope()
         .then((scope) => {
