@@ -508,6 +508,71 @@ function extractPatchOperations(
   })
 }
 
+/**
+ * Re-applies `transaction` on top of `working`. If its actions no longer apply,
+ * reports a `rebase-error` and returns `undefined` so the caller skips it.
+ */
+function rebaseTransaction(
+  transaction: AppliedTransaction,
+  working: DocumentSet,
+  {grants, identity}: SyncTransactionState,
+  events: DocumentStoreState['events'],
+): ReturnType<typeof processActions> | undefined {
+  if (!grants) return undefined
+  try {
+    return processActions({...transaction, working, grants, identity})
+  } catch (error) {
+    if (!(error instanceof ActionError)) throw error
+    events.next({
+      type: 'rebase-error',
+      transactionId: error.transactionId,
+      documentId: error.documentId,
+      message: error.message,
+      error,
+    })
+    return undefined
+  }
+}
+
+/**
+ * Re-applies the local changes on top of `remote`, the documents that changed
+ * on the server. Returns the rebased applied transactions and the resulting
+ * working set.
+ *
+ * `outgoing` is the outgoing transaction when the server hasn't applied it to
+ * `remote` yet. After a submission fails with a retryable error (such as a 401
+ * while the session is refreshed), it stays out of the remote copy until a
+ * retry succeeds, and a listener reconnect in the meantime re-fetches the
+ * document without it. It is re-applied to compute the working set only, and
+ * keeps its outgoing actions because it may already be on its way to the
+ * server.
+ */
+function rebaseLocalChanges(
+  prev: SyncTransactionState,
+  remote: DocumentSet,
+  outgoing: OutgoingTransaction | undefined,
+  events: DocumentStoreState['events'],
+): {applied: AppliedTransaction[]; working: DocumentSet} {
+  // start from the documents as they were before the earliest local change
+  let working: DocumentSet = {...prev.applied.at(0)?.previous, ...outgoing?.previous, ...remote}
+  if (outgoing) working = rebaseTransaction(outgoing, working, prev, events)?.working ?? working
+
+  // re-apply each applied (but not yet committed) transaction in order,
+  // creating a new set of applied transactions as we go
+  const applied: AppliedTransaction[] = []
+  for (const curr of prev.applied) {
+    const next = rebaseTransaction(curr, working, prev, events)
+    if (!next) continue
+    working = next.working
+    // next includes an updated `previous` set and `working` set and updates
+    // the `outgoingAction` and `outgoingMutations`. the `base` set from the
+    // original applied transaction gets put back into the updated transaction
+    // as-is to preserve the intended base for a 3-way merge
+    applied.push({...curr, ...next})
+  }
+  return {applied, working}
+}
+
 export function applyRemoteDocument(
   prev: SyncTransactionState,
   {document, documentId, previousRev, revision, timestamp, type, mutations}: RemoteDocument,
@@ -618,47 +683,15 @@ export function applyRemoteDocument(
 
   // if we got this far, this means that we could not fast-forward this revision
   // for this document. now we can rebase our local changes (if any) on top of
-  // this new base from remote. in order to do that we grab the set of documents
-  // captured before the earliest local transaction
-  const previous = prev.applied.at(0)?.previous
-  // our initial working set now is the state of the documents before any of our
-  // local transactions plus the newly updated document from remote
-  let working = {...previous, [documentId]: document}
-  const nextApplied: AppliedTransaction[] = []
-
-  // now we can iterate through our applied (but not yet committed) transactions
-  // starting with the updated working set and re-apply each transaction in
-  // order creating a new set of applied transactions as we go.
-  //
-  // NOTE: we don't want to rebase over the outgoing transaction because that
-  // transaction is already on its way to the server. if an outgoing transaction
-  // needs to be rebased, then it eventually will be when we see that
-  // transaction again through the listener and this same flow will run then
-  for (const curr of prev.applied) {
-    try {
-      const next = processActions({...curr, working, grants: prev.grants, identity: prev.identity})
-      working = next.working
-      // next includes an updated `previous` set and `working` set and updates
-      // the `outgoingAction` and `outgoingMutations`. the `base` set from the
-      // original applied transaction gets put back into the updated transaction
-      // as-is to preserve the intended base for a 3-way merge
-      nextApplied.push({...curr, ...next})
-    } catch (error) {
-      // if processing the action ever throws a related error, we can skip this
-      // local transaction and report the error to the user
-      if (error instanceof ActionError) {
-        events.next({
-          type: 'rebase-error',
-          transactionId: error.transactionId,
-          documentId: error.documentId,
-          message: error.message,
-          error,
-        })
-        continue
-      }
-      throw error
-    }
-  }
+  // this new base from remote
+  const {applied: nextApplied, working} = rebaseLocalChanges(
+    prev,
+    {[documentId]: document},
+    // the outgoing transaction is a local change until this document's remote
+    // copy includes it, which is when its revision is no longer unverified
+    prev.outgoing && prev.outgoing.transactionId in unverifiedRevisions ? prev.outgoing : undefined,
+    events,
+  )
 
   // when the recompute lands on a value deep-equal to the current local
   // (the common case for echoes of our own transactions), keep the previous
