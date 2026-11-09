@@ -6,6 +6,7 @@ import {afterEach, beforeEach, describe, expect, it, type Mock, vi} from 'vitest
 import {useAuthState} from '../hooks/auth/useAuthState'
 import {useWindowConnection} from '../hooks/comlink/useWindowConnection'
 import {ComlinkTokenRefreshProvider} from './ComlinkTokenRefresh'
+import {onTokenRejected} from './onTokenRejected'
 import {ResourceProvider} from './ResourceProvider'
 
 // Mocks
@@ -24,6 +25,10 @@ vi.mock('../hooks/auth/useAuthState', () => ({
 
 vi.mock('../hooks/comlink/useWindowConnection', () => ({
   useWindowConnection: vi.fn(),
+}))
+
+vi.mock('./onTokenRejected', () => ({
+  onTokenRejected: vi.fn(() => ({unsubscribe: vi.fn()})),
 }))
 
 // Use simpler mock typings
@@ -105,6 +110,27 @@ describe('ComlinkTokenRefresh', () => {
             connectTo: SDK_CHANNEL_NAME,
           }),
         )
+      })
+
+      it('requests a new token when a request rejects the current one', async () => {
+        mockFetch.mockResolvedValueOnce({token: 'new-token'})
+        render(
+          <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+            <ComlinkTokenRefreshProvider>
+              <div>Test</div>
+            </ComlinkTokenRefreshProvider>
+          </ResourceProvider>,
+        )
+        expect(mockFetch).not.toHaveBeenCalled()
+
+        const refresh = vi.mocked(onTokenRejected).mock.lastCall![1]
+        await act(async () => {
+          refresh()
+          await vi.advanceTimersByTimeAsync(0)
+        })
+
+        expect(mockFetch).toHaveBeenCalledExactlyOnceWith('dashboard/v1/auth/tokens/create')
+        expect(mockSetAuthToken).toHaveBeenCalledWith(expect.any(Object), 'new-token')
       })
 
       it('should handle received token when not in studio mode', async () => {

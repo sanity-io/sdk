@@ -340,6 +340,7 @@ describe('clientStore', () => {
         getCurrent: () => auth$.value,
         subscribe: vi.fn(),
         observable: auth$,
+        reportRejected: vi.fn(),
       })
       oauthInstance = createSanityInstance({
         projectId: 'test-project',

@@ -14,8 +14,10 @@ import {
   getAuthState,
   getClientAuthState,
   getCurrentUserState,
+  getIsTokenRejectedState,
   getLoginUrlState,
   getTokenState,
+  setAuthToken,
 } from './authStore'
 import {handleAuthCallback} from './handleAuthCallback'
 import {checkForCookieAuth, getStudioTokenFromLocalStorage} from './studioModeAuth'
@@ -847,6 +849,46 @@ describe('authStore', () => {
       expect(getCurrentUserState(instance).getCurrent()).toEqual({id: 'user'})
       expect(emissions).toHaveLength(1)
       subscription.unsubscribe()
+    })
+  })
+
+  describe('getIsTokenRejectedState', () => {
+    let instance: ReturnType<typeof createSanityInstance>
+
+    beforeEach(() => {
+      instance = createSanityInstance({projectId: 'p', dataset: 'd', auth: {token: 'token'}})
+    })
+
+    afterEach(() => {
+      instance?.dispose()
+    })
+
+    it('is true once a request rejects the current credential', () => {
+      const credential = getClientAuthState(instance)
+      expect(getIsTokenRejectedState(instance).getCurrent()).toBe(false)
+
+      credential.reportRejected(credential.getCurrent())
+
+      expect(getIsTokenRejectedState(instance).getCurrent()).toBe(true)
+    })
+
+    it('ignores a rejection of a credential that was already replaced', () => {
+      const credential = getClientAuthState(instance)
+      const stale = credential.getCurrent()
+      setAuthToken(instance, 'new-token')
+
+      credential.reportRejected(stale)
+
+      expect(getIsTokenRejectedState(instance).getCurrent()).toBe(false)
+    })
+
+    it('is false again once a new token is set', () => {
+      const credential = getClientAuthState(instance)
+      credential.reportRejected(credential.getCurrent())
+
+      setAuthToken(instance, 'new-token')
+
+      expect(getIsTokenRejectedState(instance).getCurrent()).toBe(false)
     })
   })
 

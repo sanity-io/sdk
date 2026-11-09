@@ -8,6 +8,7 @@ import {contextLikeTheCliWrapper} from '../../test/dashboardSlots'
 import {useAuthState} from '../hooks/auth/useAuthState'
 import {useSanityInstance} from '../hooks/context/useSanityInstance'
 import {DashboardTokenRefreshProvider} from './DashboardTokenRefresh'
+import {onTokenRejected} from './onTokenRejected'
 import {ResourceProvider} from './ResourceProvider'
 import {SanityInstanceProvider} from './SanityInstanceProvider'
 
@@ -31,6 +32,10 @@ vi.mock('@sanity/sdk', async () => {
 
 vi.mock('../hooks/auth/useAuthState', () => ({
   useAuthState: vi.fn(),
+}))
+
+vi.mock('./onTokenRejected', () => ({
+  onTokenRejected: vi.fn(() => ({unsubscribe: vi.fn()})),
 }))
 
 vi.mock('@sanity/sdk/_internal', async (importOriginal) => ({
@@ -211,6 +216,15 @@ describe('DashboardTokenRefreshProvider', () => {
       })
 
       expect(messageBus.emit).toHaveBeenCalledWith('auth.token.refresh', undefined)
+    })
+
+    it('asks the message bus to reissue the token when a request rejects it', () => {
+      renderProvider()
+      expect(messageBus.emit).not.toHaveBeenCalled()
+
+      vi.mocked(onTokenRejected).mock.lastCall![1]()
+
+      expect(messageBus.emit).toHaveBeenCalledExactlyOnceWith('auth.token.refresh', undefined)
     })
 
     it('logs a failed token reissue instead of dropping it silently', async () => {

@@ -13,6 +13,7 @@ import React, {type PropsWithChildren, useCallback, useEffect, useMemo, useRef} 
 import {useAuthState} from '../hooks/auth/useAuthState'
 import {useWindowConnection} from '../hooks/comlink/useWindowConnection'
 import {useSanityInstance} from '../hooks/context/useSanityInstance'
+import {onTokenRejected} from './onTokenRejected'
 
 // Define specific message types extending the base types for clarity
 type SdkParentComlinkMessage = NewTokenResponseMessage | WindowMessage // Messages received by SDK
@@ -93,6 +94,12 @@ function DashboardTokenRefresh({children}: PropsWithChildren) {
       clearRefreshTimeout()
     }
   }, [clearRefreshTimeout])
+
+  // A query, listener or write rejected the token, usually because it expired
+  useEffect(() => {
+    const subscription = onTokenRejected(instance, () => void requestNewToken())
+    return () => subscription.unsubscribe()
+  }, [instance, requestNewToken])
 
   useEffect(() => {
     const has401Error =
