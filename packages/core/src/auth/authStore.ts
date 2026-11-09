@@ -111,8 +111,8 @@ export interface AuthStoreState {
   pendingCredential?: Promise<ClientAuth>
   /**
    * The token a request was rejected with as an invalid session (a 401). The
-   * session is expired once this matches the logged-in token; a new token
-   * clears that without resetting this field.
+   * session is expired once this matches the logged-in token. `setAuthToken`
+   * clears it so the old token isn't kept in memory.
    */
   rejectedToken?: string
 }
@@ -404,6 +404,7 @@ export const setAuthToken = bindActionGlobally(
             : undefined
         state.set('setToken', {
           authState: createLoggedInAuthState(token, currentUser, preservedLastTokenRefresh),
+          rejectedToken: undefined,
         })
       }
     } else {
@@ -412,6 +413,7 @@ export const setAuthToken = bindActionGlobally(
         logger.info('Clearing auth token')
         state.set('setToken', {
           authState: {type: AuthStateType.LOGGED_OUT, isDestroyingSession: false},
+          rejectedToken: undefined,
         })
       }
     }

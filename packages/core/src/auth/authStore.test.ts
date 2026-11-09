@@ -890,6 +890,16 @@ describe('authStore', () => {
 
       expect(getIsTokenRejectedState(instance).getCurrent()).toBe(false)
     })
+
+    it('forgets the rejected token once a new token is set', () => {
+      const credential = getClientAuthState(instance)
+      credential.reportRejected(credential.getCurrent())
+
+      setAuthToken(instance, 'new-token')
+      setAuthToken(instance, 'token')
+
+      expect(getIsTokenRejectedState(instance).getCurrent()).toBe(false)
+    })
   })
 
   describe('getLoginUrlsState', () => {
