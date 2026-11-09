@@ -13,6 +13,10 @@ const REACT_INTERNAL_ERROR_PATTERN =
  * Wraps a hook so an error thrown while it runs is marked as coming from the SDK, then rethrown
  * unchanged. Suspense promises pass through untouched because `markSdkError` ignores anything
  * that is not an `Error`, and errors React raises itself are not marked.
+ *
+ * Every hook factory in this folder returns its hook through this wrapper, and a guard test in
+ * `withSdkOrigin.test.tsx` checks it. A new factory must do the same, or errors from the hooks
+ * it builds are not attributed to the SDK in apps that bundle it.
  */
 export function withSdkOrigin<TParams extends unknown[], TReturn>(
   useHook: (...params: TParams) => TReturn,

@@ -1,3 +1,7 @@
+import {readdirSync, readFileSync} from 'node:fs'
+import {createRequire} from 'node:module'
+import {dirname, join} from 'node:path'
+
 import {createSanityInstance} from '@sanity/sdk'
 import {act, render, screen} from '@testing-library/react'
 import {Component, type ReactNode, Suspense, use} from 'react'
@@ -207,5 +211,50 @@ describe('withSdkOrigin', () => {
 
     expect(String(caught[0])).toContain('Rendered more hooks')
     expect(caught.some(isMarked)).toBe(false)
+  })
+})
+
+describe('hook factories', () => {
+  // Read at run time, not with `import.meta.glob`, so a factory added since the last cached
+  // transform of this file is still checked
+  const helpersDir = import.meta.dirname
+  const factorySources = readdirSync(helpersDir)
+    .filter((file) => /^create\w*Hook\.tsx?$/.test(file))
+    .map((file) => [file, readFileSync(join(helpersDir, file), 'utf8')] as const)
+
+  it('finds the hook factories', () => {
+    expect(factorySources.length).toBeGreaterThanOrEqual(4)
+  })
+
+  it.each(factorySources)('%s returns its hook through withSdkOrigin', (_file, source) => {
+    expect(source).toMatch(/withSdkOrigin\(/)
+  })
+})
+
+describe('React error messages the wrapper skips', () => {
+  // `withSdkOrigin` recognizes React's own errors by message. If a React upgrade rewords one,
+  // this fails instead of the wrapper silently marking that error as an SDK error.
+  const require = createRequire(join(import.meta.dirname, 'withSdkOrigin.test.tsx'))
+  const readBuild = (pkg: string, file: string) =>
+    readFileSync(join(dirname(require.resolve(`${pkg}/package.json`)), 'cjs', file), 'utf8')
+  const developmentSources =
+    readBuild('react-dom', 'react-dom-client.development.js') +
+    readBuild('react', 'react.development.js')
+
+  it.each([
+    'Rendered more hooks',
+    'Rendered fewer hooks',
+    'Invalid hook call',
+    'Too many re-renders',
+    'Should have a queue',
+    'Suspense Exception',
+  ])('React development builds still throw "%s"', (prefix) => {
+    expect(developmentSources).toContain(prefix)
+  })
+
+  it('React production builds still use the minified error prefix', () => {
+    expect(readBuild('react-dom', 'react-dom-client.production.js')).toContain(
+      'Minified React error #',
+    )
   })
 })
