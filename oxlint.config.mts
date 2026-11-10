@@ -10,16 +10,4 @@ export default {
     '**/.turbo',
     'sanity.types.ts',
   ],
-  overrides: [
-    {
-      // Root-level scripts are repo tooling and may import devDependencies.
-      files: ['scripts/**'],
-      rules: {
-        'import-x-js/no-extraneous-dependencies': [
-          'error',
-          {devDependencies: true, optionalDependencies: false, includeTypes: false},
-        ],
-      },
-    },
-  ],
 }

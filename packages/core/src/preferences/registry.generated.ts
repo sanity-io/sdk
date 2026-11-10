@@ -25,9 +25,7 @@ export interface Values {
    */
   'manage.favorites.projects': {
     ref: string
-    data?: {
-      [k: string]: unknown
-    }
+    data?: never
   }[]
   'studio.structure-tool.layout.{...paneKey}': string
   'studio.structure-tool.sort-order.{...paneKey}': {

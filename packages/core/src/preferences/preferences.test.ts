@@ -681,16 +681,19 @@ describe('preferences', () => {
       await readFavorites('a', 'b')
       request.mockReturnValueOnce(new Subject())
 
-      void edit((list) =>
-        list.map((item) => (item.ref === 'a' ? {...item, data: {note: 'updated'}} : item)),
+      // Cellar's favorites take no `data` today, so it's typed `never`. A list key with data updates
+      // the same way
+      void edit(
+        (list) =>
+          list.map((item) => (item.ref === 'a' ? {...item, data: 'updated'} : item)) as typeof list,
       )
 
       await vi.waitFor(() =>
-        expect(current()).toMatchObject({data: {value: [{ref: 'a', data: {note: 'updated'}}, {ref: 'b'}]}}),
+        expect(current()).toMatchObject({data: {value: [{ref: 'a', data: 'updated'}, {ref: 'b'}]}}),
       )
       expect(request).toHaveBeenLastCalledWith(
         expect.objectContaining({
-          body: {data: [{key: FAVORITES, add: [{ref: 'a', data: {note: 'updated'}}], at: 'end'}]},
+          body: {data: [{key: FAVORITES, add: [{ref: 'a', data: 'updated'}], at: 'end'}]},
         }),
       )
     })

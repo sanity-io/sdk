@@ -1,6 +1,6 @@
 import {type AccessResourceType} from '../access/checkPermissions'
 import {PreferenceError} from './preferenceError'
-import {type ItemValues, ITEMS_KEYS, KEYS, type Values} from './registry.generated'
+import {ITEMS_KEYS, type ItemValues, KEYS, type Values} from './registry.generated'
 
 /**
  * An item in a list preference, like a starred project. `ref` tells items apart.
