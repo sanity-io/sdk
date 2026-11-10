@@ -682,15 +682,15 @@ describe('preferences', () => {
       request.mockReturnValueOnce(new Subject())
 
       void edit((list) =>
-        list.map((item) => (item.ref === 'a' ? {...item, data: 'updated'} : item)),
+        list.map((item) => (item.ref === 'a' ? {...item, data: {note: 'updated'}} : item)),
       )
 
       await vi.waitFor(() =>
-        expect(current()).toMatchObject({data: {value: [{ref: 'a', data: 'updated'}, {ref: 'b'}]}}),
+        expect(current()).toMatchObject({data: {value: [{ref: 'a', data: {note: 'updated'}}, {ref: 'b'}]}}),
       )
       expect(request).toHaveBeenLastCalledWith(
         expect.objectContaining({
-          body: {data: [{key: FAVORITES, add: [{ref: 'a', data: 'updated'}], at: 'end'}]},
+          body: {data: [{key: FAVORITES, add: [{ref: 'a', data: {note: 'updated'}}], at: 'end'}]},
         }),
       )
     })
