@@ -6,6 +6,14 @@ import {defineFetcher, defineMutation, type Fetcher} from './fetcherStore'
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0))
 
+// Shows `value` the way a mutation still waiting on the server does
+const writePending = <T>(instance: SanityInstance, fetcher: Fetcher<[], T>, value: T) =>
+  void defineMutation<T, never>({
+    name: 'pending-write',
+    mutationFn: () => () => NEVER,
+    onMutate: (write, input) => write(fetcher, [], input),
+  })(instance, value)
+
 describe('fetcherStore', () => {
   let instance: SanityInstance
 
@@ -155,20 +163,6 @@ describe('fetcherStore', () => {
     unsub()
   })
 
-  it('setData writes optimistically and can be undone', () => {
-    const fetcher = defineFetcher<[], string>({
-      name: 'setdata',
-      getKey: () => 'k',
-      fetch: () => () => NEVER,
-    })
-
-    const {undo} = fetcher.setData(instance, [], 'written')
-    expect(fetcher.getState(instance).getCurrent().data).toBe('written')
-
-    undo()
-    expect(fetcher.getState(instance).getCurrent().status).toBe('pending')
-  })
-
   it('garbage-collects an entry written without a subscriber after gcTime', async () => {
     const fetcher = defineFetcher<[], string>({
       name: 'gc-orphan',
@@ -177,9 +171,8 @@ describe('fetcherStore', () => {
       fetch: () => () => NEVER,
     })
 
-    // No subscriber ever holds this entry (as an optimistic mutation write would),
-    // so only setData's own GC scheduling can clean it up.
-    fetcher.setData(instance, [], 'written')
+    // No subscriber ever holds this entry, so only the write's own GC scheduling can clean it up
+    writePending(instance, fetcher, 'written')
     expect(fetcher.getState(instance).getCurrent().data).toBe('written')
 
     await vi.waitFor(() => expect(fetcher.getState(instance).getCurrent().status).toBe('pending'))
@@ -189,9 +182,9 @@ describe('fetcherStore', () => {
     const fetcher = defineFetcher<[], string>({
       name: 'mutate-rollback',
       getKey: () => 'k',
+      initialData: () => ({data: 'server', dataUpdatedAt: Date.now()}),
       fetch: () => () => NEVER,
     })
-    fetcher.setData(instance, [], 'server')
 
     const failing = defineMutation<string, never>({
       name: 'rename-fail',
@@ -201,6 +194,227 @@ describe('fetcherStore', () => {
 
     await expect(failing(instance, 'optimistic')).rejects.toThrow('rejected')
     expect(fetcher.getState(instance).getCurrent().data).toBe('server')
+  })
+
+  describe('overlapping changes', () => {
+    let server: string[]
+    let slowRead: Subject<string[]> | undefined
+    let list: Fetcher<[], string[]>
+    let answers: Map<string, Subject<string[]>>
+    let add: (instance: SanityInstance, item: string) => Promise<unknown>
+
+    beforeEach(() => {
+      server = []
+      slowRead = undefined
+      answers = new Map()
+      list = defineFetcher<[], string[]>({
+        name: 'overlap-list',
+        getKey: () => 'k',
+        tags: [{type: 'overlap'}],
+        fetch: () => () => slowRead ?? of([...server]),
+      })
+      add = defineMutation<string, string[]>({
+        name: 'overlap-add',
+        mutationFn: () => (item) => {
+          const answer = new Subject<string[]>()
+          answers.set(item, answer)
+          return answer
+        },
+        onMutate: (write, item) => write(list, [], (current) => [...(current ?? []), item]),
+        onSuccess: (write, stored) => write(list, [], stored),
+      })
+    })
+
+    const shown = () => list.getState(instance).getCurrent().data
+
+    it("keeps a change on screen when another change's answer arrives first", async () => {
+      await list.resolveState(instance)
+      const first = add(instance, 'A')
+      void add(instance, 'B').catch(() => {})
+
+      answers.get('A')!.next(['A'])
+      await first
+
+      expect(shown()).toEqual(['A', 'B'])
+    })
+
+    it('takes back only the refused change, keeping the one made after it', async () => {
+      await list.resolveState(instance)
+      const first = add(instance, 'A')
+      const second = add(instance, 'B')
+
+      answers.get('A')!.error(new Error('refused'))
+      await expect(first).rejects.toThrow('refused')
+      expect(shown()).toEqual(['B'])
+
+      await vi.waitFor(() => expect(answers.has('B')).toBe(true))
+      answers.get('B')!.next(['B'])
+      await second
+      expect(shown()).toEqual(['B'])
+    })
+
+    it('keeps a change on screen when a refetch lands before the server has it', async () => {
+      const source = list.getState(instance)
+      const unsub = source.subscribe()
+      await vi.waitFor(() => expect(source.getCurrent().status).toBe('success'))
+      void add(instance, 'A').catch(() => {})
+
+      server = ['elsewhere']
+
+      await expect(list.refetch(instance)).resolves.toEqual(['elsewhere', 'A'])
+      expect(shown()).toEqual(['elsewhere', 'A'])
+      unsub()
+    })
+
+    it('ignores a read that started before an answer, while a later change is in flight', async () => {
+      await list.resolveState(instance)
+      slowRead = new Subject()
+      const reading = list.refetch(instance)
+      const first = add(instance, 'A')
+      answers.get('A')!.next(['A'])
+      await first
+      void add(instance, 'B').catch(() => {})
+
+      slowRead.next([])
+      await reading
+
+      expect(shown()).toEqual(['A', 'B'])
+    })
+
+    it('sends a change once the earlier change to the same entry is answered, so the later one wins', async () => {
+      const sent: string[] = []
+      const replies = new Map<string, Subject<string[]>>()
+      const replace = defineMutation<string, string[]>({
+        name: 'overlap-replace-queued',
+        mutationFn: () => (item) => {
+          sent.push(item)
+          const reply = new Subject<string[]>()
+          replies.set(item, reply)
+          return reply
+        },
+        onMutate: (write, item) => write(list, [], [item]),
+        onSuccess: (write, stored) => write(list, [], stored),
+      })
+      await list.resolveState(instance)
+
+      const x = replace(instance, 'X')
+      const y = replace(instance, 'Y')
+      expect(shown()).toEqual(['Y'])
+      expect(sent).toEqual(['X'])
+
+      replies.get('X')!.next(['X'])
+      await x
+      await vi.waitFor(() => expect(sent).toEqual(['X', 'Y']))
+      expect(shown()).toEqual(['Y'])
+
+      replies.get('Y')!.next(['Y'])
+      await y
+      expect(shown()).toEqual(['Y'])
+    })
+
+    it('sends changes to different entries straight away', async () => {
+      const sent: number[] = []
+      const item = defineFetcher<[number], string>({
+        name: 'overlap-item',
+        getKey: (_i, id) => `${id}`,
+        fetch: () => () => NEVER,
+      })
+      const rename = defineMutation<number, void>({
+        name: 'overlap-rename',
+        mutationFn: () => (id) => {
+          sent.push(id)
+          return NEVER
+        },
+        onMutate: (write, id) => write(item, [id], `renamed-${id}`),
+      })
+
+      void rename(instance, 1)
+      void rename(instance, 2)
+
+      expect(sent).toEqual([1, 2])
+    })
+
+    it('takes a change back when its request throws before it is sent', async () => {
+      const broken = defineMutation<string, string[]>({
+        name: 'overlap-broken',
+        mutationFn: () => () => {
+          throw new Error('bad input')
+        },
+        onMutate: (write, item) => write(list, [], (current) => [...(current ?? []), item]),
+      })
+      await list.resolveState(instance)
+
+      await expect(broken(instance, 'A')).rejects.toThrow('bad input')
+
+      expect(shown()).toEqual([])
+    })
+
+    it('shows changes still in flight in the order they were made', async () => {
+      await list.resolveState(instance)
+
+      void add(instance, 'A').catch(() => {})
+      void add(instance, 'B').catch(() => {})
+
+      expect(shown()).toEqual(['A', 'B'])
+    })
+
+    it("stores an answer for an entry nobody has read, so it's there when someone does", async () => {
+      const replace = defineMutation<string[], string[]>({
+        name: 'overlap-replace',
+        mutationFn: () => (items) => of(items),
+        onSuccess: (write, stored) => write(list, [], stored),
+      })
+
+      await replace(instance, ['A'])
+
+      expect(list.getState(instance).getCurrent()).toMatchObject({status: 'success', data: ['A']})
+    })
+
+    it("shows a change at once, then the API's answer", async () => {
+      await list.resolveState(instance)
+      const added = add(instance, 'A')
+      expect(shown()).toEqual(['A'])
+
+      answers.get('A')!.next(['A', 'from-server'])
+      await added
+
+      expect(shown()).toEqual(['A', 'from-server'])
+    })
+
+    it('keeps a change that saved without an answer to show, under a later change', async () => {
+      const saves = new Map<string, Subject<void>>()
+      const save = defineMutation<string, void>({
+        name: 'overlap-save',
+        mutationFn: () => (item) => {
+          const saved = new Subject<void>()
+          saves.set(item, saved)
+          return saved
+        },
+        onMutate: (write, item) => write(list, [], (current) => [...(current ?? []), item]),
+      })
+      await list.resolveState(instance)
+      const first = save(instance, 'A')
+      const second = save(instance, 'B')
+
+      saves.get('A')!.next()
+      await first
+      expect(shown()).toEqual(['A', 'B'])
+
+      await vi.waitFor(() => expect(saves.has('B')).toBe(true))
+      saves.get('B')!.error(new Error('refused'))
+      await expect(second).rejects.toThrow('refused')
+      expect(shown()).toEqual(['A'])
+    })
+
+    it("restores an entry that hadn't been read when its only change is refused", async () => {
+      const added = add(instance, 'A')
+      expect(shown()).toEqual(['A'])
+
+      answers.get('A')!.error(new Error('refused'))
+      await expect(added).rejects.toThrow('refused')
+
+      expect(list.getState(instance).getCurrent().status).toBe('pending')
+    })
   })
 
   it('reconciles tagged entries after a successful mutation', async () => {
@@ -243,7 +457,7 @@ describe('fetcherStore', () => {
 
     // Force a refetch (in flight, no value yet), then write optimistically.
     const refetching = fetcher.refetch(instance)
-    fetcher.setData(instance, [], 'optimistic')
+    writePending(instance, fetcher, 'optimistic')
     expect(source.getCurrent().data).toBe('optimistic')
 
     // Late server value must NOT clobber the optimistic write.
@@ -287,7 +501,7 @@ describe('fetcherStore', () => {
     await vi.waitFor(() => expect(source.getCurrent().isFetching).toBe(true))
 
     // Optimistic write bumps the version while the fetch is still in flight.
-    fetcher.setData(instance, [], 'optimistic')
+    writePending(instance, fetcher, 'optimistic')
 
     // The late server value is discarded (version guard) — and because the source
     // never completes, isFetching must be cleared here, not left stuck true.

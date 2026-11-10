@@ -278,5 +278,42 @@ describe('favoritesStore', () => {
       await expect(pending).rejects.toThrow('Failed to update favorite status')
       expect(status.getCurrent().data).toEqual({isFavorited: true})
     })
+
+    it('keeps a document unfavourited when it was unfavourited before the favourite saved', async () => {
+      let serverFavorited = false
+      let settleUnfavourite!: () => void
+      setupMockStateSource({
+        fetchImpl: vi.fn((endpoint: string, payload: {eventType?: string}) => {
+          if (endpoint.endsWith('/query')) return Promise.resolve({isFavorited: serverFavorited})
+          if (payload.eventType === 'added') {
+            serverFavorited = true
+            return Promise.resolve({success: true})
+          }
+          return new Promise((resolve) => {
+            settleUnfavourite = () => {
+              serverFavorited = false
+              resolve({success: true})
+            }
+          })
+        }),
+      })
+      const status = favorites.getState(instance!, mockContext)
+      const unsubscribe = status.subscribe()
+      await vi.waitFor(() => expect(status.getCurrent().data).toEqual({isFavorited: false}))
+
+      const favourited = setFavorite(instance!, {...mockContext, isFavorited: true})
+      const unfavourited = setFavorite(instance!, {...mockContext, isFavorited: false})
+      await (
+        await favourited
+      ).invalidated
+      expect(status.getCurrent().data).toEqual({isFavorited: false})
+
+      settleUnfavourite()
+      await (
+        await unfavourited
+      ).invalidated
+      expect(status.getCurrent().data).toEqual({isFavorited: false})
+      unsubscribe()
+    })
   })
 })

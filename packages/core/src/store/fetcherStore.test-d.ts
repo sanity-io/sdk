@@ -81,18 +81,6 @@ test('the params tuple is enforced per fetcher', () => {
   void widgets.getState(instance, 'nope')
 })
 
-test('setData updater is typed to TData', () => {
-  widget.setData(instance, ['w1'], {id: 'w1', label: 'x'})
-  widget.setData(instance, ['w1'], (current) => {
-    expectTypeOf(current).toEqualTypeOf<Widget | undefined>()
-    return {id: 'w1', label: 'y'}
-  })
-  // @ts-expect-error — value must be a full Widget
-  widget.setData(instance, ['w1'], {id: 'w1'})
-  // @ts-expect-error — updater function must return TData
-  widget.setData(instance, ['w1'], () => 42)
-})
-
 test('defineMutation resolves to a MutationResult of TResult with a typed input', () => {
   const createWidget = defineMutation<{label: string}, Widget>({
     name: 'test-d-create-widget',
