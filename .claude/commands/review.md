@@ -15,7 +15,8 @@ Before reviewing, load the repo's conventions:
    - `.claude/rules/core-package-conventions.md` for `packages/core/src/**/*.ts`
    - `.claude/rules/request-tag-conventions.md` for `packages/core/src/**/*.ts`
    - `.claude/rules/react-package-conventions.md` for `packages/react/src/**/*.{ts,tsx}`
-3. Treat violations of these conventions as review issues using the format below.
+3. If the diff adds or changes RxJS, load the `rxjs-like-a-pro` skill (`.claude/skills/rxjs-like-a-pro/SKILL.md`).
+4. Treat violations of these conventions, and the anti-patterns the skill lists, as review issues using the format below.
 
 ## Issue format
 

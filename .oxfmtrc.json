@@ -10,6 +10,7 @@
     ".turbo",
     ".vscode",
     ".cursor",
+    ".claude/skills",
     ".sanity",
     "coverage",
     "docs",
