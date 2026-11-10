@@ -1,11 +1,15 @@
 import {
+  BehaviorSubject,
   catchError,
+  debounceTime,
   defer,
   firstValueFrom,
   map,
   type Observable,
   of,
+  share,
   switchMap,
+  take,
   tap,
   throwError,
 } from 'rxjs'
@@ -386,7 +390,7 @@ export function request<T>(
     url: string
     method?: 'PUT' | 'PATCH' | 'DELETE'
     body?: unknown
-    query?: Record<string, string>
+    query?: Record<string, string | string[]>
     tag: string
   },
 ): Observable<T> {
@@ -447,6 +451,62 @@ export function whenOrganizationKnown(
   return firstValueFrom(observeAppOrganizationId(instance))
 }
 
+// The API reads up to this many keys in one request
+const MAX_KEYS_PER_READ = 100
+// The window projections batch in too, so the SDK's stores batch alike. It also catches the
+// minute-by-minute refetches of keys first read together, whose timers fire a moment apart
+const READ_DEBOUNCE_MS = 50
+
+interface Read {
+  keys: Set<string>
+  /** Emits each time a key joins, so the window starts again */
+  joined: BehaviorSubject<void>
+  answer: Observable<ApiPreference[]>
+}
+
+// Reads per instance and path that are still collecting keys
+const reads = new WeakMap<SanityInstance, Map<string, Read>>()
+
+// The request is shared, so the cache stopping one key's read doesn't cancel it for the others
+function readTogether(instance: SanityInstance, path: string, key: string) {
+  const open = reads.get(instance) ?? new Map<string, Read>()
+  reads.set(instance, open)
+  let read = open.get(path)
+  if (!read) {
+    const keys = new Set<string>()
+    const joined = new BehaviorSubject<void>(undefined)
+    const created: Read = {
+      keys,
+      joined,
+      answer: joined.pipe(
+        debounceTime(READ_DEBOUNCE_MS),
+        take(1),
+        tap(() => {
+          if (open.get(path) === created) open.delete(path)
+        }),
+        switchMap(() =>
+          request<{data: ApiPreference[]}>(instance, {
+            url: path,
+            query: {keys: [...keys]},
+            tag: 'preferences.get',
+          }),
+        ),
+        map(({data}) => data),
+        share(),
+      ),
+    }
+    read = created
+    open.set(path, read)
+  }
+  if (!read.keys.has(key)) {
+    read.keys.add(key)
+    // Later keys start a new read
+    if (read.keys.size >= MAX_KEYS_PER_READ) open.delete(path)
+    read.joined.next()
+  }
+  return read.answer
+}
+
 /**
  * Fetcher for one preference of the signed-in user, on the shared fetcher cache. It starts from
  * the value cached on the user's last visit, when there is one, and reads the API in the
@@ -473,12 +533,8 @@ export const userPreference = defineFetcher<
     options?.shared ? [] : [{type: 'userPreference', id: `${userId}:${key}`}],
   fetch: (instance) => (userId, key, options) => {
     const {path, keyUrl, defaultValue} = resolveKey(instance, key, options)
-    return request<{data: ApiPreference[]}>(instance, {
-      url: path,
-      query: {keys: key},
-      tag: 'preferences.get',
-    }).pipe(
-      map(({data}) => {
+    return readTogether(instance, path, key).pipe(
+      map((data) => {
         const response = data.find((candidate) => candidate.key === key)
         if (response) return toPreference(response, defaultValue)
         throw new PreferenceError(
