@@ -1,4 +1,9 @@
-import {getCurrentUserState, userPreference} from '@sanity/sdk'
+import {
+  getCurrentUserState,
+  type PreferenceKey,
+  userPreference,
+  whenOrganizationKnown,
+} from '@sanity/sdk'
 import {type FetcherSnapshot} from '@sanity/sdk/_internal'
 import {act} from '@testing-library/react'
 import {BehaviorSubject, of} from 'rxjs'
@@ -13,6 +18,7 @@ vi.mock(import('@sanity/sdk'), async (importOriginal) => {
     ...actual,
     getCurrentUserState: vi.fn(),
     userPreference: {...actual.userPreference, getState: vi.fn(), resolveState: vi.fn()},
+    whenOrganizationKnown: vi.fn(),
   }
 })
 
@@ -27,7 +33,7 @@ beforeEach(() => {
   } as unknown as ReturnType<typeof getCurrentUserState>)
   const snapshot: FetcherSnapshot<unknown> = {
     status: 'success',
-    data: {key: LAYOUT, value: 'compact', isDefault: false, resourceType: 'project'},
+    data: {key: LAYOUT, value: 'compact', isDefault: false, shared: false, resourceType: 'project'},
     error: undefined,
     isFetching: false,
     dataUpdatedAt: 1,
@@ -46,6 +52,7 @@ it("reads the signed-in user's value in the nearest resource's project", () => {
     key: LAYOUT,
     value: 'compact',
     isDefault: false,
+    shared: false,
     resourceType: 'project',
   })
   expect(userPreference.getState).toHaveBeenCalledWith(expect.anything(), 'user-1', LAYOUT, {
@@ -61,6 +68,36 @@ it('reads from the project the call names', () => {
     projectId: 'other',
     organizationId: undefined,
   })
+})
+
+it('passes `shared` and `resourceType` on to the read', () => {
+  // No declared key has a shared value yet, so any key's options are allowed
+  renderHook(() =>
+    useUserPreference(LAYOUT as PreferenceKey, {resourceType: 'project', shared: true}),
+  )
+
+  expect(userPreference.getState).toHaveBeenCalledWith(
+    expect.anything(),
+    'user-1',
+    LAYOUT,
+    expect.objectContaining({projectId: 'test', resourceType: 'project', shared: true}),
+  )
+})
+
+it("suspends until the Dashboard's organization is known, then reads the value", async () => {
+  let organizationKnown!: () => void
+  const waiting = new Promise<void>((resolve) => (organizationKnown = resolve))
+  vi.mocked(whenOrganizationKnown).mockReturnValue(waiting)
+
+  const {result} = renderHook(() => useUserPreference(LAYOUT))
+  expect(result.current).toBeNull()
+  expect(userPreference.getState).not.toHaveBeenCalled()
+
+  vi.mocked(whenOrganizationKnown).mockReturnValue(undefined)
+  await act(async () => organizationKnown())
+
+  expect(result.current.data).toMatchObject({value: 'compact'})
+  expect(whenOrganizationKnown).toHaveBeenLastCalledWith(expect.anything(), LAYOUT, undefined)
 })
 
 it("suspends until the signed-in user is known, then reads that user's value", async () => {

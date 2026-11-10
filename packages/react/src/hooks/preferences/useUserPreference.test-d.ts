@@ -21,3 +21,10 @@ test('a key only takes the IDs of the resource it is stored in', () => {
   // @ts-expect-error Stored per project, not per organization
   useUserPreference('studio.structure-tool.inspect-view-mode', {organizationId: 'o'})
 })
+
+test('only a key with a shared value takes `shared`', () => {
+  // @ts-expect-error The layout has no shared value
+  useUserPreference('studio.structure-tool.inspect-view-mode', {shared: true})
+  // @ts-expect-error Starred projects are the user's own, in no resource
+  useUserPreference('manage.favorites.projects', {resourceType: 'project'})
+})

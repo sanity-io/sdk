@@ -232,14 +232,16 @@ export {
   type UserPreferenceOrganizationOptions,
   type UserPreferenceProjectOptions,
   type UserPreferenceUserOptions,
+  whenOrganizationKnown,
 } from '../preferences/preferences'
 export type {
   PreferenceEdit,
   PreferenceKey,
+  PreferenceLevelsOf,
   PreferenceListItem,
   PreferenceResourceType,
-  PreferenceResourceTypeOf,
   PreferenceValue,
+  StoredLevel,
 } from '../preferences/registry'
 export {getDocumentPresence, getPresence, reportPresence} from '../presence/presenceStore'
 export type {

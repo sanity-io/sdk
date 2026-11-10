@@ -21,7 +21,13 @@ const useUpdateUserPreferenceMutation = createMutationHook(
  * Changes a preference of the signed-in user, read with {@link useUserPreference}. A value shows
  * at once and goes back if the API refuses it. `undefined` removes the user's value, so the key's
  * default applies again. A function gets the value on screen and returns the next one, like a
- * toggle. Without a `projectId`, it uses the project of the nearest resource.
+ * toggle.
+ *
+ * The options say where the value is stored, and only take the places the key is stored in.
+ * `shared: true` changes the value everyone in the project or organization shares, where the key
+ * has one. `resourceType` names the kind of resource, which a key stored in both projects and
+ * organizations needs. Without a `projectId`, it uses the project of the nearest resource; without
+ * an `organizationId`, the Dashboard's organization.
  *
  * @example
  * ```tsx
@@ -40,21 +46,23 @@ export function useUpdateUserPreference<K extends PreferenceKey>(
 ): MutationHookResult<PreferenceEdit<K>, UserPreference<K>> {
   const userId = useSignedInUserId()
   const projectId = useResolvedProjectId({projectId: options?.projectId})
-  const organizationId = options?.organizationId
+  const {resourceType, organizationId, shared} = options ?? {}
   const {mutate, ...state} = useUpdateUserPreferenceMutation()
-  // Depends on the IDs, not `options`, so an inline `options` object keeps the same function
+  // Depends on the options' values, not `options`, so an inline object keeps the same function
   const update = useCallback(
     (next: PreferenceEdit<K>) =>
       // The project comes from the nearest resource for every key, but only a key stored per
-      // project reads it
+      // project reads it, so these are options of any key, not only `K`'s
       mutate({
         userId,
         key,
         value: next,
+        resourceType,
         projectId,
         organizationId,
-      } as UpdateUserPreferenceInput) as Promise<UserPreference<K>>,
-    [mutate, userId, key, projectId, organizationId],
+        shared,
+      } as unknown as UpdateUserPreferenceInput) as Promise<UserPreference<K>>,
+    [mutate, userId, key, resourceType, projectId, organizationId, shared],
   )
   // The registry types each key's value; the mutation holds every key's in one type
   return {...state, data: state.data as UserPreference<K> | undefined, mutate: update}

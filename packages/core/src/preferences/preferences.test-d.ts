@@ -61,7 +61,7 @@ test('a key only takes the IDs of the resource it is stored in', () => {
   })
 })
 
-test("a preference is either the default, or the user's own value", async () => {
+test("a preference is the default, the user's own value, or the shared one", async () => {
   const stored = await updateUserPreference(instance, {userId: 'u', key: KEY, value: 'raw'})
   if (stored.isDefault) expectTypeOf(stored.resourceType).toEqualTypeOf<undefined>()
   else expectTypeOf(stored.resourceType).toEqualTypeOf<'organization' | 'project' | undefined>()
@@ -90,4 +90,15 @@ test('a key stored on the user alone takes no resource', () => {
     // @ts-expect-error Stored on the user alone, in no project
     projectId: 'p',
   })
+})
+
+test('only a key with a shared value takes `shared`', () => {
+  // @ts-expect-error The layout has no shared value
+  void updateUserPreference(instance, {userId: 'u', key: KEY, value: 'raw', shared: true})
+  void updateUserPreference(instance, {userId: 'u', key: KEY, value: 'raw', shared: false})
+})
+
+test('a shared preference always names its kind of resource', async () => {
+  const stored = await updateUserPreference(instance, {userId: 'u', key: KEY, value: 'raw'})
+  if (stored.shared) expectTypeOf(stored.resourceType).toEqualTypeOf<'organization' | 'project'>()
 })

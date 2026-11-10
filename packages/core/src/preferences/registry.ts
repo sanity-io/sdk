@@ -74,62 +74,67 @@ export type PreferenceEdit<K extends PreferenceKey> =
 
 /**
  * Where the API says a value comes from: the user's own value everywhere (`user`), in a project
- * (`user@project`) or in an organization (`user@organization`), or `default` when they haven't set
- * one. The SDK turns it into a preference's `isDefault` and `resourceType`.
+ * (`user@project`) or in an organization (`user@organization`); the value everyone in a project
+ * (`project`) or organization (`organization`) shares; or `default` when nobody has set one. The
+ * SDK turns it into a preference's `isDefault`, `shared` and `resourceType`.
  * @internal
  */
-export type PreferenceLevel = 'user' | 'user@project' | 'user@organization' | 'default'
+export type PreferenceLevel =
+  | 'user'
+  | 'user@project'
+  | 'user@organization'
+  | 'project'
+  | 'organization'
+  | 'default'
 
 /**
- * The kind of resource a preference is stored in: a project or an organization. Each user has
- * their own value in each one.
+ * The kind of resource a preference is stored in: a project or an organization. Each user can have
+ * their own value in each one, and everyone in it can share one.
  * @internal
  */
 export type PreferenceResourceType = Extract<AccessResourceType, 'organization' | 'project'>
 
-// Where a key keeps each user's value: per project or organization, or `user` for one value per
-// user everywhere
-type StoredIn = PreferenceResourceType | 'user'
+/**
+ * A level a key can store a value at.
+ * @internal
+ */
+export type StoredLevel = Exclude<PreferenceLevel, 'default'>
 
-// `satisfies` checks each default against its key's value type, and that exactly the keys whose
-// value is a list of items are marked `list`. `studio.announcement.seen` is a list of strings, not
-// of items, so it isn't one
+// The levels the API stores each key at, most specific first. `satisfies` checks each default
+// against its key's value type, and that exactly the keys whose value is a list of items are
+// marked `list`. `studio.announcement.seen` is a list of strings, not of items, so it isn't one
 const KEYS = {
-  'manage.favorites.projects': {resourceType: 'user', defaultValue: [], list: true},
-  'studio.structure-tool.layout.{paneKey}': {resourceType: 'project', defaultValue: 'default'},
-  'studio.structure-tool.sort-order.{paneKey}': {resourceType: 'project', defaultValue: {by: []}},
-  'studio.structure-tool.inspect-view-mode': {resourceType: 'project', defaultValue: 'parsed'},
+  'manage.favorites.projects': {levels: ['user'], defaultValue: [], list: true},
+  'studio.structure-tool.layout.{paneKey}': {levels: ['user@project'], defaultValue: 'default'},
+  'studio.structure-tool.sort-order.{paneKey}': {levels: ['user@project'], defaultValue: {by: []}},
+  'studio.structure-tool.inspect-view-mode': {levels: ['user@project'], defaultValue: 'parsed'},
   'studio.search.recent.{dataset}': {
-    resourceType: 'project',
+    levels: ['user@project'],
     defaultValue: {version: 3, recentSearches: []},
   },
-  'studio.announcement.seen': {resourceType: 'project', defaultValue: []},
-  'studio.timezone.scheduled-publishing': {resourceType: 'project', defaultValue: 'UTC'},
-  'studio.timezone.content-releases': {resourceType: 'project', defaultValue: 'UTC'},
-  'studio.timezone.input.{inputId}': {resourceType: 'project', defaultValue: 'UTC'},
+  'studio.announcement.seen': {levels: ['user@project'], defaultValue: []},
+  'studio.timezone.scheduled-publishing': {levels: ['user@project'], defaultValue: 'UTC'},
+  'studio.timezone.content-releases': {levels: ['user@project'], defaultValue: 'UTC'},
+  'studio.timezone.input.{inputId}': {levels: ['user@project'], defaultValue: 'UTC'},
 } satisfies {
-  [N in Name]: {resourceType: StoredIn; defaultValue: Values[N]} & (N extends ListName
+  [N in Name]: {levels: StoredLevel[]; defaultValue: Values[N]} & (N extends ListName
     ? {list: true}
     : {list?: never})
 }
 
 /**
- * The kind of resource a key is stored in, like `project` for a pane's layout, or `never` for a key
- * stored on the user alone.
+ * The levels a key is stored at, like `user@project` for a pane's layout.
  * @internal
  */
-export type PreferenceResourceTypeOf<K extends PreferenceKey> = Exclude<
-  (typeof KEYS)[NameOf<K>]['resourceType'],
-  'user'
->
+export type PreferenceLevelsOf<K extends PreferenceKey> = (typeof KEYS)[NameOf<K>]['levels'][number]
 
 /**
- * Where a key keeps each user's value, the value a user has before they set one, and whether it's
- * a list of items.
+ * The levels a key is stored at, most specific first, its value before anyone sets one, and
+ * whether it's a list of items.
  * @internal
  */
 export function lookUpKey(key: string): {
-  resourceType: StoredIn
+  levels: readonly StoredLevel[]
   defaultValue: unknown
   list?: boolean
 } {

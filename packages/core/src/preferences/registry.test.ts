@@ -5,21 +5,21 @@ import {lookUpKey} from './registry'
 describe('lookUpKey', () => {
   it('finds a key the API names in full', () => {
     expect(lookUpKey('studio.structure-tool.inspect-view-mode')).toEqual({
-      resourceType: 'project',
+      levels: ['user@project'],
       defaultValue: 'parsed',
     })
   })
 
   it('finds a key by the part the API names, whatever follows it', () => {
     expect(lookUpKey('studio.structure-tool.layout.book')).toEqual({
-      resourceType: 'project',
+      levels: ['user@project'],
       defaultValue: 'default',
     })
   })
 
   it("finds a list key that's stored on the user alone, marked as a list", () => {
     expect(lookUpKey('manage.favorites.projects')).toEqual({
-      resourceType: 'user',
+      levels: ['user'],
       defaultValue: [],
       list: true,
     })

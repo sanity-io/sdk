@@ -1,4 +1,4 @@
-import {getCurrentUserState, updateUserPreference} from '@sanity/sdk'
+import {getCurrentUserState, type PreferenceKey, updateUserPreference} from '@sanity/sdk'
 import {act} from '@testing-library/react'
 import {of} from 'rxjs'
 import {beforeEach, expect, it, vi} from 'vitest'
@@ -25,7 +25,9 @@ beforeEach(() => {
     key: LAYOUT,
     value: 'compact',
     isDefault: false,
+    shared: false,
     resourceType: 'project',
+    canEdit: true,
   })
 })
 
@@ -39,18 +41,32 @@ it("changes the signed-in user's value in the nearest resource's project", async
     key: LAYOUT,
     value: 'compact',
     projectId: 'test',
+    resourceType: undefined,
     organizationId: undefined,
+    shared: undefined,
   })
 })
 
-it('changes the value in the project the call names', async () => {
-  const {result} = renderHook(() => useUpdateUserPreference(LAYOUT, {projectId: 'other'}))
+it('changes the shared value in the kind of resource and project the call names', async () => {
+  // No declared key has a shared value yet, so any key's options are allowed
+  const {result} = renderHook(() =>
+    useUpdateUserPreference(LAYOUT as PreferenceKey, {
+      resourceType: 'project',
+      projectId: 'other',
+      shared: true,
+    }),
+  )
 
   await act(() => result.current.mutate(undefined))
 
   expect(updateUserPreference).toHaveBeenCalledWith(
     expect.anything(),
-    expect.objectContaining({value: undefined, projectId: 'other'}),
+    expect.objectContaining({
+      value: undefined,
+      resourceType: 'project',
+      projectId: 'other',
+      shared: true,
+    }),
   )
 })
 
