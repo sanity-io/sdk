@@ -5,6 +5,7 @@ import {MessageBusError} from '../dashboard/messageBus/bus'
 import {TopicError} from '../dashboard/messageBus/topicStore'
 import {DocumentInaccessibleError} from '../document/documentInaccessibleError'
 import {ActionError} from '../document/processActions/shared'
+import {PreferenceError} from '../preferences/preferenceError'
 import {isKnownSdkError} from './isKnownSdkError'
 
 const response = (statusCode: number) =>
@@ -16,6 +17,7 @@ describe('isKnownSdkError', () => {
     ['DocumentInaccessibleError', new DocumentInaccessibleError('abc')],
     ['MessageBusError', new MessageBusError('timeout' as never)],
     ['TopicError', new TopicError('topic' as never)],
+    ['PreferenceError', new PreferenceError('keyNotDeclared', 'm')],
     ['ClientError', new ClientError(response(403))],
     ['ServerError', new ServerError(response(500))],
   ])('treats %s as known', (_name, error) => {

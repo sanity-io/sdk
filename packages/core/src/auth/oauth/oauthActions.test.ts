@@ -1,10 +1,11 @@
 import {type ClientConfig, ClientError, type SanityClient} from '@sanity/client'
+import {type CurrentUser} from '@sanity/types'
 import {NEVER} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, onTestFinished, vi} from 'vitest'
 
 import {createSanityInstance, type SanityInstance} from '../../store/createSanityInstance'
 import {AuthStateType} from '../authStateType'
-import {getAuthState, getClientAuthState} from '../authStore'
+import {getAuthState, getClientAuthState, getCurrentUserState} from '../authStore'
 import {subscribeToStateAndFetchCurrentUser} from '../subscribeToStateAndFetchCurrentUser'
 import {
   getOAuthTokensState,
@@ -127,6 +128,32 @@ function setup(options: SetupOptions = {}) {
 
 function parseBody(body: unknown): URLSearchParams {
   return new URLSearchParams(body as string)
+}
+
+const signedInUser = {id: 'user-1'} as CurrentUser
+
+// Stands in for the `/users/me` fetch: a signed-in state without a user gets one, a moment later
+function fakeCurrentUserFetch() {
+  vi.mocked(subscribeToStateAndFetchCurrentUser).mockImplementation(({state}) =>
+    state.observable.subscribe(({authState}) => {
+      if (authState.type !== AuthStateType.LOGGED_IN || authState.currentUser) return
+      void Promise.resolve().then(() =>
+        state.set('fetchedCurrentUser', {authState: {...authState, currentUser: signedInUser}}),
+      )
+    }),
+  )
+}
+
+// The current user each time it changes, once the first user is known
+async function recordCurrentUsers(): Promise<unknown[]> {
+  const users: unknown[] = []
+  const subscription = getCurrentUserState(instance!).observable.subscribe((current) =>
+    users.push(current),
+  )
+  onTestFinished(() => subscription.unsubscribe())
+  await vi.waitFor(() => expect(users.at(-1)).toBe(signedInUser))
+  users.length = 0
+  return users
 }
 
 beforeEach(() => {
@@ -561,6 +588,17 @@ describe('refreshOAuthTokens', () => {
     expect(getAuthState(instance!).getCurrent()).toMatchObject({type: AuthStateType.LOGGED_OUT})
   })
 
+  it('keeps the signed-in user through a refresh, so nothing waits for /users/me again', async () => {
+    fakeCurrentUserFetch()
+    setup({storageSeed: {[OAUTH_TOKENS_KEY]: serializeTokens(seededTokens)}})
+    const users = await recordCurrentUsers()
+
+    await refreshOAuthTokens(instance!)
+
+    expect(getAuthState(instance!).getCurrent()).toMatchObject({token: 'new-access'})
+    expect(users).not.toContain(null)
+  })
+
   it('keeps the session on a transient refresh failure', async () => {
     const networkError = new Error('network down')
     const request = vi.fn().mockRejectedValue(networkError)
@@ -648,6 +686,32 @@ describe('refreshOAuthTokens', () => {
       expect(getOAuthTokensState(instance!).getCurrent()).toMatchObject({
         accessToken: 'other-tab-access',
       })
+    })
+
+    it('drops the signed-in user when it adopts tokens another tab stored, which may be another account', async () => {
+      fakeCurrentUserFetch()
+      const {storageArea} = setup({
+        storageSeed: {[OAUTH_TOKENS_KEY]: serializeTokens(seededTokens)},
+      })
+      const users = await recordCurrentUsers()
+      const otherTabDone = deferred<void>()
+      await new Promise<void>((granted) => {
+        void navigator.locks.request('sanity-oauth-refresh:client-abc', () => {
+          granted()
+          return otherTabDone.promise
+        })
+      })
+
+      const refresh = refreshOAuthTokens(instance!)
+      await new Promise((resolve) => setTimeout(resolve, 0))
+      storageArea.setItem(
+        OAUTH_TOKENS_KEY,
+        serializeTokens(otherTabTokens(new Date(Date.now() + 3600_000))),
+      )
+      otherTabDone.resolve()
+      await refresh
+
+      expect(users).toContain(null)
     })
 
     it('adopts the tokens another tab stored when its storage event arrives while waiting', async () => {

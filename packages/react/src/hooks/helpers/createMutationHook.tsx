@@ -39,7 +39,8 @@ type MutationState<TResult> =
   | {status: 'error'; data: TResult | undefined; error: unknown}
 
 /**
- * Builds a hook over a core mutation action (the result of `defineMutation`).
+ * Builds a hook over a core mutation action (the result of `defineMutation`, or any action that
+ * resolves with `{data}`).
  * The write-side counterpart to {@link createFetcherHook}: it binds the action
  * to the current {@link SanityInstance} and tracks `{isPending, error, data}`
  * locally. `mutate` resolves with the server response only — the mutation's
@@ -49,7 +50,10 @@ type MutationState<TResult> =
  * @internal
  */
 export function createMutationHook<TInput, TResult>(
-  mutation: (instance: SanityInstance, input: TInput) => Promise<MutationResult<TResult>>,
+  mutation: (
+    instance: SanityInstance,
+    input: TInput,
+  ) => Promise<Pick<MutationResult<TResult>, 'data'>>,
 ): () => MutationHookResult<TInput, TResult> {
   const idle: MutationState<TResult> = {status: 'idle', data: undefined, error: undefined}
 

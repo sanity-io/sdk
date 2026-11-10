@@ -222,6 +222,23 @@ export {
 } from '../organization/organization'
 export {organizations} from '../organizations/organizations'
 export {type Organizations, type OrganizationsOptions} from '../organizations/organizations'
+export {PreferenceError, type PreferenceErrorCode} from '../preferences/preferenceError'
+export {
+  updateUserPreference,
+  type UpdateUserPreferenceInput,
+  type UserPreference,
+  userPreference,
+  type UserPreferenceOptions,
+  type UserPreferenceOrganizationOptions,
+  type UserPreferenceProjectOptions,
+} from '../preferences/preferences'
+export type {
+  PreferenceEdit,
+  PreferenceKey,
+  PreferenceResourceType,
+  PreferenceResourceTypeOf,
+  PreferenceValue,
+} from '../preferences/registry'
 export {getDocumentPresence, getPresence, reportPresence} from '../presence/presenceStore'
 export type {
   DisconnectEvent,
