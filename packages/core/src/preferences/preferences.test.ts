@@ -7,7 +7,7 @@ import {getDashboardOrganizationId} from '../dashboard/messageBus/topicStore'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {type StateSource} from '../store/createStateSourceAction'
 import {updateUserPreference, userPreference} from './preferences'
-import {type PreferenceKey} from './registry'
+import {type PreferenceEdit, type PreferenceKey} from './registry'
 
 vi.mock('../client/clientStore')
 
@@ -293,6 +293,205 @@ describe('preferences', () => {
       expect(userPreference.getState(instance, 'user-1', LAYOUT).getCurrent()).toMatchObject({
         data: {value: 'default', isDefault: true},
       })
+    })
+  })
+
+  describe('lists', () => {
+    const FAVORITES = 'manage.favorites.projects'
+    const USER_PATH = '/users/me/preferences'
+    const favorites = (...refs: string[]) => refs.map((ref) => ({ref}))
+
+    async function readFavorites(...refs: string[]) {
+      request.mockReturnValueOnce(of({data: [stored(FAVORITES, favorites(...refs), 'user')]}))
+      await userPreference.resolveState(instance, 'user-1', FAVORITES)
+    }
+
+    const current = () => userPreference.getState(instance, 'user-1', FAVORITES).getCurrent()
+
+    it("reads a list from the user's own values, which apply everywhere, without needing a project", async () => {
+      instance.dispose()
+      instance = createSanityInstance({})
+      request.mockReturnValue(of({data: [stored(FAVORITES, favorites('a'), 'user')]}))
+
+      await expect(userPreference.resolveState(instance, 'user-1', FAVORITES)).resolves.toEqual({
+        key: FAVORITES,
+        value: favorites('a'),
+        isDefault: false,
+      })
+      expect(request).toHaveBeenCalledWith(expect.objectContaining({url: USER_PATH}))
+    })
+
+    const edit = (value: PreferenceEdit<typeof FAVORITES>) =>
+      updateUserPreference(instance, {userId: 'user-1', key: FAVORITES, value})
+
+    it("adds items to the end at once, and keeps the API's answer", async () => {
+      await readFavorites('a')
+      const write = new Subject<unknown>()
+      request.mockReturnValueOnce(write)
+
+      const added = edit((list) => [...list, {ref: 'b'}])
+
+      await vi.waitFor(() =>
+        expect(current()).toMatchObject({
+          data: {value: favorites('a', 'b'), isDefault: false},
+        }),
+      )
+      expect(request).toHaveBeenLastCalledWith({
+        url: USER_PATH,
+        method: 'PATCH',
+        body: {data: [{key: FAVORITES, add: favorites('b'), at: 'end'}]},
+        tag: 'preferences.list.change',
+        timeout: 10_000,
+      })
+      // Another tab starred `z` meanwhile, so the API's list differs from the one shown
+      write.next({data: [stored(FAVORITES, favorites('z', 'a', 'b'), 'user')]})
+      await expect(added).resolves.toMatchObject({value: favorites('z', 'a', 'b')})
+      expect(current()).toMatchObject({data: {value: favorites('z', 'a', 'b')}})
+      expect(storage.get(`sanity-preferences:v1:user-1:${USER_PATH}/${FAVORITES}`)).toContain('"z"')
+    })
+
+    it('adds items to the start', async () => {
+      await readFavorites('a')
+      request.mockReturnValueOnce(new Subject())
+
+      void edit((list) => [{ref: 'b'}, ...list])
+
+      await vi.waitFor(() => expect(current()).toMatchObject({data: {value: favorites('b', 'a')}}))
+      expect(request).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          body: {data: [{key: FAVORITES, add: favorites('b'), at: 'start'}]},
+        }),
+      )
+    })
+
+    it('sends an item changed in place as an add, which updates it where it is', async () => {
+      await readFavorites('a', 'b')
+      request.mockReturnValueOnce(new Subject())
+
+      void edit((list) =>
+        list.map((item) => (item.ref === 'a' ? {...item, data: 'updated'} : item)),
+      )
+
+      await vi.waitFor(() =>
+        expect(current()).toMatchObject({data: {value: [{ref: 'a', data: 'updated'}, {ref: 'b'}]}}),
+      )
+      expect(request).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          body: {data: [{key: FAVORITES, add: [{ref: 'a', data: 'updated'}], at: 'end'}]},
+        }),
+      )
+    })
+
+    it('removes items by their ref at once', async () => {
+      await readFavorites('a', 'b', 'c')
+      request.mockReturnValueOnce(new Subject())
+
+      void edit((list) => list.filter((item) => item.ref === 'b'))
+
+      await vi.waitFor(() => expect(current()).toMatchObject({data: {value: favorites('b')}}))
+      expect(request).toHaveBeenLastCalledWith(
+        expect.objectContaining({body: {data: [{key: FAVORITES, remove: ['a', 'c']}]}}),
+      )
+    })
+
+    it('removes and adds in one request, so the API saves both or neither', async () => {
+      await readFavorites('a', 'b')
+      request.mockReturnValueOnce(new Subject())
+
+      void edit(favorites('b', 'c'))
+
+      await vi.waitFor(() => expect(current()).toMatchObject({data: {value: favorites('b', 'c')}}))
+      expect(request).toHaveBeenCalledTimes(2)
+      expect(request).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          body: {
+            data: [
+              {key: FAVORITES, remove: ['a']},
+              {key: FAVORITES, add: favorites('c'), at: 'end'},
+            ],
+          },
+        }),
+      )
+    })
+
+    it('brings the whole list back when the API refuses a change, and says why', async () => {
+      await readFavorites('a')
+      request.mockReturnValueOnce(
+        throwError(() => refusal(400, 'quotaExceeded', 'The list holds up to 100 items')),
+      )
+
+      await expect(edit(favorites('b'))).rejects.toMatchObject({code: 'quotaExceeded'})
+      expect(current()).toMatchObject({data: {value: favorites('a')}})
+    })
+
+    it('replaces the whole list for a reorder, which adding and removing items cannot do', async () => {
+      await readFavorites('a', 'b')
+      request.mockReturnValueOnce(new Subject())
+
+      void edit(favorites('b', 'a'))
+
+      await vi.waitFor(() => expect(current()).toMatchObject({data: {value: favorites('b', 'a')}}))
+      expect(request).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          url: `${USER_PATH}/${FAVORITES}`,
+          method: 'PUT',
+          body: {value: favorites('b', 'a')},
+        }),
+      )
+    })
+
+    it('replaces the whole list for a new item in its middle', async () => {
+      await readFavorites('a', 'b')
+      request.mockReturnValueOnce(new Subject())
+
+      void edit(favorites('a', 'c', 'b'))
+
+      await vi.waitFor(() =>
+        expect(request).toHaveBeenLastCalledWith(expect.objectContaining({method: 'PUT'})),
+      )
+    })
+
+    it('sends nothing when the list is the same', async () => {
+      await readFavorites('a', 'b')
+
+      await expect(edit(favorites('a', 'b'))).resolves.toMatchObject({value: favorites('a', 'b')})
+      expect(request).toHaveBeenCalledTimes(1)
+    })
+
+    it('refuses a list with the same item twice, and sends nothing', async () => {
+      await readFavorites('a')
+
+      await expect(edit(favorites('a', 'b', 'b'))).rejects.toMatchObject({
+        code: 'valueInvalid',
+        message: expect.stringContaining('"b" more than once'),
+      })
+      expect(request).toHaveBeenCalledTimes(1)
+    })
+
+    it("reads a list that hasn't been read yet, and sends only what changed", async () => {
+      request.mockReturnValueOnce(of({data: [stored(FAVORITES, favorites('a'), 'user')]}))
+      request.mockReturnValueOnce(new Subject())
+
+      void edit((list) => [...list, {ref: 'b'}])
+
+      await vi.waitFor(() => expect(request).toHaveBeenCalledTimes(2))
+      expect(request).toHaveBeenLastCalledWith(
+        expect.objectContaining({body: {data: [{key: FAVORITES, add: favorites('b'), at: 'end'}]}}),
+      )
+    })
+
+    it('replaces a list of strings, which is a value and not a list of items', async () => {
+      request.mockReturnValueOnce(new Subject())
+
+      void updateUserPreference(instance, {
+        userId: 'user-1',
+        key: 'studio.announcement.seen',
+        value: ['bulk-edit'],
+      })
+
+      expect(request).toHaveBeenLastCalledWith(
+        expect.objectContaining({method: 'PUT', body: {value: ['bulk-edit']}}),
+      )
     })
   })
 

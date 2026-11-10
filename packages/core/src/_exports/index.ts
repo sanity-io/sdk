@@ -231,10 +231,12 @@ export {
   type UserPreferenceOptions,
   type UserPreferenceOrganizationOptions,
   type UserPreferenceProjectOptions,
+  type UserPreferenceUserOptions,
 } from '../preferences/preferences'
 export type {
   PreferenceEdit,
   PreferenceKey,
+  PreferenceListItem,
   PreferenceResourceType,
   PreferenceResourceTypeOf,
   PreferenceValue,

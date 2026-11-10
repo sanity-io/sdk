@@ -17,6 +17,14 @@ describe('lookUpKey', () => {
     })
   })
 
+  it("finds a list key that's stored on the user alone, marked as a list", () => {
+    expect(lookUpKey('manage.favorites.projects')).toEqual({
+      resourceType: 'user',
+      defaultValue: [],
+      list: true,
+    })
+  })
+
   it("doesn't match a key that stops where its `{part}` should be", () => {
     expect(() => lookUpKey('studio.structure-tool.layout.')).toThrow(
       expect.objectContaining({code: 'keyNotDeclared'}),

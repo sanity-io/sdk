@@ -61,8 +61,33 @@ test('a key only takes the IDs of the resource it is stored in', () => {
   })
 })
 
-test("a preference is either the default, or the user's own value in a resource", async () => {
+test("a preference is either the default, or the user's own value", async () => {
   const stored = await updateUserPreference(instance, {userId: 'u', key: KEY, value: 'raw'})
   if (stored.isDefault) expectTypeOf(stored.resourceType).toEqualTypeOf<undefined>()
-  else expectTypeOf(stored.resourceType).toEqualTypeOf<'organization' | 'project'>()
+  else expectTypeOf(stored.resourceType).toEqualTypeOf<'organization' | 'project' | undefined>()
+})
+
+test('a list key takes the items it can hold', () => {
+  void updateUserPreference(instance, {
+    userId: 'u',
+    key: 'manage.favorites.projects',
+    value: (list) => [...list, {ref: 'abc123'}],
+  })
+  void updateUserPreference(instance, {
+    userId: 'u',
+    key: 'manage.favorites.projects',
+    // @ts-expect-error An item needs a `ref`
+    value: [{}],
+  })
+})
+
+test('a key stored on the user alone takes no resource', () => {
+  void updateUserPreference(instance, {userId: 'u', key: 'manage.favorites.projects', value: []})
+  void updateUserPreference(instance, {
+    userId: 'u',
+    key: 'manage.favorites.projects',
+    value: [],
+    // @ts-expect-error Stored on the user alone, in no project
+    projectId: 'p',
+  })
 })
