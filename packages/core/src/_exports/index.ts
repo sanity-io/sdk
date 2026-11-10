@@ -224,6 +224,14 @@ export {organizations} from '../organizations/organizations'
 export {type Organizations, type OrganizationsOptions} from '../organizations/organizations'
 export {PreferenceError, type PreferenceErrorCode} from '../preferences/preferenceError'
 export {
+  updateUserPreferenceListItem,
+  type UpdateUserPreferenceListItemInput,
+  type UserPreferenceList,
+  userPreferenceList,
+  type UserPreferenceListItem,
+  type UserPreferenceListOptions,
+} from '../preferences/preferenceItems'
+export {
   updateUserPreference,
   type UpdateUserPreferenceInput,
   type UserPreference,
@@ -239,6 +247,8 @@ export type {
   PreferenceKey,
   PreferenceLevelsOf,
   PreferenceListItem,
+  PreferenceListItemValue,
+  PreferenceListKey,
   PreferenceResourceType,
   PreferenceValue,
   StoredLevel,
