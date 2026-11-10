@@ -12,6 +12,8 @@ This is the `@sanity/sdk` monorepo, the SDK for building Sanity-powered apps.
 
 Per-path conventions live in `.claude/rules/` and load automatically when Claude reads files matching their `paths:` frontmatter. Read the file under `.claude/rules/` that matches the package you are editing before making changes there.
 
+Skills live in `.claude/skills/`, where Claude Code, Cursor and OpenCode all find them. Load `rxjs-like-a-pro` before writing or reviewing code that uses RxJS; most stores in `packages/core` are built on it. It's copied unchanged from [bjoerge/rxjs-skills](https://github.com/bjoerge/rxjs-skills), so update it from there rather than editing it here.
+
 ## Workspace commands
 
 This repo uses pnpm with Turbo. Common commands run from the root:

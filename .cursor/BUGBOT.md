@@ -85,6 +85,8 @@ Per-path conventions live in `.claude/rules/`, each with a `paths:` frontmatter 
 
 Read the ones matching the changed files and treat violations as review issues. Repo-wide standards are in `AGENTS.md` at the root.
 
+When the diff adds or changes RxJS, read `.claude/skills/rxjs-like-a-pro/SKILL.md` and flag the patterns it lists as anti-patterns, such as a subscribe inside a subscribe or a hand-rolled timer where an operator exists.
+
 ## Output
 
 Keep reviews short, direct and actionable. For each issue: state the problem in one or two sentences, give the fix, include line numbers. If there is no actionable feedback, post nothing, except on a major dependency upgrade (section 5), where a one-line confirmation that usages were checked is itself useful.
