@@ -50,14 +50,16 @@ export function PaginationControls({
     }
 
     for (let i = startPage; i <= endPage; i++) {
+      const page = i
+
       buttons.push(
         <Button
-          key={i}
-          data-testid={`pagination-page-${i}`}
-          level={i === currentPage ? 'primary' : 'tertiary'}
-          onClick={() => goToPage(i)}
+          key={page}
+          data-testid={`pagination-page-${page}`}
+          level={page === currentPage ? 'primary' : 'tertiary'}
+          onClick={() => goToPage(page)}
           style={buttonStyle}
-          text={String(i)}
+          text={String(page)}
         />,
       )
     }
