@@ -85,7 +85,7 @@ export function AgentActionsRoute(): JSX.Element {
             </Box>
             {promptResult && (
               <Box padding={3}>
-                <Code as="span" size={1} style={{whiteSpace: 'pre-wrap'}}>
+                <Code inline size={1} style={{whiteSpace: 'pre-wrap'}}>
                   {promptResult}
                 </Code>
               </Box>
@@ -131,7 +131,7 @@ export function AgentActionsRoute(): JSX.Element {
             </Box>
             {generateResult && (
               <Box padding={3}>
-                <Code as="span" size={1} style={{whiteSpace: 'pre-wrap'}}>
+                <Code inline size={1} style={{whiteSpace: 'pre-wrap'}}>
                   {generateResult}
                 </Code>
               </Box>
