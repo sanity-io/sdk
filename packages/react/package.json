@@ -113,7 +113,7 @@
     "typescript": "catalog:",
     "vite": "catalog:",
     "vitest": "catalog:",
-    "xstate": "5.33.3"
+    "xstate": "5.33.4"
   },
   "peerDependencies": {
     "react": "^19.2.0",
