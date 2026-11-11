@@ -83,9 +83,168 @@ describe('preferences', () => {
   afterEach(() => {
     instance.dispose()
     vi.unstubAllGlobals()
+    vi.useRealTimers()
   })
 
   describe('reading', () => {
+    const pane = (name: string) => `studio.structure-tool.layout.${name}` as const
+
+    it('reads the keys a page starts reading together in one request, each with its own value', async () => {
+      request.mockReturnValue(
+        of({data: [stored(pane('a'), 'compact'), stored(pane('b'), 'detail')]}),
+      )
+
+      const [a, b] = await Promise.all([
+        userPreference.resolveState(instance, 'user-1', pane('a')),
+        userPreference.resolveState(instance, 'user-1', pane('b')),
+      ])
+
+      expect([a.value, b.value]).toEqual(['compact', 'detail'])
+      expect(request).toHaveBeenCalledTimes(1)
+      expect(request).toHaveBeenCalledWith({
+        url: PATH,
+        query: {keys: [pane('a'), pane('b')]},
+        tag: 'preferences.get',
+        timeout: 10_000,
+      })
+    })
+
+    it('reads at most 100 keys in one request', async () => {
+      const names = Array.from({length: 101}, (_, i) => pane(`${i}`))
+      request.mockImplementation(({query}) =>
+        of({data: query.keys.map((key: string) => stored(key, 'compact'))}),
+      )
+
+      await Promise.all(names.map((key) => userPreference.resolveState(instance, 'user-1', key)))
+
+      // Two reads that close a moment apart can be sent in either order
+      const sizes = request.mock.calls.map(([{query}]) => query.keys.length)
+      expect(sizes.sort((a, b) => b - a)).toEqual([100, 1])
+    })
+
+    it('reads keys stored in different places in separate requests', async () => {
+      request.mockImplementation(({query}) =>
+        of({data: query.keys.map((key: string) => stored(key, [], 'user'))}),
+      )
+
+      await Promise.all([
+        userPreference.resolveState(instance, 'user-1', pane('a')),
+        userPreference.resolveState(instance, 'user-1', 'manage.favorites.projects'),
+      ])
+
+      expect(request.mock.calls.map(([{url}]) => url).sort()).toEqual([
+        PATH,
+        '/users/me/preferences',
+      ])
+    })
+
+    it("keeps reading the other keys when the cache stops one key's read before the API answers", async () => {
+      const answer = new Subject<{data: unknown[]}>()
+      request.mockReturnValueOnce(answer).mockReturnValueOnce(of({data: [stored(pane('a'), 'x')]}))
+      const a = userPreference.getState(instance, 'user-1', pane('a'))
+      const b = userPreference.getState(instance, 'user-1', pane('b'))
+      const stop = [a.subscribe(), b.subscribe()]
+      await vi.waitFor(() => expect(request).toHaveBeenCalledTimes(1))
+
+      // A forced refetch is one way the cache cancels a single key's read
+      void userPreference.refetch(instance, 'user-1', pane('a'))
+      answer.next({data: [stored(pane('a'), 'compact'), stored(pane('b'), 'detail')]})
+
+      await vi.waitFor(() => expect(b.getCurrent()).toMatchObject({data: {value: 'detail'}}))
+      stop.forEach((unsubscribe) => unsubscribe())
+    })
+
+    it('reads the keys a page reads together in one request again when they refresh a minute later', async () => {
+      vi.useFakeTimers({
+        toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'],
+      })
+      request.mockImplementation(({query}) =>
+        of({data: query.keys.map((key: string) => stored(key, 'compact'))}),
+      )
+      const stop = [pane('a'), pane('b')].map((key) =>
+        userPreference.getState(instance, 'user-1', key).subscribe(),
+      )
+      await vi.advanceTimersByTimeAsync(100)
+      expect(request).toHaveBeenCalledTimes(1)
+
+      await vi.advanceTimersByTimeAsync(60_000)
+
+      expect(request).toHaveBeenCalledTimes(2)
+      expect(request).toHaveBeenLastCalledWith(
+        expect.objectContaining({query: {keys: [pane('a'), pane('b')]}}),
+      )
+      stop.forEach((unsubscribe) => unsubscribe())
+    })
+
+    it('waits until no key has joined for 50 ms, like projections, before sending', async () => {
+      vi.useFakeTimers({
+        toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'],
+      })
+      request.mockImplementation(({query}) =>
+        of({data: query.keys.map((key: string) => stored(key, 'compact'))}),
+      )
+      const stop = [userPreference.getState(instance, 'user-1', pane('a')).subscribe()]
+      await vi.advanceTimersByTimeAsync(40)
+      stop.push(userPreference.getState(instance, 'user-1', pane('b')).subscribe())
+      await vi.advanceTimersByTimeAsync(40)
+      expect(request).not.toHaveBeenCalled()
+
+      await vi.advanceTimersByTimeAsync(20)
+
+      expect(request).toHaveBeenCalledTimes(1)
+      expect(request).toHaveBeenCalledWith(
+        expect.objectContaining({query: {keys: [pane('a'), pane('b')]}}),
+      )
+      stop.forEach((unsubscribe) => unsubscribe())
+    })
+
+    it('gives a key read after a request has gone its own request', async () => {
+      request
+        .mockReturnValueOnce(new Subject())
+        .mockReturnValueOnce(of({data: [stored(pane('c'), 'compact')]}))
+      const unsubscribe = userPreference.getState(instance, 'user-1', pane('a')).subscribe()
+      await vi.waitFor(() => expect(request).toHaveBeenCalledTimes(1))
+
+      await expect(
+        userPreference.resolveState(instance, 'user-1', pane('c')),
+      ).resolves.toMatchObject({
+        value: 'compact',
+      })
+      expect(request).toHaveBeenLastCalledWith(
+        expect.objectContaining({query: {keys: [pane('c')]}}),
+      )
+      unsubscribe()
+    })
+
+    it("sends each app instance's reads through its own request", async () => {
+      const other = createSanityInstance({projectId: 'project-1', dataset: 'production'})
+      request.mockImplementation(({query}) =>
+        of({data: query.keys.map((key: string) => stored(key, 'compact'))}),
+      )
+
+      await Promise.all([
+        userPreference.resolveState(instance, 'user-1', pane('a')),
+        userPreference.resolveState(other, 'user-2', pane('a')),
+      ])
+
+      expect(request).toHaveBeenCalledTimes(2)
+      other.dispose()
+    })
+
+    it('fails every key in a request that fails', async () => {
+      request.mockReturnValue(
+        throwError(() => refusal(403, 'accessDenied', "You can't read this project")),
+      )
+
+      const reads = await Promise.allSettled([
+        userPreference.resolveState(instance, 'user-1', pane('a')),
+        userPreference.resolveState(instance, 'user-1', pane('b')),
+      ])
+
+      expect(reads.map((read) => read.status)).toEqual(['rejected', 'rejected'])
+      expect(request).toHaveBeenCalledTimes(1)
+    })
+
     it("reads a key from the user's own values in the app's project", async () => {
       request.mockReturnValue(of({data: [stored(LAYOUT, 'compact')]}))
 
@@ -102,7 +261,7 @@ describe('preferences', () => {
       })
       expect(request).toHaveBeenCalledWith({
         url: PATH,
-        query: {keys: LAYOUT},
+        query: {keys: [LAYOUT]},
         tag: 'preferences.get',
         timeout: 10_000,
       })
@@ -695,7 +854,7 @@ describe('preferences', () => {
       })
       expect(request).toHaveBeenCalledWith({
         url: '/projects/project-1/preferences',
-        query: {keys: SHARED_KEY},
+        query: {keys: [SHARED_KEY]},
         tag: 'preferences.get',
         timeout: 10_000,
       })
