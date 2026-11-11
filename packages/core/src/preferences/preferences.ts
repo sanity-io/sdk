@@ -536,6 +536,15 @@ const resetUserPreference = defineMutation<ResetUserPreferenceInput, UserPrefere
     (instance) =>
     ({userId, key, ...options}) =>
       sendWrite(instance, userId, key, options, {method: 'DELETE', tag: 'preferences.reset'}),
+  // Only the API knows which value applies next, so this leaves the value as it is. Writing it
+  // still sends the reset in turn with the key's other changes
+  onMutate: (write, {userId, key, ...options}) => {
+    try {
+      write(userPreference, [userId, key, options], (current) => current as UserPreference)
+    } catch {
+      // A key that can't be resolved has nothing to show; `mutationFn` rejects with why
+    }
+  },
   onSuccess: (write, stored, {userId, key, ...options}) =>
     write(userPreference, [userId, key, options], stored),
   invalidates: sharedChange,

@@ -24,7 +24,6 @@ const makeFetcher = (snapshot: FetcherSnapshot<string>): Fetcher<[id: string], s
     refetch: vi.fn(() => Promise.resolve('refetched')),
     invalidate: vi.fn(),
     invalidateAll: vi.fn(),
-    setData: vi.fn(() => ({undo: vi.fn()})),
   }
   return fetcher as unknown as Fetcher<[id: string], string>
 }
@@ -127,10 +126,10 @@ describe('createFetcherHook', () => {
     const fetcher = defineFetcher<[id: string], string>({
       name: `regression-loop-${Math.random().toString(36).slice(2)}`,
       getKey: (_instance, id) => id,
+      // A success entry from the start, so the hook skips Suspense and lands in useSyncExternalStore
+      initialData: (_instance, id) => ({data: `DATA:${id}`, dataUpdatedAt: Date.now()}),
       fetch: () => (id) => of(`DATA:${id}`),
     })
-    // Seed a success entry so we skip Suspense and land in useSyncExternalStore.
-    fetcher.setData(instance, ['a'], 'DATA:a')
 
     const useThing = createFetcherHook(fetcher)
 
@@ -156,9 +155,9 @@ describe('createFetcherHook', () => {
     const fetcher = defineFetcher<[id: string], typeof data>({
       name: `regression-object-${Math.random().toString(36).slice(2)}`,
       getKey: (_instance, id) => id,
+      initialData: () => ({data, dataUpdatedAt: Date.now()}),
       fetch: () => () => of(data),
     })
-    fetcher.setData(instance, ['a'], data)
 
     const useThing = createFetcherHook(fetcher)
 

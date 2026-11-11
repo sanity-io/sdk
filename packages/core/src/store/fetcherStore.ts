@@ -1,4 +1,14 @@
-import {filter, firstValueFrom, map, type Observable, Subscription, take} from 'rxjs'
+import {
+  concatMap,
+  defaultIfEmpty,
+  filter,
+  firstValueFrom,
+  forkJoin,
+  map,
+  type Observable,
+  Subscription,
+  take,
+} from 'rxjs'
 
 import {setCleanupInterval, setCleanupTimeout} from '../utils/setCleanupTimeout'
 import {bindActionGlobally} from './createActionBinder'
@@ -162,24 +172,14 @@ export interface Fetcher<TParams extends unknown[], TData> {
    * Resolves with the entry's data as held by the cache once the fetch settles.
    */
   refetch: (instance: SanityInstance, ...params: TParams) => Promise<TData>
-  /**
-   * Writes an entry's data directly. Returns an undo handle — inside a
-   * mutation's `onMutate` these writes are recorded and rolled back automatically
-   * on failure.
-   */
-  setData: (
-    instance: SanityInstance,
-    params: TParams,
-    updater: TData | ((current: TData | undefined) => TData),
-  ) => {undo: () => void}
 }
 
 /**
  * Writes an entry's data in any fetcher. Passed to {@link MutationDefinition}
  * callbacks — mutations are the only holders of arbitrary write access; read
  * fetchers pull their data (see {@link FetcherDefinition.initialData}). Inside
- * `onMutate`, every write is recorded and undone automatically if the mutation
- * fails.
+ * `onMutate`, every write is a pending change that comes off when the mutation
+ * settles; inside `onSuccess`, writes are the server's answer.
  *
  * @internal
  */
@@ -208,13 +208,16 @@ export interface MutationResult<TResult> {
  * Defines a mutation with optimistic cache updates. Lifecycle:
  *
  * 1. `onMutate` applies optimistic writes synchronously — the UI updates before
- *    the request leaves. Each entry carries a version counter that increments on
- *    every write. An optimistic write bumps the counter, so a revalidation already
- *    in flight lands "out of date" and is discarded rather than clobbering the
- *    optimistic write.
- * 2. The request runs. On failure, recorded writes are rolled back automatically
- *    — the cache is restored exactly, so failure ends the lifecycle here.
- * 3. On success, `onSuccess` may write the server response into the cache directly.
+ *    the request leaves. Each write is kept as a pending change on its entry, on
+ *    top of the entry's confirmed data, so other mutations' answers and refetches
+ *    land underneath it rather than replacing it.
+ * 2. The request runs, once earlier mutations that wrote optimistically to the
+ *    same entries have settled, so their answers come back in order. On
+ *    failure, this mutation's pending changes come off and any others stay, so
+ *    failure ends the lifecycle here.
+ * 3. On success, `onSuccess` may write the server response; it becomes the
+ *    entry's confirmed data in place of this mutation's changes. An entry
+ *    `onSuccess` doesn't write keeps the changes as confirmed.
  * 4. On success, `invalidates` tags mark matching entries across the cache
  *    stale (active entries refetch), so the cache reconverges on server truth
  *    even if the optimistic shape was wrong.
@@ -231,9 +234,9 @@ export interface MutationDefinition<TInput, TResult> {
   /** Reconcile the cache with the server response, avoiding a refetch round-trip */
   onSuccess?: (write: CacheWriter, result: TResult, input: TInput) => void
   /**
-   * Cache tags to invalidate on success. Failure invalidates nothing: recorded
-   * optimistic writes roll back to the exact pre-mutation cache, and any
-   * server-side ambiguity (e.g. timeout after commit) heals via `staleTime`.
+   * Cache tags to invalidate on success. Failure invalidates nothing: the
+   * mutation's optimistic changes come off, and any server-side ambiguity (e.g.
+   * timeout after commit) heals via `staleTime`.
    * A static array, or a function of the result/input.
    */
   invalidates?: CacheTag[] | ((result: TResult, input: TInput) => CacheTag[])
@@ -254,7 +257,20 @@ interface CacheEntryMeta {
   forcedStale: boolean
   tags: CacheTag[]
   subscriptions: number
+  /** Optimistic writes of mutations still in flight, applied in order on top of `confirmed` */
+  pending: PendingChange[]
+  /** What the entry shows without `pending`; only set while there are pending changes */
+  confirmed: Confirmed | undefined
 }
+
+/** One optimistic write, tagged with the mutation call that made it. */
+interface PendingChange {
+  mutation: number
+  updater: unknown
+}
+
+/** The parts of an entry a pending change is applied on top of. */
+type Confirmed = Pick<CacheEntry, 'status' | 'data' | 'error' | 'dataUpdatedAt' | 'tags'>
 
 /**
  * One entry in the shared cache: a {@link FetcherSnapshot} plus internal
@@ -284,7 +300,12 @@ type AnyDefinition = FetcherDefinition<unknown[], unknown>
 // Module-level: the cache store is global (one instance across all Sanity
 // instances, keyed only by fetcher key), so this bookkeeping lives alongside it.
 const definitions = new Map<string, AnyDefinition>()
+// So a mutation's writes, which name a fetcher, reach its definition
+const fetcherDefinitions = new WeakMap<object, AnyDefinition>()
 const inflight = new Map<string, InflightFetch>()
+// Per entry, when the last mutation that wrote to it optimistically settles. A later one's request
+// waits for it, so answers come back in the order the changes were made
+const lastWrites = new Map<string, Promise<void>>()
 const gcTimers = new Map<string, ReturnType<typeof setTimeout>>()
 const intervalTimers = new Map<string, ReturnType<typeof setInterval>>()
 const snapshotCache = new WeakMap<CacheEntry, FetcherSnapshot<unknown>>()
@@ -383,6 +404,7 @@ const cacheStore = defineStore<CacheState>({
     gcTimers.clear()
     intervalTimers.clear()
     inflight.clear()
+    lastWrites.clear()
   },
 })
 
@@ -425,6 +447,8 @@ const baseEntry = (
       forcedStale: false,
       tags: computeTags(def, seeded.data, params),
       subscriptions: 0,
+      pending: [],
+      confirmed: undefined,
     }
   }
   return {
@@ -441,6 +465,45 @@ const baseEntry = (
     forcedStale: false,
     tags: [],
     subscriptions: 0,
+    pending: [],
+    confirmed: undefined,
+  }
+}
+
+const confirmedOf = ({status, data, error, dataUpdatedAt, tags}: CacheEntry): Confirmed =>
+  ({status, data, error, dataUpdatedAt, tags}) as Confirmed
+
+/**
+ * The entry as shown: its confirmed parts with every pending change applied in order. Each
+ * mutation's changes come off when it settles, so a late answer, a refusal or a refetch never
+ * drops another mutation's change.
+ */
+const showChanges = (
+  def: AnyDefinition,
+  entry: CacheEntry,
+  confirmed: Confirmed,
+  pending: PendingChange[],
+): CacheEntry => {
+  const version = entry.version + 1
+  if (!pending.length) {
+    return {...entry, ...confirmed, version, pending, confirmed: undefined} as CacheEntry
+  }
+  const data = pending.reduce<unknown>(
+    (current, change) => applyUpdater(change.updater, current),
+    confirmed.data,
+  )
+  // A change that leaves an entry without data, like a reset's, has nothing to show yet
+  if (data === undefined) return {...entry, ...confirmed, version, pending, confirmed} as CacheEntry
+  return {
+    ...entry,
+    status: 'success',
+    data,
+    error: confirmed.error,
+    dataUpdatedAt: confirmed.dataUpdatedAt ?? Date.now(),
+    tags: computeTags(def, data, entry.params),
+    version,
+    pending,
+    confirmed,
   }
 }
 
@@ -494,7 +557,9 @@ const startFetch = (
       .subscribe({
         next: (data) => {
           const current = state.get().entries[key]
-          if (current && current.version !== startVersion) {
+          // An entry with no data, like one a reset is waiting on, has nothing a stale result
+          // could replace, so it takes the result under its changes below
+          if (current && current.version !== startVersion && current.data !== undefined) {
             // A write (optimistic mutation) landed mid-fetch: discard the now-stale
             // server result and keep the written data. Tear the fetch down here —
             // a non-completing source won't fire `complete` to clear `isFetching`.
@@ -509,6 +574,30 @@ const startFetch = (
             }
             resolve(current.data)
             sub.unsubscribe()
+            return
+          }
+          if (current?.pending.length) {
+            // The server's latest, or all there is; changes still in flight go on top
+            updateEntry(
+              state,
+              key,
+              'fetchUnderChanges',
+              (prev) =>
+                prev &&
+                showChanges(
+                  def,
+                  {...prev, isFetching: false, forcedStale: false},
+                  {
+                    status: 'success',
+                    data,
+                    error: undefined,
+                    dataUpdatedAt: Date.now(),
+                    tags: computeTags(def, data, params),
+                  },
+                  prev.pending,
+                ),
+            )
+            resolve(state.get().entries[key]?.data)
             return
           }
           updateEntry(state, key, 'fetchSuccess', (prev) => ({
@@ -579,7 +668,7 @@ const startInterval = (
  * now) its in-flight fetch is torn down and the entry removed. No-op if the
  * entry still has subscribers or a GC timer is already pending. Called from
  * every path that can leave an entry at zero subscribers — the unsubscribe
- * teardown, and the imperative `refetch`/`setData` writes that create entries
+ * teardown, and the imperative `refetch` and mutation writes that create entries
  * without ever subscribing. A later subscribe cancels the pending timer.
  */
 const scheduleGc = (state: StoreState<CacheState>, def: AnyDefinition, key: string): void => {
@@ -734,35 +823,73 @@ export function defineFetcher<TParams extends unknown[], TData>(
     },
   )
 
-  const setData = bindActionGlobally(
-    cacheStore,
-    (
-      {state, instance}: StoreContext<CacheState>,
-      params: TParams,
-      updater: TData | ((current: TData | undefined) => TData),
-    ) => {
-      const key = entryKey(def.name, def.getKey(instance, ...params))
-      let previous: CacheEntry | undefined
-      updateEntry(state, key, 'setData', (prev) => {
-        previous = prev
-        const from = asTyped<TData>(prev ?? baseEntry(def, key, instance, params))
-        const nextData = applyUpdater(updater, from.data)
-        return {
-          ...from,
-          status: 'success',
-          data: nextData,
-          dataUpdatedAt: from.dataUpdatedAt ?? Date.now(),
-          version: from.version + 1,
-          tags: computeTags(def, nextData, params),
-        }
-      })
-      scheduleGc(state, def, key)
-      return {undo: () => updateEntry(state, key, 'undoSetData', () => previous)}
-    },
-  )
-
-  return {getState, resolveState, invalidate, invalidateAll, refetch, setData}
+  const fetcher = {getState, resolveState, invalidate, invalidateAll, refetch}
+  fetcherDefinitions.set(fetcher, def)
+  return fetcher
 }
+
+const entryKeyOf = (def: AnyDefinition, instance: SanityInstance, params: unknown[]): string =>
+  entryKey(def.name, def.getKey(instance, ...params))
+
+/** Records a mutation's optimistic write as a pending change on the entry, shown at once. */
+const addChange = bindActionGlobally(
+  cacheStore,
+  (
+    {state, instance}: StoreContext<CacheState>,
+    def: AnyDefinition,
+    params: unknown[],
+    change: PendingChange,
+  ) => {
+    const key = entryKeyOf(def, instance, params)
+    updateEntry(state, key, 'addChange', (prev) => {
+      const from = prev ?? baseEntry(def, key, instance, params)
+      return showChanges(def, from, from.confirmed ?? confirmedOf(from), [...from.pending, change])
+    })
+    scheduleGc(state, def, key)
+  },
+)
+
+/**
+ * Takes a settled mutation's changes off the entry. On success they become confirmed: replaced by
+ * its `onSuccess` writes when it made any, or else kept as the server accepted them. On failure
+ * they're dropped. Other mutations' changes stay on top either way.
+ */
+const settleChanges = bindActionGlobally(
+  cacheStore,
+  (
+    {state, instance}: StoreContext<CacheState>,
+    def: AnyDefinition,
+    params: unknown[],
+    mutation: number,
+    {succeeded, confirms}: {succeeded: boolean; confirms: unknown[]},
+  ) => {
+    const key = entryKeyOf(def, instance, params)
+    updateEntry(state, key, 'settleChanges', (prev) => {
+      if (!prev && !confirms.length) return prev
+      const from = prev ?? baseEntry(def, key, instance, params)
+      const own = from.pending.filter((change) => change.mutation === mutation)
+      const accepted = succeeded && !confirms.length ? own.map(({updater}) => updater) : []
+      const confirmed = [...accepted, ...confirms].reduce<Confirmed>(
+        (current, updater) => {
+          const data = applyUpdater(updater, current.data)
+          return {
+            status: 'success',
+            data,
+            error: undefined,
+            dataUpdatedAt: current.dataUpdatedAt ?? Date.now(),
+            tags: computeTags(def, data, params),
+          }
+        },
+        from.confirmed ?? confirmedOf(from),
+      )
+      const pending = from.pending.filter((change) => change.mutation !== mutation)
+      return showChanges(def, from, confirmed, pending)
+    })
+    scheduleGc(state, def, key)
+  },
+)
+
+let mutationCount = 0
 
 /**
  * Creates a bound mutation from its definition. The returned action resolves at
@@ -775,16 +902,57 @@ export function defineMutation<TInput, TResult>(
   definition: MutationDefinition<TInput, TResult>,
 ): (instance: SanityInstance, input: TInput) => Promise<MutationResult<TResult>> {
   return (instance, input) => {
-    const undos: Array<() => void> = []
-    const write: CacheWriter = (fetcher, params, updater) => {
-      undos.push(fetcher.setData(instance, params, updater).undo)
+    const mutation = ++mutationCount
+    // Every entry this call writes to, with the `onSuccess` writes to apply when it settles
+    const touched = new Map<string, {def: AnyDefinition; params: unknown[]; confirms: unknown[]}>()
+    const touch = (fetcher: object, params: unknown[]) => {
+      const def = fetcherDefinitions.get(fetcher)
+      if (!def) throw new Error('A mutation wrote to a fetcher that `defineFetcher` did not create')
+      const key = entryKeyOf(def, instance, params)
+      const entry = touched.get(key) ?? {def, params, confirms: []}
+      touched.set(key, entry)
+      return entry
+    }
+    const settle = (succeeded: boolean) => {
+      for (const {def, params, confirms} of touched.values()) {
+        settleChanges(instance, def, params, mutation, {succeeded, confirms})
+      }
     }
 
-    definition.onMutate?.(write, input)
+    definition.onMutate?.((fetcher, params, updater) => {
+      addChange(instance, touch(fetcher, params).def, params, {mutation, updater})
+    }, input)
 
-    return firstValueFrom(definition.mutationFn(instance)(input)).then(
+    const keys = [...touched.keys()]
+    const earlier = keys.flatMap((key) => lastWrites.get(key) ?? [])
+    // `forkJoin([])` completes without emitting, so `defaultIfEmpty` sends a request with nothing
+    // ahead of it straight away. `concatMap` turns a request that throws before it's sent into a
+    // rejection, so its changes come off
+    const request = firstValueFrom(
+      forkJoin(earlier).pipe(
+        defaultIfEmpty([]),
+        concatMap(() => definition.mutationFn(instance)(input)),
+      ),
+    )
+    const settled = request.then(
+      () => {},
+      () => {},
+    )
+    for (const key of keys) lastWrites.set(key, settled)
+    void settled.then(() => {
+      for (const key of keys) if (lastWrites.get(key) === settled) lastWrites.delete(key)
+    })
+
+    return request.then(
       (result) => {
-        definition.onSuccess?.(write, result, input)
+        definition.onSuccess?.(
+          (fetcher, params, updater) => {
+            touch(fetcher, params).confirms.push(updater)
+          },
+          result,
+          input,
+        )
+        settle(true)
         const targets =
           typeof definition.invalidates === 'function'
             ? definition.invalidates(result, input)
@@ -793,7 +961,7 @@ export function defineMutation<TInput, TResult>(
         return {data: result, invalidated}
       },
       (error) => {
-        for (let i = undos.length - 1; i >= 0; i--) undos[i]()
+        settle(false)
         throw error
       },
     )

@@ -253,19 +253,25 @@ describe('preferences', () => {
     it('gives a function the value on screen, a change still on its way included', async () => {
       request.mockReturnValueOnce(of({data: [stored(LAYOUT, 'detail')]}))
       await userPreference.resolveState(instance, 'user-1', LAYOUT)
-      request.mockReturnValue(new Subject())
+      const first = new Subject<unknown>()
+      request.mockReturnValueOnce(first).mockReturnValueOnce(new Subject())
       const flip = (current: string) => (current === 'compact' ? 'detail' : 'compact')
 
       void updateUserPreference(instance, {userId: 'user-1', key: LAYOUT, value: flip})
       void updateUserPreference(instance, {userId: 'user-1', key: LAYOUT, value: flip})
+      first.next(stored(LAYOUT, 'compact'))
+      first.complete()
 
       expect(request).toHaveBeenNthCalledWith(
         2,
         expect.objectContaining({method: 'PUT', body: {value: 'compact'}}),
       )
-      expect(request).toHaveBeenNthCalledWith(
-        3,
-        expect.objectContaining({method: 'PUT', body: {value: 'detail'}}),
+      // Writes to a key go out one at a time, so the second waits for the first's answer
+      await vi.waitFor(() =>
+        expect(request).toHaveBeenNthCalledWith(
+          3,
+          expect.objectContaining({method: 'PUT', body: {value: 'detail'}}),
+        ),
       )
     })
 
@@ -292,6 +298,130 @@ describe('preferences', () => {
       await updateUserPreference(instance, {userId: 'user-1', key: LAYOUT, value: () => undefined})
 
       expect(request).toHaveBeenLastCalledWith(expect.objectContaining({method: 'DELETE'}))
+    })
+
+    it('shows a later change once it saves, after an earlier one is refused', async () => {
+      request.mockReturnValueOnce(of({data: [stored(LAYOUT, 'default')]}))
+      await userPreference.resolveState(instance, 'user-1', LAYOUT)
+      const first = new Subject<unknown>()
+      const second = new Subject<unknown>()
+      request.mockReturnValueOnce(first).mockReturnValueOnce(second)
+
+      const compact = updateUserPreference(instance, {
+        userId: 'user-1',
+        key: LAYOUT,
+        value: 'compact',
+      })
+      const detail = updateUserPreference(instance, {
+        userId: 'user-1',
+        key: LAYOUT,
+        value: 'detail',
+      })
+      first.error(refusal(400, 'valueInvalid', 'No'))
+      await expect(compact).rejects.toMatchObject({code: 'valueInvalid'})
+      expect(userPreference.getState(instance, 'user-1', LAYOUT).getCurrent()).toMatchObject({
+        data: {value: 'detail'},
+      })
+      second.next(stored(LAYOUT, 'detail'))
+      await detail
+
+      expect(userPreference.getState(instance, 'user-1', LAYOUT).getCurrent()).toMatchObject({
+        data: {value: 'detail'},
+      })
+    })
+
+    it('sends a change made right after a reset once the reset is answered, so the change wins', async () => {
+      request.mockReturnValueOnce(of({data: [stored(LAYOUT, 'detail')]}))
+      await userPreference.resolveState(instance, 'user-1', LAYOUT)
+      const reset = new Subject<unknown>()
+      request.mockReturnValueOnce(reset).mockReturnValueOnce(of(stored(LAYOUT, 'compact')))
+
+      const resetting = updateUserPreference(instance, {
+        userId: 'user-1',
+        key: LAYOUT,
+        value: undefined,
+      })
+      const saving = updateUserPreference(instance, {
+        userId: 'user-1',
+        key: LAYOUT,
+        value: 'compact',
+      })
+      await Promise.resolve()
+      expect(request).toHaveBeenCalledTimes(2)
+      reset.next(stored(LAYOUT, 'default', 'default'))
+      reset.complete()
+      await Promise.all([resetting, saving])
+
+      expect(request).toHaveBeenLastCalledWith(expect.objectContaining({method: 'PUT'}))
+      expect(userPreference.getState(instance, 'user-1', LAYOUT).getCurrent()).toMatchObject({
+        data: {value: 'compact'},
+      })
+    })
+
+    it('sends a reset made right after a change once the change is answered, so the reset wins', async () => {
+      request.mockReturnValueOnce(of({data: [stored(LAYOUT, 'detail')]}))
+      await userPreference.resolveState(instance, 'user-1', LAYOUT)
+      const saved = new Subject<unknown>()
+      request
+        .mockReturnValueOnce(saved)
+        .mockReturnValueOnce(of(stored(LAYOUT, 'default', 'default')))
+
+      const saving = updateUserPreference(instance, {
+        userId: 'user-1',
+        key: LAYOUT,
+        value: 'compact',
+      })
+      const resetting = updateUserPreference(instance, {
+        userId: 'user-1',
+        key: LAYOUT,
+        value: undefined,
+      })
+      await Promise.resolve()
+      expect(request).toHaveBeenCalledTimes(2)
+      saved.next(stored(LAYOUT, 'compact'))
+      saved.complete()
+      await Promise.all([saving, resetting])
+
+      expect(request).toHaveBeenLastCalledWith(expect.objectContaining({method: 'DELETE'}))
+      expect(userPreference.getState(instance, 'user-1', LAYOUT).getCurrent()).toMatchObject({
+        data: {value: 'default', isDefault: true},
+      })
+    })
+
+    it("shows nothing for a key that hasn't been read while its reset is sent", () => {
+      request.mockReturnValueOnce(new Subject())
+
+      void updateUserPreference(instance, {userId: 'user-1', key: LAYOUT, value: undefined})
+
+      expect(userPreference.getState(instance, 'user-1', LAYOUT).getCurrent()).toMatchObject({
+        status: 'pending',
+        data: undefined,
+      })
+    })
+
+    it('shows the value a first read answers with while a reset of the key is sent', async () => {
+      const read = new Subject<unknown>()
+      const reset = new Subject<unknown>()
+      request.mockImplementation((options) => (options.method === 'DELETE' ? reset : read))
+
+      const reading = userPreference.resolveState(instance, 'user-1', LAYOUT)
+      await vi.waitFor(() => expect(read.observed).toBe(true))
+      const resetting = updateUserPreference(instance, {
+        userId: 'user-1',
+        key: LAYOUT,
+        value: undefined,
+      })
+      await vi.waitFor(() => expect(reset.observed).toBe(true))
+      read.next({data: [stored(LAYOUT, 'compact')]})
+      read.complete()
+      await expect(reading).resolves.toMatchObject({value: 'compact'})
+      reset.error(refusal(403, 'accessDenied', 'No'))
+      await expect(resetting).rejects.toMatchObject({code: 'accessDenied'})
+
+      expect(userPreference.getState(instance, 'user-1', LAYOUT).getCurrent()).toMatchObject({
+        status: 'success',
+        data: {value: 'compact'},
+      })
     })
 
     it("removes the value for undefined, showing what applies next once it's answered", async () => {
@@ -462,6 +592,36 @@ describe('preferences', () => {
           body: {value: favorites('b', 'a')},
         }),
       )
+    })
+
+    it('keeps a second star on screen while the first one is answered', async () => {
+      await readFavorites()
+      const first = new Subject<unknown>()
+      request.mockReturnValueOnce(first).mockReturnValueOnce(new Subject())
+
+      const starred = edit((list) => [...list, {ref: 'a'}])
+      void edit((list) => [...list, {ref: 'b'}])
+      first.next({data: [stored(FAVORITES, favorites('a'), 'user')]})
+      await starred
+
+      expect(current()).toMatchObject({data: {value: favorites('a', 'b')}})
+    })
+
+    it('keeps a later star when an earlier one is refused', async () => {
+      await readFavorites()
+      const first = new Subject<unknown>()
+      const second = new Subject<unknown>()
+      request.mockReturnValueOnce(first).mockReturnValueOnce(second)
+
+      const a = edit((list) => [...list, {ref: 'a'}])
+      const b = edit((list) => [...list, {ref: 'b'}])
+      first.error(refusal(400, 'quotaExceeded', 'The list holds up to 100 items'))
+      await expect(a).rejects.toMatchObject({code: 'quotaExceeded'})
+      expect(current()).toMatchObject({data: {value: favorites('b')}})
+      second.next({data: [stored(FAVORITES, favorites('b'), 'user')]})
+      await b
+
+      expect(current()).toMatchObject({data: {value: favorites('b')}})
     })
 
     it('replaces the whole list for a new item in its middle', async () => {
