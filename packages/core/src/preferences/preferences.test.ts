@@ -681,8 +681,11 @@ describe('preferences', () => {
       await readFavorites('a', 'b')
       request.mockReturnValueOnce(new Subject())
 
-      void edit((list) =>
-        list.map((item) => (item.ref === 'a' ? {...item, data: 'updated'} : item)),
+      // Cellar's favorites take no `data` today, so it's typed `never`. A list key with data updates
+      // the same way
+      void edit(
+        (list) =>
+          list.map((item) => (item.ref === 'a' ? {...item, data: 'updated'} : item)) as typeof list,
       )
 
       await vi.waitFor(() =>

@@ -1,0 +1,477 @@
+[
+  {
+    "key": "context.org-picker.last-organization",
+    "schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^o[a-zA-Z0-9]+$"
+        }
+      },
+      "additionalProperties": false,
+      "default": {}
+    },
+    "levels": ["user"],
+    "write": {},
+    "maxBytes": 16384,
+    "versions": [1]
+  },
+  {
+    "key": "context.insights.export-options",
+    "schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "format": {
+          "type": "string",
+          "enum": ["csv", "json", "ndjson"]
+        },
+        "withMessages": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false,
+      "default": {}
+    },
+    "levels": ["user@organization", "user"],
+    "write": {},
+    "maxBytes": 16384,
+    "versions": [1]
+  },
+  {
+    "key": "context.tables.conversations",
+    "schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "sort": {
+          "type": "string",
+          "enum": [
+            "date-desc",
+            "date-asc",
+            "score-desc",
+            "score-asc",
+            "sentiment-desc",
+            "sentiment-asc",
+            "gaps-desc",
+            "gaps-asc"
+          ]
+        },
+        "visible": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "boolean"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "default": {}
+    },
+    "levels": ["user@organization"],
+    "write": {},
+    "maxBytes": 16384,
+    "versions": [1]
+  },
+  {
+    "key": "context.tables.knowledge-bases",
+    "schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "sort": {
+          "type": "object",
+          "properties": {
+            "column": {
+              "type": "string"
+            },
+            "direction": {
+              "type": "string",
+              "enum": ["asc", "desc"]
+            }
+          },
+          "required": ["column", "direction"],
+          "additionalProperties": false
+        },
+        "hidden": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "default": {}
+    },
+    "levels": ["user@organization"],
+    "write": {},
+    "maxBytes": 16384,
+    "versions": [1]
+  },
+  {
+    "key": "context.tables.mcp-endpoints",
+    "schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "sort": {
+          "type": "object",
+          "properties": {
+            "column": {
+              "type": "string"
+            },
+            "direction": {
+              "type": "string",
+              "enum": ["asc", "desc"]
+            }
+          },
+          "required": ["column", "direction"],
+          "additionalProperties": false
+        },
+        "hidden": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "default": {}
+    },
+    "levels": ["user@organization"],
+    "write": {},
+    "maxBytes": 16384,
+    "versions": [1]
+  },
+  {
+    "key": "context.tables.org-issues",
+    "schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "sort": {
+          "type": "object",
+          "properties": {
+            "column": {
+              "type": "string"
+            },
+            "direction": {
+              "type": "string",
+              "enum": ["asc", "desc"]
+            }
+          },
+          "required": ["column", "direction"],
+          "additionalProperties": false
+        },
+        "hidden": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "default": {}
+    },
+    "levels": ["user@organization"],
+    "write": {},
+    "maxBytes": 16384,
+    "versions": [1]
+  },
+  {
+    "key": "context.setup-guide.hidden",
+    "schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "boolean",
+      "default": false
+    },
+    "levels": ["user@organization"],
+    "write": {},
+    "maxBytes": 16384,
+    "versions": [1]
+  },
+  {
+    "key": "context.setup-guide.completion",
+    "schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "completedAt": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "default": {}
+    },
+    "levels": ["organization"],
+    "write": {
+      "organization": "sanity.organization.update"
+    },
+    "maxBytes": 16384,
+    "versions": [1]
+  },
+  {
+    "key": "dashboard.dashboard-2-opt-in",
+    "schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "boolean",
+      "default": false
+    },
+    "levels": ["user"],
+    "write": {},
+    "maxBytes": 16384,
+    "versions": [1]
+  },
+  {
+    "key": "manage.favorites.projects",
+    "schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "maxItems": 100,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "ref": {
+            "type": "string",
+            "pattern": "^(?:project):.{1,256}$"
+          },
+          "data": {
+            "not": {}
+          }
+        },
+        "required": ["ref"],
+        "additionalProperties": false
+      },
+      "default": []
+    },
+    "levels": ["user"],
+    "write": {},
+    "maxBytes": 16384,
+    "versions": [1]
+  },
+  {
+    "key": "studio.structure-tool.layout.{...paneKey}",
+    "schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "default": "default"
+    },
+    "levels": ["user@project"],
+    "write": {},
+    "maxBytes": 16384,
+    "versions": [1]
+  },
+  {
+    "key": "studio.structure-tool.sort-order.{...paneKey}",
+    "schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "by": {
+          "maxItems": 20,
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "field": {
+                "type": "string",
+                "maxLength": 256
+              },
+              "direction": {
+                "type": "string",
+                "enum": ["asc", "desc"]
+              },
+              "nulls": {
+                "type": "string",
+                "enum": ["first", "last"]
+              }
+            },
+            "required": ["field", "direction"],
+            "additionalProperties": {}
+          }
+        }
+      },
+      "required": ["by"],
+      "additionalProperties": {},
+      "default": {
+        "by": []
+      }
+    },
+    "levels": ["user@project"],
+    "write": {},
+    "maxBytes": 16384,
+    "versions": [1]
+  },
+  {
+    "key": "studio.structure-tool.inspect-view-mode",
+    "schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "string",
+      "enum": ["parsed", "raw"],
+      "default": "parsed"
+    },
+    "levels": ["user@project"],
+    "write": {},
+    "maxBytes": 16384,
+    "versions": [1]
+  },
+  {
+    "key": "studio.structure-tool.recent.{dataset}",
+    "schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "array",
+          "items": {}
+        },
+        {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": {}
+        }
+      ],
+      "default": []
+    },
+    "levels": ["user@project"],
+    "write": {},
+    "maxBytes": 16384,
+    "versions": [1]
+  },
+  {
+    "key": "studio.search.recent.{dataset}",
+    "schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        },
+        "recentSearches": {
+          "maxItems": 100,
+          "type": "array",
+          "items": {}
+        }
+      },
+      "required": ["version", "recentSearches"],
+      "additionalProperties": {},
+      "default": {
+        "version": 3,
+        "recentSearches": []
+      }
+    },
+    "levels": ["user@project"],
+    "write": {},
+    "maxBytes": 16384,
+    "versions": [1]
+  },
+  {
+    "key": "studio.announcement.seen",
+    "schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "maxItems": 1000,
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 256
+      },
+      "default": []
+    },
+    "levels": ["user@project"],
+    "write": {},
+    "maxBytes": 16384,
+    "versions": [1]
+  },
+  {
+    "key": "studio.timezone.scheduled-publishing",
+    "schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "string",
+      "maxLength": 64,
+      "pattern": "^(?!Etc\\/Unknown$)[A-Za-z][A-Za-z0-9._+-]*(?:\\/[A-Za-z][A-Za-z0-9._+-]*)*$",
+      "default": "UTC"
+    },
+    "levels": ["user@project"],
+    "write": {},
+    "maxBytes": 16384,
+    "versions": [1]
+  },
+  {
+    "key": "studio.timezone.content-releases",
+    "schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "string",
+      "maxLength": 64,
+      "pattern": "^(?!Etc\\/Unknown$)[A-Za-z][A-Za-z0-9._+-]*(?:\\/[A-Za-z][A-Za-z0-9._+-]*)*$",
+      "default": "UTC"
+    },
+    "levels": ["user@project"],
+    "write": {},
+    "maxBytes": 16384,
+    "versions": [1]
+  },
+  {
+    "key": "studio.timezone.input.{...inputId}",
+    "schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "string",
+      "maxLength": 64,
+      "pattern": "^(?!Etc\\/Unknown$)[A-Za-z][A-Za-z0-9._+-]*(?:\\/[A-Za-z][A-Za-z0-9._+-]*)*$",
+      "default": "UTC"
+    },
+    "levels": ["user@project"],
+    "write": {},
+    "maxBytes": 16384,
+    "versions": [1]
+  },
+  {
+    "key": "studio.vision-tool.saved-queries",
+    "schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "_key": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{1,128}$"
+        },
+        "url": {
+          "type": "string"
+        },
+        "savedAt": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": ["_key", "url", "savedAt"],
+      "additionalProperties": {}
+    },
+    "bigList": {
+      "maxItems": 10000,
+      "pageSize": 100
+    },
+    "levels": ["user@project"],
+    "write": {},
+    "maxBytes": 65536,
+    "versions": [1]
+  }
+]

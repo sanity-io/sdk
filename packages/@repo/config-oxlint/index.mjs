@@ -144,6 +144,7 @@ export default {
           '**/package.config.ts',
           '**/playwright.config.ts',
           '**/knip.config.ts',
+          '**/scripts/**',
         ],
         optionalDependencies: false,
         includeTypes: false,

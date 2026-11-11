@@ -1,15 +1,6 @@
 import {type AccessResourceType} from '../access/checkPermissions'
 import {PreferenceError} from './preferenceError'
-
-interface SortOrder {
-  by: {
-    field: string
-    direction: 'asc' | 'desc'
-    nulls?: 'first' | 'last'
-    [extra: string]: unknown
-  }[]
-  [extra: string]: unknown
-}
+import {ITEMS_KEYS, type ItemValues, KEYS, type Values} from './registry.generated'
 
 /**
  * An item in a list preference, like a starred project. `ref` tells items apart.
@@ -20,27 +11,9 @@ export interface PreferenceListItem {
   data?: unknown
 }
 
-// The value type of every key the preferences API declares, by the API's name for the key. A
-// `{part}` in a name stands for anything, like the pane in `studio.structure-tool.layout.{paneKey}`
-interface Values {
-  'manage.favorites.projects': PreferenceListItem[]
-  'studio.structure-tool.layout.{paneKey}': string
-  'studio.structure-tool.sort-order.{paneKey}': SortOrder
-  'studio.structure-tool.inspect-view-mode': 'parsed' | 'raw'
-  'studio.search.recent.{dataset}': {
-    version: number
-    recentSearches: unknown[]
-    [extra: string]: unknown
-  }
-  'studio.announcement.seen': string[]
-  'studio.timezone.scheduled-publishing': string
-  'studio.timezone.content-releases': string
-  'studio.timezone.input.{inputId}': string
-}
-
 type Name = keyof Values
 type ListName = {[N in Name]: Values[N] extends PreferenceListItem[] ? N : never}[Name]
-// `studio.structure-tool.layout.{paneKey}` becomes `studio.structure-tool.layout.${string}`
+// `studio.structure-tool.layout.{...paneKey}` becomes `studio.structure-tool.layout.${string}`
 type KeyOf<N extends Name> = N extends `${infer Prefix}{${string}}` ? `${Prefix}${string}` : N
 type NameOf<K extends string> = {[N in Name]: K extends KeyOf<N> ? N : never}[Name]
 
@@ -71,18 +44,6 @@ export type PreferenceEdit<K extends PreferenceKey> =
   | PreferenceValue<K>
   | undefined
   | ((current: PreferenceValue<K>) => PreferenceValue<K> | undefined)
-
-// The item type of every key the preferences API keeps as separate items. These hold more than fits
-// in one value, so they're read a page at a time and changed one item at a time
-interface ItemValues {
-  'studio.vision-tool.saved-queries': {
-    _key: string
-    url: string
-    savedAt: string
-    title?: string
-    [extra: string]: unknown
-  }
-}
 
 /**
  * A key for a long personal list kept as separate items, like `studio.vision-tool.saved-queries`,
@@ -133,32 +94,23 @@ export type PreferenceResourceType = Extract<AccessResourceType, 'organization' 
  */
 export type StoredLevel = Exclude<PreferenceLevel, 'default'>
 
-// The levels the API stores each key at, most specific first. `satisfies` checks each default
-// against its key's value type, and that exactly the keys whose value is a list of items are
-// marked `list`. `studio.announcement.seen` is a list of strings, not of items, so it isn't one
-const KEYS = {
-  'manage.favorites.projects': {levels: ['user'], defaultValue: [], list: true},
-  'studio.structure-tool.layout.{paneKey}': {levels: ['user@project'], defaultValue: 'default'},
-  'studio.structure-tool.sort-order.{paneKey}': {levels: ['user@project'], defaultValue: {by: []}},
-  'studio.structure-tool.inspect-view-mode': {levels: ['user@project'], defaultValue: 'parsed'},
-  'studio.search.recent.{dataset}': {
-    levels: ['user@project'],
-    defaultValue: {version: 3, recentSearches: []},
-  },
-  'studio.announcement.seen': {levels: ['user@project'], defaultValue: []},
-  'studio.timezone.scheduled-publishing': {levels: ['user@project'], defaultValue: 'UTC'},
-  'studio.timezone.content-releases': {levels: ['user@project'], defaultValue: 'UTC'},
-  'studio.timezone.input.{inputId}': {levels: ['user@project'], defaultValue: 'UTC'},
-} satisfies {
+/**
+ * What the generated registry declares about each key: the levels it's stored at, most specific
+ * first, and its value before anyone sets one. `KEYS` is checked against it, so each default fits
+ * its key's value type and exactly the keys whose value is a list of items are marked `list`.
+ * @internal
+ */
+export type KeyInfos = {
   [N in Name]: {levels: StoredLevel[]; defaultValue: Values[N]} & (N extends ListName
     ? {list: true}
     : {list?: never})
 }
 
-// These keys have no single value, so no default
-const ITEMS_KEYS = {
-  'studio.vision-tool.saved-queries': {levels: ['user@project'], defaultValue: null},
-} satisfies {[K in PreferenceListKey]: {levels: StoredLevel[]; defaultValue: null}}
+/**
+ * The same for keys kept as separate items, which have no single value, so no default.
+ * @internal
+ */
+export type ItemKeyInfos = {[K in PreferenceListKey]: {levels: StoredLevel[]; defaultValue: null}}
 
 /**
  * The levels a key is stored at, like `user@project` for a pane's layout.
