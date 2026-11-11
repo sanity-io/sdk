@@ -10,16 +10,46 @@ export interface Values {
     format?: 'csv' | 'json' | 'ndjson'
     withMessages?: boolean
   }
-  'context.insights.conversation-columns': {
+  'context.tables.conversations': {
+    sort?:
+      | 'date-desc'
+      | 'date-asc'
+      | 'score-desc'
+      | 'score-asc'
+      | 'sentiment-desc'
+      | 'sentiment-asc'
+      | 'gaps-desc'
+      | 'gaps-asc'
     visible?: {
       [k: string]: boolean
     }
-    order?: string[]
+  }
+  'context.tables.knowledge-bases': {
+    sort?: {
+      column: string
+      direction: 'asc' | 'desc'
+    }
+    hidden?: string[]
+  }
+  'context.tables.mcp-endpoints': {
+    sort?: {
+      column: string
+      direction: 'asc' | 'desc'
+    }
+    hidden?: string[]
+  }
+  'context.tables.org-issues': {
+    sort?: {
+      column: string
+      direction: 'asc' | 'desc'
+    }
+    hidden?: string[]
   }
   'context.setup-guide.hidden': boolean
   'context.setup-guide.completion': {
     completedAt?: string
   }
+  'dashboard.dashboard-2-opt-in': boolean
   /**
    * @maxItems 100
    */
@@ -78,10 +108,14 @@ export interface ItemValues {
 
 export const KEYS = {
   'context.org-picker.last-organization': {levels: ['user'], defaultValue: {}},
-  'context.insights.export-options': {levels: ['user'], defaultValue: {}},
-  'context.insights.conversation-columns': {levels: ['user@organization'], defaultValue: {}},
+  'context.insights.export-options': {levels: ['user@organization', 'user'], defaultValue: {}},
+  'context.tables.conversations': {levels: ['user@organization'], defaultValue: {}},
+  'context.tables.knowledge-bases': {levels: ['user@organization'], defaultValue: {}},
+  'context.tables.mcp-endpoints': {levels: ['user@organization'], defaultValue: {}},
+  'context.tables.org-issues': {levels: ['user@organization'], defaultValue: {}},
   'context.setup-guide.hidden': {levels: ['user@organization'], defaultValue: false},
   'context.setup-guide.completion': {levels: ['organization'], defaultValue: {}},
+  'dashboard.dashboard-2-opt-in': {levels: ['user'], defaultValue: false},
   'manage.favorites.projects': {levels: ['user'], defaultValue: [], list: true},
   'studio.structure-tool.layout.{...paneKey}': {levels: ['user@project'], defaultValue: 'default'},
   'studio.structure-tool.sort-order.{...paneKey}': {

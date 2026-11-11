@@ -36,17 +36,30 @@
       "additionalProperties": false,
       "default": {}
     },
-    "levels": ["user"],
+    "levels": ["user@organization", "user"],
     "write": {},
     "maxBytes": 16384,
     "versions": [1]
   },
   {
-    "key": "context.insights.conversation-columns",
+    "key": "context.tables.conversations",
     "schema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "type": "object",
       "properties": {
+        "sort": {
+          "type": "string",
+          "enum": [
+            "date-desc",
+            "date-asc",
+            "score-desc",
+            "score-asc",
+            "sentiment-desc",
+            "sentiment-asc",
+            "gaps-desc",
+            "gaps-asc"
+          ]
+        },
         "visible": {
           "type": "object",
           "propertyNames": {
@@ -55,8 +68,107 @@
           "additionalProperties": {
             "type": "boolean"
           }
+        }
+      },
+      "additionalProperties": false,
+      "default": {}
+    },
+    "levels": ["user@organization"],
+    "write": {},
+    "maxBytes": 16384,
+    "versions": [1]
+  },
+  {
+    "key": "context.tables.knowledge-bases",
+    "schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "sort": {
+          "type": "object",
+          "properties": {
+            "column": {
+              "type": "string"
+            },
+            "direction": {
+              "type": "string",
+              "enum": ["asc", "desc"]
+            }
+          },
+          "required": ["column", "direction"],
+          "additionalProperties": false
         },
-        "order": {
+        "hidden": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "default": {}
+    },
+    "levels": ["user@organization"],
+    "write": {},
+    "maxBytes": 16384,
+    "versions": [1]
+  },
+  {
+    "key": "context.tables.mcp-endpoints",
+    "schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "sort": {
+          "type": "object",
+          "properties": {
+            "column": {
+              "type": "string"
+            },
+            "direction": {
+              "type": "string",
+              "enum": ["asc", "desc"]
+            }
+          },
+          "required": ["column", "direction"],
+          "additionalProperties": false
+        },
+        "hidden": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "default": {}
+    },
+    "levels": ["user@organization"],
+    "write": {},
+    "maxBytes": 16384,
+    "versions": [1]
+  },
+  {
+    "key": "context.tables.org-issues",
+    "schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "sort": {
+          "type": "object",
+          "properties": {
+            "column": {
+              "type": "string"
+            },
+            "direction": {
+              "type": "string",
+              "enum": ["asc", "desc"]
+            }
+          },
+          "required": ["column", "direction"],
+          "additionalProperties": false
+        },
+        "hidden": {
           "type": "array",
           "items": {
             "type": "string"
@@ -100,6 +212,18 @@
     "write": {
       "organization": "sanity.organization.update"
     },
+    "maxBytes": 16384,
+    "versions": [1]
+  },
+  {
+    "key": "dashboard.dashboard-2-opt-in",
+    "schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "boolean",
+      "default": false
+    },
+    "levels": ["user"],
+    "write": {},
     "maxBytes": 16384,
     "versions": [1]
   },
