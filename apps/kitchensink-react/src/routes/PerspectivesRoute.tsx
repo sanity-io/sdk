@@ -59,7 +59,7 @@ export function PerspectivesRoute(): JSX.Element {
           document id without passing a perspective option.
         </Text>
         <Text size={1} muted>
-          Latest published author id: <Code as="span">{docId ?? 'Loading…'}</Code>
+          Latest published author id: <Code inline>{docId ?? 'Loading…'}</Code>
         </Text>
 
         <ResourceProvider perspective="drafts" fallback={null}>
