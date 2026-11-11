@@ -85,7 +85,12 @@ export {
   usePaginatedDocuments,
 } from '../hooks/paginatedDocuments/usePaginatedDocuments'
 export {useUpdateUserPreference} from '../hooks/preferences/useUpdateUserPreference'
+export {useUpdateUserPreferenceList} from '../hooks/preferences/useUpdateUserPreferenceList'
 export {useUserPreference} from '../hooks/preferences/useUserPreference'
+export {
+  type UserPreferenceListResult,
+  useUserPreferenceList,
+} from '../hooks/preferences/useUserPreferenceList'
 export {usePresence} from '../hooks/presence/usePresence'
 export {
   usePresenceForDocument,

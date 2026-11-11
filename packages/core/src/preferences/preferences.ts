@@ -28,14 +28,18 @@ import {
   type PreferenceLevel,
   type PreferenceLevelsOf,
   type PreferenceListItem,
+  type PreferenceListKey,
   type PreferenceResourceType,
   type PreferenceValue,
   type StoredLevel,
 } from './registry'
 
 const API_VERSION = '2026-11-07'
-// Another tab's change shows here within this long; a reload or remount shows it at once
-const REFETCH_INTERVAL_MS = 60_000
+/**
+ * Another tab's change shows here within this long; a reload or remount shows it at once.
+ * @internal
+ */
+export const REFETCH_INTERVAL_MS = 60_000
 // The client's default is 5 minutes, which a hung write's value would stay on screen for
 const REQUEST_TIMEOUT_MS = 10_000
 
@@ -190,7 +194,7 @@ type OptionsAt<L extends StoredLevel, Levels extends StoredLevel> = L extends 'u
  * app's.
  * @internal
  */
-export type UserPreferenceOptions<K extends PreferenceKey = PreferenceKey> =
+export type UserPreferenceOptions<K extends PreferenceKey | PreferenceListKey = PreferenceKey> =
   // Code that handles any key, like the shared cache, can pass any of them
   PreferenceKey extends K
     ? {
@@ -274,9 +278,16 @@ function levelNotAllowed(key: string, types: readonly string[], shared: boolean)
   )
 }
 
-// Where a call reads and writes a key: the most specific level the key is stored at that the call
-// has an ID for. The user's own value, or with `shared` the one everyone in the resource shares
-function resolveKey(instance: SanityInstance, key: string, options: UserPreferenceOptions = {}) {
+/**
+ * Where a call reads and writes a key: the most specific level the key is stored at that the call
+ * has an ID for. The user's own value, or with `shared` the one everyone in the resource shares.
+ * @internal
+ */
+export function resolveKey(
+  instance: SanityInstance,
+  key: string,
+  options: UserPreferenceOptions = {},
+): {path: string; keyUrl: string; defaultValue: unknown} {
   const {levels, defaultValue} = lookUpKey(key)
   const {shared = false} = options
   const target = (path: string) => ({
@@ -365,13 +376,17 @@ function cachePreference(userId: string, keyUrl: string, preference: UserPrefere
   }
 }
 
-function request<T>(
+/**
+ * Sends a request to the preferences API. A refusal becomes a {@link PreferenceError}.
+ * @internal
+ */
+export function request<T>(
   instance: SanityInstance,
   options: {
     url: string
     method?: 'PUT' | 'PATCH' | 'DELETE'
     body?: unknown
-    query?: {keys: string}
+    query?: Record<string, string>
     tag: string
   },
 ): Observable<T> {

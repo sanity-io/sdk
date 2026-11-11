@@ -72,6 +72,39 @@ export type PreferenceEdit<K extends PreferenceKey> =
   | undefined
   | ((current: PreferenceValue<K>) => PreferenceValue<K> | undefined)
 
+// The item type of every key the preferences API keeps as separate items. These hold more than fits
+// in one value, so they're read a page at a time and changed one item at a time
+interface ItemValues {
+  'studio.vision-tool.saved-queries': {
+    _key: string
+    url: string
+    savedAt: string
+    title?: string
+    [extra: string]: unknown
+  }
+}
+
+/**
+ * A key for a long personal list kept as separate items, like `studio.vision-tool.saved-queries`,
+ * read a page at a time.
+ * @internal
+ */
+export type PreferenceListKey = keyof ItemValues
+
+/**
+ * The value of one item under a {@link PreferenceListKey}.
+ * @internal
+ */
+export type PreferenceListItemValue<K extends PreferenceListKey> = ItemValues[K]
+
+/**
+ * An items key with a value one of its items can hold.
+ * @internal
+ */
+export type PreferenceListItemKeyValue = {
+  [K in PreferenceListKey]: {key: K; value: PreferenceListItemValue<K>}
+}[PreferenceListKey]
+
 /**
  * Where the API says a value comes from: the user's own value everywhere (`user`), in a project
  * (`user@project`) or in an organization (`user@organization`); the value everyone in a project
@@ -122,11 +155,19 @@ const KEYS = {
     : {list?: never})
 }
 
+// These keys have no single value, so no default
+const ITEMS_KEYS = {
+  'studio.vision-tool.saved-queries': {levels: ['user@project'], defaultValue: null},
+} satisfies {[K in PreferenceListKey]: {levels: StoredLevel[]; defaultValue: null}}
+
 /**
  * The levels a key is stored at, like `user@project` for a pane's layout.
  * @internal
  */
-export type PreferenceLevelsOf<K extends PreferenceKey> = (typeof KEYS)[NameOf<K>]['levels'][number]
+export type PreferenceLevelsOf<K extends PreferenceKey | PreferenceListKey> =
+  K extends PreferenceListKey
+    ? (typeof ITEMS_KEYS)[K]['levels'][number]
+    : (typeof KEYS)[NameOf<K>]['levels'][number]
 
 /**
  * The levels a key is stored at, most specific first, its value before anyone sets one, and
@@ -138,7 +179,7 @@ export function lookUpKey(key: string): {
   defaultValue: unknown
   list?: boolean
 } {
-  for (const [name, info] of Object.entries(KEYS)) {
+  for (const [name, info] of Object.entries({...KEYS, ...ITEMS_KEYS})) {
     // The API only puts a `{part}` at the end of a name
     const [prefix, part] = name.split('{')
     const matches = part ? key.length > prefix!.length && key.startsWith(prefix!) : key === name
