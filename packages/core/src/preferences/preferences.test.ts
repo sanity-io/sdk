@@ -3,10 +3,13 @@ import {of, Subject, throwError} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {getClientState} from '../client/clientStore'
-import {getDashboardOrganizationId} from '../dashboard/messageBus/topicStore'
+import {type MessageBusConnection} from '../dashboard/messageBus/bus'
+import {getDashboardMessageBus} from '../dashboard/messageBus/store'
+import {getDashboardOrganizationId, getTopicState} from '../dashboard/messageBus/topicStore'
+import {observeAppOrganizationId} from '../organization/appOrganization'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {type StateSource} from '../store/createStateSourceAction'
-import {updateUserPreference, userPreference} from './preferences'
+import {updateUserPreference, userPreference, whenOrganizationKnown} from './preferences'
 import {type PreferenceEdit, type PreferenceKey} from './registry'
 
 vi.mock('../client/clientStore')
@@ -14,29 +17,44 @@ vi.mock('../client/clientStore')
 vi.mock('../dashboard/messageBus/topicStore', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../dashboard/messageBus/topicStore')>()),
   getDashboardOrganizationId: vi.fn(() => ({getCurrent: () => undefined})),
+  getTopicState: vi.fn(),
 }))
 
-// No declared key is stored per organization yet, so the tests declare one
+vi.mock('../dashboard/messageBus/store', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../dashboard/messageBus/store')>()),
+  getDashboardMessageBus: vi.fn(),
+}))
+
+vi.mock('../organization/appOrganization', () => ({observeAppOrganizationId: vi.fn()}))
+
+// No declared key is stored per organization or shared yet, so the tests declare them
+const TEST_KEYS: Record<string, {levels: string[]; defaultValue: unknown; list?: true}> = {
+  'test.organization-key': {levels: ['user@organization'], defaultValue: 'none'},
+  'test.shared-only-key': {levels: ['project'], defaultValue: 'none'},
+  'test.shared-list-key': {levels: ['user@project', 'project'], defaultValue: [], list: true},
+  'test.shared-key': {
+    levels: ['user@project', 'user@organization', 'project', 'organization'],
+    defaultValue: 'none',
+  },
+}
 vi.mock('./registry', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./registry')>()
-  return {
-    ...actual,
-    lookUpKey: (key: string) =>
-      key === 'test.organization-key'
-        ? {resourceType: 'organization', defaultValue: 'none'}
-        : actual.lookUpKey(key),
-  }
+  return {...actual, lookUpKey: (key: string) => TEST_KEYS[key] ?? actual.lookUpKey(key)}
 })
 
 const ORGANIZATION_KEY = 'test.organization-key' as PreferenceKey
+const SHARED_KEY = 'test.shared-key' as PreferenceKey
+const SHARED_ONLY_KEY = 'test.shared-only-key' as PreferenceKey
+const SHARED_LIST_KEY = 'test.shared-list-key' as PreferenceKey
 const LAYOUT = 'studio.structure-tool.layout.book'
 const PATH = '/projects/project-1/users/me/preferences'
 
-const stored = (key: string, activeValue: unknown, activeLevel = 'user@project') => ({
-  key,
-  activeValue,
-  activeLevel,
-})
+const stored = (
+  key: string,
+  activeValue: unknown,
+  activeLevel = 'user@project',
+  canEdit?: boolean,
+) => ({key, activeValue, activeLevel, canEdit})
 
 const refusal = (statusCode: number, code: string, message: string) =>
   new ClientError({statusCode, headers: {}, body: {code, message}})
@@ -75,6 +93,7 @@ describe('preferences', () => {
         key: LAYOUT,
         value: 'compact',
         isDefault: false,
+        shared: false,
         resourceType: 'project',
       })
       expect(getClientState).toHaveBeenCalledWith(instance, {
@@ -106,6 +125,7 @@ describe('preferences', () => {
         key: LAYOUT,
         value: 'default',
         isDefault: true,
+        shared: false,
       })
     })
 
@@ -146,7 +166,7 @@ describe('preferences', () => {
 
   describe('cache', () => {
     it("starts from the value cached on the user's last visit, then reads it again", async () => {
-      request.mockReturnValue(of({data: [stored(LAYOUT, 'compact')]}))
+      request.mockReturnValue(of({data: [stored(LAYOUT, 'compact', 'user@project', true)]}))
       await userPreference.resolveState(instance, 'user-1', LAYOUT)
       instance.dispose()
       instance = createSanityInstance({projectId: 'project-1', dataset: 'production'})
@@ -156,7 +176,10 @@ describe('preferences', () => {
       const source = userPreference.getState(instance, 'user-1', LAYOUT)
       const unsubscribe = source.subscribe()
 
-      expect(source.getCurrent()).toMatchObject({status: 'success', data: {value: 'compact'}})
+      expect(source.getCurrent()).toMatchObject({
+        status: 'success',
+        data: {value: 'compact', canEdit: true},
+      })
       await vi.waitFor(() => expect(request).toHaveBeenCalledTimes(2))
       read.next({data: [stored(LAYOUT, 'detail')]})
       expect(source.getCurrent()).toMatchObject({data: {value: 'detail'}})
@@ -302,7 +325,7 @@ describe('preferences', () => {
     const favorites = (...refs: string[]) => refs.map((ref) => ({ref}))
 
     async function readFavorites(...refs: string[]) {
-      request.mockReturnValueOnce(of({data: [stored(FAVORITES, favorites(...refs), 'user')]}))
+      request.mockReturnValueOnce(of({data: [stored(FAVORITES, favorites(...refs), 'user', true)]}))
       await userPreference.resolveState(instance, 'user-1', FAVORITES)
     }
 
@@ -317,6 +340,7 @@ describe('preferences', () => {
         key: FAVORITES,
         value: favorites('a'),
         isDefault: false,
+        shared: false,
       })
       expect(request).toHaveBeenCalledWith(expect.objectContaining({url: USER_PATH}))
     })
@@ -495,6 +519,205 @@ describe('preferences', () => {
     })
   })
 
+  describe('shared values', () => {
+    it('reads the value everyone in the project shares, and whether the user can change it', async () => {
+      request.mockReturnValue(of({data: [stored(SHARED_KEY, 'compact', 'project', false)]}))
+
+      await expect(
+        userPreference.resolveState(instance, 'user-1', SHARED_KEY, {shared: true}),
+      ).resolves.toEqual({
+        key: SHARED_KEY,
+        value: 'compact',
+        isDefault: false,
+        shared: true,
+        resourceType: 'project',
+        canEdit: false,
+      })
+      expect(request).toHaveBeenCalledWith({
+        url: '/projects/project-1/preferences',
+        query: {keys: SHARED_KEY},
+        tag: 'preferences.get',
+        timeout: 10_000,
+      })
+    })
+
+    it("reads the organization's shared value when the call has no project", async () => {
+      instance.dispose()
+      instance = createSanityInstance({organizationId: 'org-9'})
+      request.mockReturnValue(of({data: [stored(SHARED_KEY, 'compact', 'organization')]}))
+
+      await userPreference.resolveState(instance, 'user-1', SHARED_KEY, {shared: true})
+
+      expect(request).toHaveBeenCalledWith(
+        expect.objectContaining({url: '/organizations/org-9/preferences'}),
+      )
+    })
+
+    it("shows the shared value to a user who hasn't set their own", async () => {
+      request.mockReturnValue(of({data: [stored(SHARED_KEY, 'compact', 'project')]}))
+
+      await expect(
+        userPreference.resolveState(instance, 'user-1', SHARED_KEY),
+      ).resolves.toMatchObject({
+        value: 'compact',
+        shared: true,
+        resourceType: 'project',
+      })
+      expect(request).toHaveBeenCalledWith(expect.objectContaining({url: PATH}))
+    })
+
+    it('shows a change to the shared value at once', async () => {
+      request.mockReturnValueOnce(of({data: [stored(SHARED_KEY, 'none', 'default', true)]}))
+      await userPreference.resolveState(instance, 'user-1', SHARED_KEY, {shared: true})
+      request.mockReturnValueOnce(new Subject())
+
+      void updateUserPreference(instance, {
+        userId: 'user-1',
+        key: SHARED_KEY,
+        value: 'compact',
+        shared: true,
+      })
+
+      expect(
+        userPreference.getState(instance, 'user-1', SHARED_KEY, {shared: true}).getCurrent(),
+      ).toMatchObject({
+        data: {value: 'compact', shared: true, resourceType: 'project', canEdit: true},
+      })
+      expect(request).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          url: `/projects/project-1/preferences/${SHARED_KEY}`,
+          method: 'PUT',
+        }),
+      )
+    })
+
+    it("refreshes the user's own read once the shared value they see has changed", async () => {
+      request.mockReturnValueOnce(of({data: [stored(SHARED_KEY, 'compact', 'project')]}))
+      const own = userPreference.getState(instance, 'user-1', SHARED_KEY)
+      const unsubscribe = own.subscribe()
+      await vi.waitFor(() => expect(own.getCurrent()).toMatchObject({data: {value: 'compact'}}))
+      request
+        .mockReturnValueOnce(of(stored(SHARED_KEY, 'detail', 'project')))
+        .mockReturnValueOnce(of({data: [stored(SHARED_KEY, 'detail', 'project')]}))
+
+      await updateUserPreference(instance, {
+        userId: 'user-1',
+        key: SHARED_KEY,
+        value: 'detail',
+        shared: true,
+      })
+
+      await vi.waitFor(() =>
+        expect(own.getCurrent()).toMatchObject({
+          data: {value: 'detail', shared: true, resourceType: 'project'},
+        }),
+      )
+      expect(request).toHaveBeenLastCalledWith(expect.objectContaining({url: PATH}))
+      unsubscribe()
+    })
+
+    it("refreshes the user's own read once the shared list they see has changed", async () => {
+      request.mockReturnValueOnce(of({data: [stored(SHARED_LIST_KEY, [{ref: 'a'}], 'project')]}))
+      const own = userPreference.getState(instance, 'user-1', SHARED_LIST_KEY)
+      const unsubscribe = own.subscribe()
+      await vi.waitFor(() => expect(own.getCurrent()).toMatchObject({data: {shared: true}}))
+      const sharedList = [{ref: 'a'}, {ref: 'b'}]
+      request
+        .mockReturnValueOnce(of({data: [stored(SHARED_LIST_KEY, [{ref: 'a'}], 'project')]}))
+        .mockReturnValueOnce(of({data: [stored(SHARED_LIST_KEY, sharedList, 'project')]}))
+        .mockReturnValueOnce(of({data: [stored(SHARED_LIST_KEY, sharedList, 'project')]}))
+
+      await updateUserPreference(instance, {
+        userId: 'user-1',
+        key: SHARED_LIST_KEY,
+        value: (list) => [...(list as {ref: string}[]), {ref: 'b'}],
+        shared: true,
+      })
+
+      await vi.waitFor(() => expect(own.getCurrent()).toMatchObject({data: {value: sharedList}}))
+      expect(request).toHaveBeenLastCalledWith(expect.objectContaining({url: PATH}))
+      unsubscribe()
+    })
+
+    it("refreshes the user's own read once an item is removed from the shared list", async () => {
+      request.mockReturnValueOnce(of({data: [stored(SHARED_LIST_KEY, [{ref: 'a'}], 'project')]}))
+      const own = userPreference.getState(instance, 'user-1', SHARED_LIST_KEY)
+      const unsubscribe = own.subscribe()
+      await vi.waitFor(() => expect(own.getCurrent()).toMatchObject({data: {shared: true}}))
+      request
+        .mockReturnValueOnce(of({data: [stored(SHARED_LIST_KEY, [{ref: 'a'}], 'project')]}))
+        .mockReturnValueOnce(of({data: [stored(SHARED_LIST_KEY, [], 'project')]}))
+        .mockReturnValueOnce(of({data: [stored(SHARED_LIST_KEY, [], 'project')]}))
+
+      await updateUserPreference(instance, {
+        userId: 'user-1',
+        key: SHARED_LIST_KEY,
+        value: [],
+        shared: true,
+      })
+
+      await vi.waitFor(() => expect(own.getCurrent()).toMatchObject({data: {value: []}}))
+      expect(request).toHaveBeenLastCalledWith(expect.objectContaining({url: PATH}))
+      unsubscribe()
+    })
+
+    it("brings the shared value back when a user who can't change it tries to", async () => {
+      request.mockReturnValueOnce(of({data: [stored(SHARED_KEY, 'compact', 'project', false)]}))
+      await userPreference.resolveState(instance, 'user-1', SHARED_KEY, {shared: true})
+      const write = new Subject<unknown>()
+      request.mockReturnValueOnce(write)
+      const shared = userPreference.getState(instance, 'user-1', SHARED_KEY, {shared: true})
+
+      const saved = updateUserPreference(instance, {
+        userId: 'user-1',
+        key: SHARED_KEY,
+        value: 'detail',
+        shared: true,
+      })
+      expect(shared.getCurrent()).toMatchObject({data: {value: 'detail'}})
+      write.error(refusal(403, 'accessDenied', "You can't change this project's value"))
+
+      await expect(saved).rejects.toMatchObject({code: 'accessDenied'})
+      expect(shared.getCurrent()).toMatchObject({data: {value: 'compact', canEdit: false}})
+    })
+
+    it("fails with a clear error for a key that has no shared value, rather than using the user's own", () => {
+      expect(() =>
+        userPreference
+          .getState(instance, 'user-1', 'manage.favorites.projects', {shared: true})
+          .getCurrent(),
+      ).toThrow(
+        expect.objectContaining({
+          code: 'levelNotAllowed',
+          message: expect.stringContaining('has no shared value'),
+        }),
+      )
+    })
+
+    it('fails with a clear error when a key that only has a shared value is read without `shared`', () => {
+      expect(() =>
+        userPreference.getState(instance, 'user-1', SHARED_ONLY_KEY).getCurrent(),
+      ).toThrow(
+        expect.objectContaining({
+          code: 'levelNotAllowed',
+          message: expect.stringContaining('Pass `shared: true`'),
+        }),
+      )
+    })
+
+    it("reads the project's shared value ahead of the organization's", async () => {
+      instance.dispose()
+      instance = createSanityInstance({projectId: 'project-1', organizationId: 'org-9'})
+      request.mockReturnValue(of({data: [stored(SHARED_KEY, 'compact', 'project')]}))
+
+      await userPreference.resolveState(instance, 'user-1', SHARED_KEY, {shared: true})
+
+      expect(request).toHaveBeenCalledWith(
+        expect.objectContaining({url: '/projects/project-1/preferences'}),
+      )
+    })
+  })
+
   describe('project and organization', () => {
     it('fails with a clear error for a project key when there is no project', () => {
       instance.dispose()
@@ -544,6 +767,123 @@ describe('preferences', () => {
       expect(request).toHaveBeenCalledWith(
         expect.objectContaining({url: '/organizations/org-dashboard/users/me/preferences'}),
       )
+    })
+
+    it('uses the kind of resource the call names, for a key stored in both', async () => {
+      instance.dispose()
+      instance = createSanityInstance({projectId: 'project-1', organizationId: 'org-9'})
+      request.mockReturnValue(of({data: [stored(SHARED_KEY, 'x', 'user@organization')]}))
+
+      await expect(
+        userPreference.resolveState(instance, 'user-1', SHARED_KEY, {resourceType: 'organization'}),
+      ).resolves.toMatchObject({isDefault: false, shared: false, resourceType: 'organization'})
+      expect(request).toHaveBeenCalledWith(
+        expect.objectContaining({url: '/organizations/org-9/users/me/preferences'}),
+      )
+    })
+
+    it('fails with a clear error for a kind of resource the key is not stored in', () => {
+      expect(() =>
+        userPreference
+          .getState(instance, 'user-1', LAYOUT, {resourceType: 'organization'})
+          .getCurrent(),
+      ).toThrow(
+        expect.objectContaining({
+          code: 'levelNotAllowed',
+          message: expect.stringContaining("isn't stored per organization"),
+        }),
+      )
+    })
+
+    it('uses the organization the call names, even for a key also stored per project', async () => {
+      request.mockReturnValue(of({data: [stored(SHARED_KEY, 'x', 'user@organization')]}))
+
+      await userPreference.resolveState(instance, 'user-1', SHARED_KEY, {organizationId: 'org-1'})
+
+      expect(request).toHaveBeenCalledWith(
+        expect.objectContaining({url: '/organizations/org-1/users/me/preferences'}),
+      )
+    })
+
+    describe('in a Dashboard that has yet to publish its organization', () => {
+      let published: string | undefined
+      let organization$: Subject<string | undefined>
+
+      beforeEach(() => {
+        published = undefined
+        organization$ = new Subject()
+        vi.mocked(getDashboardMessageBus).mockReturnValue({} as MessageBusConnection)
+        vi.mocked(getTopicState).mockReturnValue({
+          getCurrent: () => (published ? {id: published} : undefined),
+        } as unknown as ReturnType<typeof getTopicState>)
+        vi.mocked(getDashboardOrganizationId).mockReturnValue({
+          getCurrent: () => published,
+        } as ReturnType<typeof getDashboardOrganizationId>)
+        vi.mocked(observeAppOrganizationId).mockReturnValue(organization$)
+      })
+
+      afterEach(() => {
+        vi.mocked(getDashboardMessageBus).mockReset()
+      })
+
+      const publish = (id: string) => {
+        published = id
+        organization$.next(id)
+      }
+
+      it('sends a change to a key stored per organization once the organization is known', async () => {
+        request.mockReturnValue(of(stored(ORGANIZATION_KEY, 'x', 'user@organization')))
+
+        const saved = updateUserPreference(instance, {
+          userId: 'user-1',
+          key: ORGANIZATION_KEY,
+          value: 'x',
+        })
+        await Promise.resolve()
+        expect(request).not.toHaveBeenCalled()
+
+        publish('org-dashboard')
+        await saved
+
+        expect(request).toHaveBeenCalledWith(
+          expect.objectContaining({
+            url: `/organizations/org-dashboard/users/me/preferences/${ORGANIZATION_KEY}`,
+          }),
+        )
+      })
+
+      it('waits only for a key stored per organization that the call names no organization for', () => {
+        expect(whenOrganizationKnown(instance, ORGANIZATION_KEY)).toBeInstanceOf(Promise)
+        expect(whenOrganizationKnown(instance, SHARED_KEY, {shared: true})).toBeInstanceOf(Promise)
+        expect(whenOrganizationKnown(instance, LAYOUT)).toBeUndefined()
+        expect(
+          whenOrganizationKnown(instance, SHARED_KEY, {resourceType: 'project'}),
+        ).toBeUndefined()
+        // Its only organization level is the user's own, so its shared value isn't per organization
+        expect(whenOrganizationKnown(instance, ORGANIZATION_KEY, {shared: true})).toBeUndefined()
+        expect(
+          whenOrganizationKnown(instance, ORGANIZATION_KEY, {organizationId: 'org-1'}),
+        ).toBeUndefined()
+
+        publish('org-dashboard')
+
+        expect(whenOrganizationKnown(instance, ORGANIZATION_KEY)).toBeUndefined()
+      })
+
+      it('rejects a change once the Dashboard says it has no organization, rather than waiting', async () => {
+        vi.mocked(getTopicState).mockReturnValue({
+          getCurrent: () => null,
+        } as unknown as ReturnType<typeof getTopicState>)
+
+        expect(whenOrganizationKnown(instance, ORGANIZATION_KEY)).toBeUndefined()
+        await expect(
+          updateUserPreference(instance, {
+            userId: 'user-1',
+            key: ORGANIZATION_KEY,
+            value: 'x',
+          }),
+        ).rejects.toMatchObject({code: 'levelNotAllowed'})
+      })
     })
 
     it("uses the app's organization when there's no Dashboard", async () => {

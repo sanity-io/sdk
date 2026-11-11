@@ -1,9 +1,21 @@
-import {catchError, defer, map, type Observable, switchMap, tap, throwError} from 'rxjs'
+import {
+  catchError,
+  defer,
+  firstValueFrom,
+  map,
+  type Observable,
+  of,
+  switchMap,
+  tap,
+  throwError,
+} from 'rxjs'
 
 import {getDefaultStorage} from '../auth/utils'
 import {getClientState} from '../client/clientStore'
 import {isDatasetResource} from '../config/sanityConfig'
-import {getDashboardOrganizationId} from '../dashboard/messageBus/topicStore'
+import {getDashboardMessageBus} from '../dashboard/messageBus/store'
+import {getDashboardOrganizationId, getTopicState} from '../dashboard/messageBus/topicStore'
+import {observeAppOrganizationId} from '../organization/appOrganization'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {defineFetcher, defineMutation} from '../store/fetcherStore'
 import {isDeepEqual, isObject} from '../utils/object'
@@ -14,10 +26,11 @@ import {
   type PreferenceKey,
   type PreferenceKeyValue,
   type PreferenceLevel,
+  type PreferenceLevelsOf,
   type PreferenceListItem,
   type PreferenceResourceType,
-  type PreferenceResourceTypeOf,
   type PreferenceValue,
+  type StoredLevel,
 } from './registry'
 
 const API_VERSION = '2026-11-07'
@@ -27,49 +40,110 @@ const REFETCH_INTERVAL_MS = 60_000
 const REQUEST_TIMEOUT_MS = 10_000
 
 /**
- * A preference of the signed-in user, and where its value comes from: their own value, or the
- * key's default when they haven't set one.
+ * A preference of the signed-in user, and where its value comes from: their own value, the value
+ * everyone in their project or organization shares, or the key's default.
  * @internal
  */
 export type UserPreference<K extends PreferenceKey = PreferenceKey> = {
   key: K
-  /** The user's value, or the key's default when they haven't set one. */
+  /**
+   * The value in effect: the user's own, then the one their project or organization shares, then
+   * the key's default.
+   */
   value: PreferenceValue<K>
+  /**
+   * Whether the user can change the value where the call writes it: their own, or with `shared`
+   * the shared one. `undefined` until the API answers; a value cached from the user's last visit
+   * keeps that visit's answer.
+   */
+  canEdit: boolean | undefined
 } & (
   | {
-      /** The user hasn't set a value, so `value` is the key's default. */
+      /** Nobody has set a value, so `value` is the key's default. */
       isDefault: true
+      /** The default isn't anyone's value. */
+      shared: false
       resourceType?: undefined
     }
   | {
       isDefault: false
+      /** `value` is the user's own. */
+      shared: false
       /**
        * The kind of resource the user's value is stored in, like the project for a pane's layout.
        * Missing for a value that applies everywhere, like the user's starred projects.
        */
       resourceType?: PreferenceResourceType
     }
+  | {
+      isDefault: false
+      /** `value` is the one everyone in the project or organization shares. */
+      shared: true
+      /** The kind of resource whose members share the value. */
+      resourceType: PreferenceResourceType
+    }
 )
 
 /**
- * Reads and writes a key in a project. The key's other resource IDs can't be passed.
+ * Picks the user's own value or the shared one, and whether a call has to name the kind of
+ * resource. A key stored in both projects and organizations has to name it; one stored in only one
+ * kind can leave it out.
+ */
+type ResourceOptions<
+  R extends PreferenceResourceType,
+  Shared extends boolean,
+  Named extends boolean,
+> = (Named extends true
+  ? {
+      /**
+       * The kind of resource to read and write. The key is stored in more than one, so a call
+       * names it.
+       */
+      resourceType: R
+    }
+  : {
+      /**
+       * The kind of resource to read and write. The key is stored in only this one, so it can be
+       * left out.
+       */
+      resourceType?: R
+    }) &
+  (Shared extends true
+    ? {
+        /** Reads and writes the value everyone in the resource shares, instead of the user's own. */
+        shared: true
+      }
+    : {
+        /**
+         * Reads and writes the user's own value. Leave it out, or pass `true` for the shared value
+         * where the key has one.
+         */
+        shared?: false
+      })
+
+/**
+ * Reads and writes a key in a project: the user's own value, or with `shared` the one everyone in
+ * the project shares.
  * @internal
  */
-export interface UserPreferenceProjectOptions {
-  /** The key is stored per project. */
-  resourceType?: 'project'
+export type UserPreferenceProjectOptions<
+  Shared extends boolean = boolean,
+  Named extends boolean = boolean,
+> = ResourceOptions<'project', Shared, Named> & {
   /** The project to use. Without it, the project of the app's resource. */
   projectId?: string
   organizationId?: never
 }
 
 /**
- * Reads and writes a key in an organization. The key's other resource IDs can't be passed.
+ * Reads and writes a key in an organization: the user's own value, or with `shared` the one
+ * everyone in the organization shares.
  * @internal
  */
-export interface UserPreferenceOrganizationOptions {
-  /** The key is stored per organization. */
-  resourceType?: 'organization'
+export type UserPreferenceOrganizationOptions<
+  Shared extends boolean = boolean,
+  Named extends boolean = boolean,
+> = ResourceOptions<'organization', Shared, Named> & {
   /** The organization to use. Without it, the Dashboard's organization, or the app's. */
   organizationId?: string
   projectId?: never
@@ -77,31 +151,55 @@ export interface UserPreferenceOrganizationOptions {
 
 /**
  * Reads and writes a key stored on the user alone, like their starred projects, which applies
- * everywhere. It takes no resource.
+ * everywhere. It takes no resource, and has no shared value.
  * @internal
  */
 export interface UserPreferenceUserOptions {
   resourceType?: never
   projectId?: never
   organizationId?: never
+  shared?: false
 }
+
+// Whether a key stores this kind of value in both projects and organizations
+type InBoth<Levels, Project, Organization> = [Project] extends [Levels]
+  ? [Organization] extends [Levels]
+    ? true
+    : false
+  : false
+
+// The options for one level a key is stored at; `Levels` is all of them
+type OptionsAt<L extends StoredLevel, Levels extends StoredLevel> = L extends 'user'
+  ? UserPreferenceUserOptions
+  : L extends 'user@project'
+    ? UserPreferenceProjectOptions<false, InBoth<Levels, 'user@project', 'user@organization'>>
+    : L extends 'user@organization'
+      ? UserPreferenceOrganizationOptions<
+          false,
+          InBoth<Levels, 'user@project', 'user@organization'>
+        >
+      : L extends 'project'
+        ? UserPreferenceProjectOptions<true, InBoth<Levels, 'project', 'organization'>>
+        : UserPreferenceOrganizationOptions<true, InBoth<Levels, 'project', 'organization'>>
 
 /**
  * Where a call reads and writes a key, as the options it takes. A key only takes the options of
- * the resource it's stored in: a key stored per project takes a `projectId`, one stored per
- * organization an `organizationId`, and one stored on the user alone none. Without an ID, the call
- * uses the app's.
+ * the places it's stored: a key stored per project takes a `projectId`, one stored per organization
+ * an `organizationId`, and one stored on the user alone none. `shared: true` reads and writes the
+ * value everyone in the resource shares, for keys that have one. Without an ID, the call uses the
+ * app's.
  * @internal
  */
 export type UserPreferenceOptions<K extends PreferenceKey = PreferenceKey> =
   // Code that handles any key, like the shared cache, can pass any of them
   PreferenceKey extends K
-    ? {resourceType?: PreferenceResourceType; projectId?: string; organizationId?: string}
-    : [PreferenceResourceTypeOf<K>] extends [never]
-      ? UserPreferenceUserOptions
-      : PreferenceResourceTypeOf<K> extends 'project'
-        ? UserPreferenceProjectOptions
-        : UserPreferenceOrganizationOptions
+    ? {
+        resourceType?: PreferenceResourceType
+        projectId?: string
+        organizationId?: string
+        shared?: boolean
+      }
+    : OptionsAt<PreferenceLevelsOf<K>, PreferenceLevelsOf<K>>
 
 /**
  * Input for {@link updateUserPreference}: the key and its next value, for the given user.
@@ -134,49 +232,111 @@ interface ApiPreference {
   key: string
   activeValue: unknown
   activeLevel: PreferenceLevel
+  canEdit?: boolean
 }
 
-// Where the signed-in user's own values for a key live: per project, per organization, or on the
-// user alone
-function resolveKey(instance: SanityInstance, key: string, options: UserPreferenceOptions = {}) {
-  const {resourceType, defaultValue} = lookUpKey(key)
-  let path = '/users/me/preferences'
-  if (resourceType !== 'user') {
-    const {resource} = instance.config
-    const resourceId =
-      resourceType === 'project'
-        ? (options.projectId ??
-          (resource && isDatasetResource(resource)
-            ? resource.projectId
-            : instance.config.projectId))
-        : (options.organizationId ??
-          getDashboardOrganizationId(instance).getCurrent() ??
-          instance.config.organizationId)
-    if (!resourceId) {
-      throw new PreferenceError(
-        'levelNotAllowed',
-        `"${key}" is stored per ${resourceType}, and this call has no ${resourceType} ID. Pass \`${resourceType}Id\`, or set one in the app's config.`,
-      )
-    }
-    path = `/${resourceType}s/${encodeURIComponent(resourceId)}${path}`
+const RESOURCE_TYPES = ['project', 'organization'] as const
+
+// The call's ID for a resource, or else the app's: its resource's project, or the Dashboard's
+// organization
+function resourceIdFor(
+  instance: SanityInstance,
+  type: (typeof RESOURCE_TYPES)[number],
+  options: UserPreferenceOptions,
+) {
+  if (type === 'organization') {
+    return (
+      options.organizationId ??
+      getDashboardOrganizationId(instance).getCurrent() ??
+      instance.config.organizationId
+    )
   }
-  return {path, keyUrl: `${path}/${encodeURIComponent(key)}`, defaultValue}
+  const {resource} = instance.config
+  return (
+    options.projectId ??
+    (resource && isDatasetResource(resource) ? resource.projectId : instance.config.projectId)
+  )
 }
 
-// Where a write stores the user's own value, so it shows there at once
-function ownSource(key: string) {
-  const {resourceType} = lookUpKey(key)
-  return {isDefault: false, ...(resourceType !== 'user' && {resourceType})} as const
+// Why a call has nowhere to read or write a key
+function levelNotAllowed(key: string, types: readonly string[], shared: boolean) {
+  if (types.length) {
+    return new PreferenceError(
+      'levelNotAllowed',
+      `"${key}" is stored per ${types.join(' or ')}, and this call has no ${types.join(' or ')} ID. Pass ${types.map((type) => `\`${type}Id\``).join(' or ')}, or set one in the app's config.`,
+    )
+  }
+  return new PreferenceError(
+    'levelNotAllowed',
+    shared
+      ? `"${key}" has no shared value. Leave out \`shared\` to use the signed-in user's own value.`
+      : `"${key}" only has a shared value. Pass \`shared: true\` to read and write it.`,
+  )
+}
+
+// Where a call reads and writes a key: the most specific level the key is stored at that the call
+// has an ID for. The user's own value, or with `shared` the one everyone in the resource shares
+function resolveKey(instance: SanityInstance, key: string, options: UserPreferenceOptions = {}) {
+  const {levels, defaultValue} = lookUpKey(key)
+  const {shared = false} = options
+  const target = (path: string) => ({
+    path,
+    keyUrl: `${path}/${encodeURIComponent(key)}`,
+    defaultValue,
+  })
+  const types = RESOURCE_TYPES.filter(
+    (type) =>
+      (!options.resourceType || type === options.resourceType) &&
+      levels.includes(shared ? type : `user@${type}`),
+  )
+  // A call that names an organization means it, even for a key that's also stored per project
+  if (options.organizationId) types.reverse()
+  const owner = shared ? '' : '/users/me'
+  for (const type of types) {
+    const resourceId = resourceIdFor(instance, type, options)
+    if (resourceId) return target(`/${type}s/${encodeURIComponent(resourceId)}${owner}/preferences`)
+  }
+  if (!shared && !options.resourceType && levels.includes('user')) {
+    return target('/users/me/preferences')
+  }
+  if (options.resourceType && !types.length) {
+    throw new PreferenceError(
+      'levelNotAllowed',
+      `"${key}" isn't stored per ${options.resourceType}. Leave out \`resourceType\`, or pass one the key is stored in.`,
+    )
+  }
+  throw levelNotAllowed(key, types, shared)
+}
+
+// Where a value comes from, from the API's level for it: `user@project` is the user's own value in
+// a project, `user` alone applies everywhere, and `project` is the one everyone in it shares
+function sourceOf(level: PreferenceLevel) {
+  if (level === 'default') return {isDefault: true, shared: false} as const
+  const [owner, resourceType] = level.split('@')
+  if (owner === 'user')
+    return {isDefault: false, shared: false, ...(resourceType && {resourceType})}
+  return {isDefault: false, shared: true, resourceType: owner}
+}
+
+// Where a write stores its value, so it shows there at once. Without an instance it can't tell
+// which resource IDs the call has, so a key stored in two kinds of resource shows the more specific
+// one until the API answers
+function writeSource(key: string, {shared = false, resourceType}: UserPreferenceOptions) {
+  const level = lookUpKey(key).levels.find(
+    (stored) =>
+      stored.startsWith('user') !== shared && (!resourceType || stored.endsWith(resourceType)),
+  )
+  return level && sourceOf(level)
 }
 
 function toPreference(response: ApiPreference, defaultValue: unknown): UserPreference {
   // The registry types each key's value; the API's answer is `unknown`
-  const {key, activeValue, activeLevel} = response
-  const value = activeValue ?? defaultValue
-  if (activeLevel === 'default') return {key, value, isDefault: true} as UserPreference
-  // `user@project` is the user's own value in a project; `user` alone applies everywhere
-  const [, resourceType] = activeLevel.split('@')
-  return {key, value, isDefault: false, ...(resourceType && {resourceType})} as UserPreference
+  return {
+    key: response.key,
+    value: response.activeValue ?? defaultValue,
+    canEdit: response.canEdit,
+    ...sourceOf(response.activeLevel),
+  } as UserPreference
 }
 
 // Cached per user, so a value shows straight away on the next visit
@@ -221,22 +381,55 @@ function request<T>(
   )
 }
 
-// Sends a write and caches the API's answer. Deferred, so a key that can't be resolved rejects the
-// call rather than throwing before it starts
+// Sends a write, once the organization it may go to is known, and caches the API's answer.
+// Deferred, so a key that can't be resolved rejects the call rather than throwing before it starts.
+// A batch goes to the path the key is stored under, which applies its changes in one go
 function sendWrite(
   instance: SanityInstance,
   userId: string,
   key: PreferenceKey,
   options: UserPreferenceOptions,
-  change: {method: 'PUT' | 'PATCH' | 'DELETE'; body?: unknown; tag: string},
+  {
+    batch = false,
+    ...change
+  }: {method: 'PUT' | 'PATCH' | 'DELETE'; body?: unknown; tag: string; batch?: boolean},
 ): Observable<UserPreference> {
-  return defer(() => {
-    const {keyUrl, defaultValue} = resolveKey(instance, key, options)
-    return request<ApiPreference>(instance, {url: keyUrl, ...change}).pipe(
-      map((response) => toPreference(response, defaultValue)),
-      tap((stored) => cachePreference(userId, keyUrl, stored)),
-    )
-  })
+  return defer(() => whenOrganizationKnown(instance, key, options) ?? of(undefined)).pipe(
+    switchMap(() => {
+      const {path, keyUrl, defaultValue} = resolveKey(instance, key, options)
+      return request<ApiPreference | {data: ApiPreference[]}>(instance, {
+        url: batch ? path : keyUrl,
+        ...change,
+      }).pipe(
+        // A batch answers with one preference per change, each with the value after all of them
+        map((response) =>
+          toPreference('data' in response ? response.data[0]! : response, defaultValue),
+        ),
+        tap((stored) => cachePreference(userId, keyUrl, stored)),
+      )
+    }),
+  )
+}
+
+/**
+ * Resolves once the Dashboard has published its organization, when a call reads or writes a key
+ * there without naming one. Otherwise `undefined`: there's nothing to wait for.
+ *
+ * @internal
+ */
+export function whenOrganizationKnown(
+  instance: SanityInstance,
+  key: PreferenceKey,
+  options: UserPreferenceOptions = {},
+): Promise<unknown> | undefined {
+  const level = options.shared ? 'organization' : 'user@organization'
+  if (options.organizationId || options.resourceType === 'project') return undefined
+  if (!lookUpKey(key).levels.includes(level)) return undefined
+  // Outside a message bus the organization is known from the start, or never
+  if (!getDashboardMessageBus(instance)) return undefined
+  // `null` is a published "no organization", so only `undefined` is still waiting
+  if (getTopicState(instance, 'organizations.current').getCurrent() !== undefined) return undefined
+  return firstValueFrom(observeAppOrganizationId(instance))
 }
 
 /**
@@ -259,6 +452,10 @@ export const userPreference = defineFetcher<
     return cached ? {data: cached, dataUpdatedAt: 0} : undefined
   },
   refetchInterval: REFETCH_INTERVAL_MS,
+  // A user's own read answers with the shared value when they haven't set one, so a change to the
+  // shared value refetches it
+  tags: (_data, userId, key, options) =>
+    options?.shared ? [] : [{type: 'userPreference', id: `${userId}:${key}`}],
   fetch: (instance) => (userId, key, options) => {
     const {path, keyUrl, defaultValue} = resolveKey(instance, key, options)
     return request<{data: ApiPreference[]}>(instance, {
@@ -279,6 +476,11 @@ export const userPreference = defineFetcher<
   },
 })
 
+// After a change to a shared value, the user's own reads of the key, which may show it
+function sharedChange(_result: UserPreference, {userId, key, shared}: ResetUserPreferenceInput) {
+  return shared ? [{type: 'userPreference', id: `${userId}:${key}`}] : []
+}
+
 // Stores a value. It shows in the cached `userPreference` at once, and is rolled back when the API
 // refuses it
 const setUserPreference = defineMutation<SetUserPreferenceInput, UserPreference>({
@@ -293,22 +495,26 @@ const setUserPreference = defineMutation<SetUserPreferenceInput, UserPreference>
       }),
   onMutate: (write, {userId, key, value, ...options}) => {
     try {
+      const source = writeSource(key, options)
       // The registry types each key's value; the cache holds every key's as `unknown`
-      write(userPreference, [userId, key, options], {
-        key,
-        value,
-        ...ownSource(key),
-      } as UserPreference)
+      write(
+        userPreference,
+        [userId, key, options],
+        (current) => ({key, value, canEdit: current?.canEdit, ...source}) as UserPreference,
+      )
     } catch {
-      // A key that can't be resolved has nothing to show; `mutationFn` rejects with why
+      // A key that can't be resolved yet has nothing to show; `mutationFn` waits for its
+      // organization, or rejects with why
     }
   },
   onSuccess: (write, stored, {userId, key, value: _value, ...options}) =>
     write(userPreference, [userId, key, options], stored),
+  invalidates: sharedChange,
 })
 
-// Removes the user's value, so the key's default applies again. The cached `userPreference` changes
-// once the API answers: only it knows which value applies next
+// Removes a value, the user's own or with `shared` the shared one, so the next one in effect
+// applies again: the shared value or the key's default. The cached `userPreference` changes once
+// the API answers: only it knows which value applies next
 const resetUserPreference = defineMutation<ResetUserPreferenceInput, UserPreference>({
   name: 'resetUserPreference',
   mutationFn:
@@ -317,6 +523,7 @@ const resetUserPreference = defineMutation<ResetUserPreferenceInput, UserPrefere
       sendWrite(instance, userId, key, options, {method: 'DELETE', tag: 'preferences.reset'}),
   onSuccess: (write, stored, {userId, key, ...options}) =>
     write(userPreference, [userId, key, options], stored),
+  invalidates: sharedChange,
 })
 
 // The list a change starts from: the one read last, or the key's default when it hasn't been read
@@ -333,26 +540,20 @@ const changeUserPreferenceList = defineMutation<ChangeUserPreferenceListInput, U
   mutationFn:
     (instance) =>
     ({userId, key, add, at, remove, ...options}) =>
-      defer(() => {
-        const {path, keyUrl, defaultValue} = resolveKey(instance, key, options)
-        const changes = [
-          ...(remove.length ? [{key, remove}] : []),
-          ...(add.length ? [{key, add, at}] : []),
-        ]
-        return request<{data: ApiPreference[]}>(instance, {
-          url: path,
-          method: 'PATCH',
-          body: {data: changes},
-          tag: 'preferences.list.change',
-        }).pipe(
-          // One answer per change, each with the list after all of them
-          map(({data}) => toPreference(data[0]!, defaultValue)),
-          tap((stored) => cachePreference(userId, keyUrl, stored)),
-        )
+      sendWrite(instance, userId, key, options, {
+        method: 'PATCH',
+        body: {
+          data: [
+            ...(remove.length ? [{key, remove}] : []),
+            ...(add.length ? [{key, add, at}] : []),
+          ],
+        },
+        tag: 'preferences.list.change',
+        batch: true,
       }),
   onMutate: (write, {userId, key, add, at, remove, ...options}) => {
     try {
-      const source = ownSource(key)
+      const source = writeSource(key, options)
       write(userPreference, [userId, key, options], (current) => {
         // The same as the API: items already in the list are updated where they are
         const byRef = new Map(add.map((item) => [item.ref, item]))
@@ -362,14 +563,16 @@ const changeUserPreferenceList = defineMutation<ChangeUserPreferenceListInput, U
         const existing = new Set(kept.map((item) => item.ref))
         const added = add.filter((item) => !existing.has(item.ref))
         const value = at === 'start' ? [...added, ...kept] : [...kept, ...added]
-        return {key, value, ...source} as UserPreference
+        return {key, value, canEdit: current?.canEdit, ...source} as UserPreference
       })
     } catch {
-      // A key that can't be resolved has nothing to show; `mutationFn` rejects with why
+      // A key that can't be resolved yet has nothing to show; `mutationFn` waits for its
+      // organization, or rejects with why
     }
   },
   onSuccess: (write, stored, {userId, key, add: _add, at: _at, remove: _remove, ...options}) =>
     write(userPreference, [userId, key, options], stored),
+  invalidates: sharedChange,
 })
 
 // The items to remove and add to turn `current` into `next`, or `undefined` when only replacing
@@ -410,13 +613,14 @@ function listChange(
 }
 
 /**
- * Changes a preference of the signed-in user. A value stores it, and shows at once in the cached
- * {@link userPreference}; `undefined` removes the user's value, so the key's default applies once
- * the API answers. A function gets the value on screen, changes still on their way included, and
- * returns the next one. For a list, only the items removed and added are sent, so a change made
- * elsewhere in the meantime is kept; a reorder replaces the whole list. Resolves with the
- * preference the API stored, and rejects with a {@link PreferenceError} when it refuses, after the
- * value on screen goes back.
+ * Changes a preference of the signed-in user, or with `shared` the value everyone in the project or
+ * organization shares. A value stores it, and shows at once in the cached {@link userPreference};
+ * `undefined` removes it, so the next value in effect applies once the API answers: the shared
+ * value or the key's default. A function gets the value on screen, changes still on their way
+ * included, and returns the next one. For a list, only the items removed and added are sent, so a
+ * change made elsewhere in the meantime is kept; a reorder replaces the whole list. Resolves with
+ * the preference the API stored, and rejects with a {@link PreferenceError} when it refuses, after
+ * the value on screen goes back.
  *
  * @internal
  */
@@ -426,6 +630,9 @@ export async function updateUserPreference<K extends PreferenceKey>(
 ): Promise<UserPreference<K>> {
   // The options a generic `K` takes aren't known here; every key's are one of these
   const options = rest as UserPreferenceOptions
+  // The cache key names the organization, so wait for the Dashboard's when the key needs it
+  const organization = whenOrganizationKnown(instance, key, options)
+  if (organization) await organization
   const {list} = lookUpKey(key)
   let current: UserPreference | undefined
   if (list || typeof value === 'function') {
