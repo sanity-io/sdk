@@ -1,5 +1,5 @@
 import {ClientError} from '@sanity/client'
-import {AuthStateType} from '@sanity/sdk'
+import {AuthStateType, PreferenceError} from '@sanity/sdk'
 import {
   getClientErrorApiBody,
   getProjectAccessErrorDetails,
@@ -26,7 +26,14 @@ export type LoginErrorProps = FallbackProps
  *
  * @alpha
  */
-export function LoginError({error, resetErrorBoundary}: LoginErrorProps): React.ReactNode {
+export function LoginError({error: thrown, resetErrorBoundary}: LoginErrorProps): React.ReactNode {
+  // A preference read that fails on a 401 is a sign-in problem like any other request's
+  const error =
+    thrown instanceof PreferenceError &&
+    thrown.statusCode === 401 &&
+    thrown.cause instanceof ClientError
+      ? thrown.cause
+      : thrown
   if (
     !(
       error instanceof AuthError ||

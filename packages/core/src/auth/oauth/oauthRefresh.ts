@@ -164,10 +164,14 @@ async function doRefreshOAuthTokens(
 
     options.storageArea?.setItem(options.storageKey, serializeTokens(tokens))
     logger.info('OAuth tokens refreshed')
-    state.set('oauthRefreshed', {
-      authState: createLoggedInAuthState(tokens.accessToken, null),
+    // A refresh is the same session, so the user stays and nothing waits for `/users/me` again
+    state.set('oauthRefreshed', ({authState}) => ({
+      authState: createLoggedInAuthState(
+        tokens.accessToken,
+        authState.type === AuthStateType.LOGGED_IN ? authState.currentUser : null,
+      ),
       oauthTokens: tokens,
-    })
+    }))
     const {refreshToken: _refreshToken, ...publicTokens} = tokens
     return publicTokens
   } catch (error) {

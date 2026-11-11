@@ -1,10 +1,10 @@
 import {ClientError} from '@sanity/client'
-import {type CurrentUser, getProjectAccessErrorProjectId} from '@sanity/sdk'
+import {type CurrentUser, getProjectAccessErrorProjectId, PreferenceError} from '@sanity/sdk'
 import {installMessageBus, isDashboardEnvironment, resetMessageBus} from '@sanity/sdk/_internal'
 import {type MessageBusHost, type PayloadOf} from '@sanity/sdk/dashboard'
 import {fireEvent, render, screen, waitFor} from '@testing-library/react'
 import {ErrorBoundary, type FallbackProps} from 'react-error-boundary'
-import {afterEach, beforeEach, describe, expect, it, type Mock, vi} from 'vitest'
+import {afterEach, beforeEach, describe, expect, it, type Mock, onTestFinished, vi} from 'vitest'
 
 import {ResourceProvider} from '../../context/ResourceProvider'
 import {AuthError} from './AuthError'
@@ -279,6 +279,64 @@ describe('LoginError', () => {
     await waitFor(() => {
       expect(mockReset).toHaveBeenCalled()
     })
+  })
+
+  it('auto-logs-out on a 401 from a preference read outside the dashboard', async () => {
+    const clientError = makeClientError(401, {
+      error: {type: 'someOther401Type', description: 'Token is invalid'},
+    })
+    const error = new PreferenceError('unauthorized', 'Token is invalid', {
+      statusCode: 401,
+      cause: clientError,
+    })
+
+    render(
+      <ResourceProvider fallback={null}>
+        <LoginError error={error} resetErrorBoundary={vi.fn()} />
+      </ResourceProvider>,
+    )
+
+    expect(await screen.findByText('Signing you out and returning to login...')).toBeInTheDocument()
+    await waitFor(() => expect(mockLogout).toHaveBeenCalled())
+  })
+
+  it("shows the project access screen on a preference read's projectUserNotFound 401", () => {
+    const clientError = makeClientError(401, {
+      error: {
+        type: 'projectUserNotFoundError',
+        description: 'User is not a member of this project.',
+      },
+    })
+    const error = new PreferenceError('unauthorized', 'User is not a member of this project.', {
+      statusCode: 401,
+      cause: clientError,
+    })
+
+    render(
+      <ResourceProvider fallback={null}>
+        <LoginError error={error} resetErrorBoundary={vi.fn()} />
+      </ResourceProvider>,
+    )
+
+    expect(screen.getByText("You don't have access to this project")).toBeInTheDocument()
+  })
+
+  it("rethrows a preference error that isn't a 401, for the app's own error boundary", () => {
+    const clientError = makeClientError(400, {code: 'levelNotAllowed', message: 'Not allowed'})
+    const error = new PreferenceError('levelNotAllowed', 'Not allowed', {
+      statusCode: 400,
+      cause: clientError,
+    })
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    onTestFinished(() => consoleErrorSpy.mockRestore())
+
+    expect(() =>
+      render(
+        <ResourceProvider fallback={null}>
+          <LoginError error={error} resetErrorBoundary={vi.fn()} />
+        </ResourceProvider>,
+      ),
+    ).toThrow(error)
   })
 
   // In the dashboard we must not auto-log-out on a generic 401.

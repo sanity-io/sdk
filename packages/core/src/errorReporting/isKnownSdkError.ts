@@ -4,11 +4,10 @@ import {MessageBusError} from '../dashboard/messageBus/bus'
 import {TopicError} from '../dashboard/messageBus/topicStore'
 import {DocumentInaccessibleError} from '../document/documentInaccessibleError'
 import {ActionError} from '../document/processActions/shared'
+import {PreferenceError} from '../preferences/preferenceError'
+import {isNetworkFailure} from './isNetworkFailure'
 
 const MAX_CAUSE_DEPTH = 5
-
-/** Browsers word a failed `fetch` differently, and all of them throw a plain `TypeError`. */
-const NETWORK_FAILURE_MESSAGE = /failed to fetch|networkerror|load failed|network request failed/i
 
 /**
  * Aborting a request on teardown is routine. Matched by name because `DOMException` and abort
@@ -16,10 +15,6 @@ const NETWORK_FAILURE_MESSAGE = /failed to fetch|networkerror|load failed|networ
  */
 function isAbortError(error: unknown): boolean {
   return error instanceof Error && error.name === 'AbortError'
-}
-
-function isNetworkFailure(error: unknown): boolean {
-  return error instanceof TypeError && NETWORK_FAILURE_MESSAGE.test(error.message)
 }
 
 /** Known errors that cannot be matched by class. */
@@ -35,6 +30,7 @@ function isKnownErrorInstance(error: unknown): boolean {
     ActionError,
     DocumentInaccessibleError,
     MessageBusError,
+    PreferenceError,
     TopicError,
     // 4xx and 5xx responses from the Sanity API reflect the app's permissions, queries, or API
     // availability, not a defect in the SDK
