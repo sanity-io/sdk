@@ -228,7 +228,7 @@
     "versions": [1]
   },
   {
-    "key": "manage.favorites.projects",
+    "key": "manage.pinned.projects",
     "schema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "maxItems": 100,
@@ -272,34 +272,65 @@
     "key": "studio.structure-tool.sort-order.{...paneKey}",
     "schema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
-      "type": "object",
-      "properties": {
-        "by": {
-          "maxItems": 20,
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "field": {
-                "type": "string",
-                "maxLength": 256
-              },
-              "direction": {
-                "type": "string",
-                "enum": ["asc", "desc"]
-              },
-              "nulls": {
-                "type": "string",
-                "enum": ["first", "last"]
-              }
-            },
-            "required": ["field", "direction"],
-            "additionalProperties": {}
-          }
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        {
+          "type": "object",
+          "properties": {
+            "by": {
+              "anyOf": [
+                {
+                  "maxItems": 20,
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "field": {
+                        "type": "string",
+                        "maxLength": 256
+                      },
+                      "direction": {
+                        "type": "string",
+                        "maxLength": 16
+                      },
+                      "nulls": {
+                        "type": "string",
+                        "maxLength": 16
+                      }
+                    },
+                    "required": ["field"],
+                    "additionalProperties": {}
+                  }
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "field": {
+                      "type": "string",
+                      "maxLength": 256
+                    },
+                    "direction": {
+                      "type": "string",
+                      "maxLength": 16
+                    },
+                    "nulls": {
+                      "type": "string",
+                      "maxLength": 16
+                    }
+                  },
+                  "required": ["field"],
+                  "additionalProperties": {}
+                }
+              ]
+            }
+          },
+          "additionalProperties": {}
         }
-      },
-      "required": ["by"],
-      "additionalProperties": {},
+      ],
       "default": {
         "by": []
       }
@@ -471,7 +502,7 @@
     },
     "levels": ["user@project"],
     "write": {},
-    "maxBytes": 65536,
+    "maxBytes": 1048576,
     "versions": [1]
   }
 ]
