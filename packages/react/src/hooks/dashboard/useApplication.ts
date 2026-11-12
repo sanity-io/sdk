@@ -9,8 +9,8 @@ import {type DashboardApplication, useApplications} from './useApplications'
  *
  * @example
  * ```tsx
- * function SelectedApplication({slug}: {slug: string}) {
- *   const application = useApplication(slug)
+ * function SelectedApplication({id}: {id: string}) {
+ *   const application = useApplication(id)
  *   return application ? <h1>{application.title}</h1> : <p>Application unavailable</p>
  * }
  * ```
