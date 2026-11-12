@@ -1,5 +1,5 @@
 import {type SanityConfig} from '../config/sanityConfig'
-import {isMessageBusEnvironment, isMessageBusHost} from '../dashboard/messageBus/bus'
+import {isMessageBusEnvironment, isMessageBusHost} from '../dashboard/messageBus/environment'
 import {DEFAULT_BASE} from './authConstants'
 
 /**

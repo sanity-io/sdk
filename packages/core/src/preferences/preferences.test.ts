@@ -1,11 +1,17 @@
-import {ClientError, type SanityClient} from '@sanity/client'
+import {ClientError, type SanityClient, ServerError} from '@sanity/client'
 import {of, Subject, throwError} from 'rxjs'
-import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
+import {afterEach, beforeEach, describe, expect, it, onTestFinished, vi} from 'vitest'
 
+import {setAuthToken} from '../auth/authStore'
 import {getClientState} from '../client/clientStore'
 import {type MessageBusConnection} from '../dashboard/messageBus/bus'
 import {getDashboardMessageBus} from '../dashboard/messageBus/store'
 import {getDashboardOrganizationId, getTopicState} from '../dashboard/messageBus/topicStore'
+import {
+  OUT_OF_SYNC_RETRY_BASE_DELAY,
+  OUT_OF_SYNC_RETRY_COUNT,
+  OUT_OF_SYNC_RETRY_MAX_DELAY,
+} from '../document/documentConstants'
 import {observeAppOrganizationId} from '../organization/appOrganization'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {type StateSource} from '../store/createStateSourceAction'
@@ -58,6 +64,9 @@ const stored = (
 
 const refusal = (statusCode: number, code: string, message: string) =>
   new ClientError({statusCode, headers: {}, body: {code, message}})
+
+// Long enough for a read that keeps failing on the network to use up its retries
+const RETRIES_RUN_OUT = OUT_OF_SYNC_RETRY_MAX_DELAY * OUT_OF_SYNC_RETRY_COUNT
 
 describe('preferences', () => {
   let instance: SanityInstance
@@ -307,19 +316,62 @@ describe('preferences', () => {
       })
     })
 
-    it('passes an unexpected error on as it is, so error reporting still sees it', async () => {
+    it('passes an unexpected error on as it is once its retries run out, so error reporting still sees it', async () => {
+      vi.useFakeTimers({
+        toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'],
+      })
       const bug = new Error('Something broke')
       request.mockReturnValue(throwError(() => bug))
 
-      await expect(userPreference.resolveState(instance, 'user-1', LAYOUT)).rejects.toBe(bug)
+      const read = userPreference.resolveState(instance, 'user-1', LAYOUT).catch((error) => error)
+      await vi.advanceTimersByTimeAsync(RETRIES_RUN_OUT)
+
+      expect(await read).toBe(bug)
     })
 
-    it('reports a request the browser could not send as a network error', async () => {
-      request.mockReturnValue(throwError(() => new TypeError('Failed to fetch')))
-
-      await expect(userPreference.resolveState(instance, 'user-1', LAYOUT)).rejects.toMatchObject({
-        code: 'networkError',
+    it.each([
+      ['a request the browser could not send', 'networkError', new TypeError('Failed to fetch')],
+      ['a 5xx', 'requestFailed', new ServerError({statusCode: 503, headers: {}, body: {}})],
+    ])('reports %s as %s once its retries run out', async (_, code, failure) => {
+      vi.useFakeTimers({
+        toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'],
       })
+      request.mockReturnValue(throwError(() => failure))
+
+      const read = userPreference.resolveState(instance, 'user-1', LAYOUT).catch((error) => error)
+      await vi.advanceTimersByTimeAsync(OUT_OF_SYNC_RETRY_MAX_DELAY)
+      expect(request.mock.calls.length).toBeGreaterThan(1)
+      await vi.advanceTimersByTimeAsync(RETRIES_RUN_OUT)
+
+      expect(await read).toMatchObject({code})
+    })
+
+    it('reads a preference again once the token changes after its read failed with a 401', async () => {
+      // Answers the current user's read, which a new token starts, instead of the real API
+      const clientFactory = vi.fn().mockReturnValue({
+        observable: {request: vi.fn().mockReturnValue(of({id: 'user-1'}))},
+      })
+      const signedIn = createSanityInstance({
+        projectId: 'project-1',
+        dataset: 'production',
+        auth: {clientFactory},
+      })
+      request.mockReturnValueOnce(throwError(() => refusal(401, 'unauthorized', 'Session expired')))
+      request.mockReturnValueOnce(of({data: [stored(LAYOUT, 'compact')]}))
+      const preference = userPreference.getState(signedIn, 'user-1', LAYOUT)
+      const stop = preference.subscribe()
+      await vi.waitFor(() => expect(preference.getCurrent()).toMatchObject({status: 'error'}))
+
+      setAuthToken(signedIn, 'renewed-token')
+
+      await vi.waitFor(() =>
+        expect(preference.getCurrent()).toMatchObject({
+          status: 'success',
+          data: {value: 'compact'},
+        }),
+      )
+      stop()
+      signedIn.dispose()
     })
   })
 
@@ -449,20 +501,51 @@ describe('preferences', () => {
       )
     })
 
-    it('succeeds when a change with a function is tried again after its read failed', async () => {
-      const toggle = () =>
-        updateUserPreference(instance, {
-          userId: 'user-1',
-          key: LAYOUT,
-          value: (current) => (current === 'detail' ? 'compact' : 'detail'),
-        })
-
-      request.mockReturnValueOnce(throwError(() => new TypeError('Failed to fetch')))
-      await expect(toggle()).rejects.toMatchObject({code: 'networkError'})
+    it("sends a change with a function made after the read's network error showed, once the network is back", async () => {
+      vi.useFakeTimers({
+        toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'],
+      })
+      request.mockReturnValue(throwError(() => new TypeError('Failed to fetch')))
+      const preference = userPreference.getState(instance, 'user-1', LAYOUT)
+      onTestFinished(preference.subscribe())
+      await vi.advanceTimersByTimeAsync(RETRIES_RUN_OUT)
+      expect(preference.getCurrent()).toMatchObject({
+        status: 'error',
+        error: {code: 'networkError'},
+      })
 
       request.mockReturnValueOnce(of({data: [stored(LAYOUT, 'detail')]}))
       request.mockReturnValueOnce(of(stored(LAYOUT, 'compact')))
-      await expect(toggle()).resolves.toMatchObject({value: 'compact'})
+      const toggled = updateUserPreference(instance, {
+        userId: 'user-1',
+        key: LAYOUT,
+        value: (current) => (current === 'detail' ? 'compact' : 'detail'),
+      }).catch((error: unknown) => error)
+      await vi.advanceTimersByTimeAsync(OUT_OF_SYNC_RETRY_BASE_DELAY)
+
+      expect(await toggled).toMatchObject({value: 'compact'})
+      expect(request).toHaveBeenLastCalledWith(
+        expect.objectContaining({method: 'PUT', body: {value: 'compact'}}),
+      )
+    })
+
+    it('succeeds when the read a change with a function needs fails on the network first', async () => {
+      vi.useFakeTimers({
+        toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'],
+      })
+      request.mockReturnValueOnce(throwError(() => new TypeError('Failed to fetch')))
+      request.mockReturnValueOnce(of({data: [stored(LAYOUT, 'detail')]}))
+      request.mockReturnValueOnce(of(stored(LAYOUT, 'compact')))
+
+      // Caught now, so a regression fails the assertion below instead of as an unhandled rejection
+      const toggled = updateUserPreference(instance, {
+        userId: 'user-1',
+        key: LAYOUT,
+        value: (current) => (current === 'detail' ? 'compact' : 'detail'),
+      }).catch((error: unknown) => error)
+      await vi.advanceTimersByTimeAsync(OUT_OF_SYNC_RETRY_MAX_DELAY)
+
+      expect(await toggled).toMatchObject({value: 'compact'})
       expect(request).toHaveBeenLastCalledWith(
         expect.objectContaining({method: 'PUT', body: {value: 'compact'}}),
       )

@@ -4,6 +4,7 @@ import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {OUT_OF_SYNC_RETRY_COUNT, OUT_OF_SYNC_RETRY_MAX_DELAY} from '../document/documentConstants'
 import {DocumentInaccessibleError} from '../document/documentInaccessibleError'
+import {PreferenceError} from '../preferences/preferenceError'
 import {retryOnCredentialChange, retryRead} from './retry'
 
 const clientError = (statusCode: number, body: object = {}) =>
@@ -43,6 +44,10 @@ describe('retryRead', () => {
     ['a 408', clientError(408)],
     ['a 429', clientError(429)],
     ['a dropped listener', new ConnectionFailedError('closed')],
+    [
+      'a wrapped network error',
+      new PreferenceError('networkError', 'offline', {cause: new TypeError('Failed to fetch')}),
+    ],
   ])('retries %s after a backoff without reporting it', async (_, error) => {
     const read = startRead([error])
     expect(read.values).toEqual([])
@@ -58,6 +63,7 @@ describe('retryRead', () => {
     ['an expired session', clientError(401, {errorCode: 'SIO-401-AEX'})],
     ['a rejected listener', new ConnectionFailedError('rejected', {status: 401})],
     ['an unreadable document', new DocumentInaccessibleError('doc')],
+    ['a wrapped 401', new PreferenceError('requestFailed', '401', {cause: clientError(401)})],
   ])('reports %s and retries it only once the credential changes', async (_, error) => {
     const read = startRead([error])
     expect(read.setError).toHaveBeenCalledWith(error)
@@ -75,6 +81,8 @@ describe('retryRead', () => {
     ['a 400', clientError(400)],
     ['a 403', clientError(403)],
     ['a CORS error', new CorsOriginError({projectId: 'p'})],
+    ['a wrapped 403', new PreferenceError('accessDenied', '403', {cause: clientError(403)})],
+    ['a preference error the SDK raised', new PreferenceError('keyNotDeclared', 'unknown key')],
   ])('reports %s and never retries it', async (_, error) => {
     const read = startRead([error])
     expect(read.setError).toHaveBeenCalledWith(error)

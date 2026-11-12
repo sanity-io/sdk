@@ -2,7 +2,8 @@ import {getIsInDashboardState} from '../../auth/authStore'
 import {createActionBinder} from '../../store/createActionBinder'
 import {type SanityInstance} from '../../store/createSanityInstance'
 import {defineStore} from '../../store/defineStore'
-import {connectMessageBus, isMessageBusInstalled, type MessageBusConnection} from './bus'
+import {connectMessageBus, type MessageBusConnection} from './bus'
+import {isMessageBusInstalled} from './environment'
 
 interface DashboardMessageBusState {
   connection?: MessageBusConnection
