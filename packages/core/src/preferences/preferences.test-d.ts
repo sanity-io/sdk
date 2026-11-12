@@ -70,22 +70,22 @@ test("a preference is the default, the user's own value, or the shared one", asy
 test('a list key takes the items it can hold', () => {
   void updateUserPreference(instance, {
     userId: 'u',
-    key: 'manage.favorites.projects',
+    key: 'manage.pinned.projects',
     value: (list) => [...list, {ref: 'abc123'}],
   })
   void updateUserPreference(instance, {
     userId: 'u',
-    key: 'manage.favorites.projects',
+    key: 'manage.pinned.projects',
     // @ts-expect-error An item needs a `ref`
     value: [{}],
   })
 })
 
 test('a key stored on the user alone takes no resource', () => {
-  void updateUserPreference(instance, {userId: 'u', key: 'manage.favorites.projects', value: []})
+  void updateUserPreference(instance, {userId: 'u', key: 'manage.pinned.projects', value: []})
   void updateUserPreference(instance, {
     userId: 'u',
-    key: 'manage.favorites.projects',
+    key: 'manage.pinned.projects',
     value: [],
     // @ts-expect-error Stored on the user alone, in no project
     projectId: 'p',

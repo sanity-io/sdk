@@ -49,7 +49,7 @@ function toKeys(keys: Definition[]) {
   return JSON.stringify(Object.fromEntries(entries))
 }
 
-// A list of items told apart by `ref`, like `manage.favorites.projects`, which the SDK edits as a list
+// A list of items told apart by `ref`, like `manage.pinned.projects`, which the SDK edits as a list
 function isItemList(schema: JSONSchema) {
   const items = schema.items
   return schema.type === 'array' && isSchema(items) && Boolean(items.properties?.['ref'])
