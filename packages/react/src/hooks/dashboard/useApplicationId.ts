@@ -11,7 +11,12 @@ declare const __SANITY_APP_ID__: string | undefined
  * @example
  * ```tsx
  * function Root({children}: {children: React.ReactNode}) {
- *   const application = useApplication(useApplicationId() ?? '')
+ *   const applicationId = useApplicationId()
+ *   return applicationId ? <Scoped applicationId={applicationId}>{children}</Scoped> : children
+ * }
+ *
+ * function Scoped({applicationId, children}: {applicationId: string; children: React.ReactNode}) {
+ *   const application = useApplication(applicationId)
  *   return <div className={application?.slug ?? undefined}>{children}</div>
  * }
  * ```
