@@ -1,10 +1,14 @@
-import {concatWith, NEVER, of, startWith, Subject, throwError} from 'rxjs'
+import {concatWith, NEVER, type Observable, of, startWith, Subject, throwError} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {createSanityInstance, type SanityInstance} from './createSanityInstance'
 import {defineFetcher, defineMutation, type Fetcher} from './fetcherStore'
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0))
+
+// Answers each fetch with the next result, and fails a fetch past the last one
+const answerInTurn = <T>(...results: Observable<T>[]) =>
+  vi.fn(() => results.shift() ?? throwError(() => new Error('Fetched once too often')))
 
 // Shows `value` the way a mutation still waiting on the server does
 const writePending = <T>(instance: SanityInstance, fetcher: Fetcher<[], T>, value: T) =>
@@ -143,6 +147,72 @@ describe('fetcherStore', () => {
       data: 'recovered',
     })
   })
+
+  it('resolveState fetches again after a failed fetch and settles with that fetch', async () => {
+    const fetchSpy = answerInTurn(
+      throwError(() => new Error('offline')),
+      throwError(() => new Error('still offline')),
+      of('back'),
+    )
+    const fetcher = defineFetcher<[], string>({
+      name: 'resolve-after-error',
+      getKey: () => 'k',
+      fetch: () => fetchSpy,
+    })
+
+    await expect(fetcher.resolveState(instance)).rejects.toThrow('offline')
+    await expect(fetcher.resolveState(instance)).rejects.toThrow('still offline')
+    await flush()
+    expect(fetchSpy).toHaveBeenCalledTimes(2)
+    expect(await fetcher.resolveState(instance)).toBe('back')
+    expect(fetchSpy).toHaveBeenCalledTimes(3)
+  })
+
+  it('resolveState calls made together after a failed fetch share one fetch', async () => {
+    const answer = new Subject<string>()
+    const fetchSpy = answerInTurn(
+      throwError(() => new Error('offline')),
+      answer,
+    )
+    const fetcher = defineFetcher<[], string>({
+      name: 'resolve-after-error-together',
+      getKey: () => 'k',
+      fetch: () => fetchSpy,
+    })
+
+    await expect(fetcher.resolveState(instance)).rejects.toThrow('offline')
+    const retries = Promise.all([
+      fetcher.resolveState(instance),
+      fetcher.resolveState(instance),
+    ]).catch((error: unknown) => error)
+    await flush()
+    answer.next('back')
+
+    expect(await retries).toEqual(['back', 'back'])
+    expect(fetchSpy).toHaveBeenCalledTimes(2)
+  })
+
+  it('resolveState settles a retry still in flight when the failed entry is due to be collected, and collects it after', async () => {
+    const answer = new Subject<string>()
+    const fetchSpy = answerInTurn(
+      throwError(() => new Error('offline')),
+      answer,
+    )
+    const fetcher = defineFetcher<[], string>({
+      name: 'resolve-after-error-past-gc',
+      gcTime: 20,
+      getKey: () => 'k',
+      fetch: () => fetchSpy,
+    })
+
+    await expect(fetcher.resolveState(instance)).rejects.toThrow('offline')
+    const retry = fetcher.resolveState(instance).catch((error: unknown) => error)
+    await new Promise((resolve) => setTimeout(resolve, 40))
+    answer.next('back')
+
+    expect(await retry).toBe('back')
+    await vi.waitFor(() => expect(fetcher.getState(instance).getCurrent().status).toBe('pending'))
+  }, 500)
 
   it('pre-seeds an entry via initialData without fetching when the seed is fresh', async () => {
     const fetchSpy = vi.fn(() => of('fetched'))
