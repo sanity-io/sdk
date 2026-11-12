@@ -833,23 +833,6 @@ describe('fetcherStore', () => {
       expect(source.getCurrent()).toMatchObject({data: 'first', error: undefined, isFetching: true})
     })
 
-    it('resolveState after a 401 answers with the error instead of fetching with the same token', async () => {
-      const fetchSpy = answerInTurn(
-        throwError(() => sessionExpired),
-        of('recovered'),
-      )
-      const fetcher = defineFetcher<[], string>({
-        name: 'token-resolve-unchanged',
-        getKey: () => 'k',
-        fetch: () => fetchSpy,
-      })
-      onTestFinished(fetcher.getState(instance).subscribe())
-      await vi.waitFor(() => expect(fetcher.getState(instance).getCurrent().status).toBe('error'))
-
-      await expect(fetcher.resolveState(instance)).rejects.toBe(sessionExpired)
-      expect(fetchSpy).toHaveBeenCalledTimes(1)
-    })
-
     it("shows a retry's answer and clears the error when a change was refused while it waited for the token", async () => {
       const fetchSpy = answerInTurn(
         of('first'),
@@ -881,7 +864,9 @@ describe('fetcherStore', () => {
 
     it('keeps waiting for a new token while the entry is watched, after a resolveState call on it settles', async () => {
       vi.useFakeTimers()
+      // The second 401 answers the request resolveState sends
       const fetchSpy = answerInTurn(
+        throwError(() => sessionExpired),
         throwError(() => sessionExpired),
         of('recovered'),
       )

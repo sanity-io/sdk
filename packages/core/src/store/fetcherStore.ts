@@ -165,7 +165,7 @@ export interface Fetcher<TParams extends unknown[], TData> {
    * Resolves with the entry's first available data — the promise a suspending
    * component throws. Rejects when the fetch fails, which for a network error
    * or 5xx is once its retries run out. When the entry's last fetch failed,
-   * fetches again, or takes the answer of the retry still running for it.
+   * fetches again straight away, even if a retry is still waiting.
    */
   resolveState: (instance: SanityInstance, ...params: TParams) => Promise<TData>
   /**
@@ -576,8 +576,15 @@ const startFetch = (
         take(1),
         tap({error: (error: unknown) => (record.failure = {error})}),
         retryRead(getClientAuthState(instance), (error) => {
-          // A recovery clears the error with the answer it brings
-          if (error === undefined) return
+          // A shown failure comes off once the read recovers, or moves on to one not shown yet
+          if (error === undefined) {
+            updateEntry(state, key, 'fetchRetry', (prev) => {
+              if (!prev || prev.error === undefined) return prev
+              if (prev.status === 'success') return {...prev, error: undefined, isFetching: true}
+              return {...prev, status: 'pending', error: undefined, isFetching: true}
+            })
+            return
+          }
           updateEntry(state, key, 'fetchError', (prev) => {
             if (!prev) return prev
             // Keep rendering data if we have it (background failure); otherwise surface as error.
@@ -837,14 +844,18 @@ export function defineFetcher<TParams extends unknown[], TData>(
     // Async so a key that can't be built rejects, like a failed fetch, instead of throwing
     async ({state, instance}: StoreContext<CacheState>, ...params: TParams): Promise<TData> => {
       const key = entryKey(def.name, def.getKey(instance, ...params))
-      // An error left by an earlier fetch is not an answer: fetch again, or join the retry still
-      // running for it as the query store does, keeping garbage collection off the entry meanwhile
+      // An error left by an earlier fetch is not an answer: fetch again now, restarting a retry
+      // that is waiting on a backoff or a new token, keeping garbage collection off the entry
+      // until that fetch settles
       if (state.get().entries[key]?.status === 'error') {
         cancelGc(key)
-        return (startFetch(state, def, instance, params, false) as Promise<TData>).finally(() => {
-          scheduleGc(state, def, key)
-          stopUnwatchedRetry(state, key)
-        })
+        const retrying = inflight.get(key)?.failure !== undefined
+        return (startFetch(state, def, instance, params, retrying) as Promise<TData>).finally(
+          () => {
+            scheduleGc(state, def, key)
+            stopUnwatchedRetry(state, key)
+          },
+        )
       }
       return firstValueFrom(
         getState(instance, ...params).observable.pipe(
