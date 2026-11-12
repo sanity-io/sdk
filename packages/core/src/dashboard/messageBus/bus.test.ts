@@ -9,7 +9,6 @@ import {
   connectMessageBus,
   createIsolatedMessageBus as createRuntimeMessageBus,
   installMessageBus,
-  isMessageBusHost,
   type MessageBus,
   type MessageBusClient,
   MessageBusError,
@@ -18,6 +17,7 @@ import {
   resetMessageBus,
   workerMessages,
 } from './bus'
+import {isMessageBusHost} from './environment'
 import {type TopicManifest, type TopicMigration} from './topics'
 
 const createMessageBus = (appId = 'dashboard') => createRuntimeMessageBus(appId)

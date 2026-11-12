@@ -19,6 +19,7 @@ import {
   OUT_OF_SYNC_RETRY_MAX_DELAY,
 } from '../document/documentConstants'
 import {DocumentInaccessibleError} from '../document/documentInaccessibleError'
+import {PreferenceError} from '../preferences/preferenceError'
 import {type StateSource} from '../store/createStateSourceAction'
 
 function getStatusCode(error: unknown): number | undefined {
@@ -51,6 +52,12 @@ function isMissingAccess(error: unknown): boolean {
 
 function classify(error: unknown): 'session' | 'access' | 'transient' | 'terminal' {
   if (error instanceof DocumentInaccessibleError) return 'session'
+  // Preferences wraps request errors to give them its own codes; the request error inside decides
+  if (getStatusCode(error) === undefined && error instanceof Error && error.cause !== undefined) {
+    return classify(error.cause)
+  }
+  // One the SDK raised itself, like an unknown key, fails the same way however often it's retried
+  if (error instanceof PreferenceError) return 'terminal'
   if (getStatusCode(error) === 401) return isMissingAccess(error) ? 'access' : 'session'
 
   return isTransientError(error) ? 'transient' : 'terminal'
@@ -122,7 +129,11 @@ export function retryOnCredentialChange<T>(
  *   backoff for the first {@link OUT_OF_SYNC_RETRY_COUNT} retries
  * - a network error, 408, 429 or 5xx retries after a backoff, and reaches
  *   `setError` after `count` retries
- * - a CORS error or any other 4xx reaches `setError` and isn't retried
+ * - a CORS error, any other 4xx, or a {@link PreferenceError} the SDK raised
+ *   reaches `setError` and isn't retried
+ *
+ * An error wrapping another, like a {@link PreferenceError} for a failed
+ * request, is retried the way the error inside it would be.
  *
  * `setError` receives a failure once, and again only when the kind of failure
  * changes. It receives `undefined` once the read recovers, or when it moves on

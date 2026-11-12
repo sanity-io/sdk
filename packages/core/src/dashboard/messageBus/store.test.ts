@@ -9,8 +9,8 @@ const bus = vi.hoisted(() => ({
   installed: vi.fn(),
 }))
 
-vi.mock('./bus', () => ({
-  connectMessageBus: bus.connect,
+vi.mock('./bus', () => ({connectMessageBus: bus.connect}))
+vi.mock('./environment', () => ({
   isMessageBusInstalled: bus.installed,
   isMessageBusEnvironment: bus.installed,
   isMessageBusHost: () => false,

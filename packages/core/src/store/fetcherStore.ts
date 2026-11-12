@@ -8,8 +8,11 @@ import {
   of,
   Subscription,
   take,
+  tap,
 } from 'rxjs'
 
+import {getClientAuthState} from '../auth/authStore'
+import {retryRead} from '../client/retry'
 import {setCleanupInterval, setCleanupTimeout} from '../utils/setCleanupTimeout'
 import {bindActionGlobally} from './createActionBinder'
 import {type SanityInstance} from './createSanityInstance'
@@ -18,6 +21,7 @@ import {
   type SelectorContext,
   type StateSource,
 } from './createStateSourceAction'
+import {UPSTREAM_CLOSE_DELAY_MS} from './createStoreInstance'
 import {type StoreState} from './createStoreState'
 import {defineStore, type StoreContext} from './defineStore'
 
@@ -102,7 +106,9 @@ export interface FetcherDefinition<TParams extends unknown[], TData> {
   name: string
   /**
    * Fetches the data once. Return an observable that emits the result and
-   * completes.
+   * completes. A failure is retried by the rules of {@link retryRead}: a 401
+   * once the credential changes, a network error or 5xx after a backoff. Each
+   * retry calls the function `fetch` returns again, side effects included.
    */
   fetch: (instance: SanityInstance) => (...params: TParams) => Observable<TData>
   /** Converts params into the cache key that identifies an entry (unique within `name`) */
@@ -157,8 +163,9 @@ export interface Fetcher<TParams extends unknown[], TData> {
   getState: (instance: SanityInstance, ...params: TParams) => StateSource<FetcherSnapshot<TData>>
   /**
    * Resolves with the entry's first available data — the promise a suspending
-   * component throws. Rejects if the fetch fails. When the entry's last fetch
-   * failed, fetches again and settles with that fetch.
+   * component throws. Rejects when the fetch fails, which for a network error
+   * or 5xx is once its retries run out. When the entry's last fetch failed,
+   * fetches again, or takes the answer of the retry still running for it.
    */
   resolveState: (instance: SanityInstance, ...params: TParams) => Promise<TData>
   /**
@@ -298,6 +305,8 @@ interface InflightFetch {
   resolve: (data: unknown) => void
   reject: (error: unknown) => void
   startVersion: number
+  /** Set once an attempt fails, while `retryRead` retries it */
+  failure?: {error: unknown}
 }
 
 // Erased definition type used by the machinery, which is generic-agnostic.
@@ -314,6 +323,7 @@ const inflight = new Map<string, InflightFetch>()
 const lastWrites = new Map<string, Promise<void>>()
 const gcTimers = new Map<string, ReturnType<typeof setTimeout>>()
 const intervalTimers = new Map<string, ReturnType<typeof setInterval>>()
+const stopTimers = new Map<string, ReturnType<typeof setTimeout>>()
 const snapshotCache = new WeakMap<CacheEntry, FetcherSnapshot<unknown>>()
 
 const PENDING_SNAPSHOT: FetcherSnapshot<never> = {
@@ -406,9 +416,11 @@ const cacheStore = defineStore<CacheState>({
     // down every outstanding timer and fetch so nothing leaks between lifetimes.
     for (const timer of gcTimers.values()) clearTimeout(timer)
     for (const timer of intervalTimers.values()) clearInterval(timer)
+    for (const timer of stopTimers.values()) clearTimeout(timer)
     for (const fetch of inflight.values()) fetch.sub.unsubscribe()
     gcTimers.clear()
     intervalTimers.clear()
+    stopTimers.clear()
     inflight.clear()
     lastWrites.clear()
   },
@@ -536,7 +548,6 @@ const startFetch = (
     ...(prev ?? baseEntry(def, key, instance, params)),
     isFetching: true,
   }))
-  const startVersion = state.get().entries[key]?.version ?? 0
 
   let resolve!: (data: unknown) => void
   let reject!: (error: unknown) => void
@@ -552,28 +563,47 @@ const startFetch = (
   // Register before subscribing so a synchronous observable (whose `next`/
   // `complete` fire during `.subscribe()`) sees — and can clean up — its own record.
   const sub = new Subscription()
-  inflight.set(key, {sub, promise, resolve, reject, startVersion})
+  const record: InflightFetch = {sub, promise, resolve, reject, startVersion: 0}
+  inflight.set(key, record)
 
   sub.add(
-    def
-      .fetch(instance)(...params)
-      .pipe(take(1))
+    // Each attempt notes the version it starts from: a retry that starts after a write isn't stale
+    defer(() => {
+      record.startVersion = state.get().entries[key]?.version ?? 0
+      return def.fetch(instance)(...params)
+    })
+      .pipe(
+        take(1),
+        tap({error: (error: unknown) => (record.failure = {error})}),
+        retryRead(getClientAuthState(instance), (error) => {
+          // A recovery clears the error with the answer it brings
+          if (error === undefined) return
+          updateEntry(state, key, 'fetchError', (prev) => {
+            if (!prev) return prev
+            // Keep rendering data if we have it (background failure); otherwise surface as error.
+            if (prev.status === 'success') return {...prev, error, isFetching: false}
+            return {...prev, status: 'error', error, isFetching: false}
+          })
+          reject(error)
+        }),
+      )
       .subscribe({
         next: (data) => {
           const current = state.get().entries[key]
           // An entry still without data, like one whose only change was refused mid-fetch, has
           // nothing newer than this result, so it takes it
-          if (current && current.version !== startVersion && current.data !== undefined) {
+          if (current && current.version !== record.startVersion && current.data !== undefined) {
             // A write (optimistic mutation) landed mid-fetch: discard the now-stale
             // server result and keep the written data. Tear the fetch down here —
             // a non-completing source won't fire `complete` to clear `isFetching`.
             inflight.delete(key)
-            if (current.isFetching) {
+            // An error an earlier attempt showed is out of date now this one has been answered
+            if (current.isFetching || current.error !== undefined) {
               updateEntry(
                 state,
                 key,
                 'fetchDiscard',
-                (prev) => prev && {...prev, isFetching: false},
+                (prev) => prev && {...prev, isFetching: false, error: undefined},
               )
             }
             resolve(current.data)
@@ -615,16 +645,6 @@ const startFetch = (
             tags: computeTags(def, data, params),
           }))
           resolve(data)
-        },
-        error: (error) => {
-          updateEntry(state, key, 'fetchError', (prev) => {
-            if (!prev) return prev
-            // Keep rendering data if we have it (background failure); otherwise surface as error.
-            if (prev.status === 'success') return {...prev, error, isFetching: false}
-            return {...prev, status: 'error', error, isFetching: false}
-          })
-          inflight.delete(key)
-          reject(error)
         },
         complete: () => {
           inflight.delete(key)
@@ -692,6 +712,29 @@ const scheduleGc = (state: StoreState<CacheState>, def: AnyDefinition, key: stri
   gcTimers.set(key, timer)
 }
 
+/**
+ * A second after an entry stops being watched, stops retrying its failed fetch, as the query
+ * store does, and marks the entry stale so the next subscriber fetches again.
+ */
+const stopUnwatchedRetry = (state: StoreState<CacheState>, key: string): void => {
+  clearTimeout(stopTimers.get(key))
+  const timer = setCleanupTimeout(() => {
+    stopTimers.delete(key)
+    const fetch = inflight.get(key)
+    if (!fetch?.failure || (state.get().entries[key]?.subscriptions ?? 0) > 0) return
+    fetch.sub.unsubscribe()
+    inflight.delete(key)
+    fetch.reject(fetch.failure.error)
+    updateEntry(
+      state,
+      key,
+      'stopRetry',
+      (prev) => prev && {...prev, isFetching: false, forcedStale: true},
+    )
+  }, UPSTREAM_CLOSE_DELAY_MS)
+  stopTimers.set(key, timer)
+}
+
 const cancelGc = (key: string): void => {
   const timer = gcTimers.get(key)
   if (!timer) return
@@ -748,6 +791,8 @@ export function defineFetcher<TParams extends unknown[], TData>(
       onSubscribe: ({state, instance}: StoreContext<CacheState>, ...params: TParams) => {
         const key = entryKey(def.name, def.getKey(instance, ...params))
         cancelGc(key)
+        clearTimeout(stopTimers.get(key))
+        stopTimers.delete(key)
 
         updateEntry(state, key, 'subscribe', (prev) => ({
           ...(prev ?? baseEntry(def, key, instance, params)),
@@ -781,6 +826,7 @@ export function defineFetcher<TParams extends unknown[], TData>(
             intervalTimers.delete(key)
           }
           scheduleGc(state, def, key)
+          stopUnwatchedRetry(state, key)
         }
       },
     }),
@@ -791,13 +837,14 @@ export function defineFetcher<TParams extends unknown[], TData>(
     // Async so a key that can't be built rejects, like a failed fetch, instead of throwing
     async ({state, instance}: StoreContext<CacheState>, ...params: TParams): Promise<TData> => {
       const key = entryKey(def.name, def.getKey(instance, ...params))
-      // An error left by an earlier fetch is not an answer: fetch again, keeping
-      // garbage collection off the entry until that fetch settles
+      // An error left by an earlier fetch is not an answer: fetch again, or join the retry still
+      // running for it as the query store does, keeping garbage collection off the entry meanwhile
       if (state.get().entries[key]?.status === 'error') {
         cancelGc(key)
-        return (startFetch(state, def, instance, params, false) as Promise<TData>).finally(() =>
-          scheduleGc(state, def, key),
-        )
+        return (startFetch(state, def, instance, params, false) as Promise<TData>).finally(() => {
+          scheduleGc(state, def, key)
+          stopUnwatchedRetry(state, key)
+        })
       }
       return firstValueFrom(
         getState(instance, ...params).observable.pipe(
@@ -840,7 +887,7 @@ export function defineFetcher<TParams extends unknown[], TData>(
       const key = entryKey(def.name, def.getKey(instance, ...params))
       const promise = startFetch(state, def, instance, params, true) as Promise<TData>
       scheduleGc(state, def, key)
-      return promise
+      return promise.finally(() => stopUnwatchedRetry(state, key))
     },
   )
 

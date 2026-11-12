@@ -1,7 +1,11 @@
+import {ClientError, ServerError} from '@sanity/client'
 import {concatWith, NEVER, type Observable, of, startWith, Subject, throwError} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, onTestFinished, vi} from 'vitest'
 
+import {setAuthToken} from '../auth/authStore'
+import {OUT_OF_SYNC_RETRY_MAX_DELAY} from '../document/documentConstants'
 import {createSanityInstance, type SanityInstance} from './createSanityInstance'
+import {UPSTREAM_CLOSE_DELAY_MS} from './createStoreInstance'
 import {defineFetcher, defineMutation, type Fetcher} from './fetcherStore'
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0))
@@ -9,6 +13,13 @@ const flush = () => new Promise((resolve) => setTimeout(resolve, 0))
 // Answers each fetch with the next result, and fails a fetch past the last one
 const answerInTurn = <T>(...results: Observable<T>[]) =>
   vi.fn(() => results.shift() ?? throwError(() => new Error('Fetched once too often')))
+
+// A failure retrying can't fix, so the fetch settles on it straight away
+const refusal = (message: string) =>
+  throwError(
+    () => new ClientError({statusCode: 400, headers: {}, body: {error: 'Bad Request', message}}),
+  )
+const unavailable = new ServerError({statusCode: 503, headers: {}, body: {}})
 
 // Shows `value` the way a mutation still waiting on the server does
 const writePending = <T>(instance: SanityInstance, fetcher: Fetcher<[], T>, value: T) =>
@@ -134,7 +145,7 @@ describe('fetcherStore', () => {
     const fetcher = defineFetcher<[], string>({
       name: 'errors',
       getKey: () => 'k',
-      fetch: () => () => (attempt++ === 0 ? throwError(() => new Error('boom')) : of('recovered')),
+      fetch: () => () => (attempt++ === 0 ? refusal('boom') : of('recovered')),
     })
 
     await expect(fetcher.resolveState(instance)).rejects.toThrow('boom')
@@ -148,20 +159,72 @@ describe('fetcherStore', () => {
     })
   })
 
-  it('resolveState fetches again after a failed fetch and settles with that fetch', async () => {
+  it('retries a fetch that failed with a 5xx after a backoff, without showing the error', async () => {
+    vi.useFakeTimers()
     const fetchSpy = answerInTurn(
-      throwError(() => new Error('offline')),
-      throwError(() => new Error('still offline')),
+      throwError(() => unavailable),
       of('back'),
     )
+    const fetcher = defineFetcher<[], string>({
+      name: 'transient',
+      getKey: () => 'k',
+      fetch: () => fetchSpy,
+    })
+    const source = fetcher.getState(instance)
+    onTestFinished(source.subscribe())
+
+    await vi.advanceTimersByTimeAsync(0)
+    expect(fetchSpy).toHaveBeenCalledTimes(1)
+    expect(source.getCurrent()).toMatchObject({
+      status: 'pending',
+      error: undefined,
+      isFetching: true,
+    })
+
+    await vi.advanceTimersByTimeAsync(OUT_OF_SYNC_RETRY_MAX_DELAY)
+    expect(source.getCurrent()).toMatchObject({status: 'success', data: 'back', error: undefined})
+  })
+
+  it('stops retrying a failed fetch a second after its last subscriber leaves, and fetches again on the next subscribe', async () => {
+    vi.useFakeTimers()
+    const fetchSpy = answerInTurn(
+      of('first'),
+      throwError(() => unavailable),
+      throwError(() => unavailable),
+      of('back'),
+    )
+    const fetcher = defineFetcher<[], string>({
+      name: 'transient-unwatched',
+      getKey: () => 'k',
+      fetch: () => fetchSpy,
+    })
+    const unsubscribe = fetcher.getState(instance).subscribe()
+    await vi.advanceTimersByTimeAsync(0)
+    const refetched = fetcher.refetch(instance).catch((error: unknown) => error)
+    unsubscribe()
+
+    // The first retry, half a second in, still runs inside the second the fetch is kept for
+    await vi.advanceTimersByTimeAsync(UPSTREAM_CLOSE_DELAY_MS)
+    expect(await refetched).toBe(unavailable)
+    await vi.advanceTimersByTimeAsync(OUT_OF_SYNC_RETRY_MAX_DELAY)
+    expect(fetchSpy).toHaveBeenCalledTimes(3)
+
+    const source = fetcher.getState(instance)
+    onTestFinished(source.subscribe())
+    await vi.advanceTimersByTimeAsync(0)
+    expect(source.getCurrent()).toMatchObject({data: 'back', error: undefined})
+  })
+
+  it('resolveState fetches again after a failed fetch and settles with that fetch', async () => {
+    const fetchSpy = answerInTurn(refusal('refused'), refusal('refused again'), of('back'))
     const fetcher = defineFetcher<[], string>({
       name: 'resolve-after-error',
       getKey: () => 'k',
       fetch: () => fetchSpy,
     })
 
-    await expect(fetcher.resolveState(instance)).rejects.toThrow('offline')
-    await expect(fetcher.resolveState(instance)).rejects.toThrow('still offline')
+    await expect(fetcher.resolveState(instance)).rejects.toThrow('refused')
+    await expect(fetcher.resolveState(instance)).rejects.toThrow('refused again')
     await flush()
     expect(fetchSpy).toHaveBeenCalledTimes(2)
     expect(await fetcher.resolveState(instance)).toBe('back')
@@ -170,17 +233,14 @@ describe('fetcherStore', () => {
 
   it('resolveState calls made together after a failed fetch share one fetch', async () => {
     const answer = new Subject<string>()
-    const fetchSpy = answerInTurn(
-      throwError(() => new Error('offline')),
-      answer,
-    )
+    const fetchSpy = answerInTurn(refusal('refused'), answer)
     const fetcher = defineFetcher<[], string>({
       name: 'resolve-after-error-together',
       getKey: () => 'k',
       fetch: () => fetchSpy,
     })
 
-    await expect(fetcher.resolveState(instance)).rejects.toThrow('offline')
+    await expect(fetcher.resolveState(instance)).rejects.toThrow('refused')
     const retries = Promise.all([
       fetcher.resolveState(instance),
       fetcher.resolveState(instance),
@@ -194,10 +254,7 @@ describe('fetcherStore', () => {
 
   it('resolveState settles a retry still in flight when the failed entry is due to be collected, and collects it after', async () => {
     const answer = new Subject<string>()
-    const fetchSpy = answerInTurn(
-      throwError(() => new Error('offline')),
-      answer,
-    )
+    const fetchSpy = answerInTurn(refusal('refused'), answer)
     const fetcher = defineFetcher<[], string>({
       name: 'resolve-after-error-past-gc',
       gcTime: 20,
@@ -205,7 +262,7 @@ describe('fetcherStore', () => {
       fetch: () => fetchSpy,
     })
 
-    await expect(fetcher.resolveState(instance)).rejects.toThrow('offline')
+    await expect(fetcher.resolveState(instance)).rejects.toThrow('refused')
     const retry = fetcher.resolveState(instance).catch((error: unknown) => error)
     await new Promise((resolve) => setTimeout(resolve, 40))
     answer.next('back')
@@ -662,5 +719,278 @@ describe('fetcherStore', () => {
       timeout: 500,
     })
     unsub()
+  })
+
+  describe('when the token changes', () => {
+    const sessionExpired = new ClientError({
+      statusCode: 401,
+      headers: {},
+      body: {error: 'Unauthorized', message: 'Session not found'},
+    })
+    const notFound = new ClientError({statusCode: 404, headers: {}, body: {error: 'Not Found'}})
+
+    beforeEach(() => {
+      instance.dispose()
+      // Answers the current user's read, which a new token starts. Otherwise it goes to the real
+      // API, fails, and changes the credential a second time
+      const clientFactory = vi.fn().mockReturnValue({
+        observable: {request: vi.fn().mockReturnValue(of({id: 'user'}))},
+      })
+      instance = createSanityInstance({projectId: 'p', dataset: 'd', auth: {clientFactory}})
+    })
+
+    it('refetches an entry whose background fetch failed with a 401, and clears its error', async () => {
+      const fetchSpy = answerInTurn(
+        of('first'),
+        throwError(() => sessionExpired),
+        of('second'),
+      )
+      const fetcher = defineFetcher<[], string>({
+        name: 'token-background-401',
+        getKey: () => 'k',
+        fetch: () => fetchSpy,
+      })
+      const source = fetcher.getState(instance)
+      onTestFinished(source.subscribe())
+      await vi.waitFor(() => expect(source.getCurrent().data).toBe('first'))
+      await expect(fetcher.refetch(instance)).rejects.toBe(sessionExpired)
+      expect(source.getCurrent()).toMatchObject({data: 'first', error: sessionExpired})
+
+      setAuthToken(instance, 'renewed-token')
+
+      await vi.waitFor(() =>
+        expect(source.getCurrent()).toMatchObject({data: 'second', error: undefined}),
+      )
+      expect(fetchSpy).toHaveBeenCalledTimes(3)
+    })
+
+    it('refetches when the token changed while the fetch that failed with a 401 was in flight', async () => {
+      const answer = new Subject<string>()
+      const fetchSpy = answerInTurn(of('first'), answer, of('second'))
+      const fetcher = defineFetcher<[], string>({
+        name: 'token-changed-in-flight',
+        getKey: () => 'k',
+        fetch: () => fetchSpy,
+      })
+      const source = fetcher.getState(instance)
+      onTestFinished(source.subscribe())
+      await vi.waitFor(() => expect(source.getCurrent().data).toBe('first'))
+      const refetched = fetcher.refetch(instance)
+
+      setAuthToken(instance, 'renewed-token')
+      answer.error(sessionExpired)
+      await expect(refetched).rejects.toBe(sessionExpired)
+
+      await vi.waitFor(() =>
+        expect(source.getCurrent()).toMatchObject({data: 'second', error: undefined}),
+      )
+      expect(fetchSpy).toHaveBeenCalledTimes(3)
+    })
+
+    it('reads a value shown from the last visit again straight away, not on its next refetch', async () => {
+      const fetchSpy = answerInTurn(
+        throwError(() => sessionExpired),
+        of('fresh'),
+      )
+      const fetcher = defineFetcher<[], string>({
+        name: 'token-from-last-visit',
+        getKey: () => 'k',
+        initialData: () => ({data: 'from last visit', dataUpdatedAt: 0}),
+        refetchInterval: 60_000,
+        fetch: () => fetchSpy,
+      })
+      const source = fetcher.getState(instance)
+      onTestFinished(source.subscribe())
+      await vi.waitFor(() => expect(source.getCurrent().error).toBe(sessionExpired))
+
+      setAuthToken(instance, 'renewed-token')
+
+      await vi.waitFor(() =>
+        expect(source.getCurrent()).toMatchObject({data: 'fresh', error: undefined}),
+      )
+    })
+
+    it('resolveState after a 401 answers with the error instead of fetching with the same token', async () => {
+      const fetchSpy = answerInTurn(
+        throwError(() => sessionExpired),
+        of('recovered'),
+      )
+      const fetcher = defineFetcher<[], string>({
+        name: 'token-resolve-unchanged',
+        getKey: () => 'k',
+        fetch: () => fetchSpy,
+      })
+      onTestFinished(fetcher.getState(instance).subscribe())
+      await vi.waitFor(() => expect(fetcher.getState(instance).getCurrent().status).toBe('error'))
+
+      await expect(fetcher.resolveState(instance)).rejects.toBe(sessionExpired)
+      expect(fetchSpy).toHaveBeenCalledTimes(1)
+    })
+
+    it("shows a retry's answer and clears the error when a change was refused while it waited for the token", async () => {
+      const fetchSpy = answerInTurn(
+        of('first'),
+        throwError(() => sessionExpired),
+        of('second'),
+      )
+      const fetcher = defineFetcher<[], string>({
+        name: 'token-change-while-waiting',
+        getKey: () => 'k',
+        fetch: () => fetchSpy,
+      })
+      const source = fetcher.getState(instance)
+      onTestFinished(source.subscribe())
+      await vi.waitFor(() => expect(source.getCurrent().data).toBe('first'))
+      await expect(fetcher.refetch(instance)).rejects.toBe(sessionExpired)
+      const refused = defineMutation<string, never>({
+        name: 'refused-while-waiting',
+        mutationFn: () => () => throwError(() => new Error('refused')),
+        onMutate: (write, input) => write(fetcher, [], input),
+      })
+      await expect(refused(instance, 'optimistic')).rejects.toThrow('refused')
+
+      setAuthToken(instance, 'renewed-token')
+
+      await vi.waitFor(() =>
+        expect(source.getCurrent()).toMatchObject({data: 'second', error: undefined}),
+      )
+    })
+
+    it('keeps waiting for a new token while the entry is watched, after a resolveState call on it settles', async () => {
+      vi.useFakeTimers()
+      const fetchSpy = answerInTurn(
+        throwError(() => sessionExpired),
+        of('recovered'),
+      )
+      const fetcher = defineFetcher<[], string>({
+        name: 'token-watched-after-resolve',
+        getKey: () => 'k',
+        fetch: () => fetchSpy,
+      })
+      const source = fetcher.getState(instance)
+      onTestFinished(source.subscribe())
+      await vi.advanceTimersByTimeAsync(0)
+      await expect(fetcher.resolveState(instance)).rejects.toBe(sessionExpired)
+      await vi.advanceTimersByTimeAsync(UPSTREAM_CLOSE_DELAY_MS)
+
+      setAuthToken(instance, 'renewed-token')
+      await vi.advanceTimersByTimeAsync(0)
+
+      expect(source.getCurrent()).toMatchObject({status: 'success', data: 'recovered'})
+    })
+
+    it('stops waiting for a new token a second after a resolveState call on a failed entry settles', async () => {
+      vi.useFakeTimers()
+      const fetchSpy = answerInTurn(
+        throwError(() => sessionExpired),
+        throwError(() => sessionExpired),
+        of('recovered'),
+      )
+      const fetcher = defineFetcher<[], string>({
+        name: 'token-resolve-only',
+        getKey: () => 'k',
+        fetch: () => fetchSpy,
+      })
+      await expect(fetcher.resolveState(instance)).rejects.toBe(sessionExpired)
+      await vi.advanceTimersByTimeAsync(UPSTREAM_CLOSE_DELAY_MS)
+      await expect(fetcher.resolveState(instance)).rejects.toBe(sessionExpired)
+      await vi.advanceTimersByTimeAsync(UPSTREAM_CLOSE_DELAY_MS)
+
+      setAuthToken(instance, 'renewed-token')
+      await vi.advanceTimersByTimeAsync(0)
+
+      expect(fetchSpy).toHaveBeenCalledTimes(2)
+    })
+
+    it('keeps a failed fetch waiting for a second after its latest subscriber leaves, not its first', async () => {
+      vi.useFakeTimers()
+      const fetchSpy = answerInTurn(
+        throwError(() => sessionExpired),
+        of('recovered'),
+      )
+      const fetcher = defineFetcher<[], string>({
+        name: 'token-resubscribed',
+        getKey: () => 'k',
+        fetch: () => fetchSpy,
+      })
+      const leaveFirst = fetcher.getState(instance).subscribe()
+      await vi.advanceTimersByTimeAsync(0)
+      leaveFirst()
+      await vi.advanceTimersByTimeAsync(UPSTREAM_CLOSE_DELAY_MS / 2)
+      fetcher.getState(instance).subscribe()()
+      await vi.advanceTimersByTimeAsync(UPSTREAM_CLOSE_DELAY_MS / 2)
+
+      setAuthToken(instance, 'renewed-token')
+      await vi.advanceTimersByTimeAsync(0)
+
+      expect(fetchSpy).toHaveBeenCalledTimes(2)
+    })
+
+    it('leaves an entry whose fetch failed with a 401 alone while the token stays the same', async () => {
+      vi.useFakeTimers()
+      const fetchSpy = answerInTurn(
+        of('first'),
+        throwError(() => sessionExpired),
+        of('recovered'),
+      )
+      const fetcher = defineFetcher<[], string>({
+        name: 'token-unchanged',
+        getKey: () => 'k',
+        fetch: () => fetchSpy,
+      })
+      const source = fetcher.getState(instance)
+      onTestFinished(source.subscribe())
+      await vi.runAllTimersAsync()
+      expect(source.getCurrent().data).toBe('first')
+      await expect(fetcher.refetch(instance)).rejects.toBe(sessionExpired)
+
+      await vi.runAllTimersAsync()
+
+      expect(fetchSpy).toHaveBeenCalledTimes(2)
+      expect(source.getCurrent()).toMatchObject({data: 'first', error: sessionExpired})
+    })
+
+    it('does not refetch entries that succeeded, failed for another reason, or have no subscribers', async () => {
+      vi.useFakeTimers()
+      const healthySpy = answerInTurn(of('ok'), of('ok again'))
+      const notFoundSpy = answerInTurn(
+        throwError(() => notFound),
+        of('found'),
+      )
+      const unsubscribedSpy = answerInTurn(
+        throwError(() => sessionExpired),
+        of('recovered'),
+      )
+      const healthy = defineFetcher<[], string>({
+        name: 'token-healthy',
+        staleTime: 60_000,
+        getKey: () => 'k',
+        fetch: () => healthySpy,
+      })
+      const failedOtherwise = defineFetcher<[], string>({
+        name: 'token-404',
+        getKey: () => 'k',
+        fetch: () => notFoundSpy,
+      })
+      const unsubscribed = defineFetcher<[], string>({
+        name: 'token-unsubscribed',
+        getKey: () => 'k',
+        fetch: () => unsubscribedSpy,
+      })
+
+      onTestFinished(healthy.getState(instance).subscribe())
+      onTestFinished(failedOtherwise.getState(instance).subscribe())
+      const unsubscribe = unsubscribed.getState(instance).subscribe()
+      await vi.runAllTimersAsync()
+      unsubscribe()
+      await vi.advanceTimersByTimeAsync(UPSTREAM_CLOSE_DELAY_MS)
+
+      setAuthToken(instance, 'renewed-token')
+      await vi.runAllTimersAsync()
+
+      expect(healthySpy, 'entry that succeeded').toHaveBeenCalledTimes(1)
+      expect(notFoundSpy, 'entry that failed with a 404').toHaveBeenCalledTimes(1)
+      expect(unsubscribedSpy, 'entry with no subscribers').toHaveBeenCalledTimes(1)
+    })
   })
 })

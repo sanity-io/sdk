@@ -17,6 +17,12 @@ import {
 import {type Application} from '../../applications/applications'
 import {randomId} from '../../utils/ids'
 import {
+  getInstalledMessageBus,
+  MESSAGE_BUS_KEY,
+  MESSAGE_BUS_REGISTRY_KEY,
+  resolveAppId,
+} from './environment'
+import {
   DASHBOARD_TOPIC_MANIFEST,
   type EventTopic,
   type MessageBusTopics,
@@ -316,9 +322,7 @@ export interface MessageBusHost<TTopics = MessageBusTopics> extends MessageBusCo
   readonly connections: Observable<MessageBusClient>
 }
 
-const MESSAGE_BUS_KEY = Symbol.for('sanity.os.bus')
 const MESSAGE_BUS_PROTOCOL_KEY = Symbol.for('sanity.os.protocol')
-const MESSAGE_BUS_REGISTRY_KEY = Symbol.for('sanity.os.registry')
 const MESSAGE_BUS_PENDING_REPLY_KEY = Symbol.for('sanity.os.request')
 const MESSAGE_BUS_EVENT_MESSAGES_KEY = Symbol.for('sanity.os.event-messages')
 
@@ -1315,51 +1319,11 @@ function reset(registry: MessageBusRegistry): void {
   mergeTopicManifest(registry, DASHBOARD_TOPIC_MANIFEST)
 }
 
-declare const __SANITY_APP_ID__: string | undefined
-
 function throwMissingAppId(): never {
   throw new MessageBusError(
     'MISSING_APP_ID',
     'Cannot initialize the message bus without an app ID. Build the application with the Sanity CLI or pass an app ID when connecting.',
   )
-}
-
-const resolveAppId = (appId?: string): string | undefined =>
-  appId ?? (typeof __SANITY_APP_ID__ === 'string' ? __SANITY_APP_ID__ : undefined)
-
-function getInstalledMessageBus(): MessageBus | undefined {
-  const bus = (globalThis as {[MESSAGE_BUS_KEY]?: unknown})[MESSAGE_BUS_KEY]
-  return typeof bus === 'object' && bus !== null && MESSAGE_BUS_REGISTRY_KEY in bus
-    ? (bus as unknown as MessageBus)
-    : undefined
-}
-
-/**
- * Returns whether a message bus registry is installed.
- * @internal
- */
-export function isMessageBusInstalled(): boolean {
-  return getInstalledMessageBus() !== undefined
-}
-
-/**
- * Returns whether this application installed the message bus and hosts the others on it.
- * @internal
- */
-export function isMessageBusHost(): boolean {
-  const installedMessageBus = getInstalledMessageBus()
-  return (
-    !!installedMessageBus &&
-    (installedMessageBus as InternalMessageBus)[MESSAGE_BUS_REGISTRY_KEY].appId === resolveAppId()
-  )
-}
-
-/**
- * Returns whether this application runs on an installed message bus.
- * @internal
- */
-export function isMessageBusEnvironment(): boolean {
-  return isMessageBusInstalled()
 }
 
 /**
@@ -1387,7 +1351,7 @@ export interface ConnectMessageBusOptions {
 export function connectMessageBus(
   options: ConnectMessageBusOptions = {},
 ): MessageBusConnection | undefined {
-  const installedMessageBus = getInstalledMessageBus()
+  const installedMessageBus = getInstalledMessageBus() as MessageBus | undefined
   if (!installedMessageBus) return undefined
 
   const appId = resolveAppId(options.appId)
@@ -1434,7 +1398,7 @@ export interface InstallMessageBusOptions {
  */
 export function installMessageBus(options: InstallMessageBusOptions = {}): MessageBusHost<Topics> {
   const appId = resolveAppId(options.appId) ?? throwMissingAppId()
-  const installedMessageBus = getInstalledMessageBus()
+  const installedMessageBus = getInstalledMessageBus() as MessageBus | undefined
   if (installedMessageBus) {
     const installedAppId = (installedMessageBus as InternalMessageBus)[MESSAGE_BUS_REGISTRY_KEY]
       .appId
