@@ -33,6 +33,7 @@ export {
 export {useApplicationConfigs} from '../hooks/dashboard/useApplicationConfigs'
 export {useApplicationContext} from '../hooks/dashboard/useApplicationContext'
 export {useApplicationForegroundId} from '../hooks/dashboard/useApplicationForegroundId'
+export {useApplicationId} from '../hooks/dashboard/useApplicationId'
 export {
   type DashboardApplication,
   type DashboardApplicationBase,
