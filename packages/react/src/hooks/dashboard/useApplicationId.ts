@@ -1,8 +1,8 @@
-declare const __SANITY_APP_ID__: string | undefined
+import {useMessageBus} from './useMessageBus'
 
 /**
- * Returns the id the Sanity CLI embedded in this application at build time, or `null` when it was
- * built without one.
+ * Returns the id this application connected to the Dashboard message bus with, or `null` outside
+ * a Dashboard. The Sanity CLI embeds it at build time.
  *
  * `sanity deploy` embeds the deployed application id and `sanity dev` the slug, so pass it to
  * {@link useApplication} to read the application's details. An installed application is listed
@@ -25,5 +25,5 @@ declare const __SANITY_APP_ID__: string | undefined
  * @category Dashboard
  */
 export function useApplicationId(): string | null {
-  return typeof __SANITY_APP_ID__ === 'string' ? __SANITY_APP_ID__ : null
+  return useMessageBus()?.appId ?? null
 }
