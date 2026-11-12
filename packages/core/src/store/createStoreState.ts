@@ -60,7 +60,7 @@ export interface StoreState<TState> {
  */
 export function createStoreState<TState>(
   initialState: TState,
-  devToolsOptions?: DevtoolsOptions,
+  devToolsOptions?: Omit<DevtoolsOptions, 'actionCreators'>,
 ): StoreState<TState> {
   // Create underlying Zustand store with devtools integration
   const store = createStore<TState>()(devtools(() => initialState, devToolsOptions))
