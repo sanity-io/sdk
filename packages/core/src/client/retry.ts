@@ -56,12 +56,26 @@ function classify(error: unknown): 'session' | 'access' | 'transient' | 'termina
   return isTransientError(error) ? 'transient' : 'terminal'
 }
 
-type CredentialSource = Pick<StateSource<unknown>, 'getCurrent' | 'observable'>
+type CredentialSource = Pick<StateSource<unknown>, 'getCurrent' | 'observable'> & {
+  /** Marks a credential the API rejected as an invalid session (a 401). */
+  reportRejected?: (credential: unknown) => void
+}
+
+/**
+ * Whether the API rejected the request's credential as an invalid session,
+ * usually an expired token. A 401 for missing project access is not one: a new
+ * token for the same user would be rejected too.
+ */
+function isRejectedSession(error: unknown): boolean {
+  return getStatusCode(error) === 401 && !isMissingAccess(error)
+}
 
 /**
  * Retries `source` after `delay` emits. `delay` also gets an observable that
  * emits once `credential` differs from the one the failed attempt went out
- * with, including a change made while the attempt was in flight.
+ * with, including a change made while the attempt was in flight. A 401 that
+ * rejects the session is reported on `credential` before `delay` runs, so a
+ * Dashboard host can issue a new token.
  *
  * @internal
  */
@@ -83,15 +97,17 @@ export function retryWithCredential<T>(
     }).pipe(
       retry({
         resetOnSuccess: true,
-        delay: (error: unknown, retryCount) =>
-          delay(
+        delay: (error: unknown, retryCount) => {
+          if (isRejectedSession(error)) credential.reportRejected?.(attemptCredential)
+          return delay(
             error,
             retryCount,
             credential.observable.pipe(
               filter((current) => current !== attemptCredential),
               take(1),
             ),
-          ),
+          )
+        },
       }),
     )
   })

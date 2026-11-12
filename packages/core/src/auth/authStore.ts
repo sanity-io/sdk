@@ -9,7 +9,8 @@ import {createSelector} from 'reselect'
 
 import {type AuthConfig, type AuthProvider} from '../config/authConfig'
 import {bindActionGlobally} from '../store/createActionBinder'
-import {createStateSourceAction} from '../store/createStateSourceAction'
+import {type SanityInstance} from '../store/createSanityInstance'
+import {createStateSourceAction, type StateSource} from '../store/createStateSourceAction'
 import {defineStore} from '../store/defineStore'
 import {getStagingApiHost} from '../utils/getStagingApiHost'
 import {getAuthLogger} from './authLogger'
@@ -108,6 +109,12 @@ export interface AuthStoreState {
    * settles, so clients hold requests instead of sending the outgoing token.
    */
   pendingCredential?: Promise<ClientAuth>
+  /**
+   * The token a request was rejected with as an invalid session (a 401). The
+   * session is expired once this matches the logged-in token. `setAuthToken`
+   * clears it so the old token isn't kept in memory.
+   */
+  rejectedToken?: string
 }
 
 // ---------------------------------------------------------------------------
@@ -284,16 +291,57 @@ const selectClientAuth = createSelector(
   (token, authMethod, pending) => pending ?? Promise.resolve(toCredential(token, authMethod)),
 )
 
+const getClientAuthSource = bindActionGlobally(
+  authStore,
+  createStateSourceAction(({state}) => selectClientAuth(state)),
+)
+
+/**
+ * Records that the API rejected `credential` as an invalid session. Only the
+ * current credential counts, so a late 401 for a token that has already been
+ * replaced is ignored.
+ */
+const reportRejectedCredential = bindActionGlobally(
+  authStore,
+  ({state, instance}, credential: unknown) => {
+    const current = state.get()
+    const token = selectToken(current)
+    if (!token || credential !== selectClientAuth(current) || current.rejectedToken === token) {
+      return
+    }
+    getAuthLogger(instance).info('Request rejected the current token as an invalid session')
+    state.set('rejectToken', {rejectedToken: token})
+  },
+)
+
 /**
  * A promise of the current credential, re-emitted when it changes or a
  * refresh starts. Clients in OAuth apps take it as their `auth` option, and
- * reads and writes retry when it changes.
+ * reads and writes retry when it changes. `reportRejected` marks a credential
+ * the API rejected with a 401, see {@link getIsTokenRejectedState}.
  *
  * @internal
  */
-export const getClientAuthState = bindActionGlobally(
+export const getClientAuthState = (
+  instance: SanityInstance,
+): StateSource<Promise<ClientAuth>> & {reportRejected: (credential: unknown) => void} => ({
+  ...getClientAuthSource(instance),
+  reportRejected: (credential) => reportRejectedCredential(instance, credential),
+})
+
+/**
+ * Whether the API rejected the current token as an invalid session, usually
+ * because it expired. Becomes `false` again once a new token is set. In a
+ * Dashboard this is the signal to ask the host for a new token.
+ *
+ * @internal
+ */
+export const getIsTokenRejectedState = bindActionGlobally(
   authStore,
-  createStateSourceAction(({state}) => selectClientAuth(state)),
+  createStateSourceAction(({state}) => {
+    const token = selectToken(state)
+    return !!token && state.rejectedToken === token
+  }),
 )
 
 /**
@@ -356,6 +404,7 @@ export const setAuthToken = bindActionGlobally(
             : undefined
         state.set('setToken', {
           authState: createLoggedInAuthState(token, currentUser, preservedLastTokenRefresh),
+          rejectedToken: undefined,
         })
       }
     } else {
@@ -364,6 +413,7 @@ export const setAuthToken = bindActionGlobally(
         logger.info('Clearing auth token')
         state.set('setToken', {
           authState: {type: AuthStateType.LOGGED_OUT, isDestroyingSession: false},
+          rejectedToken: undefined,
         })
       }
     }

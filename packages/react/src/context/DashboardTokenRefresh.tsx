@@ -8,6 +8,16 @@ import {catchError} from 'rxjs/operators'
 import {useAuthState} from '../hooks/auth/useAuthState'
 import {useSanityInstance} from '../hooks/context/useSanityInstance'
 import {useMessageBus} from '../hooks/dashboard/useMessageBus'
+import {onTokenRejected} from './onTokenRejected'
+
+/** Asks the OS to reissue the token; the new one arrives on the `auth.token` subscription. */
+function requestTokenRefresh(messageBus: MessageBus): void {
+  // Event topics have no replay, so a missing responder or timeout is otherwise dropped silently.
+  messageBus.emit('auth.token.refresh', undefined).catch((error) => {
+    // eslint-disable-next-line no-console
+    console.warn('[sanity/sdk] Dashboard token refresh failed:', error)
+  })
+}
 
 /**
  * Keeps the SDK auth token in sync with the dashboard "OS".
@@ -34,17 +44,19 @@ function DashboardTokenRefresh({
     return () => subscription.unsubscribe()
   }, [instance, messageBus])
 
+  // A query, listener or write rejected the token, usually because it expired
+  useEffect(() => {
+    const subscription = onTokenRejected(instance, () => requestTokenRefresh(messageBus))
+    return () => subscription.unsubscribe()
+  }, [instance, messageBus])
+
   useEffect(() => {
     const has401Error =
       authState.type === AuthStateType.ERROR && (authState.error as ClientError)?.statusCode === 401
 
     if (has401Error && processed401ErrorRef.current !== authState.error) {
       processed401ErrorRef.current = authState.error
-      // Event topics have no replay, so a missing responder or timeout is otherwise dropped silently.
-      messageBus.emit('auth.token.refresh', undefined).catch((error) => {
-        // eslint-disable-next-line no-console
-        console.warn('[sanity/sdk] Dashboard token refresh failed:', error)
-      })
+      requestTokenRefresh(messageBus)
     } else if (!has401Error) {
       processed401ErrorRef.current = null
     }

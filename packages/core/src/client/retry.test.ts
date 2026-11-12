@@ -4,7 +4,7 @@ import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {OUT_OF_SYNC_RETRY_COUNT, OUT_OF_SYNC_RETRY_MAX_DELAY} from '../document/documentConstants'
 import {DocumentInaccessibleError} from '../document/documentInaccessibleError'
-import {retryOnCredentialChange, retryRead} from './retry'
+import {retryOnCredentialChange, retryRead, retryWithCredential} from './retry'
 
 const clientError = (statusCode: number, body: object = {}) =>
   new ClientError({statusCode, headers: {}, body})
@@ -232,4 +232,42 @@ it('retryOnCredentialChange reports each failure, then retries once the credenti
   renew(credentials)
 
   expect(values).toEqual(['ok'])
+})
+
+describe('retryWithCredential', () => {
+  function attemptWith(error: unknown) {
+    const initial = Promise.resolve({token: 'initial'})
+    const credentials = new BehaviorSubject<unknown>(initial)
+    const reportRejected = vi.fn()
+    let attempts = 0
+
+    retryWithCredential(
+      defer(() => (attempts++ === 0 ? throwError(() => error) : of('ok'))),
+      {getCurrent: () => credentials.value, observable: credentials, reportRejected},
+      (_error, _count, credentialChanged) => credentialChanged,
+    ).subscribe()
+
+    return {initial, reportRejected}
+  }
+
+  it.each([
+    ['a 401', clientError(401)],
+    ['a rejected listener', new ConnectionFailedError('rejected', {status: 401})],
+  ])('reports the credential that %s rejected', (_, error) => {
+    const {initial, reportRejected} = attemptWith(error)
+
+    expect(reportRejected).toHaveBeenCalledExactlyOnceWith(initial)
+  })
+
+  it.each([
+    ['a missing membership', clientError(401, {error: {type: 'projectUserNotFoundError'}})],
+    ['a missing grant', clientError(401, {code: 'missing_grant'})],
+    ['an unreadable document', new DocumentInaccessibleError('doc')],
+    ['a 403', clientError(403)],
+    ['a 5xx', new ServerError({statusCode: 503, headers: {}, body: {}})],
+  ])('does not report the credential for %s', (_, error) => {
+    const {reportRejected} = attemptWith(error)
+
+    expect(reportRejected).not.toHaveBeenCalled()
+  })
 })

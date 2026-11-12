@@ -1,5 +1,6 @@
 export {getApplicationOrigin} from '../applications/applicationOrigin'
 export {isStudioConfig} from '../auth/authMode'
+export {getIsTokenRejectedState} from '../auth/authStore'
 export {
   getProjectAccessErrorDetails,
   getSignInMethodLabel,
