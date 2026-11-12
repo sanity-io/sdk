@@ -449,6 +449,25 @@ describe('preferences', () => {
       )
     })
 
+    it('succeeds when a change with a function is tried again after its read failed', async () => {
+      const toggle = () =>
+        updateUserPreference(instance, {
+          userId: 'user-1',
+          key: LAYOUT,
+          value: (current) => (current === 'detail' ? 'compact' : 'detail'),
+        })
+
+      request.mockReturnValueOnce(throwError(() => new TypeError('Failed to fetch')))
+      await expect(toggle()).rejects.toMatchObject({code: 'networkError'})
+
+      request.mockReturnValueOnce(of({data: [stored(LAYOUT, 'detail')]}))
+      request.mockReturnValueOnce(of(stored(LAYOUT, 'compact')))
+      await expect(toggle()).resolves.toMatchObject({value: 'compact'})
+      expect(request).toHaveBeenLastCalledWith(
+        expect.objectContaining({method: 'PUT', body: {value: 'compact'}}),
+      )
+    })
+
     it('removes the value when a function returns undefined', async () => {
       request.mockReturnValueOnce(of({data: [stored(LAYOUT, 'compact')]}))
       await userPreference.resolveState(instance, 'user-1', LAYOUT)

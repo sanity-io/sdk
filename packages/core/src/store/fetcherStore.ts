@@ -157,7 +157,8 @@ export interface Fetcher<TParams extends unknown[], TData> {
   getState: (instance: SanityInstance, ...params: TParams) => StateSource<FetcherSnapshot<TData>>
   /**
    * Resolves with the entry's first available data — the promise a suspending
-   * component throws. Rejects if the initial fetch fails.
+   * component throws. Rejects if the fetch fails. When the entry's last fetch
+   * failed, fetches again and settles with that fetch.
    */
   resolveState: (instance: SanityInstance, ...params: TParams) => Promise<TData>
   /**
@@ -668,8 +669,9 @@ const startInterval = (
  * now) its in-flight fetch is torn down and the entry removed. No-op if the
  * entry still has subscribers or a GC timer is already pending. Called from
  * every path that can leave an entry at zero subscribers — the unsubscribe
- * teardown, and the imperative `refetch` and mutation writes that create entries
- * without ever subscribing. A later subscribe cancels the pending timer.
+ * teardown, and the imperative `refetch`, `resolveState` retry and mutation writes
+ * that fetch or create entries without ever subscribing. A later subscribe cancels
+ * the pending timer.
  */
 const scheduleGc = (state: StoreState<CacheState>, def: AnyDefinition, key: string): void => {
   if (gcTimers.has(key)) return
@@ -685,6 +687,13 @@ const scheduleGc = (state: StoreState<CacheState>, def: AnyDefinition, key: stri
     updateEntry(state, key, 'gc', () => undefined)
   }, def.gcTime ?? DEFAULT_GC_TIME)
   gcTimers.set(key, timer)
+}
+
+const cancelGc = (key: string): void => {
+  const timer = gcTimers.get(key)
+  if (!timer) return
+  clearTimeout(timer)
+  gcTimers.delete(key)
 }
 
 /** Shared across all fetchers: scans the whole cache and revalidates entries carrying any matched tag. */
@@ -735,12 +744,7 @@ export function defineFetcher<TParams extends unknown[], TData>(
       },
       onSubscribe: ({state, instance}: StoreContext<CacheState>, ...params: TParams) => {
         const key = entryKey(def.name, def.getKey(instance, ...params))
-
-        const pendingGc = gcTimers.get(key)
-        if (pendingGc) {
-          clearTimeout(pendingGc)
-          gcTimers.delete(key)
-        }
+        cancelGc(key)
 
         updateEntry(state, key, 'subscribe', (prev) => ({
           ...(prev ?? baseEntry(def, key, instance, params)),
@@ -779,19 +783,33 @@ export function defineFetcher<TParams extends unknown[], TData>(
     }),
   )
 
-  const resolveState = (instance: SanityInstance, ...params: TParams): Promise<TData> =>
-    firstValueFrom(
-      getState(instance, ...params).observable.pipe(
-        filter(
-          (snapshot): snapshot is Exclude<FetcherSnapshot<TData>, {status: 'pending'}> =>
-            snapshot.status !== 'pending',
+  const resolveState = bindActionGlobally(
+    cacheStore,
+    // Async so a key that can't be built rejects, like a failed fetch, instead of throwing
+    async ({state, instance}: StoreContext<CacheState>, ...params: TParams): Promise<TData> => {
+      const key = entryKey(def.name, def.getKey(instance, ...params))
+      // An error left by an earlier fetch is not an answer: fetch again, keeping
+      // garbage collection off the entry until that fetch settles
+      if (state.get().entries[key]?.status === 'error') {
+        cancelGc(key)
+        return (startFetch(state, def, instance, params, false) as Promise<TData>).finally(() =>
+          scheduleGc(state, def, key),
+        )
+      }
+      return firstValueFrom(
+        getState(instance, ...params).observable.pipe(
+          filter(
+            (snapshot): snapshot is Exclude<FetcherSnapshot<TData>, {status: 'pending'}> =>
+              snapshot.status !== 'pending',
+          ),
+          map((snapshot) => {
+            if (snapshot.status === 'error') throw snapshot.error
+            return snapshot.data
+          }),
         ),
-        map((snapshot) => {
-          if (snapshot.status === 'error') throw snapshot.error
-          return snapshot.data
-        }),
-      ),
-    )
+      )
+    },
+  )
 
   const invalidate = bindActionGlobally(
     cacheStore,
