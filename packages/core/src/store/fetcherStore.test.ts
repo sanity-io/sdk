@@ -2,7 +2,7 @@ import {concatWith, NEVER, type Observable, of, startWith, Subject, throwError} 
 import {afterEach, beforeEach, describe, expect, it, onTestFinished, vi} from 'vitest'
 
 import {createSanityInstance, type SanityInstance} from './createSanityInstance'
-import {defineFetcher, defineMutation, type Fetcher} from './fetcherStore'
+import {defineFetcher, defineMutation, type Fetcher, resetFetchErrors} from './fetcherStore'
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0))
 
@@ -213,6 +213,35 @@ describe('fetcherStore', () => {
     expect(await retry).toBe('back')
     await vi.waitFor(() => expect(fetcher.getState(instance).getCurrent().status).toBe('pending'))
   }, 500)
+
+  it('resetFetchErrors keeps cached data', async () => {
+    const fetcher = defineFetcher<[], string>({
+      name: 'reset-keeps-data',
+      getKey: () => 'k',
+      fetch: () => () => of('data'),
+    })
+
+    await fetcher.resolveState(instance)
+    resetFetchErrors(instance)
+
+    expect(fetcher.getState(instance).getCurrent().status).toBe('success')
+  })
+
+  it('resetFetchErrors keeps a failed entry that has a subscriber', async () => {
+    const fetcher = defineFetcher<[], string>({
+      name: 'reset-keeps-subscribed',
+      getKey: () => 'k',
+      fetch: () => () => throwError(() => new Error('offline')),
+    })
+    const state = fetcher.getState(instance)
+    const unsubscribe = state.subscribe()
+    await flush()
+
+    resetFetchErrors(instance)
+
+    expect(state.getCurrent().status).toBe('error')
+    unsubscribe()
+  })
 
   it('pre-seeds an entry via initialData without fetching when the seed is fresh', async () => {
     const fetchSpy = vi.fn(() => of('fetched'))

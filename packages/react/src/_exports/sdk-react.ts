@@ -75,6 +75,7 @@ export {
 } from '../hooks/documents/useDocuments'
 export {type FetcherHookResult} from '../hooks/helpers/createFetcherHook'
 export {type MutationHookResult} from '../hooks/helpers/createMutationHook'
+export {useResetFetchErrors} from '../hooks/helpers/useResetFetchErrors'
 export {useInstallation} from '../hooks/installations/useInstallation'
 export {useInstallations} from '../hooks/installations/useInstallations'
 export {useOrganization} from '../hooks/organizations/useOrganization'

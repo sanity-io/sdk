@@ -726,6 +726,25 @@ const invalidateByTags = bindActionGlobally(
 )
 
 /**
+ * Removes failed entries that nothing subscribes to or fetches, so their next read fetches again.
+ *
+ * @internal
+ */
+export const resetFetchErrors = bindActionGlobally(
+  cacheStore,
+  ({state}: StoreContext<CacheState>): void => {
+    for (const [key, entry] of Object.entries(state.get().entries)) {
+      const failed = entry.status === 'error'
+      const inUse = entry.subscriptions > 0 || inflight.has(key)
+      if (!failed || inUse) continue
+
+      cancelGc(key)
+      updateEntry(state, key, 'resetFetchErrors', () => undefined)
+    }
+  },
+)
+
+/**
  * Registers a fetcher definition against the shared cache and returns its typed
  * handle.
  *
