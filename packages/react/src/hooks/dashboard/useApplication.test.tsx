@@ -56,4 +56,9 @@ describe('useApplication', () => {
     rerender({applicationId: 'missing'})
     expect(result.current).toBeNull()
   })
+
+  it('returns an application by slug', () => {
+    const {result} = renderHook(() => useApplication(application.slug))
+    expect(result.current?.id).toBe(application.id)
+  })
 })

@@ -1,9 +1,10 @@
 import {type DashboardApplication, useApplications} from './useApplications'
 
 /**
- * Returns a dashboard application by id, or `null` when it is unavailable.
+ * Returns a dashboard application by id or slug, or `null` when it is unavailable.
  *
- * Suspends until the dashboard publishes its application list.
+ * Suspends until the dashboard publishes its application list. A slug is unique only within an
+ * organization, so when several entries match, the first listed wins.
  *
  * @example
  * ```tsx
@@ -16,8 +17,10 @@ import {type DashboardApplication, useApplications} from './useApplications'
  * @public
  * @category Dashboard
  */
-export function useApplication(
-  applicationId: DashboardApplication['id'],
-): DashboardApplication | null {
-  return useApplications().find(({id}) => id === applicationId) ?? null
+export function useApplication(applicationIdOrSlug: string): DashboardApplication | null {
+  return (
+    useApplications().find(
+      ({id, slug}) => id === applicationIdOrSlug || slug === applicationIdOrSlug,
+    ) ?? null
+  )
 }
