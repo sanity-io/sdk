@@ -3,9 +3,8 @@ import {type DashboardApplication, useApplications} from './useApplications'
 /**
  * Returns a dashboard application by id or slug, or `null` when it is unavailable.
  *
- * Suspends until the dashboard publishes its application list. An id match wins over a slug match.
- * A slug is unique only within an organization, so when several entries share it, the first listed
- * wins.
+ * Suspends until the dashboard publishes its application list. A slug is unique only within an
+ * organization, so when several entries match, the first listed wins.
  *
  * @example
  * ```tsx
@@ -19,11 +18,9 @@ import {type DashboardApplication, useApplications} from './useApplications'
  * @category Dashboard
  */
 export function useApplication(applicationIdOrSlug: string): DashboardApplication | null {
-  const applications = useApplications()
-
   return (
-    applications.find(({id}) => id === applicationIdOrSlug) ??
-    applications.find(({slug}) => slug === applicationIdOrSlug) ??
-    null
+    useApplications().find(
+      ({id, slug}) => id === applicationIdOrSlug || slug === applicationIdOrSlug,
+    ) ?? null
   )
 }

@@ -61,16 +61,4 @@ describe('useApplication', () => {
     const {result} = renderHook(() => useApplication(application.slug))
     expect(result.current?.id).toBe(application.id)
   })
-
-  it("returns the application with a matching id when another application's slug equals that id", () => {
-    host.connections.subscribe((client) =>
-      client.emit('applications.list', {
-        ok: true,
-        value: [{...application, id: 'application-2', slug: application.id}, application],
-      } as ValueOf<'applications.list'>),
-    )
-
-    const {result} = renderHook(() => useApplication(application.id))
-    expect(result.current?.id).toBe(application.id)
-  })
 })
