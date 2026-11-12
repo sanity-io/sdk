@@ -10,6 +10,7 @@ import {type StateSource} from '../store/createStateSourceAction'
 import {defineMutation} from '../store/fetcherStore'
 import {
   type FavoriteDocumentContext,
+  favoriteScope,
   type FavoriteStatusResponse,
   type SetFavoriteInput,
   toFavoriteDocument,
@@ -99,6 +100,7 @@ export function resolveBusFavorite(instance: SanityInstance): Promise<void> {
  */
 export const setBusFavorite = defineMutation<SetFavoriteInput, FavoriteStatusResponse>({
   name: 'setBusFavorite',
+  scope: favoriteScope,
   mutationFn:
     (instance) =>
     ({isFavorited, ...context}) =>

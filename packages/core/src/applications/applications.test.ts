@@ -1,6 +1,6 @@
 import {type SanityClient} from '@sanity/client'
-import {of} from 'rxjs'
-import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
+import {of, Subject} from 'rxjs'
+import {afterEach, beforeEach, describe, expect, it, onTestFinished, vi} from 'vitest'
 
 import {getClientState} from '../client/clientStore'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
@@ -143,5 +143,24 @@ describe('applications', () => {
       method: 'DELETE',
       tag: 'applications.delete',
     })
+  })
+
+  it('sends a delete made right after an update once the update is answered, so the application stays deleted', async () => {
+    vi.useFakeTimers()
+    onTestFinished(() => {
+      vi.useRealTimers()
+    })
+    const update = new Subject<unknown>()
+    request.mockReturnValueOnce(update).mockReturnValueOnce(of({deleted: true}))
+
+    const updating = updateApplication(instance, {applicationId: 'app1', title: 'Renamed'})
+    const deleting = deleteApplication(instance, {applicationId: 'app1'})
+    // A delete that's only delayed, not queued, would have gone by now
+    await vi.runAllTimersAsync()
+    expect(request).toHaveBeenCalledOnce()
+
+    update.next({id: 'app1'})
+    await Promise.all([updating, deleting])
+    expect(request).toHaveBeenLastCalledWith(expect.objectContaining({method: 'DELETE'}))
   })
 })

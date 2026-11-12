@@ -230,6 +230,24 @@ describe('setBusFavorite', () => {
     )
   })
 
+  it('sends an unfavorite made right after a favorite once the host has replied to the favorite', async () => {
+    vi.useFakeTimers()
+    const updates = captureUpdates()
+
+    const favoriting = setBusFavorite(instance, {...context, isFavorited: true})
+    const unfavoriting = setBusFavorite(instance, {...context, isFavorited: false})
+    // An update that's only delayed, not queued, would have gone before the first one times out
+    await vi.advanceTimersByTimeAsync(FETCH_TIMEOUT_DEFAULT - 1)
+    expect(updates.map((message) => message.payload.favorited)).toEqual([true])
+
+    updates[0].reply()
+    await vi.waitFor(() =>
+      expect(updates.map((message) => message.payload.favorited)).toEqual([true, false]),
+    )
+    updates[1].reply()
+    await Promise.all([favoriting, unfavoriting])
+  })
+
   it('waits as long as the comlink write before timing out', async () => {
     vi.useFakeTimers()
     // A host that accepts the update but never replies.

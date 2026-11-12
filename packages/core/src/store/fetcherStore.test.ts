@@ -1,5 +1,5 @@
 import {concatWith, NEVER, type Observable, of, startWith, Subject, throwError} from 'rxjs'
-import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
+import {afterEach, beforeEach, describe, expect, it, onTestFinished, vi} from 'vitest'
 
 import {createSanityInstance, type SanityInstance} from './createSanityInstance'
 import {defineFetcher, defineMutation, type Fetcher} from './fetcherStore'
@@ -272,6 +272,7 @@ describe('fetcherStore', () => {
     let list: Fetcher<[], string[]>
     let answers: Map<string, Subject<string[]>>
     let add: (instance: SanityInstance, item: string) => Promise<unknown>
+    let replaceOnAnswer: (instance: SanityInstance, item: string) => Promise<unknown>
 
     beforeEach(() => {
       server = []
@@ -285,12 +286,24 @@ describe('fetcherStore', () => {
       })
       add = defineMutation<string, string[]>({
         name: 'overlap-add',
+        scope: () => 'overlap-list',
         mutationFn: () => (item) => {
           const answer = new Subject<string[]>()
           answers.set(item, answer)
           return answer
         },
         onMutate: (write, item) => write(list, [], (current) => [...(current ?? []), item]),
+        onSuccess: (write, stored) => write(list, [], stored),
+      })
+      // Changes the list too, but only shows it once the API answers
+      replaceOnAnswer = defineMutation<string, string[]>({
+        name: 'overlap-replace-on-answer',
+        scope: () => 'overlap-list',
+        mutationFn: () => (item) => {
+          const answer = new Subject<string[]>()
+          answers.set(item, answer)
+          return answer
+        },
         onSuccess: (write, stored) => write(list, [], stored),
       })
     })
@@ -351,11 +364,12 @@ describe('fetcherStore', () => {
       expect(shown()).toEqual(['A', 'B'])
     })
 
-    it('sends a change once the earlier change to the same entry is answered, so the later one wins', async () => {
+    it('sends a change once the earlier change in its scope is answered, so the later one wins', async () => {
       const sent: string[] = []
       const replies = new Map<string, Subject<string[]>>()
       const replace = defineMutation<string, string[]>({
         name: 'overlap-replace-queued',
+        scope: () => 'overlap-list',
         mutationFn: () => (item) => {
           sent.push(item)
           const reply = new Subject<string[]>()
@@ -382,7 +396,7 @@ describe('fetcherStore', () => {
       expect(shown()).toEqual(['Y'])
     })
 
-    it('sends changes to different entries straight away', async () => {
+    it('sends changes in different scopes straight away', async () => {
       const sent: number[] = []
       const item = defineFetcher<[number], string>({
         name: 'overlap-item',
@@ -391,6 +405,7 @@ describe('fetcherStore', () => {
       })
       const rename = defineMutation<number, void>({
         name: 'overlap-rename',
+        scope: (id) => `overlap-rename:${id}`,
         mutationFn: () => (id) => {
           sent.push(id)
           return NEVER
@@ -402,6 +417,38 @@ describe('fetcherStore', () => {
       void rename(instance, 2)
 
       expect(sent).toEqual([1, 2])
+    })
+
+    it("holds back a change that doesn't show at once until the earlier change that does is answered", async () => {
+      vi.useFakeTimers()
+      // Watched, so the list isn't collected while the timers run
+      onTestFinished(list.getState(instance).subscribe())
+      await list.resolveState(instance)
+
+      void add(instance, 'A')
+      void replaceOnAnswer(instance, 'B')
+      // A change that's only delayed, not queued, would have gone by now
+      await vi.runAllTimersAsync()
+      expect([...answers.keys()]).toEqual(['A'])
+
+      answers.get('A')!.next(['A'])
+      await vi.waitFor(() => expect([...answers.keys()]).toEqual(['A', 'B']))
+    })
+
+    it("holds back a change that shows at once until the earlier change that doesn't is answered", async () => {
+      vi.useFakeTimers()
+      // Watched, so the list isn't collected while the timers run
+      onTestFinished(list.getState(instance).subscribe())
+      await list.resolveState(instance)
+
+      void replaceOnAnswer(instance, 'A')
+      void add(instance, 'B')
+      // A change that's only delayed, not queued, would have gone by now
+      await vi.runAllTimersAsync()
+      expect([...answers.keys()]).toEqual(['A'])
+
+      answers.get('A')!.next(['A'])
+      await vi.waitFor(() => expect([...answers.keys()]).toEqual(['A', 'B']))
     })
 
     it('takes a change back when its request throws before it is sent', async () => {
@@ -455,6 +502,7 @@ describe('fetcherStore', () => {
       const saves = new Map<string, Subject<void>>()
       const save = defineMutation<string, void>({
         name: 'overlap-save',
+        scope: () => 'overlap-list',
         mutationFn: () => (item) => {
           const saved = new Subject<void>()
           saves.set(item, saved)
@@ -484,6 +532,19 @@ describe('fetcherStore', () => {
       await expect(added).rejects.toThrow('refused')
 
       expect(list.getState(instance).getCurrent().status).toBe('pending')
+    })
+
+    it("shows a first read's answer when a change made while it was in flight is refused", async () => {
+      slowRead = new Subject()
+      onTestFinished(list.getState(instance).subscribe())
+      await vi.waitFor(() => expect(slowRead!.observed).toBe(true))
+
+      const added = add(instance, 'A')
+      answers.get('A')!.error(new Error('refused'))
+      await expect(added).rejects.toThrow('refused')
+
+      slowRead.next(['from-server'])
+      expect(shown()).toEqual(['from-server'])
     })
   })
 

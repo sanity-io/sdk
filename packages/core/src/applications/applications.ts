@@ -306,6 +306,11 @@ export const application = defineFetcher<
   tags: (data) => [{type: 'application', id: data.id}],
 })
 
+// An application's updates and deletes are sent one at a time, so the server keeps the last one made
+function applicationScope({applicationId}: {applicationId: string}) {
+  return `application:${applicationId}`
+}
+
 /**
  * Confirmation returned by the API's soft-delete endpoints.
  *
@@ -344,6 +349,7 @@ export type UpdateApplicationInput = {applicationId: string} & Partial<
  */
 export const updateApplication = defineMutation<UpdateApplicationInput, Application>({
   name: 'updateApplication',
+  scope: applicationScope,
   mutationFn:
     (instance) =>
     ({applicationId, ...body}) =>
@@ -381,6 +387,7 @@ export interface DeleteApplicationInput {
  */
 export const deleteApplication = defineMutation<DeleteApplicationInput, DeletedResult>({
   name: 'deleteApplication',
+  scope: applicationScope,
   mutationFn:
     (instance) =>
     ({applicationId}) =>

@@ -72,6 +72,11 @@ function itemUrl(keyUrl: string, itemId: string) {
   return `${keyUrl}/items/${encodeURIComponent(itemId)}`
 }
 
+// An item's saves and removals are sent one at a time, so the server keeps the last one made
+function itemScope({userId, key, itemId}: RemoveUserPreferenceListItemInput) {
+  return `preferenceItem:${userId}:${key}:${itemId}`
+}
+
 // Every cached list of a user's items for a key, so a change refetches them all
 function itemsTag(userId: string, key: PreferenceListKey) {
   return [{type: 'userPreferenceList', id: `${userId}:${key}`}]
@@ -124,6 +129,7 @@ const setUserPreferenceListItem = defineMutation<
   UserPreferenceListItem
 >({
   name: 'setUserPreferenceListItem',
+  scope: itemScope,
   mutationFn:
     (instance) =>
     ({userId: _userId, key, itemId, value, ...options}) =>
@@ -142,6 +148,7 @@ const setUserPreferenceListItem = defineMutation<
 // Removes an item. Succeeds when there was no such item
 const removeUserPreferenceListItem = defineMutation<RemoveUserPreferenceListItemInput, void>({
   name: 'removeUserPreferenceListItem',
+  scope: itemScope,
   mutationFn:
     (instance) =>
     ({userId: _userId, key, itemId, ...options}) =>
