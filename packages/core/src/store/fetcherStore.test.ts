@@ -810,6 +810,29 @@ describe('fetcherStore', () => {
       )
     })
 
+    it('takes the 401 off an entry once the token changes, while its next attempt retries a 5xx', async () => {
+      const fetchSpy = answerInTurn(
+        of('first'),
+        throwError(() => sessionExpired),
+        throwError(() => unavailable),
+        of('second'),
+      )
+      const fetcher = defineFetcher<[], string>({
+        name: 'token-then-transient',
+        getKey: () => 'k',
+        fetch: () => fetchSpy,
+      })
+      const source = fetcher.getState(instance)
+      onTestFinished(source.subscribe())
+      await vi.waitFor(() => expect(source.getCurrent().data).toBe('first'))
+      await expect(fetcher.refetch(instance)).rejects.toBe(sessionExpired)
+
+      setAuthToken(instance, 'renewed-token')
+
+      expect(fetchSpy).toHaveBeenCalledTimes(3)
+      expect(source.getCurrent()).toMatchObject({data: 'first', error: undefined, isFetching: true})
+    })
+
     it('resolveState after a 401 answers with the error instead of fetching with the same token', async () => {
       const fetchSpy = answerInTurn(
         throwError(() => sessionExpired),

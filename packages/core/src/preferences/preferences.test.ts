@@ -1,13 +1,17 @@
 import {ClientError, type SanityClient, ServerError} from '@sanity/client'
 import {of, Subject, throwError} from 'rxjs'
-import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
+import {afterEach, beforeEach, describe, expect, it, onTestFinished, vi} from 'vitest'
 
 import {setAuthToken} from '../auth/authStore'
 import {getClientState} from '../client/clientStore'
 import {type MessageBusConnection} from '../dashboard/messageBus/bus'
 import {getDashboardMessageBus} from '../dashboard/messageBus/store'
 import {getDashboardOrganizationId, getTopicState} from '../dashboard/messageBus/topicStore'
-import {OUT_OF_SYNC_RETRY_COUNT, OUT_OF_SYNC_RETRY_MAX_DELAY} from '../document/documentConstants'
+import {
+  OUT_OF_SYNC_RETRY_BASE_DELAY,
+  OUT_OF_SYNC_RETRY_COUNT,
+  OUT_OF_SYNC_RETRY_MAX_DELAY,
+} from '../document/documentConstants'
 import {observeAppOrganizationId} from '../organization/appOrganization'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {type StateSource} from '../store/createStateSourceAction'
@@ -492,6 +496,34 @@ describe('preferences', () => {
         value: (current) => (current === 'detail' ? 'compact' : 'detail'),
       })
 
+      expect(request).toHaveBeenLastCalledWith(
+        expect.objectContaining({method: 'PUT', body: {value: 'compact'}}),
+      )
+    })
+
+    it("sends a change with a function made after the read's network error showed, once the network is back", async () => {
+      vi.useFakeTimers({
+        toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'],
+      })
+      request.mockReturnValue(throwError(() => new TypeError('Failed to fetch')))
+      const preference = userPreference.getState(instance, 'user-1', LAYOUT)
+      onTestFinished(preference.subscribe())
+      await vi.advanceTimersByTimeAsync(RETRIES_RUN_OUT)
+      expect(preference.getCurrent()).toMatchObject({
+        status: 'error',
+        error: {code: 'networkError'},
+      })
+
+      request.mockReturnValueOnce(of({data: [stored(LAYOUT, 'detail')]}))
+      request.mockReturnValueOnce(of(stored(LAYOUT, 'compact')))
+      const toggled = updateUserPreference(instance, {
+        userId: 'user-1',
+        key: LAYOUT,
+        value: (current) => (current === 'detail' ? 'compact' : 'detail'),
+      }).catch((error: unknown) => error)
+      await vi.advanceTimersByTimeAsync(OUT_OF_SYNC_RETRY_BASE_DELAY)
+
+      expect(await toggled).toMatchObject({value: 'compact'})
       expect(request).toHaveBeenLastCalledWith(
         expect.objectContaining({method: 'PUT', body: {value: 'compact'}}),
       )
