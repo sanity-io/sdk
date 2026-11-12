@@ -1,5 +1,5 @@
 import {ClientError, type SanityClient} from '@sanity/client'
-import {concatWith, NEVER, of, throwError} from 'rxjs'
+import {concatWith, NEVER, of, Subject, throwError} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, onTestFinished, vi} from 'vitest'
 
 import {getClientState} from '../client/clientStore'
@@ -182,6 +182,35 @@ describe('preference items', () => {
       timeout: 10_000,
     })
     unsubscribe()
+  })
+
+  it('sends a delete made right after a save once the save is answered, so the item stays deleted', async () => {
+    vi.useFakeTimers()
+    onTestFinished(() => {
+      vi.useRealTimers()
+    })
+    const save = new Subject<unknown>()
+    request.mockReturnValueOnce(save).mockReturnValueOnce(of(undefined))
+
+    const saving = updateUserPreferenceListItem(instance, {
+      userId: 'user-1',
+      key: QUERIES,
+      itemId: 'q1',
+      value: query('q1'),
+    })
+    const deleting = updateUserPreferenceListItem(instance, {
+      userId: 'user-1',
+      key: QUERIES,
+      itemId: 'q1',
+      value: undefined,
+    })
+    // A delete that's only delayed, not queued, would have gone by now
+    await vi.runAllTimersAsync()
+    expect(request).toHaveBeenCalledOnce()
+
+    save.next(item('q1'))
+    await Promise.all([saving, deleting])
+    expect(request).toHaveBeenLastCalledWith(expect.objectContaining({method: 'DELETE'}))
   })
 
   it("never shows one user's cached list to another, or reads it again after their change", async () => {

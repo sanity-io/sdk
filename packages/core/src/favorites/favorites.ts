@@ -60,6 +60,16 @@ function createFavoriteKey(context: FavoriteDocumentContext): string {
 }
 
 /**
+ * The mutation scope for a document's favorite state, so its changes are sent one at a time and the
+ * server keeps the last one made.
+ *
+ * @internal
+ */
+export function favoriteScope(context: FavoriteDocumentContext): string {
+  return `favorite:${createFavoriteKey(context)}`
+}
+
+/**
  * Fetcher for a document's favorite status, read from the dashboard over
  * comlink, on the shared fetcher cache.
  *
@@ -118,6 +128,7 @@ export type SetFavoriteInput = FavoriteDocumentContext & {
  */
 export const setFavorite = defineMutation<SetFavoriteInput, FavoriteStatusResponse>({
   name: 'setFavorite',
+  scope: favoriteScope,
   mutationFn: (instance) => {
     return ({isFavorited, ...context}: SetFavoriteInput): Observable<FavoriteStatusResponse> => {
       const nodeStateSource = getNodeState<FrameMessages, WindowMessages>(instance, {

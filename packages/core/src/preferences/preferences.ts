@@ -552,10 +552,16 @@ function sharedChange(_result: UserPreference, {userId, key, shared}: ResetUserP
   return shared ? [{type: 'userPreference', id: `${userId}:${key}`}] : []
 }
 
+// A key's changes are sent one at a time, so the server keeps the last one made
+function preferenceScope({userId, key}: {userId: string; key: PreferenceKey}) {
+  return `preference:${userId}:${key}`
+}
+
 // Stores a value. It shows in the cached `userPreference` at once, and is rolled back when the API
 // refuses it
 const setUserPreference = defineMutation<SetUserPreferenceInput, UserPreference>({
   name: 'setUserPreference',
+  scope: preferenceScope,
   mutationFn:
     (instance) =>
     ({userId, key, value, ...options}) =>
@@ -588,19 +594,11 @@ const setUserPreference = defineMutation<SetUserPreferenceInput, UserPreference>
 // the API answers: only it knows which value applies next
 const resetUserPreference = defineMutation<ResetUserPreferenceInput, UserPreference>({
   name: 'resetUserPreference',
+  scope: preferenceScope,
   mutationFn:
     (instance) =>
     ({userId, key, ...options}) =>
       sendWrite(instance, userId, key, options, {method: 'DELETE', tag: 'preferences.reset'}),
-  // Only the API knows which value applies next, so this leaves the value as it is. Writing it
-  // still sends the reset in turn with the key's other changes
-  onMutate: (write, {userId, key, ...options}) => {
-    try {
-      write(userPreference, [userId, key, options], (current) => current as UserPreference)
-    } catch {
-      // A key that can't be resolved has nothing to show; `mutationFn` rejects with why
-    }
-  },
   onSuccess: (write, stored, {userId, key, ...options}) =>
     write(userPreference, [userId, key, options], stored),
   invalidates: sharedChange,
@@ -617,6 +615,7 @@ function listOf(key: string, current: UserPreference | undefined): PreferenceLis
 // rolled back before it can't come back with it
 const changeUserPreferenceList = defineMutation<ChangeUserPreferenceListInput, UserPreference>({
   name: 'changeUserPreferenceList',
+  scope: preferenceScope,
   mutationFn:
     (instance) =>
     ({userId, key, add, at, remove, ...options}) =>

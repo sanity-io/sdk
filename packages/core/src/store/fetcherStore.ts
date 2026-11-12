@@ -1,11 +1,11 @@
 import {
   concatMap,
-  defaultIfEmpty,
+  defer,
   filter,
   firstValueFrom,
-  forkJoin,
   map,
   type Observable,
+  of,
   Subscription,
   take,
 } from 'rxjs'
@@ -212,10 +212,10 @@ export interface MutationResult<TResult> {
  *    the request leaves. Each write is kept as a pending change on its entry, on
  *    top of the entry's confirmed data, so other mutations' answers and refetches
  *    land underneath it rather than replacing it.
- * 2. The request runs, once earlier mutations that wrote optimistically to the
- *    same entries have settled, so their answers come back in order. On
- *    failure, this mutation's pending changes come off and any others stay, so
- *    failure ends the lifecycle here.
+ * 2. The request runs, once earlier mutations with the same `scope` have
+ *    settled, so their answers come back in order. On failure, this mutation's
+ *    pending changes come off and any others stay, so failure ends the
+ *    lifecycle here.
  * 3. On success, `onSuccess` may write the server response; it becomes the
  *    entry's confirmed data in place of this mutation's changes. An entry
  *    `onSuccess` doesn't write keeps the changes as confirmed.
@@ -230,6 +230,11 @@ export interface MutationDefinition<TInput, TResult> {
   name: string
   /** Creates the observable that performs the server mutation */
   mutationFn: (instance: SanityInstance) => (input: TInput) => Observable<TResult>
+  /**
+   * Mutations with the same scope are sent one at a time, in the order they're made, so the server
+   * keeps the last one. Without a scope, a mutation is sent straight away.
+   */
+  scope?: (input: TInput) => string
   /** Optimistic cache writes, applied synchronously before the request */
   onMutate?: (write: CacheWriter, input: TInput) => void
   /** Reconcile the cache with the server response, avoiding a refetch round-trip */
@@ -304,8 +309,8 @@ const definitions = new Map<string, AnyDefinition>()
 // So a mutation's writes, which name a fetcher, reach its definition
 const fetcherDefinitions = new WeakMap<object, AnyDefinition>()
 const inflight = new Map<string, InflightFetch>()
-// Per entry, when the last mutation that wrote to it optimistically settles. A later one's request
-// waits for it, so answers come back in the order the changes were made
+// Per mutation scope, when the last mutation in it settles. A later one's request waits for it, so
+// answers come back in the order the changes were made
 const lastWrites = new Map<string, Promise<void>>()
 const gcTimers = new Map<string, ReturnType<typeof setTimeout>>()
 const intervalTimers = new Map<string, ReturnType<typeof setInterval>>()
@@ -493,8 +498,6 @@ const showChanges = (
     (current, change) => applyUpdater(change.updater, current),
     confirmed.data,
   )
-  // A change that leaves an entry without data, like a reset's, has nothing to show yet
-  if (data === undefined) return {...entry, ...confirmed, version, pending, confirmed} as CacheEntry
   return {
     ...entry,
     status: 'success',
@@ -558,8 +561,8 @@ const startFetch = (
       .subscribe({
         next: (data) => {
           const current = state.get().entries[key]
-          // An entry with no data, like one a reset is waiting on, has nothing a stale result
-          // could replace, so it takes the result under its changes below
+          // An entry still without data, like one whose only change was refused mid-fetch, has
+          // nothing newer than this result, so it takes it
           if (current && current.version !== startVersion && current.data !== undefined) {
             // A write (optimistic mutation) landed mid-fetch: discard the now-stale
             // server result and keep the written data. Tear the fetch down here —
@@ -941,25 +944,25 @@ export function defineMutation<TInput, TResult>(
       addChange(instance, touch(fetcher, params).def, params, {mutation, updater})
     }, input)
 
-    const keys = [...touched.keys()]
-    const earlier = keys.flatMap((key) => lastWrites.get(key) ?? [])
-    // `forkJoin([])` completes without emitting, so `defaultIfEmpty` sends a request with nothing
-    // ahead of it straight away. `concatMap` turns a request that throws before it's sent into a
-    // rejection, so its changes come off
+    const scope = definition.scope?.(input)
+    const earlier = scope === undefined ? undefined : lastWrites.get(scope)
+    // `of` sends a request with nothing ahead of it straight away. `concatMap` turns a request that
+    // throws before it's sent into a rejection, so its changes come off
     const request = firstValueFrom(
-      forkJoin(earlier).pipe(
-        defaultIfEmpty([]),
+      defer(() => earlier ?? of(undefined)).pipe(
         concatMap(() => definition.mutationFn(instance)(input)),
       ),
     )
-    const settled = request.then(
-      () => {},
-      () => {},
-    )
-    for (const key of keys) lastWrites.set(key, settled)
-    void settled.then(() => {
-      for (const key of keys) if (lastWrites.get(key) === settled) lastWrites.delete(key)
-    })
+    if (scope !== undefined) {
+      const settled = request.then(
+        () => {},
+        () => {},
+      )
+      lastWrites.set(scope, settled)
+      void settled.then(() => {
+        if (lastWrites.get(scope) === settled) lastWrites.delete(scope)
+      })
+    }
 
     return request.then(
       (result) => {
