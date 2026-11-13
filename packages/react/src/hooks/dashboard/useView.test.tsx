@@ -31,20 +31,6 @@ describe('useView', () => {
     expect(result.current).toBe(view)
   })
 
-  it('throws in an asset source', () => {
-    expect(() =>
-      renderHook(() => useView(), {
-        wrapper: ({children}: {children: ReactNode}) => (
-          <RootContext.Provider
-            value={{signal: new AbortController().signal, viewType: 'asset_source', props: {}}}
-          >
-            {children}
-          </RootContext.Provider>
-        ),
-      }),
-    ).toThrow('useView must be called inside a Dashboard view')
-  })
-
   it('throws when the host passes no view', () => {
     expect(() =>
       renderHook(() => useView(), {

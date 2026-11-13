@@ -10,7 +10,7 @@ export type DashboardViewRoot =
       props: {view: Extract<ApplicationInterface, {type: 'panel'}>; onClose: () => void}
     }
   | {viewType: 'tile'; props: {view: Extract<ApplicationInterface, {type: 'tile'}>}}
-  | {viewType: 'asset_source'; props: unknown}
+  | {viewType: 'asset_source'; props: {view: Extract<ApplicationInterface, {type: 'asset_source'}>}}
 
 /** The root a CLI-generated wrapper rendered the app into. */
 type DashboardRoot = {
