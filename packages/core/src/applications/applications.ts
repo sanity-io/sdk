@@ -1,7 +1,7 @@
 import {switchMap} from 'rxjs'
 
 import {getClientState} from '../client/clientStore'
-import {defineFetcher, defineMutation} from '../store/fetcherStore'
+import {defineFetcher, defineMutation, definePagedFetcher} from '../store/fetcherStore'
 import {buildQuery} from '../utils/buildQuery'
 import {type Included, type IncludesAny} from '../utils/includeShape'
 
@@ -208,7 +208,10 @@ export interface ApplicationsOptions<Include extends ApplicationInclude = Applic
   include?: Include[]
   /** Page size (1-100, default 50), or `'none'` to disable pagination */
   limit?: number | 'none'
-  /** Cursor from a previous response's `nextCursor` */
+  /**
+   * Cursor from a previous response's `nextCursor`
+   * @deprecated Load the next page with `loadMore` instead. Removed in the next major.
+   */
   cursor?: string
 }
 
@@ -230,12 +233,12 @@ function serializeInclude(include: ApplicationInclude[] | undefined): string | u
 
 /**
  * Fetcher for an organization's applications (`GET /applications`), on the
- * shared fetcher cache.
+ * shared fetcher cache, a page at a time.
  *
  * @see https://www.sanity.io/docs/http-reference/applications-api
  * @internal
  */
-export const applications = defineFetcher<
+export const applications = definePagedFetcher<
   [options: ApplicationsOptions],
   ApplicationsResponse<ApplicationInclude>
 >({
@@ -248,7 +251,7 @@ export const applications = defineFetcher<
       options.limit ?? '',
       options.cursor ?? '',
     ].join(':'),
-  fetch: (instance) => (options) =>
+  fetch: (instance) => (cursor, options) =>
     getClientState(instance, {apiVersion: API_VERSION, scope: 'global'}).observable.pipe(
       switchMap((client) =>
         client.observable.request<ApplicationsResponse<ApplicationInclude>>({
@@ -258,15 +261,15 @@ export const applications = defineFetcher<
             type: options.type,
             include: serializeInclude(options.include),
             limit: options.limit,
-            cursor: options.cursor,
+            cursor: cursor ?? options.cursor,
           }),
           tag: 'applications.list',
         }),
       ),
     ),
-  tags: (data) => [
+  tags: (pages) => [
     {type: 'application', id: 'LIST'},
-    ...data.data.map((app) => ({type: 'application', id: app.id})),
+    ...pages.flatMap((page) => page.data.map((app) => ({type: 'application', id: app.id}))),
   ],
 })
 

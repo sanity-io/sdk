@@ -60,7 +60,7 @@ describe('applications', () => {
     expect(pages.flatMap(({data}) => data)).toEqual([{id: 'app1'}, {id: 'app2'}])
     expect(request).toHaveBeenLastCalledWith({
       url: '/applications',
-      query: {organizationId: 'org1', type: 'studio', limit: 1, cursor: 'c1'},
+      query: {organizationId: 'org1', type: 'studio', limit: '1', cursor: 'c1'},
       tag: 'applications.list',
     })
   })
