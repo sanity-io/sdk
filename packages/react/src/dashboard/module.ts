@@ -1,4 +1,5 @@
 import {type ApplicationInterface} from '@sanity/sdk'
+import {type AssetSourceComponentProps} from '@sanity/types'
 import * as React from 'react'
 
 const ROOT_SLOT_KEY = Symbol.for('sanity.os.root')
@@ -10,7 +11,12 @@ export type DashboardViewRoot =
       props: {view: Extract<ApplicationInterface, {type: 'panel'}>; onClose: () => void}
     }
   | {viewType: 'tile'; props: {view: Extract<ApplicationInterface, {type: 'tile'}>}}
-  | {viewType: 'asset_source'; props: unknown}
+  | {
+      viewType: 'asset_source'
+      props: AssetSourceComponentProps & {
+        view: Extract<ApplicationInterface, {type: 'asset_source'}>
+      }
+    }
 
 /** The root a CLI-generated wrapper rendered the app into. */
 type DashboardRoot = {

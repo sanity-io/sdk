@@ -42,6 +42,7 @@ export {
   type DashboardWebWorker,
   useApplications,
 } from '../hooks/dashboard/useApplications'
+export {useAssetSource} from '../hooks/dashboard/useAssetSource'
 export {useAuthToken} from '../hooks/dashboard/useAuthToken'
 export {useCapabilities} from '../hooks/dashboard/useCapabilities'
 export {useCurrentUser} from '../hooks/dashboard/useCurrentUser'
@@ -58,6 +59,7 @@ export {
 export {useOrganizationId} from '../hooks/dashboard/useOrganizationId'
 export {usePanel} from '../hooks/dashboard/usePanel'
 export {useRemoteClient} from '../hooks/dashboard/useRemoteClient'
+export {useTile} from '../hooks/dashboard/useTile'
 export {useTopic} from '../hooks/dashboard/useTopic'
 export {useView} from '../hooks/dashboard/useView'
 export {useWindowTitle} from '../hooks/dashboard/useWindowTitle'
