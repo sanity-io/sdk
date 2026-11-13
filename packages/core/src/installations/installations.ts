@@ -2,7 +2,7 @@ import {switchMap} from 'rxjs'
 
 import {type Application, type ApplicationInterface} from '../applications/applications'
 import {getClientState} from '../client/clientStore'
-import {defineFetcher} from '../store/fetcherStore'
+import {defineFetcher, definePagedFetcher} from '../store/fetcherStore'
 import {buildQuery} from '../utils/buildQuery'
 import {type Included} from '../utils/includeShape'
 
@@ -115,7 +115,10 @@ export interface InstallationsOptions<Include extends InstallationInclude = Inst
   include?: Include[]
   /** Page size (1-100, default 50), or `'none'` to disable pagination */
   limit?: number | 'none'
-  /** Cursor from a previous response's `nextCursor` */
+  /**
+   * Cursor from a previous response's `nextCursor`
+   * @deprecated Load the next page with `loadMore` instead. Removed in the next major.
+   */
   cursor?: string
 }
 
@@ -137,12 +140,12 @@ function serializeInclude(include: InstallationInclude[] | undefined): string | 
 
 /**
  * Fetcher for an organization's installations (`GET /installations`), on the
- * shared fetcher cache.
+ * shared fetcher cache, a page at a time.
  *
  * @see https://www.sanity.io/docs/http-reference/applications-api
  * @internal
  */
-export const installations = defineFetcher<
+export const installations = definePagedFetcher<
   [options: InstallationsOptions],
   InstallationsResponse<InstallationInclude>
 >({
@@ -154,7 +157,7 @@ export const installations = defineFetcher<
       options.limit ?? '',
       options.cursor ?? '',
     ].join(':'),
-  fetch: (instance) => (options) =>
+  fetch: (instance) => (cursor, options) =>
     getClientState(instance, {apiVersion: API_VERSION, scope: 'global'}).observable.pipe(
       switchMap((client) =>
         client.observable.request<InstallationsResponse<InstallationInclude>>({
@@ -163,15 +166,17 @@ export const installations = defineFetcher<
             organizationId: options.organizationId,
             include: serializeInclude(options.include),
             limit: options.limit,
-            cursor: options.cursor,
+            cursor: cursor ?? options.cursor,
           }),
           tag: 'installations.list',
         }),
       ),
     ),
-  tags: (data) => [
+  tags: (pages) => [
     {type: 'installation', id: 'LIST'},
-    ...data.data.map((installation) => ({type: 'installation', id: installation.id})),
+    ...pages.flatMap((page) =>
+      page.data.map((installation) => ({type: 'installation', id: installation.id})),
+    ),
   ],
 })
 
