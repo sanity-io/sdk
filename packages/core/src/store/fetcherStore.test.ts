@@ -840,6 +840,30 @@ describe('fetcherStore', () => {
       ])
     })
 
+    it('reads the next page from the pages a refetch retrying a failure reads, rather than cancelling it', async () => {
+      vi.useFakeTimers()
+      const first = vi.fn((): Observable<Page> => page(['a'], 'c1'))
+      const {fetcher, read, source} = pagedFetcher({
+        first,
+        c1: () => page(['stale'], null),
+        c2: () => page(['b'], null),
+      })
+      await vi.advanceTimersByTimeAsync(0)
+      first.mockReturnValueOnce(throwError(() => unavailable)).mockReturnValue(page(['a2'], 'c2'))
+      const refetching = fetcher.refetch(instance)
+      await vi.advanceTimersByTimeAsync(0)
+
+      const loading = fetcher.loadMore(instance)
+      await vi.advanceTimersByTimeAsync(OUT_OF_SYNC_RETRY_MAX_DELAY)
+      await Promise.all([refetching, loading])
+
+      expect(read.mock.calls).toEqual([[undefined], [undefined], [undefined], ['c2']])
+      expect(source.getCurrent().data).toEqual([
+        {data: ['a2'], nextCursor: 'c2'},
+        {data: ['b'], nextCursor: null},
+      ])
+    })
+
     it('reads the next page once when load more is called again before it arrives', async () => {
       const next = new Subject<Page>()
       const {fetcher, read, source} = pagedFetcher({first: () => page(['a'], 'c1'), c1: () => next})
@@ -865,6 +889,53 @@ describe('fetcherStore', () => {
       await fetcher.refetch(instance)
 
       expect(read.mock.calls).toEqual([[undefined], ['c1']])
+      expect(source.getCurrent().data).toHaveLength(2)
+    })
+
+    it('keeps the next page when a refetch runs while it loads', async () => {
+      const next = new Subject<Page>()
+      const {fetcher, read, source} = pagedFetcher({
+        first: () => page(['a'], 'c1'),
+        c1: () => next,
+      })
+      await vi.waitFor(() => expect(source.getCurrent().status).toBe('success'))
+
+      const loading = fetcher.loadMore(instance)
+      const refetching = fetcher.refetch(instance)
+      next.next({data: ['b'], nextCursor: null})
+      await Promise.all([loading, refetching])
+
+      expect(read.mock.calls).toEqual([[undefined], ['c1'], [undefined], ['c1']])
+      expect(source.getCurrent().data).toEqual([
+        {data: ['a'], nextCursor: 'c1'},
+        {data: ['b'], nextCursor: null},
+      ])
+    })
+
+    it('keeps the next page when a change refetches the list while it loads', async () => {
+      const next = new Subject<Page>()
+      const list = {type: 'paged-list', id: 'LIST'}
+      const read = vi.fn((cursor: string | undefined) => (cursor ? next : page(['a'], 'c1')))
+      const fetcher = definePagedFetcher<[], Page>({
+        name: `paged-${++run}`,
+        getKey: () => 'k',
+        fetch: () => read,
+        tags: [list],
+      })
+      const source = fetcher.getState(instance)
+      onTestFinished(source.subscribe())
+      await vi.waitFor(() => expect(source.getCurrent().status).toBe('success'))
+      const change = defineMutation<undefined, null>({
+        name: `paged-change-${run}`,
+        mutationFn: () => () => of(null),
+        invalidates: [list],
+      })
+
+      const loading = fetcher.loadMore(instance)
+      const {invalidated} = await change(instance, undefined)
+      next.next({data: ['b'], nextCursor: null})
+      await Promise.all([loading, invalidated])
+
       expect(source.getCurrent().data).toHaveLength(2)
     })
 

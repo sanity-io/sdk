@@ -312,6 +312,8 @@ interface InflightFetch {
   failure?: {error: unknown}
   /** Reads a paged entry's next page, rather than every page again */
   nextPage: boolean
+  /** Reads every page again, and the next page of one it replaced, so a load more isn't lost */
+  extraPage: boolean
 }
 
 // Erased definition type used by the machinery, which is generic-agnostic.
@@ -576,6 +578,7 @@ const startFetch = (
     reject,
     startVersion: 0,
     nextPage: nextPage !== undefined,
+    extraPage: !nextPage && Boolean(existing?.nextPage || existing?.extraPage),
   }
   inflight.set(key, record)
 
@@ -956,7 +959,8 @@ export interface PagedFetcherDefinition<
 /**
  * A {@link Fetcher} over the pages of a list read so far, returned by {@link definePagedFetcher}.
  * A refetch, after a change or on the poll, reads every one of them again from the first, so an
- * item never shows twice or goes missing.
+ * item never shows twice or goes missing. A refetch that starts while `loadMore` reads the next page
+ * reads that page too.
  *
  * @internal
  */
@@ -974,7 +978,8 @@ export interface PagedFetcher<TParams extends unknown[], TPage extends CursorPag
 
 /**
  * Registers a fetcher for a list the API answers a page at a time, like TanStack Query's infinite
- * queries, against the shared cache.
+ * queries, against the shared cache. An entry's data is the pages read so far, so a mutation that
+ * writes to one updates an array of pages, and readers outside React join them.
  *
  * @internal
  */
@@ -988,7 +993,9 @@ export function definePagedFetcher<TParams extends unknown[], TPage extends Curs
       (instance) =>
       (...params) => {
         const read = (cursor?: string) => fetchPage(instance)(cursor, ...params).pipe(take(1))
-        const count = fetcher.getState(instance, ...params).getCurrent().data?.length ?? 1
+        const pages = fetcher.getState(instance, ...params).getCurrent().data?.length ?? 1
+        const key = entryKey(definition.name, definition.getKey(instance, ...params))
+        const count = inflight.get(key)?.extraPage ? pages + 1 : pages
         return read().pipe(
           expand((page, index) =>
             page.nextCursor !== null && index + 1 < count ? read(page.nextCursor) : EMPTY,
@@ -1004,10 +1011,11 @@ export function definePagedFetcher<TParams extends unknown[], TPage extends Curs
     cacheStore,
     ({state, instance}: StoreContext<CacheState>, ...params: TParams): Promise<TPage[]> => {
       const loading = inflight.get(entryKeyOf(def, instance, params))
-      // A read retrying after a failure is replaced straight away, as `resolveState` does
-      if (loading && !loading.failure) {
-        if (loading.nextPage) return loading.promise as Promise<TPage[]>
-        // A refetch, like the one after a change, goes first, so the next page follows its pages
+      // A next page retrying after a failure is read again now, as `resolveState` does
+      if (loading?.nextPage && !loading.failure) return loading.promise as Promise<TPage[]>
+      // A refetch, like the one after a change, goes first, even while it retries, so the next
+      // page follows its pages
+      if (loading && !loading.nextPage) {
         return loading.promise.then(() => loadMore(instance, ...params))
       }
       const pages = fetcher.getState(instance, ...params).getCurrent().data

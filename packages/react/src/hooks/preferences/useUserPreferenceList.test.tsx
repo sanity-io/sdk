@@ -142,6 +142,17 @@ it('refetches every page read so far, as one list', async () => {
   expect(refetched).toEqual({data: items(['q1', 'q2']), nextCursor: null})
 })
 
+it('keeps load more the same function across renders, so an effect that calls it runs once', async () => {
+  request.mockReturnValue(page(['q1'], 'c1'))
+  const {result, rerender} = renderHook(() => useUserPreferenceList(QUERIES))
+  await vi.waitFor(() => expect(result.current?.data).toEqual(items(['q1'])))
+  const {loadMore} = result.current
+
+  rerender()
+
+  expect(result.current.loadMore).toBe(loadMore)
+})
+
 it('starts again from the first page for another project', async () => {
   request.mockImplementation(({projectId = '', cursor}) =>
     cursor ? page([`${projectId}-2`], null) : page([projectId], `${projectId}-c1`),
