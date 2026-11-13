@@ -4,7 +4,7 @@ import {useContext} from 'react'
 import {getDashboardRootContext} from '../../dashboard/module'
 
 /**
- * Returns the interface record of the view this component renders in.
+ * Returns the current view.
  *
  * Throws when the component does not render in a Dashboard view.
  *
@@ -21,6 +21,7 @@ import {getDashboardRootContext} from '../../dashboard/module'
  */
 export function useView(): Exclude<ApplicationInterface, {type: 'worker'}> {
   const view = useContext(getDashboardRootContext())?.props?.view
+
   if (!view) throw new Error('useView must be called inside a Dashboard view')
 
   return view

@@ -5,7 +5,7 @@ import {getDashboardRootContext} from '../../dashboard/module'
 import {useView} from './useView'
 
 /**
- * Returns the panel view this component renders in, and a function that closes the panel.
+ * Returns the panel view and onClose handler.
  *
  * Throws when the component does not render in a panel view.
  *
@@ -31,9 +31,11 @@ export function usePanel(): {
 } {
   const view = useView()
   const onClose = useContext(getDashboardRootContext())?.props?.onClose
+
   if (view.type !== 'panel') {
     throw new Error(`usePanel must be called inside a panel view, not a ${view.type} view`)
   }
+
   if (!onClose) throw new Error('The Dashboard rendered this panel without onClose')
 
   return {view, onClose}
