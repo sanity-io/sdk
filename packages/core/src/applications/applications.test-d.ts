@@ -99,10 +99,10 @@ test('Application — a wide include array makes config and activeDeployment opt
   expectTypeOf<Config['mfManifest']>().toEqualTypeOf<unknown>()
 })
 
-test('applications.resolveState — resolves the wide list envelope', () => {
+test('applications.resolveState — resolves the pages read so far, each the wide list envelope', () => {
   expectTypeOf(
     applications.resolveState(instance, {organizationId: 'org_1'}),
-  ).resolves.toEqualTypeOf<ApplicationsResponse<ApplicationInclude>>()
+  ).resolves.toEqualTypeOf<ApplicationsResponse<ApplicationInclude>[]>()
 })
 
 test('application.getState — exposes the snapshot envelope', () => {

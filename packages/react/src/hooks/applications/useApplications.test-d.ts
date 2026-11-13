@@ -1,12 +1,12 @@
 import {type Application, type ApplicationInterface, type ApplicationsResponse} from '@sanity/sdk'
 import {expectTypeOf, test} from 'vitest'
 
-import {type FetcherHookResult} from '../helpers/createFetcherHook'
+import {type PagedFetcherHookResult} from '../helpers/createPagedFetcherHook'
 import {useApplications} from './useApplications'
 
 test('useApplications — no include: base items, no deployment or config', () => {
   const result = useApplications({organizationId: 'org_1'})
-  expectTypeOf(result).toEqualTypeOf<FetcherHookResult<ApplicationsResponse<never>>>()
+  expectTypeOf(result).toEqualTypeOf<PagedFetcherHookResult<ApplicationsResponse<never>>>()
   type Item = (typeof result.data.data)[number]
   expectTypeOf<Extract<keyof Item, 'activeDeployment' | 'config'>>().toEqualTypeOf<never>()
 })

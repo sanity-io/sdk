@@ -6,10 +6,12 @@ import {createFetcherHook, type FetcherHookResult} from './createFetcherHook'
 import {withSdkOrigin} from './withSdkOrigin'
 
 /**
- * The value returned by a hook built with {@link createPagedFetcherHook}. `data` is one page
- * holding every item read so far, in order, with the last page's `nextCursor`.
+ * The value returned by a hook that reads a list a page at a time, like `useApplications`. `data`
+ * is one page holding every item read so far, in order, with the last page's `nextCursor`.
  *
- * @internal
+ * @public
+ * @category Types
+ * @category Platform
  */
 export interface PagedFetcherHookResult<TPage> extends FetcherHookResult<TPage> {
   /** Whether there's another page to read. */
