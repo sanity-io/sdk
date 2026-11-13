@@ -45,6 +45,20 @@ describe('useView', () => {
     ).toThrow('useView must be called inside a Dashboard view')
   })
 
+  it('throws when the host passes no view', () => {
+    expect(() =>
+      renderHook(() => useView(), {
+        wrapper: ({children}: {children: ReactNode}) => (
+          <RootContext.Provider
+            value={{signal: new AbortController().signal, viewType: 'tile', props: {} as never}}
+          >
+            {children}
+          </RootContext.Provider>
+        ),
+      }),
+    ).toThrow('useView must be called inside a Dashboard view')
+  })
+
   it('throws outside a Dashboard view', () => {
     expect(() => renderHook(() => useView())).toThrow(
       'useView must be called inside a Dashboard view',
