@@ -71,10 +71,10 @@ test('Installation — a wide include array makes the fields optional', () => {
   expectTypeOf<KeyModifier<Wide['application'], 'config'>>().toEqualTypeOf<'optional'>()
 })
 
-test('installations.resolveState — resolves the wide list envelope', () => {
+test('installations.resolveState — resolves the pages read so far, each the wide list envelope', () => {
   expectTypeOf(
     installations.resolveState(instance, {organizationId: 'org_1'}),
-  ).resolves.toEqualTypeOf<InstallationsResponse<InstallationInclude>>()
+  ).resolves.toEqualTypeOf<InstallationsResponse<InstallationInclude>[]>()
 })
 
 test('installation.getState — exposes the snapshot envelope', () => {
