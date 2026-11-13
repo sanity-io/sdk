@@ -1,8 +1,6 @@
-import {type ApplicationInterface} from '@sanity/sdk'
-import {type AssetSourceComponentProps} from '@sanity/types'
 import {useContext} from 'react'
 
-import {getDashboardRootContext} from '../../dashboard/module'
+import {type DashboardViewRoot, getDashboardRootContext} from '../../dashboard/module'
 import {useView} from './useView'
 
 /**
@@ -21,9 +19,7 @@ import {useView} from './useView'
  * @public
  * @category Dashboard
  */
-export function useAssetSource(): AssetSourceComponentProps & {
-  view: Extract<ApplicationInterface, {type: 'asset_source'}>
-} {
+export function useAssetSource(): Extract<DashboardViewRoot, {viewType: 'asset_source'}>['props'] {
   const view = useView()
   const root = useContext(getDashboardRootContext())
 

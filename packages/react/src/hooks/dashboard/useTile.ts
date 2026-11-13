@@ -1,5 +1,4 @@
-import {type ApplicationInterface} from '@sanity/sdk'
-
+import {type DashboardViewRoot} from '../../dashboard/module'
 import {useView} from './useView'
 
 /**
@@ -18,7 +17,7 @@ import {useView} from './useView'
  * @public
  * @category Dashboard
  */
-export function useTile(): {view: Extract<ApplicationInterface, {type: 'tile'}>} {
+export function useTile(): Extract<DashboardViewRoot, {viewType: 'tile'}>['props'] {
   const view = useView()
 
   if (view.type !== 'tile') {
