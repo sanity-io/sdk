@@ -4,7 +4,7 @@ import * as React from 'react'
 const ROOT_SLOT_KEY = Symbol.for('sanity.os.root')
 
 /** The props the host passed to `render()`, per view type. */
-type DashboardViewRoot =
+export type DashboardViewRoot =
   | {
       viewType: 'panel'
       props: {view: Extract<ApplicationInterface, {type: 'panel'}>; onClose: () => void}

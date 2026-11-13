@@ -1,7 +1,6 @@
-import {type ApplicationInterface} from '@sanity/sdk'
 import {useContext} from 'react'
 
-import {getDashboardRootContext} from '../../dashboard/module'
+import {type DashboardViewRoot, getDashboardRootContext} from '../../dashboard/module'
 import {useView} from './useView'
 
 /**
@@ -25,10 +24,7 @@ import {useView} from './useView'
  * @public
  * @category Dashboard
  */
-export function usePanel(): {
-  view: Extract<ApplicationInterface, {type: 'panel'}>
-  onClose: () => void
-} {
+export function usePanel(): Extract<DashboardViewRoot, {viewType: 'panel'}>['props'] {
   const view = useView()
   const root = useContext(getDashboardRootContext())
 
