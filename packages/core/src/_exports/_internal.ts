@@ -39,13 +39,17 @@ export {getQueryKey, parseQueryKey} from '../query/queryStore' // only used for 
 export {
   type CacheTag,
   type CacheWriter,
+  type CursorPage,
   defineFetcher,
   defineMutation,
+  definePagedFetcher,
   type Fetcher,
   type FetcherDefinition,
   type FetcherSnapshot,
   type MutationDefinition,
   type MutationResult,
+  type PagedFetcher,
+  type PagedFetcherDefinition,
 } from '../store/fetcherStore'
 export {getTelemetryManager, initTelemetry, trackHookMounted} from '../telemetry/initTelemetry'
 export {getUsersKey, parseUsersKey} from '../users/reducers' // only used for memoizing in React, not needed for actual functionality

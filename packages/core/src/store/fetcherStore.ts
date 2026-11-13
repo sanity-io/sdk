@@ -1,6 +1,8 @@
 import {
   concatMap,
   defer,
+  EMPTY,
+  expand,
   filter,
   firstValueFrom,
   map,
@@ -9,6 +11,7 @@ import {
   Subscription,
   take,
   tap,
+  toArray,
 } from 'rxjs'
 
 import {getClientAuthState} from '../auth/authStore'
@@ -307,6 +310,8 @@ interface InflightFetch {
   startVersion: number
   /** Set once an attempt fails, while `retryRead` retries it */
   failure?: {error: unknown}
+  /** Reads a paged entry's next page, rather than every page again */
+  nextPage: boolean
 }
 
 // Erased definition type used by the machinery, which is generic-agnostic.
@@ -534,6 +539,7 @@ const startFetch = (
   instance: SanityInstance,
   params: unknown[],
   force: boolean,
+  nextPage?: () => Observable<unknown>,
 ): Promise<unknown> => {
   const key = entryKey(def.name, def.getKey(instance, ...params))
 
@@ -563,14 +569,21 @@ const startFetch = (
   // Register before subscribing so a synchronous observable (whose `next`/
   // `complete` fire during `.subscribe()`) sees — and can clean up — its own record.
   const sub = new Subscription()
-  const record: InflightFetch = {sub, promise, resolve, reject, startVersion: 0}
+  const record: InflightFetch = {
+    sub,
+    promise,
+    resolve,
+    reject,
+    startVersion: 0,
+    nextPage: nextPage !== undefined,
+  }
   inflight.set(key, record)
 
   sub.add(
     // Each attempt notes the version it starts from: a retry that starts after a write isn't stale
     defer(() => {
       record.startVersion = state.get().entries[key]?.version ?? 0
-      return def.fetch(instance)(...params)
+      return nextPage ? nextPage() : def.fetch(instance)(...params)
     })
       .pipe(
         take(1),
@@ -689,6 +702,9 @@ const startInterval = (
   const timer = setCleanupInterval(() => {
     if (typeof document !== 'undefined' && document.hidden) return
     const entry = state.get().entries[key]
+    // A poll would cancel the next page, as it reads only the pages before it. A next page that
+    // keeps failing holds the poll off until it's read or nobody watches the list
+    if (inflight.get(key)?.nextPage) return
     if (entry && entry.subscriptions > 0) detach(startFetch(state, def, instance, params, true))
   }, def.refetchInterval)
   intervalTimers.set(key, timer)
@@ -905,6 +921,107 @@ export function defineFetcher<TParams extends unknown[], TData>(
   const fetcher = {getState, resolveState, invalidate, invalidateAll, refetch}
   fetcherDefinitions.set(fetcher, def)
   return fetcher
+}
+
+/**
+ * One page of a list the API answers a page at a time: its items, and the cursor to read the page
+ * after it with, or `null` on the last page.
+ *
+ * @internal
+ */
+export interface CursorPage {
+  data: unknown[]
+  nextCursor: string | null
+}
+
+/**
+ * A {@link FetcherDefinition} for a list the API answers a page at a time. An entry holds the
+ * pages read so far, in order.
+ *
+ * @internal
+ */
+export interface PagedFetcherDefinition<
+  TParams extends unknown[],
+  TPage extends CursorPage,
+> extends Omit<FetcherDefinition<TParams, TPage[]>, 'fetch' | 'initialData'> {
+  /**
+   * Reads one page: the first without a cursor, each one after with the `nextCursor` of the page
+   * before. Return an observable that emits the page.
+   */
+  fetch: (
+    instance: SanityInstance,
+  ) => (cursor: string | undefined, ...params: TParams) => Observable<TPage>
+}
+
+/**
+ * A {@link Fetcher} over the pages of a list read so far, returned by {@link definePagedFetcher}.
+ * A refetch, after a change or on the poll, reads every one of them again from the first, so an
+ * item never shows twice or goes missing.
+ *
+ * @internal
+ */
+export interface PagedFetcher<TParams extends unknown[], TPage extends CursorPage> extends Fetcher<
+  TParams,
+  TPage[]
+> {
+  /**
+   * Reads the page after the last one read and adds it. Called again while that page loads, it
+   * shares the read. A failure rejects and shows on the entry's `error`, keeping the pages read so
+   * far. Resolves with the pages read so far when there's no page after them.
+   */
+  loadMore: (instance: SanityInstance, ...params: TParams) => Promise<TPage[]>
+}
+
+/**
+ * Registers a fetcher for a list the API answers a page at a time, like TanStack Query's infinite
+ * queries, against the shared cache.
+ *
+ * @internal
+ */
+export function definePagedFetcher<TParams extends unknown[], TPage extends CursorPage>({
+  fetch: fetchPage,
+  ...definition
+}: PagedFetcherDefinition<TParams, TPage>): PagedFetcher<TParams, TPage> {
+  const pagesDefinition: FetcherDefinition<TParams, TPage[]> = {
+    ...definition,
+    fetch:
+      (instance) =>
+      (...params) => {
+        const read = (cursor?: string) => fetchPage(instance)(cursor, ...params).pipe(take(1))
+        const count = fetcher.getState(instance, ...params).getCurrent().data?.length ?? 1
+        return read().pipe(
+          expand((page, index) =>
+            page.nextCursor !== null && index + 1 < count ? read(page.nextCursor) : EMPTY,
+          ),
+          toArray(),
+        )
+      },
+  }
+  const fetcher = defineFetcher(pagesDefinition)
+  const def = pagesDefinition as unknown as AnyDefinition
+
+  const loadMore: PagedFetcher<TParams, TPage>['loadMore'] = bindActionGlobally(
+    cacheStore,
+    ({state, instance}: StoreContext<CacheState>, ...params: TParams): Promise<TPage[]> => {
+      const loading = inflight.get(entryKeyOf(def, instance, params))
+      // A read retrying after a failure is replaced straight away, as `resolveState` does
+      if (loading && !loading.failure) {
+        if (loading.nextPage) return loading.promise as Promise<TPage[]>
+        // A refetch, like the one after a change, goes first, so the next page follows its pages
+        return loading.promise.then(() => loadMore(instance, ...params))
+      }
+      const pages = fetcher.getState(instance, ...params).getCurrent().data
+      const cursor = pages?.at(-1)?.nextCursor
+      if (!pages || typeof cursor !== 'string') return fetcher.resolveState(instance, ...params)
+      return startFetch(state, def, instance, params, true, () =>
+        fetchPage(instance)(cursor, ...params).pipe(map((page) => [...pages, page])),
+      ) as Promise<TPage[]>
+    },
+  )
+
+  const paged = {...fetcher, loadMore}
+  fetcherDefinitions.set(paged, def)
+  return paged
 }
 
 const entryKeyOf = (def: AnyDefinition, instance: SanityInstance, params: unknown[]): string =>

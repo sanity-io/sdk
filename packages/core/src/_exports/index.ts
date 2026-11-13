@@ -226,10 +226,9 @@ export {PreferenceError, type PreferenceErrorCode} from '../preferences/preferen
 export {
   updateUserPreferenceListItem,
   type UpdateUserPreferenceListItemInput,
-  type UserPreferenceList,
   userPreferenceList,
   type UserPreferenceListItem,
-  type UserPreferenceListOptions,
+  type UserPreferenceListPage,
 } from '../preferences/preferenceItems'
 export {
   updateUserPreference,

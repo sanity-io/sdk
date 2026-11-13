@@ -127,6 +127,21 @@ it('reads the next page once when load more is pressed twice before it arrives',
   expect(cursors()).toEqual([undefined, 'c1'])
 })
 
+it('refetches every page read so far, as one list', async () => {
+  request.mockImplementation(({cursor}) => (cursor ? page(['q2'], null) : page(['q1'], 'c1')))
+  const {result} = renderHook(() => useUserPreferenceList(QUERIES))
+  await vi.waitFor(() => expect(result.current?.data).toEqual(items(['q1'])))
+  await act(async () => result.current.loadMore())
+  await vi.waitFor(() => expect(result.current?.data).toEqual(items(['q1', 'q2'])))
+
+  let refetched: unknown
+  await act(async () => {
+    refetched = await result.current.refetch()
+  })
+
+  expect(refetched).toEqual({data: items(['q1', 'q2']), nextCursor: null})
+})
+
 it('starts again from the first page for another project', async () => {
   request.mockImplementation(({projectId = '', cursor}) =>
     cursor ? page([`${projectId}-2`], null) : page([projectId], `${projectId}-c1`),

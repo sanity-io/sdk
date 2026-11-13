@@ -773,7 +773,7 @@ describe('fetcherStore', () => {
     })
 
     it('keeps the pages read when the next one fails, and reads it again on the next load more', async () => {
-      const next = vi.fn(() => refusal('Bad cursor'))
+      const next = vi.fn((): Observable<Page> => refusal('Bad cursor'))
       const {fetcher, source} = pagedFetcher({first: () => page(['a'], 'c1'), c1: next})
       await vi.waitFor(() => expect(source.getCurrent().status).toBe('success'))
 
@@ -794,6 +794,50 @@ describe('fetcherStore', () => {
         ],
         error: undefined,
       })
+    })
+
+    it('reads a next page that keeps failing again straight away on the next load more', async () => {
+      vi.useFakeTimers()
+      const next = vi.fn((): Observable<Page> => throwError(() => unavailable))
+      const {fetcher, source} = pagedFetcher({first: () => page(['a'], 'c1'), c1: next})
+      await vi.advanceTimersByTimeAsync(0)
+      const failing = fetcher.loadMore(instance).catch((error: unknown) => error)
+
+      // A 5xx shows once five retries have failed, about 15 seconds in, and keeps retrying after
+      await vi.advanceTimersByTimeAsync(16_000)
+      expect(await failing).toBe(unavailable)
+      expect(source.getCurrent()).toMatchObject({status: 'success', error: unavailable})
+      const reads = next.mock.calls.length
+      next.mockReturnValue(page(['b'], null))
+
+      await fetcher.loadMore(instance)
+
+      expect(next).toHaveBeenCalledTimes(reads + 1)
+      expect(source.getCurrent()).toMatchObject({error: undefined})
+      expect(source.getCurrent().data).toHaveLength(2)
+    })
+
+    it('reads the next page from the pages a refetch in flight reads, rather than cancelling it', async () => {
+      const refetched = new Subject<Page>()
+      const first = vi.fn((): Observable<Page> => page(['a'], 'c1'))
+      const {fetcher, read, source} = pagedFetcher({
+        first,
+        c1: () => page(['stale'], null),
+        c2: () => page(['b'], null),
+      })
+      await vi.waitFor(() => expect(source.getCurrent().status).toBe('success'))
+      first.mockReturnValue(refetched)
+
+      const refetching = fetcher.refetch(instance)
+      const loading = fetcher.loadMore(instance)
+      refetched.next({data: ['a2'], nextCursor: 'c2'})
+      await Promise.all([refetching, loading])
+
+      expect(read.mock.calls).toEqual([[undefined], [undefined], ['c2']])
+      expect(source.getCurrent().data).toEqual([
+        {data: ['a2'], nextCursor: 'c2'},
+        {data: ['b'], nextCursor: null},
+      ])
     })
 
     it('reads the next page once when load more is called again before it arrives', async () => {
