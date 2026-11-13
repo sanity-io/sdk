@@ -1,5 +1,72 @@
 # Changelog
 
+## 3.13.0
+
+### Minor Changes
+
+- [#1477](https://github.com/sanity-io/sdk/pull/1477) [`bb54558`](https://github.com/sanity-io/sdk/commit/bb54558fe20794a9f465f212c9f623d24a30e910) Thanks [@stipsan](https://github.com/stipsan)! - Your `.groq` files now type your queries. `useQuery`, `getQueryState` and `resolveQuery` read the result and params types straight off a query imported through [`@sanity-labs/groq-content-mapper`](https://github.com/sanity-labs/groq-content-mapper): no generic to keep in sync, no registry entry, and params are checked too. This is experimental, and builds on `@sanity/client@8.11.0`.
+  
+  Before, you either wrote the type yourself or registered the query:
+  
+  ```tsx
+  const {data} = useQuery<Movie | null>({query: '*[_type == "movie" && _id == $id][0]', params: {id}})
+  ```
+  
+  After:
+  
+  ```tsx
+  import movieById from './movieById.groq' with {type: 'text'}
+  
+  const {data} = useQuery({query: movieById, params: {id}})
+  //     ^? Movie | null, and params that don't match the query are a type error
+  ```
+  
+  Plain strings, `defineQuery`, explicit generics, Typegen registrations and a query typed `any` resolve exactly as before. The brand carries no project or dataset and overrides the handle, like an explicit generic, so keep each dataset's `.groq` files in that dataset's `schemas` folder.
+
+- [#1509](https://github.com/sanity-io/sdk/pull/1509) [`e513a93`](https://github.com/sanity-io/sdk/commit/e513a93ccad172cbb3aec7c6df48696f788e6228) Thanks [@ryanbonial](https://github.com/ryanbonial)! - Apps built with the SDK now send unexpected SDK errors to Sanity's error tracking, through the `api.sanity.io` intake tunnel. This applies whether the app bundles the SDK or loads it with auto-updates. `@sanity/sdk` adds `@sentry/browser` as a dependency, loaded lazily the first time an SDK error boundary catches an unexpected error.
+  
+  Only errors thrown by SDK code that reach the `SDKProvider` or `AuthBoundary` error boundaries are reported. Errors from your own components are not, unless they wrap an SDK error as their `cause`. In that case the event includes your error's message and stack along with the SDK error. Expected SDK errors (document actions, message bus, Sanity API 4xx and 5xx responses, network failures, aborted requests), authentication and configuration errors, and CORS errors are not reported.
+  
+  Each event carries the error message and stack trace as they are, which includes the URLs of your app's script files. It also carries the SDK version, the name of the boundary that caught the error, and whether the app loads the SDK with auto-updates. The SDK adds no cookies, headers, request bodies, user details, or IP address. A page sends at most 10 events.
+  
+  Nothing is sent from local or development hosts (`localhost`, loopback and private network addresses, `*.localhost` and `*.local` names, and `file://` pages), from tests that render in jsdom or happy-dom, or from browsers driven by test automation such as Playwright or Cypress. To turn reporting on in those places while debugging, set `localStorage.SANITY_DEBUG_ERROR_REPORTING`.
+
+- [#1527](https://github.com/sanity-io/sdk/pull/1527) [`4a32181`](https://github.com/sanity-io/sdk/commit/4a3218152c9f5d4234256dff58b4da17e57b0888) Thanks [@joshuaellis](https://github.com/joshuaellis)! - `useUserPreference` reads a signed-in user's preference, like a list's layout, and `useUpdateUserPreference` changes it: pass a value, a function of the value on screen, or `undefined` to go back to the default. A change shows at once, sticks across reloads and browsers, and goes back if the API refuses it.
+
+- [#1528](https://github.com/sanity-io/sdk/pull/1528) [`481f36d`](https://github.com/sanity-io/sdk/commit/481f36d4e4708428583dfd87614cbe78c64c198a) Thanks [@joshuaellis](https://github.com/joshuaellis)! - `useUpdateUserPreference` changes a list preference, like starring and unstarring a project, by sending only the items added and removed, so a change made in another tab or browser is kept. A change shows at once, and goes back if the API refuses it, like when the list already holds 100 items.
+
+- [#1530](https://github.com/sanity-io/sdk/pull/1530) [`875db09`](https://github.com/sanity-io/sdk/commit/875db0990710f4b6dad8c78d7f563a0a2e83002b) Thanks [@joshuaellis](https://github.com/joshuaellis)! - Preference hooks take `shared: true` to read and change the value everyone in a project or organization shares, for keys that have one, and `resourceType` to pick a project or an organization for a key stored in both. A preference says whether its value is the default (`isDefault`), shared (`shared`) or stored in a `resourceType`, and `canEdit` says whether the signed-in user can change it.
+
+- [#1532](https://github.com/sanity-io/sdk/pull/1532) [`125f0b0`](https://github.com/sanity-io/sdk/commit/125f0b0139cfb902f3b4069f074ea4c2322d4761) Thanks [@joshuaellis](https://github.com/joshuaellis)! - `useUserPreferenceList` reads a long personal preference list, like Vision's saved queries, a page at a time with `loadMore`, and `useUpdateUserPreferenceList` saves or removes one item at a time. Outside React, `userPreferenceList` and `updateUserPreferenceListItem` do the same.
+
+- [#1572](https://github.com/sanity-io/sdk/pull/1572) [`fae6e5a`](https://github.com/sanity-io/sdk/commit/fae6e5a75857dfbcba91efa12b766efd2e9e7c56) Thanks [@joshuaellis](https://github.com/joshuaellis)! - When `useUsers` can't load the next page, the users already shown stay on screen and the failure is on its new `error` field, so the app can call `loadMore` again. The beta `getUsersState`, `resolveUsers` and `loadMoreUsers` in `@sanity/sdk` are deprecated, as is the `userId` option of `useUsers`: read a list of users with `useUsers`, and one user with `useUser`. They're removed in the next major.
+
+- [#1570](https://github.com/sanity-io/sdk/pull/1570) [`827c11f`](https://github.com/sanity-io/sdk/commit/827c11fc18746d8f35ecc3bc55ce1d4e2afa7087) Thanks [@joshuaellis](https://github.com/joshuaellis)! - `useApplications` reads an organization's applications a page at a time: `loadMore` adds the next page to `data.data`, `hasMore` says whether there is one, and `isPending` is true while it loads. A failed `loadMore` keeps the applications already shown and sets `error`. The `cursor` option is deprecated.
+
+- [#1571](https://github.com/sanity-io/sdk/pull/1571) [`9ecad2e`](https://github.com/sanity-io/sdk/commit/9ecad2ebdae335946ff2b9d8665205c56aee8089) Thanks [@joshuaellis](https://github.com/joshuaellis)! - `useInstallations` reads an organization's installations a page at a time: `loadMore` adds the next page to `data.data`, `hasMore` says whether there is one, and `isPending` is true while it loads. A failed `loadMore` keeps the installations already shown and sets `error`. The `cursor` option is deprecated.
+
+### Patch Changes
+
+- [#1525](https://github.com/sanity-io/sdk/pull/1525) [`3fbddd7`](https://github.com/sanity-io/sdk/commit/3fbddd79735416d310eff5a57ceaa04bb94fa44d) Thanks [@squiggler-app](https://github.com/apps/squiggler-app)! - Update dependencies: `@module-federation/runtime@2.9.3`
+
+- [#1523](https://github.com/sanity-io/sdk/pull/1523) [`76cf050`](https://github.com/sanity-io/sdk/commit/76cf0501844def8f5c5e705d172bf34438570a9b) Thanks [@squiggler-app](https://github.com/apps/squiggler-app)! - Update dependencies: `groq@6.23.0`, `sanity@6.23.0`
+
+- [#1512](https://github.com/sanity-io/sdk/pull/1512) [`8a9995f`](https://github.com/sanity-io/sdk/commit/8a9995f88100b6f5e91c6d262932b07a7c9b35b4) Thanks [@squiggler-app](https://github.com/apps/squiggler-app)! - Update dependencies: `@sanity/client@8.15.1`, `@sanity/types@6.23.0`
+
+- [#1546](https://github.com/sanity-io/sdk/pull/1546) [`431f5a9`](https://github.com/sanity-io/sdk/commit/431f5a909298f64fb0e7459d4851435b9b06db62) Thanks [@squiggler-app](https://github.com/apps/squiggler-app)! - Update dependencies: `zustand@5.1.0`
+
+- [#1527](https://github.com/sanity-io/sdk/pull/1527) [`4a32181`](https://github.com/sanity-io/sdk/commit/4a3218152c9f5d4234256dff58b4da17e57b0888) Thanks [@joshuaellis](https://github.com/joshuaellis)! - Refreshing an OAuth access token keeps the signed-in user, so `useCurrentUser` no longer returns `null` while `/users/me` is fetched again.
+
+- [#1536](https://github.com/sanity-io/sdk/pull/1536) [`7518e43`](https://github.com/sanity-io/sdk/commit/7518e431f68458814fb1f6ade5b585f782e477fc) Thanks [@joshuaellis](https://github.com/joshuaellis)! - A change that's still saving stays on screen when another change is answered or refused first, or a refetch lands before the server has it. Before, starring two projects quickly or unfavouriting a document straight after favouriting it could hide one of the changes.
+
+- [#1539](https://github.com/sanity-io/sdk/pull/1539) [`b450a60`](https://github.com/sanity-io/sdk/commit/b450a609697d28c2c591278a30ae0e0eab7afc22) Thanks [@joshuaellis](https://github.com/joshuaellis)! - Preferences a page starts reading together are fetched in one request per project, organization or user, with up to 100 keys each, instead of one request per preference.
+
+- [#1555](https://github.com/sanity-io/sdk/pull/1555) [`c21d7da`](https://github.com/sanity-io/sdk/commit/c21d7da704808f814a68307891bed9157d8d3a67) Thanks [@joshuaellis](https://github.com/joshuaellis)! - Saving and then deleting a list item, like a saved query, before the save has answered no longer leaves the item saved. A list item's changes now reach the server in the order they were made, as a preference's already did, and so do an application's updates and deletes and a document's favorite changes over the Dashboard message bus.
+
+- [#1558](https://github.com/sanity-io/sdk/pull/1558) [`e00e43f`](https://github.com/sanity-io/sdk/commit/e00e43f7e90f5e086494be1c9de3b7dbe1f93fbc) Thanks [@joshuaellis](https://github.com/joshuaellis)! - A project, organization, preference or other cached API read that failed with a 401 now reads again once the app gets a new token. These reads also retry network errors and 5xx responses with backoff, as queries and documents do.
+
+- [#1554](https://github.com/sanity-io/sdk/pull/1554) [`a268013`](https://github.com/sanity-io/sdk/commit/a268013cc9920afff4d09dfab42a3ff0a9d82fcc) Thanks [@joshuaellis](https://github.com/joshuaellis)! - Reading a project, organization, preference or other cached API data again after a failed read now sends a new request. Before, it failed with the earlier error until the cache let it go, at least five minutes later, so changing a preference with a function after a dropped connection failed without reaching the API.
+
 ## 3.12.0
 
 ### Minor Changes
