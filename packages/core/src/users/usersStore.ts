@@ -297,6 +297,7 @@ const listenForLoadMoreAndFetch = ({state, instance}: StoreContext<UsersStoreSta
  * integrations. Our SDK also provides a React integration for convenient usage.
  *
  * @beta
+ * @deprecated Read users with `useUsers`. Removed in the next major.
  */
 export const getUsersState = bindActionGlobally(
   usersStore,
@@ -349,6 +350,7 @@ export const getUsersState = bindActionGlobally(
  * clear the associated state if there are no active subscribers.
  *
  * @beta
+ * @deprecated Read users with `useUsers`. Removed in the next major.
  */
 export const resolveUsers = bindActionGlobally(
   usersStore,
@@ -402,6 +404,7 @@ export const resolveUsers = bindActionGlobally(
  * The function returns a promise that resolves when the next page of users has been loaded.
  *
  * @beta
+ * @deprecated Load more users with `useUsers`. Removed in the next major.
  */
 export const loadMoreUsers = bindActionGlobally(
   usersStore,

@@ -1,5 +1,5 @@
 import {type SanityClient} from '@sanity/client'
-import {firstValueFrom, NEVER, of} from 'rxjs'
+import {of} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, onTestFinished, vi} from 'vitest'
 
 import {getClientState} from '../client/clientStore'
@@ -8,7 +8,7 @@ import {installMessageBus} from '../dashboard/messageBus/bus'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {type StateSource} from '../store/createStateSourceAction'
 import {type SanityUser} from './types'
-import {getUserState, resolveUser, user, users} from './users'
+import {users} from './users'
 
 vi.mock('../client/clientStore')
 
@@ -61,9 +61,12 @@ describe('users', () => {
     const pages = await users.loadMore(instance, {projectId: 'project1', batchSize: 1})
 
     expect(pages.flatMap(({data}) => data)).toEqual([sanityUser('u1'), sanityUser('u2')])
-    expect(request).toHaveBeenLastCalledWith(
-      expect.objectContaining({query: {nextCursor: 'c1', limit: '1'}}),
-    )
+    expect(request).toHaveBeenLastCalledWith({
+      method: 'GET',
+      url: 'access/project/project1/users',
+      tag: 'users.list',
+      query: {nextCursor: 'c1', limit: '1'},
+    })
   })
 
   it("reads the users of the instance's project when none is given", async () => {
@@ -73,6 +76,16 @@ describe('users', () => {
 
     expect(request).toHaveBeenCalledWith(
       expect.objectContaining({url: 'access/project/test/users', query: {limit: '100'}}),
+    )
+  })
+
+  it("reads an organization's users when only its ID is given, not the instance's project", async () => {
+    request.mockReturnValue(of({data: [], totalCount: 0, nextCursor: null}))
+
+    await users.resolveState(instance, {organizationId: 'org1'})
+
+    expect(request).toHaveBeenCalledWith(
+      expect.objectContaining({url: 'access/organization/org1/users'}),
     )
   })
 
@@ -118,7 +131,7 @@ describe('users', () => {
   })
 })
 
-describe('user', () => {
+describe('users with a userId', () => {
   let instance: SanityInstance
   const request = vi.fn()
 
@@ -132,7 +145,7 @@ describe('user', () => {
 
   afterEach(() => instance.dispose())
 
-  it("reads a project user from the project's API, in the shape of any other user", async () => {
+  it("reads a project user from the project's API, as the only user in the list", async () => {
     request.mockReturnValue(
       of({
         id: 'p12345',
@@ -151,38 +164,46 @@ describe('user', () => {
       }),
     )
 
-    const found = await user.resolveState(instance, {userId: 'p12345', projectId: 'project1'})
+    const pages = await users.resolveState(instance, {userId: 'p12345', projectId: 'project1'})
 
     expect(getClientState).toHaveBeenCalledWith(
       instance,
       expect.objectContaining({projectId: 'project1'}),
     )
     expect(request).toHaveBeenCalledWith({method: 'GET', url: '/users/p12345', tag: 'users.get'})
-    expect(found).toEqual({
-      sanityUserId: 'p12345',
-      profile: {
-        id: 'p12345',
-        displayName: 'Project User',
-        familyName: undefined,
-        givenName: undefined,
-        middleName: undefined,
-        imageUrl: undefined,
-        createdAt: '2023-01-01T00:00:00Z',
-        updatedAt: '2023-01-01T00:00:00Z',
-        isCurrentUser: false,
-        email: 'project@example.com',
-        provider: 'google',
+    expect(pages).toEqual([
+      {
+        data: [
+          {
+            sanityUserId: 'p12345',
+            profile: {
+              id: 'p12345',
+              displayName: 'Project User',
+              familyName: undefined,
+              givenName: undefined,
+              middleName: undefined,
+              imageUrl: undefined,
+              createdAt: '2023-01-01T00:00:00Z',
+              updatedAt: '2023-01-01T00:00:00Z',
+              isCurrentUser: false,
+              email: 'project@example.com',
+              provider: 'google',
+            },
+            memberships: [],
+          },
+        ],
+        totalCount: 1,
+        nextCursor: null,
       },
-      memberships: [],
-    })
+    ])
   })
 
   it('reads a global user from the access API of the resource it belongs to', async () => {
-    request.mockReturnValue(of({data: [sanityUser('g12345')], totalCount: 1, nextCursor: null}))
+    request.mockReturnValue(of(sanityUser('g12345')))
 
-    const found = await resolveUser(instance, {userId: 'g12345', projectId: 'project1'})
+    const pages = await users.resolveState(instance, {userId: 'g12345', projectId: 'project1'})
 
-    expect(found).toEqual(sanityUser('g12345'))
+    expect(pages).toEqual([{data: [sanityUser('g12345')], totalCount: 1, nextCursor: null}])
     expect(getClientState).toHaveBeenCalledWith(
       instance,
       expect.objectContaining({scope: 'global'}),
@@ -194,41 +215,27 @@ describe('user', () => {
     })
   })
 
-  it('finds no user when the access API lists none by that ID', async () => {
-    request.mockReturnValue(of({data: [], totalCount: 0, nextCursor: null}))
+  it("reads an organization's user from the organization's access API", async () => {
+    request.mockReturnValue(of(sanityUser('g1')))
 
-    expect(await resolveUser(instance, {userId: 'g1', projectId: 'p'})).toBeUndefined()
+    await users.resolveState(instance, {
+      userId: 'g1',
+      resourceType: 'organization',
+      organizationId: 'org1',
+    })
+
+    expect(request).toHaveBeenCalledWith(
+      expect.objectContaining({url: 'access/organization/org1/users/g1'}),
+    )
   })
 
   it('reports a missing resource ID for a user right away', () => {
     instance.dispose()
     instance = createSanityInstance({})
 
-    expect(() => user.getState(instance, {userId: 'gUser1'}).getCurrent()).toThrow(
+    expect(() => users.getState(instance, {userId: 'gUser1'}).getCurrent()).toThrow(
       'An organizationId or a projectId is required',
     )
     expect(request).not.toHaveBeenCalled()
-  })
-
-  it('emits a user once it has been read', async () => {
-    request.mockReturnValue(of(sanityUser('g1')))
-
-    const found = await firstValueFrom(getUserState(instance, {userId: 'g1', projectId: 'p'}))
-
-    expect(found).toEqual(sanityUser('g1'))
-  })
-
-  it('stops waiting for a user when the signal aborts', async () => {
-    request.mockReturnValue(NEVER)
-    const controller = new AbortController()
-
-    const resolving = resolveUser(instance, {
-      userId: 'g1',
-      projectId: 'p',
-      signal: controller.signal,
-    })
-    controller.abort()
-
-    await expect(resolving).rejects.toMatchObject({name: 'AbortError'})
   })
 })

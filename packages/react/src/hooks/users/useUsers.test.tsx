@@ -112,6 +112,21 @@ it('keeps the users shown when the next page fails to load, and can load more ag
   )
 })
 
+it('is pending while it loads more users', async () => {
+  const next = new Subject<Page>()
+  read.mockImplementation((_options, cursor) => (cursor ? next : page(['u1'], 'c1', 2)))
+  const {result} = renderHook(() => useUsers())
+  await vi.waitFor(() => expect(result.current?.data).toEqual(sanityUsers(['u1'])))
+
+  await act(async () => result.current.loadMore())
+
+  expect(result.current).toMatchObject({data: sanityUsers(['u1']), isPending: true})
+  await act(async () => next.next({data: sanityUsers(['u2']), totalCount: 2, nextCursor: null}))
+  await vi.waitFor(() =>
+    expect(result.current).toMatchObject({data: sanityUsers(['u1', 'u2']), isPending: false}),
+  )
+})
+
 it("keeps a list's users shown while another list loads", async () => {
   const next = new Subject<Page>()
   read.mockImplementation(({projectId}) => (projectId === 'b' ? next : page(['a1'], null)))
@@ -123,6 +138,7 @@ it("keeps a list's users shown while another list loads", async () => {
   rerender({projectId: 'b'})
 
   expect(result.current).toMatchObject({data: sanityUsers(['a1']), isPending: true})
+  await vi.waitFor(() => expect(read).toHaveBeenLastCalledWith({projectId: 'b'}, undefined))
   await act(async () => next.next({data: sanityUsers(['b1']), totalCount: 1, nextCursor: null}))
   await vi.waitFor(() =>
     expect(result.current).toMatchObject({data: sanityUsers(['b1']), isPending: false}),
