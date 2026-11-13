@@ -36,7 +36,7 @@ describe('applications', () => {
       limit: 'none',
     })
 
-    expect(result).toEqual(response)
+    expect(result).toEqual([response])
     expect(getClientState).toHaveBeenCalledWith(instance, {
       apiVersion: 'vX',
       scope: 'global',
@@ -46,6 +46,60 @@ describe('applications', () => {
       query: {organizationId: 'org1', include: 'access,workspaces', limit: 'none'},
       tag: 'applications.list',
     })
+  })
+
+  it('reads the next page with the cursor the one before returned, keeping the filters', async () => {
+    request
+      .mockReturnValueOnce(of({nextCursor: 'c1', data: [{id: 'app1'}]}))
+      .mockReturnValueOnce(of({nextCursor: null, data: [{id: 'app2'}]}))
+    const options = {organizationId: 'org1', type: 'studio', limit: 1}
+    await applications.resolveState(instance, options)
+
+    const pages = await applications.loadMore(instance, options)
+
+    expect(pages.flatMap(({data}) => data)).toEqual([{id: 'app1'}, {id: 'app2'}])
+    expect(request).toHaveBeenLastCalledWith({
+      url: '/applications',
+      query: {organizationId: 'org1', type: 'studio', limit: 1, cursor: 'c1'},
+      tag: 'applications.list',
+    })
+  })
+
+  it('starts from the cursor the app passes, then loads more from the page it read', async () => {
+    request
+      .mockReturnValueOnce(of({nextCursor: 'c2', data: [{id: 'app2'}]}))
+      .mockReturnValueOnce(of({nextCursor: null, data: [{id: 'app3'}]}))
+    const options = {organizationId: 'org1', cursor: 'c1'}
+    await applications.resolveState(instance, options)
+
+    await applications.loadMore(instance, options)
+
+    expect(request.mock.calls.map(([{query}]) => query.cursor)).toEqual(['c1', 'c2'])
+  })
+
+  it('refetches the list when a mutation invalidates an application on a page loaded after the first', async () => {
+    request.mockImplementation(({query}) =>
+      of(
+        query.cursor
+          ? {nextCursor: null, data: [{id: 'app2'}]}
+          : {nextCursor: 'c1', data: [{id: 'app1'}]},
+      ),
+    )
+    const source = applications.getState(instance, {organizationId: 'org1'})
+    onTestFinished(source.subscribe())
+    await vi.waitFor(() => expect(source.getCurrent().status).toBe('success'))
+    await applications.loadMore(instance, {organizationId: 'org1'})
+    request.mockClear()
+
+    const change = defineMutation<undefined, {ok: boolean}>({
+      name: 'test-change-application',
+      mutationFn: () => () => of({ok: true}),
+      invalidates: [{type: 'application', id: 'app2'}],
+    })
+    const {invalidated} = await change(instance, undefined)
+    await invalidated
+
+    expect(request).toHaveBeenCalledTimes(2)
   })
 
   it('fetches a single application by id', async () => {
@@ -98,7 +152,7 @@ describe('applications', () => {
     await invalidated
 
     expect(request).toHaveBeenCalledTimes(2)
-    expect(source.getCurrent().data).toEqual({nextCursor: null, data: [{id: 'app-2'}]})
+    expect(source.getCurrent().data).toEqual([{nextCursor: null, data: [{id: 'app-2'}]}])
     unsubscribe()
   })
 
