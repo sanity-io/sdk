@@ -1,5 +1,5 @@
 import {DocumentId, getDraftId, getPublishedId} from '@sanity/id-utils'
-import {type SanityDocument} from '@sanity/types'
+import {type PatchOperations, type SanityDocument} from '@sanity/types'
 import {parse} from 'groq-js'
 import {Subject} from 'rxjs'
 import {describe, expect, it} from 'vitest'
@@ -1130,6 +1130,98 @@ describe('applyRemoteDocument', () => {
     expect(newDocState?.remoteRev).toEqual(remote.revision)
     // For this simple test we expect that the local is “rebased” to the remote document.
     expect(newDocState?.local).toEqual(remote.document)
+  })
+
+  describe('with an outgoing transaction the server has not applied yet', () => {
+    const draftId = getDraftId(DocumentId('doc1'))
+    const publishedId = getPublishedId(DocumentId('doc1'))
+    const remoteDoc = {
+      ...exampleDoc,
+      _id: draftId,
+      _rev: 'rev1',
+      _updatedAt: '2025-01-01T00:00:00.000Z',
+      name: 'Start:',
+      count: 1,
+    }
+
+    const edit = (transactionId: string, patches: PatchOperations[]): QueuedTransaction => ({
+      transactionId,
+      actions: [{type: 'document.edit', documentId: 'doc1', documentType: 'author', patches}],
+    })
+
+    // `txn1` goes out as the outgoing transaction and `txn2` is applied behind it
+    function stateWithOutgoing(): SyncTransactionState {
+      let state: SyncTransactionState = {
+        queued: [],
+        applied: [],
+        outgoing: undefined,
+        grants,
+        documentStates: {
+          [draftId]: {id: draftId, subscriptions: ['sub1'], local: remoteDoc, remote: remoteDoc},
+          [publishedId]: {id: publishedId, subscriptions: ['sub1'], local: null, remote: null},
+        },
+      }
+      state = applyFirstQueuedTransaction(
+        queueTransaction(state, edit('txn1', [{set: {name: 'Start: typed'}}, {inc: {count: 1}}])),
+      )
+      state = transitionAppliedTransactionsToOutgoing(state)
+      state = applyFirstQueuedTransaction(
+        queueTransaction(state, edit('txn2', [{set: {bio: 'b'}}])),
+      )
+      return state
+    }
+
+    it('keeps its changes in local when a sync re-fetches the document without it', () => {
+      const state = stateWithOutgoing()
+      expect(state.outgoing?.transactionId).toBe('txn1')
+
+      const events = new Subject<DocumentEvent>()
+      const next = applyRemoteDocument(
+        state,
+        {
+          type: 'sync',
+          documentId: draftId,
+          // changed by someone else since, but without `txn1`
+          document: {...remoteDoc, _rev: 'rev2', title: 'remote'},
+          revision: 'rev2',
+          timestamp: remoteDoc._updatedAt,
+        },
+        events,
+      )
+
+      expect(next.documentStates[draftId]?.local).toMatchObject({
+        name: 'Start: typed',
+        count: 2,
+        bio: 'b',
+        title: 'remote',
+      })
+      // only `local` is recomputed. the outgoing transaction may already be on its way
+      expect(next.outgoing).toBe(state.outgoing)
+      expect(next.applied[0]?.previous[draftId]).toMatchObject({name: 'Start: typed', count: 2})
+    })
+
+    it('does not apply it twice once the remote copy includes it', () => {
+      const state = stateWithOutgoing()
+
+      const events = new Subject<DocumentEvent>()
+      const next = applyRemoteDocument(
+        state,
+        {
+          type: 'sync',
+          documentId: draftId,
+          document: {...remoteDoc, _rev: 'txn1', name: 'Start: typed', count: 2},
+          revision: 'txn1',
+          timestamp: new Date().toISOString(),
+        },
+        events,
+      )
+
+      expect(next.documentStates[draftId]?.local).toMatchObject({
+        name: 'Start: typed',
+        count: 2,
+        bio: 'b',
+      })
+    })
   })
 
   // Test that a sync event removes outdated unverified revisions.
