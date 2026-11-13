@@ -20,13 +20,29 @@ describe('useView', () => {
   it('returns the view the host passed to render()', () => {
     const {result} = renderHook(() => useView(), {
       wrapper: ({children}: {children: ReactNode}) => (
-        <RootContext.Provider value={{signal: new AbortController().signal, props: {view}}}>
+        <RootContext.Provider
+          value={{signal: new AbortController().signal, viewType: 'tile', props: {view}}}
+        >
           {children}
         </RootContext.Provider>
       ),
     })
 
     expect(result.current).toBe(view)
+  })
+
+  it('throws in an asset source', () => {
+    expect(() =>
+      renderHook(() => useView(), {
+        wrapper: ({children}: {children: ReactNode}) => (
+          <RootContext.Provider
+            value={{signal: new AbortController().signal, viewType: 'asset_source', props: {}}}
+          >
+            {children}
+          </RootContext.Provider>
+        ),
+      }),
+    ).toThrow('useView must be called inside a Dashboard view')
   })
 
   it('throws outside a Dashboard view', () => {

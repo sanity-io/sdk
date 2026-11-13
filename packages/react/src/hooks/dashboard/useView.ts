@@ -19,10 +19,12 @@ import {getDashboardRootContext} from '../../dashboard/module'
  * @public
  * @category Dashboard
  */
-export function useView(): Exclude<ApplicationInterface, {type: 'worker'}> {
-  const view = useContext(getDashboardRootContext())?.props?.view
+export function useView(): Extract<ApplicationInterface, {type: 'panel' | 'tile'}> {
+  const root = useContext(getDashboardRootContext())
 
-  if (!view) throw new Error('useView must be called inside a Dashboard view')
+  if (root?.viewType !== 'panel' && root?.viewType !== 'tile') {
+    throw new Error('useView must be called inside a Dashboard view')
+  }
 
-  return view
+  return root.props.view
 }

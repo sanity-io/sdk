@@ -30,13 +30,11 @@ export function usePanel(): {
   onClose: () => void
 } {
   const view = useView()
-  const onClose = useContext(getDashboardRootContext())?.props?.onClose
+  const root = useContext(getDashboardRootContext())
 
-  if (view.type !== 'panel') {
+  if (root?.viewType !== 'panel') {
     throw new Error(`usePanel must be called inside a panel view, not a ${view.type} view`)
   }
 
-  if (!onClose) throw new Error('The Dashboard rendered this panel without onClose')
-
-  return {view, onClose}
+  return root.props
 }
