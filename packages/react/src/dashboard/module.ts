@@ -1,3 +1,4 @@
+import {type ApplicationInterface} from '@sanity/sdk'
 import * as React from 'react'
 
 const ROOT_SLOT_KEY = Symbol.for('sanity.os.root')
@@ -10,6 +11,11 @@ interface DashboardRoot {
   moduleId?: string
   /** The key of the host's bus connection, when the host passed `renderOptions.parentKey`. */
   parentKey?: string
+  /** The props the host passed to `render()`. */
+  props?: {
+    onClose?: () => void
+    view?: Exclude<ApplicationInterface, {type: 'worker'}>
+  }
 }
 
 type RootSlot = WeakMap<typeof React.createContext, React.Context<DashboardRoot | undefined>>

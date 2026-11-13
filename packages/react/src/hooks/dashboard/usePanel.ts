@@ -1,0 +1,40 @@
+import {type ApplicationInterface} from '@sanity/sdk'
+import {useContext} from 'react'
+
+import {getDashboardRootContext} from '../../dashboard/module'
+import {useView} from './useView'
+
+/**
+ * Returns the panel view this component renders in, and a function that closes the panel.
+ *
+ * Throws when the component does not render in a panel view.
+ *
+ * @example
+ * ```tsx
+ * export default function MyPanel() {
+ *   const {view, onClose} = usePanel()
+ *   return (
+ *     <header>
+ *       <h2>{view.title}</h2>
+ *       <button onClick={onClose}>Close</button>
+ *     </header>
+ *   )
+ * }
+ * ```
+ *
+ * @public
+ * @category Dashboard
+ */
+export function usePanel(): {
+  view: Extract<ApplicationInterface, {type: 'panel'}>
+  onClose: () => void
+} {
+  const view = useView()
+  const onClose = useContext(getDashboardRootContext())?.props?.onClose
+  if (view.type !== 'panel') {
+    throw new Error(`usePanel must be called inside a panel view, not a ${view.type} view`)
+  }
+  if (!onClose) throw new Error('The Dashboard rendered this panel without onClose')
+
+  return {view, onClose}
+}

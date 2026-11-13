@@ -56,8 +56,10 @@ export {
   useNavigateToStudioDocument,
 } from '../hooks/dashboard/useNavigateToStudioDocument'
 export {useOrganizationId} from '../hooks/dashboard/useOrganizationId'
+export {usePanel} from '../hooks/dashboard/usePanel'
 export {useRemoteClient} from '../hooks/dashboard/useRemoteClient'
 export {useTopic} from '../hooks/dashboard/useTopic'
+export {useView} from '../hooks/dashboard/useView'
 export {useWindowTitle} from '../hooks/dashboard/useWindowTitle'
 export {useWorker, type WorkerClient, type WorkerTypes} from '../hooks/dashboard/useWorker'
 export type {
