@@ -50,6 +50,7 @@ export interface Values {
     completedAt?: string
   }
   'dashboard.dashboard-2-opt-in': boolean
+  'dashboard.dashboard-2-org-opt-in': boolean
   /**
    * @maxItems 100
    */
@@ -122,6 +123,7 @@ export const KEYS = {
   'context.setup-guide.hidden': {levels: ['user@organization'], defaultValue: false},
   'context.setup-guide.completion': {levels: ['organization'], defaultValue: {}},
   'dashboard.dashboard-2-opt-in': {levels: ['user'], defaultValue: false},
+  'dashboard.dashboard-2-org-opt-in': {levels: ['organization'], defaultValue: false},
   'manage.pinned.projects': {levels: ['user'], defaultValue: [], list: true},
   'studio.structure-tool.layout.{...paneKey}': {levels: ['user@project'], defaultValue: 'default'},
   'studio.structure-tool.sort-order.{...paneKey}': {
