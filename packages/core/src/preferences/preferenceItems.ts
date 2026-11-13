@@ -1,7 +1,7 @@
-import {defer, EMPTY, expand, reduce, take} from 'rxjs'
+import {defer} from 'rxjs'
 
 import {type SanityInstance} from '../store/createSanityInstance'
-import {defineFetcher, defineMutation} from '../store/fetcherStore'
+import {defineMutation, definePagedFetcher} from '../store/fetcherStore'
 import {REFETCH_INTERVAL_MS, request, resolveKey, type UserPreferenceOptions} from './preferences'
 import {
   type PreferenceListItemKeyValue,
@@ -21,27 +21,12 @@ export interface UserPreferenceListItem<K extends PreferenceListKey = Preference
 }
 
 /**
- * The items on the pages read so far, in order.
+ * One page of items, as the API answers.
  * @internal
  */
-export interface UserPreferenceList<K extends PreferenceListKey = PreferenceListKey> {
+export interface UserPreferenceListPage<K extends PreferenceListKey = PreferenceListKey> {
   data: UserPreferenceListItem<K>[]
-  /** Whether there's another page to read. */
-  hasMore: boolean
-}
-
-/**
- * Where items are read from, as for any preference, and how many pages.
- * @internal
- */
-export type UserPreferenceListOptions = UserPreferenceOptions & {
-  /** How many pages to read, from the first. 1 by default. */
-  pages?: number
-}
-
-// One page of items, as the API answers
-interface ApiPage {
-  data: UserPreferenceListItem[]
+  /** Where the next page starts, or `null` on the last page. */
   nextCursor: string | null
 }
 
@@ -84,41 +69,27 @@ function itemsTag(userId: string, key: PreferenceListKey) {
 
 /**
  * Fetcher for the signed-in user's items for a key, like their saved queries, on the shared
- * fetcher cache. Reads `pages` pages in order, from the first, so a change, which reads them all
- * again, never shows an item twice or misses one that moved to another page. Lists are cached
- * per user, so people who share a browser never see each other's.
+ * fetcher cache, a page at a time. After a change, every page read so far is read again from the
+ * first, so an item never shows twice or goes missing when it moves to another page. Lists are
+ * cached per user, so people who share a browser never see each other's.
  *
  * @internal
  */
-export const userPreferenceList = defineFetcher<
-  [userId: string, key: PreferenceListKey, options?: UserPreferenceListOptions],
-  UserPreferenceList
+export const userPreferenceList = definePagedFetcher<
+  [userId: string, key: PreferenceListKey, options?: UserPreferenceOptions],
+  UserPreferenceListPage
 >({
   name: 'userPreferenceList',
-  getKey: (instance, userId, key, {pages = 1, ...options} = {}) =>
-    `${userId}:${resolveKey(instance, key, options).keyUrl}:${pages}`,
+  getKey: (instance, userId, key, options = {}) =>
+    `${userId}:${resolveKey(instance, key, options).keyUrl}`,
   fetch:
     (instance) =>
-    (_userId, key, {pages = 1, ...options} = {}) => {
-      const url = `${resolveKey(instance, key, options).keyUrl}/items`
-      // The client stays open, so each read ends on its answer for `reduce` to emit
-      const read = (cursor?: string) =>
-        request<ApiPage>(instance, {
-          url,
-          query: cursor ? {cursor} : {},
-          tag: 'preferences.items.list',
-        }).pipe(take(1))
-      return read().pipe(
-        // The API's cursor points at an item, so each page is read with the one before's
-        expand((page, index) =>
-          page.nextCursor && index + 1 < pages ? read(page.nextCursor) : EMPTY,
-        ),
-        reduce<ApiPage, UserPreferenceList>(
-          (list, page) => ({data: [...list.data, ...page.data], hasMore: page.nextCursor !== null}),
-          {data: [], hasMore: false},
-        ),
-      )
-    },
+    (cursor, _userId, key, options = {}) =>
+      request<UserPreferenceListPage>(instance, {
+        url: `${resolveKey(instance, key, options).keyUrl}/items`,
+        query: cursor ? {cursor} : {},
+        tag: 'preferences.items.list',
+      }),
   refetchInterval: REFETCH_INTERVAL_MS,
   tags: (_data, userId, key) => itemsTag(userId, key),
 })

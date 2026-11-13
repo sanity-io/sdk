@@ -29,14 +29,15 @@ describe('preference items', () => {
 
   afterEach(() => instance.dispose())
 
-  const ids = (list: {data: {itemId: string}[]}) => list.data.map(({itemId}) => itemId)
+  const ids = (pages: {data: {itemId: string}[]}[] | undefined) =>
+    pages?.flatMap(({data}) => data.map(({itemId}) => itemId))
 
   it('reads the first page, and says when there are more', async () => {
     request.mockReturnValueOnce(of({data: [item('q1')], nextCursor: 'c1'}))
 
     const list = await userPreferenceList.resolveState(instance, 'user-1', QUERIES)
 
-    expect(list).toEqual({data: [item('q1')], hasMore: true})
+    expect(list).toEqual([{data: [item('q1')], nextCursor: 'c1'}])
     expect(request).toHaveBeenCalledExactlyOnceWith({
       url: ITEMS,
       query: {},
@@ -53,20 +54,23 @@ describe('preference items', () => {
       .mockReturnValueOnce(of({data: [item('q1')], nextCursor: 'c1'}))
       .mockReturnValueOnce(of({data: [item('q2')], nextCursor: null}))
 
-    const list = await userPreferenceList.resolveState(instance, 'user-1', QUERIES, {pages: 2})
+    await userPreferenceList.resolveState(instance, 'user-1', QUERIES)
+
+    const list = await userPreferenceList.loadMore(instance, 'user-1', QUERIES)
 
     expect(ids(list)).toEqual(['q1', 'q2'])
   })
 
-  it('reads the pages asked for in order, each with the cursor the one before returned', async () => {
+  it('reads the next page with the cursor the one before returned', async () => {
     request
       .mockReturnValueOnce(of({data: [item('q1'), item('q2')], nextCursor: 'c1'}))
       .mockReturnValueOnce(of({data: [item('q3')], nextCursor: null}))
+    await userPreferenceList.resolveState(instance, 'user-1', QUERIES)
 
-    const list = await userPreferenceList.resolveState(instance, 'user-1', QUERIES, {pages: 3})
+    const list = await userPreferenceList.loadMore(instance, 'user-1', QUERIES)
 
     expect(ids(list)).toEqual(['q1', 'q2', 'q3'])
-    expect(list.hasMore).toBe(false)
+    expect(list.at(-1)?.nextCursor).toBeNull()
     expect(request).toHaveBeenCalledTimes(2)
     expect(request).toHaveBeenNthCalledWith(2, {
       url: ITEMS,
@@ -74,21 +78,6 @@ describe('preference items', () => {
       tag: 'preferences.items.list',
       timeout: 10_000,
     })
-  })
-
-  it('reads more pages of a list it has already read, rather than serving the cached pages', async () => {
-    request.mockImplementation((options) =>
-      of(
-        options.query.cursor
-          ? {data: [item('q2')], nextCursor: null}
-          : {data: [item('q1')], nextCursor: 'c1'},
-      ),
-    )
-    await userPreferenceList.resolveState(instance, 'user-1', QUERIES)
-
-    const more = await userPreferenceList.resolveState(instance, 'user-1', QUERIES, {pages: 2})
-
-    expect(ids(more)).toEqual(['q1', 'q2'])
   })
 
   it('reads the list again every minute while it is subscribed, so a change made elsewhere shows', async () => {
@@ -115,9 +104,10 @@ describe('preference items', () => {
     request.mockImplementation((options) =>
       options.url.endsWith('/items') ? of(pages[options.query.cursor ?? '']) : of(item('q0')),
     )
-    const list = userPreferenceList.getState(instance, 'user-1', QUERIES, {pages: 2})
+    const list = userPreferenceList.getState(instance, 'user-1', QUERIES)
     const unsubscribe = list.subscribe()
     await vi.waitFor(() => expect(list.getCurrent()).toMatchObject({status: 'success'}))
+    await userPreferenceList.loadMore(instance, 'user-1', QUERIES)
 
     // Adding q0 at the start pushes q2 onto the second page
     pages[''] = {data: [item('q0'), item('q1')], nextCursor: 'after-q1'}
@@ -129,7 +119,7 @@ describe('preference items', () => {
       value: query('q0'),
     })
 
-    await vi.waitFor(() => expect(ids(list.getCurrent().data!)).toEqual(['q0', 'q1', 'q2', 'q3']))
+    await vi.waitFor(() => expect(ids(list.getCurrent().data)).toEqual(['q0', 'q1', 'q2', 'q3']))
     unsubscribe()
   })
 
@@ -149,7 +139,7 @@ describe('preference items', () => {
       value: query('q1'),
     })
 
-    await vi.waitFor(() => expect(page.getCurrent()).toMatchObject({data: {data: [item('q1')]}}))
+    await vi.waitFor(() => expect(page.getCurrent()).toMatchObject({data: [{data: [item('q1')]}]}))
     expect(request).toHaveBeenNthCalledWith(2, {
       url: `${ITEMS}/q1`,
       method: 'PUT',
@@ -174,7 +164,7 @@ describe('preference items', () => {
       value: undefined,
     })
 
-    await vi.waitFor(() => expect(page.getCurrent()).toMatchObject({data: {data: []}}))
+    await vi.waitFor(() => expect(page.getCurrent()).toMatchObject({data: [{data: []}]}))
     expect(request).toHaveBeenNthCalledWith(2, {
       url: `${ITEMS}/q1`,
       method: 'DELETE',
