@@ -1,6 +1,6 @@
 import {renderHook} from '@testing-library/react'
 import {type ComponentProps, type ReactNode} from 'react'
-import {describe, expect, it} from 'vitest'
+import {describe, expect, it, vi} from 'vitest'
 
 import {getDashboardRootContext} from '../../dashboard/module'
 import {useAssetSource} from './useAssetSource'
@@ -24,12 +24,21 @@ function renderInView(value: ComponentProps<typeof RootContext.Provider>['value'
 }
 
 describe('useAssetSource', () => {
-  it('returns the asset source view the host passed to render()', () => {
+  it('returns the asset source view and props the host passed to render()', () => {
     const view = {...base, metadata: null, type: 'asset_source'} as const
+    const props: ReturnType<typeof useAssetSource> = {
+      accept: 'image/*',
+      assetSource: {component: () => null, name: 'library'},
+      onClose: vi.fn(),
+      onSelect: vi.fn(),
+      selectedAssets: [],
+      selectionType: 'single',
+      view,
+    }
 
-    const {result} = renderInView({signal, viewType: 'asset_source', props: {view}})
+    const {result} = renderInView({signal, viewType: 'asset_source', props})
 
-    expect(result.current).toEqual({view})
+    expect(result.current).toBe(props)
   })
 
   it('throws in a view of another type', () => {

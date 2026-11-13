@@ -1,31 +1,37 @@
 import {type ApplicationInterface} from '@sanity/sdk'
+import {type AssetSourceComponentProps} from '@sanity/types'
+import {useContext} from 'react'
 
+import {getDashboardRootContext} from '../../dashboard/module'
 import {useView} from './useView'
 
 /**
- * Returns the asset source view.
+ * Returns the asset source view and the asset source props, such as `onSelect` and `onClose`.
  *
  * Throws when the component does not render in an asset source view.
  *
  * @example
  * ```tsx
  * export default function MyAssetSource() {
- *   const {view} = useAssetSource()
- *   return <p>{view.title}</p>
+ *   const {view, onClose} = useAssetSource()
+ *   return <button onClick={onClose}>Close {view.title}</button>
  * }
  * ```
  *
  * @public
  * @category Dashboard
  */
-export function useAssetSource(): {view: Extract<ApplicationInterface, {type: 'asset_source'}>} {
+export function useAssetSource(): AssetSourceComponentProps & {
+  view: Extract<ApplicationInterface, {type: 'asset_source'}>
+} {
   const view = useView()
+  const root = useContext(getDashboardRootContext())
 
-  if (view.type !== 'asset_source') {
+  if (root?.viewType !== 'asset_source') {
     throw new Error(
       `useAssetSource must be called inside an asset source view, not a ${view.type} view`,
     )
   }
 
-  return {view}
+  return root.props
 }
