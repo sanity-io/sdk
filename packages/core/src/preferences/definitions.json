@@ -228,6 +228,20 @@
     "versions": [1]
   },
   {
+    "key": "dashboard.dashboard-2-org-opt-in",
+    "schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "boolean",
+      "default": false
+    },
+    "levels": ["organization"],
+    "write": {
+      "organization": "sanity.organization.update"
+    },
+    "maxBytes": 16384,
+    "versions": [1]
+  },
+  {
     "key": "manage.pinned.projects",
     "schema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -481,7 +495,7 @@
       "properties": {
         "_key": {
           "type": "string",
-          "pattern": "^[A-Za-z0-9_-]{1,128}$"
+          "pattern": "^[A-Za-z0-9_:-]{1,128}$"
         },
         "url": {
           "type": "string"
