@@ -20,4 +20,4 @@ const {data} = useQuery({query: movieById, params: {id}})
 //     ^? Movie | null, and params that don't match the query are a type error
 ```
 
-Plain strings, `defineQuery`, explicit generics and Typegen registrations resolve exactly as before.
+Plain strings, `defineQuery`, explicit generics, Typegen registrations and a query typed `any` resolve exactly as before. The brand carries no project or dataset and overrides the handle, like an explicit generic, so keep each dataset's `.groq` files in that dataset's `schemas` folder.

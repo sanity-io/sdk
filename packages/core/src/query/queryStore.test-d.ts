@@ -69,8 +69,27 @@ describe('ResolveQueryResult', () => {
     >().toEqualTypeOf<RegisteredResult>()
   })
 
+  test('the brand carries no dataset identity', () => {
+    expectTypeOf<
+      ResolveQueryResult<PostsBySearchQuery, 'querystore1.test'>
+    >().toEqualTypeOf<PostsBySearchResult>()
+    expectTypeOf<
+      ResolveQueryResult<PostsBySearchQuery, 'other.staging'>
+    >().toEqualTypeOf<PostsBySearchResult>()
+  })
+
+  test('a union of a branded query and a plain query keeps both results', () => {
+    type Mixed = PostsBySearchQuery | '*[_type == "queryStoreRegistered"]'
+    expectTypeOf<ResolveQueryResult<Mixed, 'querystore1.test'>>().toEqualTypeOf<
+      PostsBySearchResult | RegisteredResult
+    >()
+  })
+
   test('unbranded queries resolve as before', () => {
     expectTypeOf<ResolveQueryResult>().toEqualTypeOf<never>()
+    // `any` is the case under test: it must keep resolving to `never`.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expectTypeOf<ResolveQueryResult<any>>().toBeNever()
     expectTypeOf<ResolveQueryResult<'*[_type == "unregistered"]'>>().toEqualTypeOf<never>()
     expectTypeOf<
       ResolveQueryResult<'*[_type == "queryStoreRegistered"]', `${string}.${string}`>
@@ -78,6 +97,12 @@ describe('ResolveQueryResult', () => {
     expectTypeOf<
       ResolveQueryResult<'*[_type == "unregistered"]', 'querystore1.test'>
     >().toEqualTypeOf<never>()
+    expectTypeOf<
+      ResolveQueryResult<
+        '*[_type == "queryStoreRegistered"]' | '*[_type == "unregistered"]',
+        'querystore1.test'
+      >
+    >().toEqualTypeOf<RegisteredResult>()
   })
 })
 
@@ -159,6 +184,25 @@ describe('getQueryState', () => {
   test('a query known only as string still accepts any params record', () => {
     const query: string = '*[_type == $type]'
     getQueryState(instance, {query, params: {type: 'post'}})
+  })
+
+  test('a query typed any resolves to never and keeps the open params record', () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- an untyped query
+    const query: any = '*[_type == $type]'
+    expectTypeOf(getQueryState(instance, {query, params: {type: 'post'}})).toEqualTypeOf<
+      StateSource<undefined>
+    >()
+    expectTypeOf<
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- an untyped query
+      QueryOptions<any>['params']
+    >().toEqualTypeOf<Record<string, unknown> | undefined>()
+  })
+
+  test('a generic query still accepts a params record', () => {
+    function load<const Q extends string>(query: Q, params: Record<string, unknown>) {
+      return getQueryState(instance, {query, params})
+    }
+    expectTypeOf(load('*[_type == $type]', {type: 'post'})).toEqualTypeOf<StateSource<undefined>>()
   })
 })
 

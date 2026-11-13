@@ -71,8 +71,14 @@ export interface QueryOptions<
    * The query's parameters. For a query carrying a `__groqParams` brand, such as the default
    * export of a `.groq` file imported through `@sanity-labs/groq-content-mapper`, these are
    * checked against the branded params type (experimental).
+   *
+   * `any` satisfies that brand check and would type `params` as `any`. It keeps the open
+   * record, which is what an untyped query accepted before. See {@link ResolveQueryResult}
+   * for why the check is written this way.
    */
-  params?: ClientParams<TQuery, Record<string, unknown>>
+  params?: boolean extends (TQuery extends never ? true : false)
+    ? Record<string, unknown>
+    : ClientParams<TQuery, Record<string, unknown>>
 }
 
 /**

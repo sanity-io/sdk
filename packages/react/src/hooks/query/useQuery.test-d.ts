@@ -31,6 +31,15 @@ declare global {
 
 const params = {searchQuery: 'a', start: 0, end: 9}
 
+test('the brand carries no dataset identity', () => {
+  expectTypeOf(
+    useQuery({query: postsBySearch, params, projectId: 'usequery1', dataset: 'test'}).data,
+  ).toEqualTypeOf<PostsBySearchResult>()
+  expectTypeOf(
+    useQuery({query: postsBySearch, params, projectId: 'other', dataset: 'staging'}).data,
+  ).toEqualTypeOf<PostsBySearchResult>()
+})
+
 test('a branded query types data with no generic', () => {
   expectTypeOf(useQuery({query: postsBySearch, params}).data).toEqualTypeOf<PostsBySearchResult>()
   expectTypeOf(useQuery({query: firstPost}).data).toEqualTypeOf<Post | null>()

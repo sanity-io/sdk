@@ -631,6 +631,8 @@ export function BookTitles() {
 
 `useQuery`, `getQueryState` and `resolveQuery` read the result and params types off a query imported from a `.groq` file through [`@sanity-labs/groq-content-mapper`](https://github.com/sanity-labs/groq-content-mapper), so there's no generic and no registry entry to keep in sync. This is experimental and needs TypeScript 7.1 or later, type-checking with `tsc --noEmit --runExternalCode`, and a `schema.json` from `npx sanity schema extract` in your Studio project. The mapper's README covers the details.
 
+The brand carries no project or dataset and overrides the handle, like an explicit generic. A file typed against one dataset keeps that dataset's types wherever you pass it. Keep each dataset's `.groq` files in that dataset's `schemas` folder.
+
 ```jsonc
 // tsconfig.json
 {
