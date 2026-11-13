@@ -26,5 +26,5 @@ test('only a key with a shared value takes `shared`', () => {
   // @ts-expect-error The layout has no shared value
   useUserPreference('studio.structure-tool.inspect-view-mode', {shared: true})
   // @ts-expect-error Starred projects are the user's own, in no resource
-  useUserPreference('manage.favorites.projects', {resourceType: 'project'})
+  useUserPreference('manage.pinned.projects', {resourceType: 'project'})
 })

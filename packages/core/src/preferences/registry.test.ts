@@ -18,7 +18,7 @@ describe('lookUpKey', () => {
   })
 
   it("finds a list key that's stored on the user alone, marked as a list", () => {
-    expect(lookUpKey('manage.favorites.projects')).toEqual({
+    expect(lookUpKey('manage.pinned.projects')).toEqual({
       levels: ['user'],
       defaultValue: [],
       list: true,

@@ -53,23 +53,29 @@ export interface Values {
   /**
    * @maxItems 100
    */
-  'manage.favorites.projects': {
+  'manage.pinned.projects': {
     ref: string
     data?: never
   }[]
   'studio.structure-tool.layout.{...paneKey}': string
-  'studio.structure-tool.sort-order.{...paneKey}': {
-    /**
-     * @maxItems 20
-     */
-    by: {
-      field: string
-      direction: 'asc' | 'desc'
-      nulls?: 'first' | 'last'
-      [k: string]: unknown
-    }[]
-    [k: string]: unknown
-  }
+  'studio.structure-tool.sort-order.{...paneKey}':
+    | string
+    | {
+        by?:
+          | {
+              field: string
+              direction?: string
+              nulls?: string
+              [k: string]: unknown
+            }[]
+          | {
+              field: string
+              direction?: string
+              nulls?: string
+              [k: string]: unknown
+            }
+        [k: string]: unknown
+      }
   'studio.structure-tool.inspect-view-mode': 'parsed' | 'raw'
   'studio.structure-tool.recent.{dataset}':
     | string
@@ -116,7 +122,7 @@ export const KEYS = {
   'context.setup-guide.hidden': {levels: ['user@organization'], defaultValue: false},
   'context.setup-guide.completion': {levels: ['organization'], defaultValue: {}},
   'dashboard.dashboard-2-opt-in': {levels: ['user'], defaultValue: false},
-  'manage.favorites.projects': {levels: ['user'], defaultValue: [], list: true},
+  'manage.pinned.projects': {levels: ['user'], defaultValue: [], list: true},
   'studio.structure-tool.layout.{...paneKey}': {levels: ['user@project'], defaultValue: 'default'},
   'studio.structure-tool.sort-order.{...paneKey}': {
     levels: ['user@project'],
