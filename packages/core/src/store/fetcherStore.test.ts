@@ -6,7 +6,13 @@ import {setAuthToken} from '../auth/authStore'
 import {OUT_OF_SYNC_RETRY_MAX_DELAY} from '../document/documentConstants'
 import {createSanityInstance, type SanityInstance} from './createSanityInstance'
 import {UPSTREAM_CLOSE_DELAY_MS} from './createStoreInstance'
-import {defineFetcher, defineMutation, definePagedFetcher, type Fetcher} from './fetcherStore'
+import {
+  defineFetcher,
+  defineMutation,
+  definePagedFetcher,
+  type Fetcher,
+  type FetcherDefinition,
+} from './fetcherStore'
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0))
 
@@ -28,6 +34,19 @@ const writePending = <T>(instance: SanityInstance, fetcher: Fetcher<[], T>, valu
     mutationFn: () => () => NEVER,
     onMutate: (write, input) => write(fetcher, [], input),
   })(instance, value)
+
+// Stands in for the browser tab. Call it before the cache is first used, which is when it listens
+const stubTab = () => {
+  const tab = Object.assign(new EventTarget(), {hidden: false})
+  vi.stubGlobal('document', tab)
+  onTestFinished(() => void vi.unstubAllGlobals())
+  return function comeBack() {
+    for (const hidden of [true, false]) {
+      tab.hidden = hidden
+      tab.dispatchEvent(new Event('visibilitychange'))
+    }
+  }
+}
 
 describe('fetcherStore', () => {
   let instance: SanityInstance
@@ -721,6 +740,96 @@ describe('fetcherStore', () => {
     unsub()
   })
 
+  describe('when someone comes back to the tab', () => {
+    let run = 0
+    // Puts a count of its fetches on screen for `app`, once the first has landed
+    const showCount = async (
+      options: Pick<FetcherDefinition<[], number>, 'staleTime' | 'refetchOnWindowFocus'>,
+      app = instance,
+    ) => {
+      let n = 0
+      const fetchSpy = vi.fn(() => of(++n))
+      const fetcher = defineFetcher<[], number>({
+        name: `window-focus-${++run}`,
+        getKey: () => 'k',
+        fetch: () => fetchSpy,
+        ...options,
+      })
+      const source = fetcher.getState(app)
+      const unsubscribe = source.subscribe()
+      onTestFinished(unsubscribe)
+      await vi.waitFor(() => expect(source.getCurrent().data).toBe(1))
+      return {fetchSpy, source, unsubscribe}
+    }
+
+    it('refetches data on screen that has gone stale', async () => {
+      const comeBack = stubTab()
+      const {source} = await showCount({staleTime: 0})
+
+      comeBack()
+
+      expect(source.getCurrent().data).toBe(2)
+    })
+
+    it('sends nothing while the data on screen is fresh', async () => {
+      const comeBack = stubTab()
+      const {fetchSpy} = await showCount({staleTime: 60_000})
+
+      comeBack()
+
+      expect(fetchSpy).toHaveBeenCalledOnce()
+    })
+
+    it("refetches fresh data for a fetcher set to 'always'", async () => {
+      const comeBack = stubTab()
+      const {source} = await showCount({staleTime: 60_000, refetchOnWindowFocus: 'always'})
+
+      comeBack()
+
+      expect(source.getCurrent().data).toBe(2)
+    })
+
+    it('sends nothing for a fetcher set to false', async () => {
+      const comeBack = stubTab()
+      const {fetchSpy} = await showCount({staleTime: 0, refetchOnWindowFocus: false})
+
+      comeBack()
+
+      expect(fetchSpy).toHaveBeenCalledOnce()
+    })
+
+    it('sends nothing for an app that turns it off', async () => {
+      const comeBack = stubTab()
+      const app = createSanityInstance({projectId: 'p', dataset: 'd', refetchOnWindowFocus: false})
+      onTestFinished(() => app.dispose())
+      const {fetchSpy} = await showCount({staleTime: 0}, app)
+
+      comeBack()
+
+      expect(fetchSpy).toHaveBeenCalledOnce()
+    })
+
+    it('sends nothing for data no longer on screen', async () => {
+      const comeBack = stubTab()
+      const {fetchSpy, unsubscribe} = await showCount({staleTime: 0})
+      unsubscribe()
+
+      comeBack()
+
+      expect(fetchSpy).toHaveBeenCalledOnce()
+    })
+
+    it('stops listening to the tab once the last app is disposed', async () => {
+      const comeBack = stubTab()
+      const {fetchSpy} = await showCount({staleTime: 0})
+      instance.dispose()
+
+      comeBack()
+
+      expect(fetchSpy).toHaveBeenCalledOnce()
+    })
+  })
+
   describe('a paged fetcher', () => {
     interface Page {
       data: string[]
@@ -731,7 +840,7 @@ describe('fetcherStore', () => {
     // Answers each page's read from `pages`, by the cursor it was read with
     const pagedFetcher = (
       pages: Record<string, () => Observable<Page>>,
-      options: {refetchInterval?: number} = {},
+      options: Pick<FetcherDefinition<[], Page[]>, 'refetchInterval' | 'refetchOnWindowFocus'> = {},
     ) => {
       const read = vi.fn((cursor: string | undefined) => pages[cursor ?? 'first']!())
       const fetcher = definePagedFetcher<[], Page>({
@@ -950,6 +1059,24 @@ describe('fetcherStore', () => {
       const loading = fetcher.loadMore(instance)
 
       vi.advanceTimersByTime(1_000)
+      next.next({data: ['b'], nextCursor: null})
+      await loading
+
+      expect(read.mock.calls).toEqual([[undefined], ['c1']])
+      expect(source.getCurrent().data).toHaveLength(2)
+    })
+
+    it('lets a next page in flight finish when someone comes back to the tab', async () => {
+      const comeBack = stubTab()
+      const next = new Subject<Page>()
+      const {fetcher, read, source} = pagedFetcher(
+        {first: () => page(['a'], 'c1'), c1: () => next},
+        {refetchOnWindowFocus: 'always'},
+      )
+      await vi.waitFor(() => expect(source.getCurrent().status).toBe('success'))
+      const loading = fetcher.loadMore(instance)
+
+      comeBack()
       next.next({data: ['b'], nextCursor: null})
       await loading
 

@@ -5,6 +5,7 @@ import {
   expand,
   filter,
   firstValueFrom,
+  fromEvent,
   map,
   type Observable,
   of,
@@ -140,6 +141,13 @@ export interface FetcherDefinition<TParams extends unknown[], TData> {
    * independent of staleness. Ticks are skipped while `document.hidden`. Off by default.
    */
   refetchInterval?: number
+  /**
+   * Whether an entry with subscribers refetches when the tab becomes visible again: once stale
+   * (`true`), never (`false`), or however fresh it is (`'always'`). `refetchOnWindowFocus: false`
+   * in an app's `SanityConfig` turns it off for that app's entries.
+   * @defaultValue true
+   */
+  refetchOnWindowFocus?: boolean | 'always'
   /**
    * Consulted once, when an entry is being created and no cached data exists for
    * it. Return data pulled from another fetcher in the same cache — read via its
@@ -418,18 +426,29 @@ const toSnapshot = <TData>(entry: CacheEntry<TData> | undefined): FetcherSnapsho
 const cacheStore = defineStore<CacheState>({
   name: 'FetcherCache',
   getInitialState: () => ({entries: {}}),
-  initialize: () => () => {
+  initialize: ({state}) => {
+    const comeBack = (
+      typeof document === 'undefined' ? EMPTY : fromEvent(document, 'visibilitychange')
+    )
+      .pipe(
+        filter(() => !document.hidden),
+        tap(() => refetchOnWindowFocus(state)),
+      )
+      .subscribe()
     // The global store is disposed only when the last Sanity instance is: tear
     // down every outstanding timer and fetch so nothing leaks between lifetimes.
-    for (const timer of gcTimers.values()) clearTimeout(timer)
-    for (const timer of intervalTimers.values()) clearInterval(timer)
-    for (const timer of stopTimers.values()) clearTimeout(timer)
-    for (const fetch of inflight.values()) fetch.sub.unsubscribe()
-    gcTimers.clear()
-    intervalTimers.clear()
-    stopTimers.clear()
-    inflight.clear()
-    lastWrites.clear()
+    return () => {
+      comeBack.unsubscribe()
+      for (const timer of gcTimers.values()) clearTimeout(timer)
+      for (const timer of intervalTimers.values()) clearInterval(timer)
+      for (const timer of stopTimers.values()) clearTimeout(timer)
+      for (const fetch of inflight.values()) fetch.sub.unsubscribe()
+      gcTimers.clear()
+      intervalTimers.clear()
+      stopTimers.clear()
+      inflight.clear()
+      lastWrites.clear()
+    }
   },
 })
 
@@ -766,6 +785,22 @@ const cancelGc = (key: string): void => {
   if (!timer) return
   clearTimeout(timer)
   gcTimers.delete(key)
+}
+
+/**
+ * Refetches the entries on screen when the tab becomes visible again, as each fetcher's
+ * `refetchOnWindowFocus` says. Doesn't restart a fetch in flight, so a "Load more" isn't cancelled.
+ */
+const refetchOnWindowFocus = (state: StoreState<CacheState>): void => {
+  for (const entry of Object.values(state.get().entries)) {
+    const def = definitions.get(entry.fetcherName)
+    const when = def?.refetchOnWindowFocus ?? true
+    if (!def || !when || entry.subscriptions <= 0) continue
+    if (entry.instance.config.refetchOnWindowFocus === false) continue
+    if (when === 'always' || needsFetch(entry, def)) {
+      detach(startFetch(state, def, entry.instance, entry.params, false))
+    }
+  }
 }
 
 /** Shared across all fetchers: scans the whole cache and revalidates entries carrying any matched tag. */

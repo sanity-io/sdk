@@ -169,6 +169,18 @@ export interface SanityConfig extends DatasetHandle, PerspectiveHandle {
    * library and canvas requests never use the project subdomain.
    */
   useProjectHostname?: boolean
+  /**
+   * Whether the cached API data the app shows, such as projects, applications and preferences, is
+   * fetched again when someone comes back to the app's tab. Data fetched in the last 30 seconds
+   * isn't. Defaults to `true`. Like TanStack Query's option of the same name, it follows the tab's
+   * visibility, not window focus.
+   *
+   * Data another SDK instance on the page also shows, such as an organization's projects, follows
+   * the setting of whichever instance started showing it last.
+   *
+   * @beta
+   */
+  refetchOnWindowFocus?: boolean
 }
 
 /**
