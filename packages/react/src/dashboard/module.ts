@@ -1,16 +1,26 @@
+import {type ApplicationInterface} from '@sanity/sdk'
 import * as React from 'react'
 
 const ROOT_SLOT_KEY = Symbol.for('sanity.os.root')
 
+/** The props the host passed to `render()`, per view type. */
+export type DashboardViewRoot =
+  | {
+      viewType: 'panel'
+      props: {view: Extract<ApplicationInterface, {type: 'panel'}>; onClose: () => void}
+    }
+  | {viewType: 'tile'; props: {view: Extract<ApplicationInterface, {type: 'tile'}>}}
+  | {viewType: 'asset_source'; props: unknown}
+
 /** The root a CLI-generated wrapper rendered the app into. */
-interface DashboardRoot {
+type DashboardRoot = {
   /** Aborts when the host disposes the root, never when it hides it. */
   signal: AbortSignal
   /** The federation module id the host rendered, from `renderOptions.moduleId`. */
   moduleId?: string
   /** The key of the host's bus connection, when the host passed `renderOptions.parentKey`. */
   parentKey?: string
-}
+} & (DashboardViewRoot | {viewType?: undefined})
 
 type RootSlot = WeakMap<typeof React.createContext, React.Context<DashboardRoot | undefined>>
 
