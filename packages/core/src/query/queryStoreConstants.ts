@@ -7,8 +7,8 @@ import {UPSTREAM_CLOSE_DELAY_MS} from '../store/createStoreInstance'
  * when used in a frontend where components may suspend or transition to
  * different views quickly.
  *
- * Must not exceed the live connection's close delay: nothing refetches when the
- * connection reopens, so a result kept past the close would miss live events.
+ * Matches the store's upstream close delay. A listener welcome also refetches
+ * retained results after a connection reopens.
  */
 export const QUERY_STATE_CLEAR_DELAY = UPSTREAM_CLOSE_DELAY_MS
 export const QUERY_STORE_API_VERSION = 'v2025-05-06'

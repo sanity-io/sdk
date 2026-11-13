@@ -1,14 +1,13 @@
 import {omitProperty} from '../utils/object'
 
 interface QueryState {
-  syncTags?: string[]
   result?: unknown
   error?: unknown
-  lastLiveEventId?: string
   subscribers: string[]
 }
 
 export interface QueryStoreState {
+  refreshVersion?: number
   queries: {[key: string]: QueryState | undefined}
   error?: unknown
 }
@@ -22,22 +21,14 @@ export const setQueryError =
   }
 
 export const setQueryData =
-  (key: string, result: unknown, syncTags?: string[]) =>
+  (key: string, result: unknown) =>
   (prev: QueryStoreState): QueryStoreState => {
     const prevQuery = prev.queries[key]
     if (!prevQuery) return prev
     return {
       ...prev,
-      queries: {...prev.queries, [key]: {...prevQuery, result: result ?? null, syncTags}},
+      queries: {...prev.queries, [key]: {...prevQuery, result: result ?? null, error: undefined}},
     }
-  }
-
-export const setLastLiveEventId =
-  (key: string, lastLiveEventId: string) =>
-  (prev: QueryStoreState): QueryStoreState => {
-    const prevQuery = prev.queries[key]
-    if (!prevQuery) return prev
-    return {...prev, queries: {...prev.queries, [key]: {...prevQuery, lastLiveEventId}}}
   }
 
 export const addSubscriber =
