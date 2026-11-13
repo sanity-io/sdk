@@ -1,6 +1,7 @@
 import './groqCompat'
 
 import {
+  type ClientReturn,
   type SanityProjectionsByResource,
   type SanityQueriesByResource,
   type SanitySchemasByResource,
@@ -147,18 +148,47 @@ export type ResolveDocument<
       | SanityDocument<TDocumentType, TSchemaId>
 
 /**
+ * True only for `any`.
+ *
+ * `0 extends 1 & T` cannot see `any` once `T` is constrained to `string`: the intersection
+ * is checked against the constraint and becomes `never`. `any extends never` takes both
+ * branches, so it is `boolean`, and only `any` does that.
+ */
+type IsAny<T> = boolean extends (T extends never ? true : false) ? true : false
+
+/**
  * Resolves a query result for one resource, selected by the exact query text.
  *
- * A key known only as a pattern gets the union of the query's result across the registered
- * resources it can match, plus the result saved by experimental Typegen for the same query
- * text, if any. See {@link ResolveDocument} for why a registered resource does not fall
- * through, and when the experimental Typegen declarations apply.
+ * A query carrying a `__groqResult` brand, such as the default export of a `.groq` file
+ * imported through `@sanity-labs/groq-content-mapper`, resolves to the branded result through
+ * the client's `ClientReturn`. The brand carries no project or dataset and overrides the
+ * handle, like an explicit generic. Keep each dataset's `.groq` files in that dataset's
+ * `schemas` folder. Reading the brand is experimental.
+ *
+ * The check distributes over a union, so `brandedQuery | '*[_type == "post"]'` resolves to
+ * the branded result plus the registered result of the plain query. `any` satisfies a brand
+ * check and `ClientReturn<any>` is `any`, so an untyped query stays on the lookup below,
+ * which resolves it to `never` as it did before the brand existed.
+ *
+ * Any other query is looked up by resource. A key known only as a pattern gets the union of the
+ * query's result across the registered resources it can match, plus the result saved by
+ * experimental Typegen for the same query text, if any. See {@link ResolveDocument} for why a
+ * registered resource does not fall through, and when the experimental Typegen declarations
+ * apply.
  *
  * @beta
  */
-export type ResolveQueryResult<
-  TQuery extends string = string,
-  TSchemaId extends string = string,
+export type ResolveQueryResult<TQuery extends string = string, TSchemaId extends string = string> =
+  IsAny<TQuery> extends true
+    ? ResolveRegisteredQueryResult<TQuery, TSchemaId>
+    : TQuery extends {readonly __groqResult?: unknown}
+      ? ClientReturn<TQuery>
+      : ResolveRegisteredQueryResult<TQuery, TSchemaId>
+
+/** The result of an unbranded query, looked up by resource. */
+type ResolveRegisteredQueryResult<
+  TQuery extends string,
+  TSchemaId extends string,
 > = TSchemaId extends keyof SanityQueriesByResource
   ? QueryIn<TSchemaId, TQuery>
   : UsesLegacyLookup<TSchemaId, SanityQueriesByResource, TQuery> extends true
