@@ -1,16 +1,12 @@
-import {
-  type GetUsersOptions,
-  getUsersState,
-  loadMoreUsers,
-  resolveUsers,
-  type SanityUser,
-} from '@sanity/sdk'
-import {getUsersKey, parseUsersKey} from '@sanity/sdk/_internal'
-import {useCallback, useEffect, useMemo, useState, useSyncExternalStore, useTransition} from 'react'
+import {type GetUsersOptions, type SanityUser, users} from '@sanity/sdk'
+import {useDeferredValue, useMemo} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
+import {createPagedFetcherHook} from '../helpers/createPagedFetcherHook'
 import {useResolvedProjectId} from '../helpers/useResolvedProjectId'
 import {trackHookUsage} from '../helpers/useTrackHookUsage'
+
+const useUsersFetcher = createPagedFetcherHook(users)
 
 /**
  * @public
@@ -36,9 +32,14 @@ export interface UsersResult {
    */
   isPending: boolean
   /**
-   * Load more users.
+   * Load more users. A failure shows on `error`, keeping the users already shown.
    */
   loadMore: () => void
+  /**
+   * The most recent failure to read users while some still show, like a failed `loadMore`;
+   * cleared by the next successful read.
+   */
+  error: unknown
 }
 
 /**
@@ -100,60 +101,19 @@ function withResolvedProjectId(
 export function useUsers(options?: GetUsersOptions): UsersResult {
   const instance = useSanityInstance()
   trackHookUsage(instance, 'useUsers')
-  // Use React's useTransition to avoid UI jank when user options change
-  const [isPending, startTransition] = useTransition()
-
-  // Resolve the projectId from the ambient project/resource context so a
-  // project-scoped users request can pick it up rather than the top-level config.
   const resolvedProjectId = useResolvedProjectId(options)
-  const effectiveOptions = useMemo(
-    () => withResolvedProjectId(options, resolvedProjectId),
-    [options, resolvedProjectId],
-  )
-
-  // Get the unique key for this users request and its options
-  const key = getUsersKey(instance, effectiveOptions)
-  // Use a deferred state to avoid immediate re-renders when the users request changes
-  const [deferredKey, setDeferredKey] = useState(key)
-  // Parse the deferred users key back into users options
-  const deferred = useMemo(() => parseUsersKey(deferredKey), [deferredKey])
-
-  // Create an AbortController to cancel in-flight requests when needed
-  const [ref, setRef] = useState<AbortController>(new AbortController())
-
-  // When the users request or options change, start a transition to update the request
-  useEffect(() => {
-    if (key === deferredKey) return
-
-    startTransition(() => {
-      if (!ref.signal.aborted) {
-        ref.abort()
-        setRef(new AbortController())
-      }
-
-      setDeferredKey(key)
-    })
-  }, [deferredKey, key, ref])
-
-  // Get the state source for this users request from the users store
-  const {getCurrent, subscribe} = useMemo(() => {
-    return getUsersState(instance, deferred)
-  }, [instance, deferred])
-
-  // If data isn't available yet, suspend rendering until it is
-  // This is the React Suspense integration - throwing a promise
-  // will cause React to show the nearest Suspense fallback
-  if (getCurrent() === undefined) {
-    throw resolveUsers(instance, {...deferred, signal: ref.signal})
+  // A string, so options written inline don't count as another list on every render
+  const key = JSON.stringify(withResolvedProjectId(options, resolvedProjectId) ?? {})
+  // The users already shown stay on screen while another list loads
+  const shownKey = useDeferredValue(key)
+  const shown = useMemo<GetUsersOptions>(() => JSON.parse(shownKey), [shownKey])
+  const {data, hasMore, isPending, loadMore, error} = useUsersFetcher(shown)
+  return {
+    data: data.data,
+    totalCount: data.totalCount,
+    hasMore,
+    isPending: isPending || shownKey !== key,
+    loadMore,
+    error,
   }
-
-  // Subscribe to updates and get the current data
-  // useSyncExternalStore ensures the component re-renders when the data changes
-  const {data, totalCount, hasMore} = useSyncExternalStore(subscribe, getCurrent)!
-
-  const loadMore = useCallback(() => {
-    loadMoreUsers(instance, effectiveOptions)
-  }, [instance, effectiveOptions])
-
-  return {data, totalCount, hasMore, isPending, loadMore}
 }

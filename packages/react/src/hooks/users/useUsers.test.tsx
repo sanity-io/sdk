@@ -1,437 +1,201 @@
-import {
-  createSanityInstance,
-  getUsersState,
-  loadMoreUsers,
-  resolveUsers,
-  type SanityUser,
-  type StateSource,
-  type UserProfile,
-} from '@sanity/sdk'
-import {act, fireEvent, render, renderHook, screen} from '@testing-library/react'
-import {type ReactNode, useState} from 'react'
-import {type Observable, Subject} from 'rxjs'
-import {describe, expect, it, vi} from 'vitest'
+import {ClientError} from '@sanity/client'
+import {createSanityInstance, type SanityUser} from '@sanity/sdk'
+import {act, renderHook as renderBareHook} from '@testing-library/react'
+import {type ReactNode} from 'react'
+import {type Observable, of, Subject, throwError} from 'rxjs'
+import {beforeEach, expect, it, vi} from 'vitest'
 
+import {renderHook} from '../../../test/test-utils'
 import {ResourceProvider} from '../../context/ResourceProvider'
 import {SanityInstanceContext} from '../../context/SanityInstanceContext'
-import {useSanityInstance} from '../context/useSanityInstance'
 import {useUsers} from './useUsers'
 
-// Mock the functions from '@sanity/sdk'
-vi.mock('@sanity/sdk', async (importOriginal) => {
-  const original = await importOriginal<typeof import('@sanity/sdk')>()
+interface Options {
+  resourceType?: 'organization' | 'project'
+  projectId?: string
+  organizationId?: string
+  batchSize?: number
+}
+interface Page {
+  data: SanityUser[]
+  totalCount: number
+  nextCursor: string | null
+}
+
+// The hook runs on a real fetcher cache; only the page read behind it is faked
+const {read} = vi.hoisted(() => ({
+  read: vi.fn<(options: Options, cursor: string | undefined) => Observable<Page>>(),
+}))
+let run = 0
+
+vi.mock(import('@sanity/sdk'), async (importOriginal) => {
+  const actual = await importOriginal()
+  const {definePagedFetcher} = await import('@sanity/sdk/_internal')
   return {
-    ...original,
-    getUsersState: vi.fn(),
-    resolveUsers: vi.fn(),
-    loadMoreUsers: vi.fn(),
+    ...actual,
+    users: definePagedFetcher<[options?: Options], Page>({
+      name: 'test-users',
+      getKey: (_instance, options) => `${run}:${JSON.stringify(options)}`,
+      fetch:
+        () =>
+        (cursor, options = {}) =>
+          read(options, cursor),
+    }) as unknown as typeof actual.users,
   }
 })
 
-describe('useUsers', () => {
-  // Create mock user profiles with all required fields
-  const mockUserProfile1: UserProfile = {
-    id: 'profile1',
-    displayName: 'User One',
-    email: 'user1@example.com',
-    imageUrl: 'https://example.com/user1.jpg',
+const sanityUser = (id: string): SanityUser => ({
+  sanityUserId: id,
+  profile: {
+    id,
+    displayName: `User ${id}`,
+    email: `${id}@example.com`,
     provider: 'google',
     createdAt: '2023-01-01T00:00:00Z',
-  }
+  },
+  memberships: [],
+})
+const sanityUsers = (ids: string[]) => ids.map(sanityUser)
+const page = (ids: string[], nextCursor: string | null, totalCount = ids.length) =>
+  of({data: sanityUsers(ids), totalCount, nextCursor})
 
-  const mockUserProfile2: UserProfile = {
-    id: 'profile2',
-    displayName: 'User Two',
-    email: 'user2@example.com',
-    imageUrl: 'https://example.com/user2.jpg',
-    provider: 'github',
-    createdAt: '2023-01-02T00:00:00Z',
-  }
+beforeEach(() => {
+  run++
+  read.mockReset()
+  read.mockReturnValue(page(['u1'], null))
+})
 
-  const mockUsers: SanityUser[] = [
-    {
-      sanityUserId: 'user1',
-      profile: mockUserProfile1,
-      memberships: [],
-    },
-    {
-      sanityUserId: 'user2',
-      profile: mockUserProfile2,
-      memberships: [],
-    },
-  ]
+it('shows the first page of the users, how many there are, and whether there are more', async () => {
+  read.mockReturnValue(page(['u1'], 'c1', 2))
 
-  it('should render users data immediately when available', () => {
-    const getCurrent = vi.fn().mockReturnValue({
-      data: mockUsers,
-      hasMore: true,
-      totalCount: 7,
-    })
+  const {result} = renderHook(() => useUsers({batchSize: 1}))
 
-    // Type assertion to fix the StateSource type issue
-    vi.mocked(getUsersState).mockReturnValue({
-      getCurrent,
-      subscribe: vi.fn(),
-      get observable(): Observable<unknown> {
-        throw new Error('Not implemented')
-      },
-    } as unknown as StateSource<
-      {data: SanityUser[]; totalCount: number; hasMore: boolean} | undefined
-    >)
-
-    function TestComponent() {
-      const {data, totalCount, hasMore, isPending} = useUsers({
-        resourceType: 'organization',
-        organizationId: 'test-org',
-        batchSize: 10,
-      })
-      return (
-        <div data-testid="output">
-          {data.length} of {totalCount} users - {hasMore ? 'has more' : 'no more'} -{' '}
-          {isPending ? 'pending' : 'not pending'}
-        </div>
-      )
-    }
-
-    render(
-      <ResourceProvider fallback={<p>Loading...</p>}>
-        <TestComponent />
-      </ResourceProvider>,
-    )
-
-    // Verify that the output contains the data and that isPending is false
-    expect(screen.getByTestId('output').textContent).toContain('2 of 7 users')
-    expect(screen.getByTestId('output').textContent).toContain('has more')
-    expect(screen.getByTestId('output').textContent).toContain('not pending')
-  })
-
-  it('should suspend rendering until users data is resolved via Suspense', async () => {
-    const ref = {
-      current: undefined as {data: SanityUser[]; totalCount: number; hasMore: boolean} | undefined,
-    }
-    const getCurrent = vi.fn(() => ref.current)
-    const storeChanged$ = new Subject<void>()
-
-    // Type assertion to fix the StateSource type issue
-    vi.mocked(getUsersState).mockReturnValue({
-      getCurrent,
-      subscribe: vi.fn((cb) => {
-        const subscription = storeChanged$.subscribe(cb)
-        return () => subscription.unsubscribe()
-      }),
-      get observable(): Observable<unknown> {
-        throw new Error('Not implemented')
-      },
-    } as unknown as StateSource<
-      {data: SanityUser[]; totalCount: number; hasMore: boolean} | undefined
-    >)
-
-    // Create a controllable promise to simulate the users resolution
-    let resolvePromise: () => void
-    // Mock resolveUsers to return our fake promise
-    vi.mocked(resolveUsers).mockReturnValue(
-      new Promise<{data: SanityUser[]; totalCount: number; hasMore: boolean}>((resolve) => {
-        resolvePromise = () => {
-          ref.current = {
-            data: mockUsers,
-            hasMore: true,
-            totalCount: 2,
-          }
-          storeChanged$.next()
-          resolve(ref.current)
-        }
-      }),
-    )
-
-    function TestComponent() {
-      const {data} = useUsers({
-        resourceType: 'organization',
-        organizationId: 'test-org',
-        batchSize: 10,
-      })
-      return (
-        <div data-testid="output">{data.map((user) => user.profile.displayName).join(', ')}</div>
-      )
-    }
-
-    render(
-      <ResourceProvider fallback={<div data-testid="fallback">Loading...</div>}>
-        <TestComponent />
-      </ResourceProvider>,
-    )
-
-    // Initially, since storeValue is undefined, the component should suspend and fallback is shown
-    expect(screen.getByTestId('fallback')).toBeInTheDocument()
-
-    // Now simulate that data becomes available
-    await act(async () => {
-      resolvePromise()
-    })
-
-    expect(screen.getByTestId('output').textContent).toContain('User One, User Two')
-  })
-
-  it('should display transition pending state during options change', async () => {
-    const ref = {
-      current: undefined as {data: SanityUser[]; totalCount: number; hasMore: boolean} | undefined,
-    }
-    const getCurrent = vi.fn(() => ref.current)
-    const storeChanged$ = new Subject<void>()
-
-    // Use a more specific type for the mock implementation
-    vi.mocked(getUsersState).mockImplementation((_instance, options) => {
-      if (options?.organizationId === 'org1') {
-        return {
-          getCurrent: vi.fn().mockReturnValue({
-            data: [mockUsers[0]],
-            hasMore: false,
-            totalCount: 1,
-          }),
-          subscribe: vi.fn(),
-          get observable(): Observable<unknown> {
-            throw new Error('Not implemented')
-          },
-        } as unknown as StateSource<
-          {data: SanityUser[]; totalCount: number; hasMore: boolean} | undefined
-        >
-      }
-
-      return {
-        getCurrent,
-        subscribe: vi.fn((cb) => {
-          const subscription = storeChanged$.subscribe(cb)
-          return () => subscription.unsubscribe()
-        }),
-        get observable(): Observable<unknown> {
-          throw new Error('Not implemented')
-        },
-      } as unknown as StateSource<
-        {data: SanityUser[]; totalCount: number; hasMore: boolean} | undefined
-      >
-    })
-
-    // Create a controllable promise to simulate the users resolution
-    let resolvePromise: () => void
-    // Mock resolveUsers to return our fake promise
-    vi.mocked(resolveUsers).mockReturnValue(
-      new Promise<{data: SanityUser[]; totalCount: number; hasMore: boolean}>((resolve) => {
-        resolvePromise = () => {
-          ref.current = {
-            data: [mockUsers[1]],
-            hasMore: true,
-            totalCount: 1,
-          }
-          storeChanged$.next()
-          resolve(ref.current)
-        }
-      }),
-    )
-
-    function WrapperComponent() {
-      const [organizationId, setOrganizationId] = useState('org1')
-      const {data, hasMore, isPending} = useUsers({
-        resourceType: 'organization',
-        organizationId,
-        batchSize: 10,
-      })
-      return (
-        <div>
-          <div data-testid="output">
-            {data.map((user) => user.profile.displayName).join(', ')} -
-            {hasMore ? 'has more' : 'no more'} -{isPending ? 'pending' : 'not pending'}
-          </div>
-          <button data-testid="button" onClick={() => setOrganizationId('org2')}>
-            Change Organization
-          </button>
-        </div>
-      )
-    }
-
-    render(
-      <ResourceProvider fallback={<div data-testid="fallback">Loading...</div>}>
-        <WrapperComponent />
-      </ResourceProvider>,
-    )
-
-    // Initially, should show data for org1 and not pending
-    expect(screen.getByTestId('output').textContent).toContain('User One')
-    expect(screen.getByTestId('output').textContent).toContain('no more')
-    expect(screen.getByTestId('output').textContent).toContain('not pending')
-
-    // Trigger organization change to "org2"
-    act(() => {
-      screen.getByTestId('button').click()
-    })
-
-    // Immediately after clicking, deferredKey is still for org1,
-    // so the hook returns data from the previous org ('User One') but isPending should now be true.
-    expect(screen.getByTestId('output').textContent).toContain('User One')
-    expect(screen.getByTestId('output').textContent).toContain('pending')
-
-    // Simulate the completion of the transition.
-    await act(async () => {
-      resolvePromise()
-    })
-
-    // Now, the component should render with the new deferred options and display new data.
-    expect(screen.getByTestId('output').textContent).toContain('User Two')
-    expect(screen.getByTestId('output').textContent).toContain('has more')
-    expect(screen.getByTestId('output').textContent).toContain('not pending')
-  })
-
-  it('should call loadMoreUsers when loadMore is called', () => {
-    const getCurrent = vi.fn().mockReturnValue({
-      data: mockUsers,
-      hasMore: true,
+  await vi.waitFor(() =>
+    expect(result.current).toMatchObject({
+      data: sanityUsers(['u1']),
       totalCount: 2,
-    })
+      hasMore: true,
+      isPending: false,
+    }),
+  )
+  expect(read).toHaveBeenCalledExactlyOnceWith({batchSize: 1, projectId: 'test'}, undefined)
+})
 
-    // Type assertion to fix the StateSource type issue
-    vi.mocked(getUsersState).mockReturnValue({
-      getCurrent,
-      subscribe: vi.fn(),
-      get observable(): Observable<unknown> {
-        throw new Error('Not implemented')
-      },
-    } as unknown as StateSource<
-      {data: SanityUser[]; totalCount: number; hasMore: boolean} | undefined
-    >)
+it('keeps the users shown when the next page fails to load, and can load more again', async () => {
+  // A 4xx, which isn't retried, so it shows at once
+  const failure = new ClientError({statusCode: 400, headers: {}, body: {error: 'Bad Request'}})
+  read.mockImplementation((_options, cursor) =>
+    cursor ? throwError(() => failure) : page(['u1'], 'c1', 2),
+  )
+  const {result} = renderHook(() => useUsers())
+  await vi.waitFor(() => expect(result.current?.data).toEqual(sanityUsers(['u1'])))
 
-    function TestComponent() {
-      const {data, hasMore, loadMore} = useUsers({
-        resourceType: 'organization',
-        organizationId: 'test-org',
-        batchSize: 10,
-      })
-      return (
-        <div>
-          <div data-testid="output">
-            {data.length} users - {hasMore ? 'has more' : 'no more'}
-          </div>
-          <button data-testid="load-more" onClick={loadMore}>
-            Load More
-          </button>
-        </div>
-      )
-    }
+  await act(async () => result.current.loadMore())
 
-    render(
-      <ResourceProvider projectId="p" fallback={<div data-testid="fallback">Loading...</div>}>
-        <TestComponent />
-      </ResourceProvider>,
-    )
+  await vi.waitFor(() =>
+    expect(result.current).toMatchObject({
+      data: sanityUsers(['u1']),
+      error: failure,
+      isPending: false,
+    }),
+  )
+  read.mockImplementation((_options, cursor) =>
+    cursor ? page(['u2'], null, 2) : page(['u1'], 'c1', 2),
+  )
+  await act(async () => result.current.loadMore())
+  await vi.waitFor(() =>
+    expect(result.current).toMatchObject({
+      data: sanityUsers(['u1', 'u2']),
+      hasMore: false,
+      error: undefined,
+    }),
+  )
+})
 
-    // Verify initial state
-    expect(screen.getByTestId('output').textContent).toContain('2 users')
-    expect(screen.getByTestId('output').textContent).toContain('has more')
+it('is pending while it loads more users', async () => {
+  const next = new Subject<Page>()
+  read.mockImplementation((_options, cursor) => (cursor ? next : page(['u1'], 'c1', 2)))
+  const {result} = renderHook(() => useUsers())
+  await vi.waitFor(() => expect(result.current?.data).toEqual(sanityUsers(['u1'])))
 
-    // Click the load more button
-    fireEvent.click(screen.getByTestId('load-more'))
+  await act(async () => result.current.loadMore())
 
-    // Verify that loadMoreUsers was called with the correct arguments
-    expect(loadMoreUsers).toHaveBeenCalledWith(
-      expect.objectContaining({config: {projectId: 'p'}}),
-      {
-        resourceType: 'organization',
-        organizationId: 'test-org',
-        batchSize: 10,
-      },
-    )
+  expect(result.current).toMatchObject({data: sanityUsers(['u1']), isPending: true})
+  await act(async () => next.next({data: sanityUsers(['u2']), totalCount: 2, nextCursor: null}))
+  await vi.waitFor(() =>
+    expect(result.current).toMatchObject({data: sanityUsers(['u1', 'u2']), isPending: false}),
+  )
+})
+
+it("keeps a list's users shown while another list loads", async () => {
+  const next = new Subject<Page>()
+  read.mockImplementation(({projectId}) => (projectId === 'b' ? next : page(['a1'], null)))
+  const {result, rerender} = renderHook(({projectId}) => useUsers({projectId}), {
+    initialProps: {projectId: 'a'},
   })
+  await vi.waitFor(() => expect(result.current?.data).toEqual(sanityUsers(['a1'])))
 
-  it('resolves the projectId from the default resource for a project-scoped query', () => {
-    vi.mocked(getUsersState).mockReturnValue({
-      getCurrent: vi.fn().mockReturnValue({data: mockUsers, hasMore: false, totalCount: 2}),
-      subscribe: vi.fn(),
-      get observable(): Observable<unknown> {
-        throw new Error('Not implemented')
-      },
-    } as unknown as StateSource<
-      {data: SanityUser[]; totalCount: number; hasMore: boolean} | undefined
-    >)
+  rerender({projectId: 'b'})
 
-    const {
-      result: {current: instance},
-    } = renderHook(
-      () => {
-        useUsers({resourceType: 'project'})
-        return useSanityInstance()
-      },
-      {
-        wrapper: ({children}: {children: ReactNode}) => (
-          <ResourceProvider
-            resource={{projectId: 'resource-project', dataset: 'production'}}
-            fallback={null}
-          >
-            {children}
-          </ResourceProvider>
-        ),
-      },
-    )
+  expect(result.current).toMatchObject({data: sanityUsers(['a1']), isPending: true})
+  await vi.waitFor(() => expect(read).toHaveBeenLastCalledWith({projectId: 'b'}, undefined))
+  await act(async () => next.next({data: sanityUsers(['b1']), totalCount: 1, nextCursor: null}))
+  await vi.waitFor(() =>
+    expect(result.current).toMatchObject({data: sanityUsers(['b1']), isPending: false}),
+  )
+})
 
-    expect(getUsersState).toHaveBeenLastCalledWith(
-      instance,
-      expect.objectContaining({projectId: 'resource-project', resourceType: 'project'}),
-    )
-  })
-
-  it('does not inject a projectId for an organization-scoped query', () => {
-    vi.mocked(getUsersState).mockReturnValue({
-      getCurrent: vi.fn().mockReturnValue({data: mockUsers, hasMore: false, totalCount: 2}),
-      subscribe: vi.fn(),
-      get observable(): Observable<unknown> {
-        throw new Error('Not implemented')
-      },
-    } as unknown as StateSource<
-      {data: SanityUser[]; totalCount: number; hasMore: boolean} | undefined
-    >)
-
-    function TestComponent() {
-      useUsers({resourceType: 'organization', organizationId: 'test-org'})
-      return null
-    }
-
-    render(
+it('reads the project of the nearest resource for a project-scoped list', async () => {
+  renderBareHook(() => useUsers({resourceType: 'project'}), {
+    wrapper: ({children}: {children: ReactNode}) => (
       <ResourceProvider
         resource={{projectId: 'resource-project', dataset: 'production'}}
         fallback={null}
       >
-        <TestComponent />
-      </ResourceProvider>,
-    )
-
-    // Organization queries key off organizationId; the ambient project resource
-    // must not leak in as a projectId.
-    expect(vi.mocked(getUsersState).mock.lastCall?.[1]).not.toHaveProperty('projectId')
+        {children}
+      </ResourceProvider>
+    ),
   })
 
-  it('resolves a bare projectId from a ResourceProvider when the parent instance has no config', () => {
-    vi.mocked(getUsersState).mockReturnValue({
-      getCurrent: vi.fn().mockReturnValue({data: mockUsers, hasMore: false, totalCount: 2}),
-      subscribe: vi.fn(),
-      get observable(): Observable<unknown> {
-        throw new Error('Not implemented')
-      },
-    } as unknown as StateSource<
-      {data: SanityUser[]; totalCount: number; hasMore: boolean} | undefined
-    >)
+  await vi.waitFor(() =>
+    expect(read).toHaveBeenCalledWith(
+      {resourceType: 'project', projectId: 'resource-project'},
+      undefined,
+    ),
+  )
+})
 
-    // An instance with no project/dataset config, then a
-    // projectId-only ResourceProvider.
-    const emptyInstance = createSanityInstance({})
-    renderHook(() => useUsers(), {
-      wrapper: ({children}: {children: ReactNode}) => (
-        <SanityInstanceContext.Provider value={emptyInstance}>
-          <ResourceProvider projectId="bare-project" fallback={null}>
-            {children}
-          </ResourceProvider>
-        </SanityInstanceContext.Provider>
-      ),
-    })
-
-    expect(getUsersState).toHaveBeenLastCalledWith(
-      emptyInstance,
-      expect.objectContaining({projectId: 'bare-project'}),
-    )
+it("doesn't add the nearest resource's project to an organization's list", async () => {
+  renderBareHook(() => useUsers({resourceType: 'organization', organizationId: 'test-org'}), {
+    wrapper: ({children}: {children: ReactNode}) => (
+      <ResourceProvider
+        resource={{projectId: 'resource-project', dataset: 'production'}}
+        fallback={null}
+      >
+        {children}
+      </ResourceProvider>
+    ),
   })
+
+  await vi.waitFor(() =>
+    expect(read).toHaveBeenCalledWith(
+      {resourceType: 'organization', organizationId: 'test-org'},
+      undefined,
+    ),
+  )
+})
+
+it('reads the project of a ResourceProvider when the instance has no project', async () => {
+  const emptyInstance = createSanityInstance({})
+  renderBareHook(() => useUsers(), {
+    wrapper: ({children}: {children: ReactNode}) => (
+      <SanityInstanceContext.Provider value={emptyInstance}>
+        <ResourceProvider projectId="bare-project" fallback={null}>
+          {children}
+        </ResourceProvider>
+      </SanityInstanceContext.Provider>
+    ),
+  })
+
+  await vi.waitFor(() => expect(read).toHaveBeenCalledWith({projectId: 'bare-project'}, undefined))
 })

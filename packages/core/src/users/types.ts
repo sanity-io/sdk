@@ -46,11 +46,15 @@ export interface GetUsersOptions extends ProjectHandle {
   resourceType?: 'organization' | 'project'
   batchSize?: number
   organizationId?: string
+  /**
+   * @deprecated Read one user with `useUser` or `resolveUser`. Removed in the next major.
+   */
   userId?: string
 }
 
 /**
  * @public
+ * @deprecated Describes the deprecated users store. Removed in the next major.
  */
 export interface UsersGroupState {
   subscriptions: string[]
@@ -72,6 +76,7 @@ export interface SanityUserResponse {
 
 /**
  * @public
+ * @deprecated Describes the deprecated users store. Removed in the next major.
  */
 export interface UsersStoreState {
   users: {[TUsersKey in string]?: UsersGroupState}
@@ -80,6 +85,7 @@ export interface UsersStoreState {
 
 /**
  * @public
+ * @deprecated For the deprecated `resolveUsers`. Removed in the next major.
  */
 export interface ResolveUsersOptions extends GetUsersOptions {
   signal?: AbortSignal

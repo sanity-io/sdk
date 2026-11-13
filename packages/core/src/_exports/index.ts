@@ -303,6 +303,7 @@ export {
   type UsersGroupState,
   type UsersStoreState,
 } from '../users/types'
+export {users} from '../users/users'
 export {
   getUsersState,
   getUserState,
