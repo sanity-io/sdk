@@ -26,7 +26,8 @@ runs:
       uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
       with:
         path: ~/.cache/ms-playwright
-        key: ${{ runner.os }}-playwright-${{ steps.version.outputs.version }}-only-shell
+        # Playwright ships a WebKit build per Ubuntu release, linked against that release's libraries
+        key: ${{ runner.os }}-${{ steps.version.outputs.image-os }}-playwright-${{ steps.version.outputs.version }}-only-shell
 
     # Headless projects launch chromium-headless-shell, so the full Chromium build is never used
     - name: Install Playwright browsers
