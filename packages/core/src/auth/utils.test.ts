@@ -260,6 +260,18 @@ describe('getCleanedUrl', () => {
     expect(cleaned).toBe('http://example.com/callback?x=1')
   })
 
+  it('removes sid from the hash so a reload does not exchange it again', () => {
+    const url = 'http://example.com/callback#sid=s1'
+    const cleaned = getCleanedUrl(url)
+    expect(cleaned).toBe('http://example.com/callback')
+  })
+
+  it('removes sid and withSid from the hash while preserving other hash params', () => {
+    const url = 'http://example.com/callback#foo=bar&sid=s1&withSid=true'
+    const cleaned = getCleanedUrl(url)
+    expect(cleaned).toBe('http://example.com/callback#foo=bar')
+  })
+
   it('preserves non key-value hash fragments', () => {
     const url = 'http://example.com/page#section'
     const cleaned = getCleanedUrl(url)
