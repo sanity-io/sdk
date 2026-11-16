@@ -93,7 +93,7 @@
     "@sanity/diff-match-patch": "^3.2.1",
     "@sanity/diff-patch": "^7.0.0",
     "@sanity/id-utils": "^1.1.0",
-    "@sanity/image-url": "^2.1.1",
+    "@sanity/image-url": "^2.2.0",
     "@sanity/json-match": "^1.0.5",
     "@sanity/message-protocol": "catalog:",
     "@sanity/mutate": "^0.18.2",
