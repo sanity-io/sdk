@@ -221,7 +221,7 @@ describe('useApplications', () => {
       expect.objectContaining({
         application: expect.objectContaining({id: 'application-1'}),
         module: {
-          entry: 'https://inbox-apps-organization-1.sanity.run',
+          entry: 'https://inbox--apps--organization-1.sanity.run',
           moduleId: 'application-1/App',
           version: '1',
         },
@@ -295,7 +295,7 @@ describe('useApplications', () => {
         name: 'remote',
         surface: 'window',
         module: {
-          entry: 'https://remote-apps-organization-publisher.sanity.run',
+          entry: 'https://remote--apps--organization-publisher.sanity.run',
           moduleId: 'installation-1/App',
           version: '1',
         },
@@ -381,7 +381,7 @@ describe('useApplications', () => {
     const {result} = renderHook(() => useApplications())
 
     expect(result.current.map(({views}) => views[0]?.module.entry)).toEqual([
-      'https://inbox-apps-organization-1.run.sanity.work',
+      'https://inbox--apps--organization-1.run.sanity.work',
       'https://canvas.studio.sanity.work',
     ])
   })

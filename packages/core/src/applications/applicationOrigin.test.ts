@@ -23,7 +23,7 @@ describe('getApplicationOrigin', () => {
   afterEach(() => vi.unstubAllGlobals())
 
   it('derives singleton and organization origins from the slug', () => {
-    expect(getApplicationOrigin(application)).toBe('https://inbox-apps-organization-1.sanity.run')
+    expect(getApplicationOrigin(application)).toBe('https://inbox--apps--organization-1.sanity.run')
     expect(getApplicationOrigin({...application, isSingleton: false, slug: 'canvas'})).toBe(
       'https://canvas.sanity.studio',
     )
@@ -32,7 +32,7 @@ describe('getApplicationOrigin', () => {
   it('uses the staging domains when the host sets the runtime flag', () => {
     vi.stubGlobal('__SANITY_STAGING__', true)
     expect(getApplicationOrigin(application)).toBe(
-      'https://inbox-apps-organization-1.run.sanity.work',
+      'https://inbox--apps--organization-1.run.sanity.work',
     )
     expect(getApplicationOrigin({...application, isSingleton: false})).toBe(
       'https://inbox.studio.sanity.work',
