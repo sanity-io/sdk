@@ -1,4 +1,13 @@
-import {ClientError, ConnectionFailedError, CorsOriginError} from '@sanity/client'
+import {
+  ChannelError,
+  ClientError,
+  ConnectionFailedError,
+  DisconnectError,
+  isTimeoutError,
+  MessageError,
+  MessageParseError,
+  ServerError,
+} from '@sanity/client'
 import {
   defer,
   EMPTY,
@@ -19,26 +28,39 @@ import {
   OUT_OF_SYNC_RETRY_MAX_DELAY,
 } from '../document/documentConstants'
 import {DocumentInaccessibleError} from '../document/documentInaccessibleError'
-import {PreferenceError} from '../preferences/preferenceError'
+import {OutOfSyncError} from '../document/outOfSyncError'
+import {isNetworkFailure} from '../errorReporting/isNetworkFailure'
 import {type StateSource} from '../store/createStateSourceAction'
 
 function getStatusCode(error: unknown): number | undefined {
-  if (error instanceof ClientError) return error.statusCode
+  if (error instanceof ClientError || error instanceof ServerError) return error.statusCode
 
   return error instanceof ConnectionFailedError ? error.status : undefined
 }
 
 /**
- * Whether a failed request can succeed when sent again: a 408, 429 or 5xx, or any
- * error without an HTTP status, such as a network error. CORS errors are not transient.
+ * Whether a failed request can succeed when sent again: the network failed, the request timed
+ * out, a listener dropped or the server ended it with an error, or the API answered with a 408,
+ * 429 or 5xx. Any other error, like a CORS error or a response the caller rejected, fails the
+ * same way however often it's sent.
  * @internal
  */
 export function isTransientError(error: unknown): boolean {
-  if (error instanceof CorsOriginError) return false
+  if (error instanceof ConnectionFailedError && error.status === undefined) return true
+  // `@sanity/client` doesn't reconnect a listener after these, so the read has to
+  if (
+    error instanceof ChannelError ||
+    error instanceof DisconnectError ||
+    error instanceof MessageError ||
+    error instanceof MessageParseError
+  ) {
+    return true
+  }
+  if (isNetworkFailure(error) || isTimeoutError(error)) return true
 
   const statusCode = getStatusCode(error)
 
-  return statusCode === undefined || statusCode >= 500 || statusCode === 408 || statusCode === 429
+  return statusCode !== undefined && (statusCode >= 500 || statusCode === 408 || statusCode === 429)
 }
 
 function isMissingAccess(error: unknown): boolean {
@@ -52,15 +74,16 @@ function isMissingAccess(error: unknown): boolean {
 
 function classify(error: unknown): 'session' | 'access' | 'transient' | 'terminal' {
   if (error instanceof DocumentInaccessibleError) return 'session'
+  if (error instanceof OutOfSyncError || isTransientError(error)) return 'transient'
+
+  const statusCode = getStatusCode(error)
+  if (statusCode === 401) return isMissingAccess(error) ? 'access' : 'session'
   // Preferences wraps request errors to give them its own codes; the request error inside decides
-  if (getStatusCode(error) === undefined && error instanceof Error && error.cause !== undefined) {
+  if (statusCode === undefined && error instanceof Error && error.cause !== undefined) {
     return classify(error.cause)
   }
-  // One the SDK raised itself, like an unknown key, fails the same way however often it's retried
-  if (error instanceof PreferenceError) return 'terminal'
-  if (getStatusCode(error) === 401) return isMissingAccess(error) ? 'access' : 'session'
 
-  return isTransientError(error) ? 'transient' : 'terminal'
+  return 'terminal'
 }
 
 type CredentialSource = Pick<StateSource<unknown>, 'getCurrent' | 'observable'>
@@ -127,13 +150,13 @@ export function retryOnCredentialChange<T>(
  *   differs from the one the failed attempt went out with
  * - a 401 for a missing project membership or grant also retries after a
  *   backoff for the first {@link OUT_OF_SYNC_RETRY_COUNT} retries
- * - a network error, 408, 429 or 5xx retries after a backoff, and reaches
- *   `setError` after `count` retries
- * - a CORS error, any other 4xx, or a {@link PreferenceError} the SDK raised
- *   reaches `setError` and isn't retried
+ * - a failure {@link isTransientError} expects to pass, or an `OutOfSyncError`,
+ *   retries after a backoff, and reaches `setError` after `count` retries
+ * - any other error, like a CORS error, another 4xx, or one the read raised
+ *   itself, reaches `setError` and isn't retried
  *
- * An error wrapping another, like a {@link PreferenceError} for a failed
- * request, is retried the way the error inside it would be.
+ * An error wrapping another, like a `PreferenceError` for a failed request, is
+ * retried the way the error inside it would be.
  *
  * `setError` receives a failure once, and again only when the kind of failure
  * changes. It receives `undefined` once the read recovers, or when it moves on
