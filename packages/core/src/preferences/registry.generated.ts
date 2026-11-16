@@ -45,6 +45,26 @@ export interface Values {
     }
     hidden?: string[]
   }
+  'context.table-view.{table}': {
+    sort?: {
+      column: string
+      direction: 'asc' | 'desc'
+    }
+    hidden?: string[]
+  }
+  /**
+   * @maxItems 100
+   */
+  'context.favorites': {
+    ref: string
+    data?: never
+  }[]
+  'context.navigation': {
+    /**
+     * @maxItems 32
+     */
+    collapsed?: string[]
+  }
   'context.setup-guide.hidden': boolean
   'context.setup-guide.completion': {
     completedAt?: string
@@ -120,6 +140,9 @@ export const KEYS = {
   'context.tables.knowledge-bases': {levels: ['user@organization'], defaultValue: {}},
   'context.tables.mcp-endpoints': {levels: ['user@organization'], defaultValue: {}},
   'context.tables.org-issues': {levels: ['user@organization'], defaultValue: {}},
+  'context.table-view.{table}': {levels: ['user@organization'], defaultValue: {}},
+  'context.favorites': {levels: ['user@organization'], defaultValue: [], list: true},
+  'context.navigation': {levels: ['user@organization'], defaultValue: {}},
   'context.setup-guide.hidden': {levels: ['user@organization'], defaultValue: false},
   'context.setup-guide.completion': {levels: ['organization'], defaultValue: {}},
   'dashboard.dashboard-2-opt-in': {levels: ['user'], defaultValue: false},
