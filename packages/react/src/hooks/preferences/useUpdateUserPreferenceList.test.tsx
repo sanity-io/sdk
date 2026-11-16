@@ -1,4 +1,4 @@
-import {updateUserPreferenceListItem, getCurrentUserState} from '@sanity/sdk'
+import {getCurrentUserState, updateUserPreferenceListItem} from '@sanity/sdk'
 import {act} from '@testing-library/react'
 import {of} from 'rxjs'
 import {beforeEach, expect, it, vi} from 'vitest'
@@ -22,7 +22,10 @@ beforeEach(() => {
     subscribe: () => () => {},
     observable: of(USER),
   } as unknown as ReturnType<typeof getCurrentUserState>)
-  vi.mocked(updateUserPreferenceListItem).mockResolvedValue(undefined)
+  vi.mocked(updateUserPreferenceListItem).mockResolvedValue({
+    data: undefined,
+    invalidated: Promise.resolve(),
+  })
 })
 
 it("saves the item for the signed-in user in the nearest resource's project", async () => {
