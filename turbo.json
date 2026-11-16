@@ -1,5 +1,6 @@
 {
   "$schema": "https://turbo.build/schema.json",
+  "globalDependencies": ["pnpm-lock.yaml"],
   "globalEnv": ["DEBUG", "DEV", "VISUALIZER", "PKG_VERSION", "CI", "SANITY_INTERNAL_ENV"],
   "tasks": {
     "build": {
