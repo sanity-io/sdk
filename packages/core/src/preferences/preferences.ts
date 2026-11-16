@@ -244,6 +244,7 @@ interface ApiPreference {
 }
 
 const RESOURCE_TYPES = ['project', 'organization'] as const
+const PROJECT_PATH = /^\/projects\/([^/]+)\//
 
 // The call's ID for a resource, or else the app's: its resource's project, or the Dashboard's
 // organization
@@ -380,6 +381,15 @@ function cachePreference(userId: string, keyUrl: string, preference: UserPrefere
   }
 }
 
+// A project's preferences go to the project's host, `<projectId>.<apiHost>`, unless the app turns
+// `useProjectHostname` off: browsers can only call the global host from Sanity's own origins, while
+// the project's host accepts the project's CORS origins
+function clientOptionsFor(url: string) {
+  const projectId = PROJECT_PATH.exec(url)?.[1]
+  if (!projectId) return {apiVersion: API_VERSION, scope: 'global' as const}
+  return {apiVersion: API_VERSION, projectId: decodeURIComponent(projectId)}
+}
+
 /**
  * Sends a request to the preferences API. A refusal becomes a {@link PreferenceError}.
  * @internal
@@ -394,7 +404,7 @@ export function request<T>(
     tag: string
   },
 ): Observable<T> {
-  return getClientState(instance, {apiVersion: API_VERSION, scope: 'global'}).observable.pipe(
+  return getClientState(instance, clientOptionsFor(options.url)).observable.pipe(
     switchMap((client) => client.observable.request<T>({...options, timeout: REQUEST_TIMEOUT_MS})),
     catchError((error: unknown) => throwError(() => toPreferenceError(error))),
   )

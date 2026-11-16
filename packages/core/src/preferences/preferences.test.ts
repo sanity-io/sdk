@@ -264,9 +264,10 @@ describe('preferences', () => {
         shared: false,
         resourceType: 'project',
       })
+      // On the project's host, which a browser on the project's CORS origins can call
       expect(getClientState).toHaveBeenCalledWith(instance, {
         apiVersion: '2026-11-07',
-        scope: 'global',
+        projectId: 'project-1',
       })
       expect(request).toHaveBeenCalledWith({
         url: PATH,
@@ -1224,6 +1225,10 @@ describe('preferences', () => {
 
       await userPreference.resolveState(instance, 'user-1', SHARED_KEY, {organizationId: 'org-1'})
 
+      expect(getClientState).toHaveBeenCalledWith(instance, {
+        apiVersion: '2026-11-07',
+        scope: 'global',
+      })
       expect(request).toHaveBeenCalledWith(
         expect.objectContaining({url: '/organizations/org-1/users/me/preferences'}),
       )
