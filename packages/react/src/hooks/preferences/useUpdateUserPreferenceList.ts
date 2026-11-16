@@ -13,7 +13,7 @@ import {useSignedInUserId} from './useSignedInUserId'
 
 const useUpdateUserPreferenceListMutation = createMutationHook(
   (instance, input: UpdateUserPreferenceListItemInput) =>
-    updateUserPreferenceListItem(instance, input).then((data) => ({data})),
+    updateUserPreferenceListItem(instance, input),
 )
 
 /**

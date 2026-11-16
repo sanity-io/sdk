@@ -123,7 +123,7 @@ describe('preference items', () => {
     unsubscribe()
   })
 
-  it('saves an item, and resolves once the list read again shows it', async () => {
+  it('saves an item, then reads the list again and settles `invalidated` once it shows', async () => {
     request.mockReturnValueOnce(of({data: [], nextCursor: null}))
     const page = userPreferenceList.getState(instance, 'user-1', QUERIES)
     const unsubscribe = page.subscribe()
@@ -132,13 +132,14 @@ describe('preference items', () => {
       .mockReturnValueOnce(of(item('q1')))
       .mockReturnValueOnce(of({data: [item('q1')], nextCursor: null}).pipe(delay(1)))
 
-    await updateUserPreferenceListItem(instance, {
+    const {invalidated} = await updateUserPreferenceListItem(instance, {
       userId: 'user-1',
       key: QUERIES,
       itemId: 'q1',
       value: query('q1'),
     })
 
+    await invalidated
     expect(page.getCurrent()).toMatchObject({data: [{data: [item('q1')]}]})
     expect(request).toHaveBeenNthCalledWith(2, {
       url: `${ITEMS}/q1`,
@@ -150,7 +151,7 @@ describe('preference items', () => {
     unsubscribe()
   })
 
-  it('deletes an item for undefined, and resolves once the list read again is without it', async () => {
+  it('deletes an item for undefined, then reads the list again and settles `invalidated` once it is gone', async () => {
     request.mockReturnValueOnce(of({data: [item('q1')], nextCursor: null}))
     const page = userPreferenceList.getState(instance, 'user-1', QUERIES)
     const unsubscribe = page.subscribe()
@@ -159,13 +160,14 @@ describe('preference items', () => {
       .mockReturnValueOnce(of(undefined))
       .mockReturnValueOnce(of({data: [], nextCursor: null}).pipe(delay(1)))
 
-    await updateUserPreferenceListItem(instance, {
+    const {invalidated} = await updateUserPreferenceListItem(instance, {
       userId: 'user-1',
       key: QUERIES,
       itemId: 'q1',
       value: undefined,
     })
 
+    await invalidated
     expect(page.getCurrent()).toMatchObject({data: [{data: []}]})
     expect(request).toHaveBeenNthCalledWith(2, {
       url: `${ITEMS}/q1`,
