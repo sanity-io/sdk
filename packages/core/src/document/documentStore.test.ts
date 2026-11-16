@@ -1,9 +1,13 @@
 import {
   type BaseActionOptions,
   type BaseMutationOptions,
+  ChannelError,
   ClientError,
+  DisconnectError,
   type FilteredResponseQueryOptions,
   type ListenEvent,
+  MessageError,
+  MessageParseError,
   type MultipleActionResult,
   type MultipleMutationResult,
   type MutationEvent,
@@ -663,6 +667,47 @@ it('closes the listener connection once no document is subscribed, and reopens i
   }
 })
 
+it.each([
+  ['ChannelError', () => new ChannelError('Listener channel error', {})],
+  ['MessageError', () => new MessageError('Unexpected error', {})],
+  [
+    'MessageParseError',
+    () => new MessageParseError('Unable to parse EventSource message', {cause: new SyntaxError()}),
+  ],
+  ['DisconnectError', () => new DisconnectError('Server disconnected client: unknown error')],
+])('keeps an open document syncing after the listener sends a %s', async (name, makeError) => {
+  const actual = await vi.importActual<typeof import('./sharedListener')>('./sharedListener')
+  vi.mocked(createSharedListener).mockImplementationOnce(actual.createSharedListener)
+  const connections: Subject<ListenEvent<SanityDocument>>[] = []
+  const listen = vi.fn(() => {
+    const connection = new Subject<ListenEvent<SanityDocument>>()
+    connections.push(connection)
+    return connection
+  })
+  Object.assign(client, {listen})
+  const listenerInstance = createSanityInstance({projectId: 'p', dataset: `listener-${name}`})
+  const documentState = getDocumentState(
+    listenerInstance,
+    createDocumentHandle({documentId: 'existing-doc', documentType: 'book'}),
+  )
+  const errors: unknown[] = []
+  const subscription = documentState.observable.subscribe({error: (e) => errors.push(e)})
+
+  try {
+    await vi.waitFor(() => expect(connections[0]?.observed).toBe(true))
+    connections[0].next({type: 'welcome', listenerName: 'l1'} as ListenEvent<SanityDocument>)
+    await vi.waitFor(() => expect(documentState.getCurrent()).toBeDefined())
+
+    connections[0].error(makeError())
+
+    await vi.waitFor(() => expect(listen).toHaveBeenCalledTimes(2))
+    expect(errors).toEqual([])
+  } finally {
+    subscription.unsubscribe()
+    listenerInstance.dispose()
+  }
+})
+
 it('fetches documents if there are no active subscriptions for the actions applied', async () => {
   const doc = createDocumentHandle({documentId: 'existing-doc', documentType: 'article'})
 
@@ -1060,7 +1105,7 @@ it('retries transient dataset ACL fetch failures instead of failing fatally', as
   client.observable.request = vi.fn().mockReturnValue(
     defer(() => {
       aclAttempts++
-      if (aclAttempts === 1) return throwError(() => new Error('socket hang up'))
+      if (aclAttempts === 1) return throwError(() => new TypeError('Failed to fetch'))
       return of(datasetAcl)
     }),
   )

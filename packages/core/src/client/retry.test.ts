@@ -39,7 +39,14 @@ describe('retryRead', () => {
   afterEach(() => vi.useRealTimers())
 
   it.each([
-    ['a network error', new Error('Request error while attempting to reach')],
+    ['a network error', new TypeError('Failed to fetch')],
+    [
+      'a network error in Node',
+      new TypeError('fetch failed', {
+        cause: Object.assign(new Error('other side closed'), {code: 'UND_ERR_SOCKET'}),
+      }),
+    ],
+    ['a timeout', Object.assign(new Error('Request timed out'), {name: 'TimeoutError'})],
     ['a 5xx', new ServerError({statusCode: 503, headers: {}, body: {}})],
     ['a 408', clientError(408)],
     ['a 429', clientError(429)],
@@ -83,6 +90,8 @@ describe('retryRead', () => {
     ['a CORS error', new CorsOriginError({projectId: 'p'})],
     ['a wrapped 403', new PreferenceError('accessDenied', '403', {cause: clientError(403)})],
     ['a preference error the SDK raised', new PreferenceError('keyNotDeclared', 'unknown key')],
+    ['an answer the read rejected', new Error('The response is not a canvas')],
+    ['a bug in the read', new TypeError("Cannot read properties of undefined (reading 'data')")],
   ])('reports %s and never retries it', async (_, error) => {
     const read = startRead([error])
     expect(read.setError).toHaveBeenCalledWith(error)

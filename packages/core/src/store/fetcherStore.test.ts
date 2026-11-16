@@ -185,6 +185,25 @@ describe('fetcherStore', () => {
     expect(source.getCurrent()).toMatchObject({status: 'success', data: 'back', error: undefined})
   })
 
+  it('shows an error the fetch raised itself straight away, without retrying', async () => {
+    vi.useFakeTimers()
+    const rejected = new Error('The response is not a canvas')
+    const fetchSpy = vi.fn(() => throwError(() => rejected))
+    const fetcher = defineFetcher<[], string>({
+      name: 'rejected-answer',
+      getKey: () => 'k',
+      fetch: () => fetchSpy,
+    })
+    const source = fetcher.getState(instance)
+    onTestFinished(source.subscribe())
+
+    await vi.advanceTimersByTimeAsync(0)
+    expect(source.getCurrent()).toMatchObject({status: 'error', error: rejected})
+
+    await vi.advanceTimersByTimeAsync(OUT_OF_SYNC_RETRY_MAX_DELAY * 10)
+    expect(fetchSpy).toHaveBeenCalledTimes(1)
+  })
+
   it('stops retrying a failed fetch a second after its last subscriber leaves, and fetches again on the next subscribe', async () => {
     vi.useFakeTimers()
     const fetchSpy = answerInTurn(

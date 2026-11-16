@@ -18,6 +18,7 @@ import {mergeMap, scan} from 'rxjs/operators'
 
 import {type StoreContext} from '../store/defineStore'
 import {type DocumentStoreState} from './documentStore'
+import {OutOfSyncError} from './outOfSyncError'
 import {processMutations} from './processMutations'
 
 export const DEFAULT_MAX_BUFFER_SIZE = 20
@@ -46,7 +47,7 @@ export interface SyncEvent {
 
 export type ListenerEvent = SyncEvent | MutationEvent
 
-interface ListenerSequenceState {
+export interface ListenerSequenceState {
   /**
    * Tracks the latest revision from the server that can be applied locally
    * Once we receive a mutation event that has a `previousRev` that equals `base.revision`
@@ -64,18 +65,6 @@ interface ListenerSequenceState {
    * This can happen if events arrive out of order, or if an event in the middle for some reason gets lost
    */
   buffer: MutationEvent[]
-}
-
-class OutOfSyncError extends Error {
-  /**
-   * Attach state to the error for debugging/reporting
-   */
-  state: ListenerSequenceState
-  constructor(message: string, state: ListenerSequenceState) {
-    super(message)
-    this.name = 'OutOfSyncError'
-    this.state = state
-  }
 }
 
 export class DeadlineExceededError extends OutOfSyncError {

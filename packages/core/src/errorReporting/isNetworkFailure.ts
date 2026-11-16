@@ -1,8 +1,9 @@
-/** Browsers word a failed `fetch` differently, and all of them throw a plain `TypeError`. */
-const NETWORK_FAILURE_MESSAGE = /failed to fetch|networkerror|load failed|network request failed/i
+/** Browsers and Node word a failed `fetch` differently, and all of them throw a plain `TypeError`. */
+const NETWORK_FAILURE_MESSAGE =
+  /failed to fetch|fetch failed|networkerror|load failed|network request failed/i
 
 /**
- * Whether a request failed because the network did, which browsers report as a plain `TypeError`.
+ * Whether a request failed because the network did, which `fetch` reports as a plain `TypeError`.
  *
  * @internal
  */
