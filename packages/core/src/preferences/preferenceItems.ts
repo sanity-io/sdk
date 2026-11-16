@@ -136,8 +136,8 @@ const removeUserPreferenceListItem = defineMutation<RemoveUserPreferenceListItem
 /**
  * Saves one of the signed-in user's items for a key, like a saved query, or replaces the item with
  * the same ID; `undefined` removes it, and succeeds when there was no such item. The key's cached
- * lists are read again, from the first page, once the API answers. Rejects with a
- * {@link PreferenceError} when the API refuses.
+ * lists are read again, from the first page, once the API answers, and it resolves once they show
+ * the change. Rejects with a {@link PreferenceError} when the API refuses.
  *
  * @internal
  */
@@ -147,11 +147,14 @@ export async function updateUserPreferenceListItem<K extends PreferenceListKey>(
 ): Promise<void> {
   // The options a generic `K` takes aren't known here; every key's are one of these
   const input = rest as Omit<RemoveUserPreferenceListItemInput, 'key'> & {key: K}
-  if (value === undefined) {
-    await removeUserPreferenceListItem(instance, input)
-  } else {
-    // `PreferenceListItemKeyValue` pairs each key with its item type, which a generic `K` can't
-    // narrow to
-    await setUserPreferenceListItem(instance, {...input, value} as SetUserPreferenceListItemInput)
-  }
+  const {invalidated} =
+    value === undefined
+      ? await removeUserPreferenceListItem(instance, input)
+      : // `PreferenceListItemKeyValue` pairs each key with its item type, which a generic `K` can't
+        // narrow to
+        await setUserPreferenceListItem(instance, {
+          ...input,
+          value,
+        } as SetUserPreferenceListItemInput)
+  await invalidated
 }

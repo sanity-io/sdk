@@ -1,5 +1,5 @@
 import {ClientError, type SanityClient} from '@sanity/client'
-import {concatWith, NEVER, of, Subject, throwError} from 'rxjs'
+import {concatWith, delay, NEVER, of, Subject, throwError} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, onTestFinished, vi} from 'vitest'
 
 import {getClientState} from '../client/clientStore'
@@ -123,14 +123,14 @@ describe('preference items', () => {
     unsubscribe()
   })
 
-  it('saves an item, then reads the list again so it shows', async () => {
+  it('saves an item, and resolves once the list read again shows it', async () => {
     request.mockReturnValueOnce(of({data: [], nextCursor: null}))
     const page = userPreferenceList.getState(instance, 'user-1', QUERIES)
     const unsubscribe = page.subscribe()
     await vi.waitFor(() => expect(page.getCurrent()).toMatchObject({status: 'success'}))
     request
       .mockReturnValueOnce(of(item('q1')))
-      .mockReturnValueOnce(of({data: [item('q1')], nextCursor: null}))
+      .mockReturnValueOnce(of({data: [item('q1')], nextCursor: null}).pipe(delay(1)))
 
     await updateUserPreferenceListItem(instance, {
       userId: 'user-1',
@@ -139,7 +139,7 @@ describe('preference items', () => {
       value: query('q1'),
     })
 
-    await vi.waitFor(() => expect(page.getCurrent()).toMatchObject({data: [{data: [item('q1')]}]}))
+    expect(page.getCurrent()).toMatchObject({data: [{data: [item('q1')]}]})
     expect(request).toHaveBeenNthCalledWith(2, {
       url: `${ITEMS}/q1`,
       method: 'PUT',
@@ -150,12 +150,14 @@ describe('preference items', () => {
     unsubscribe()
   })
 
-  it('deletes an item for undefined, then reads the list again so it is gone', async () => {
+  it('deletes an item for undefined, and resolves once the list read again is without it', async () => {
     request.mockReturnValueOnce(of({data: [item('q1')], nextCursor: null}))
     const page = userPreferenceList.getState(instance, 'user-1', QUERIES)
     const unsubscribe = page.subscribe()
     await vi.waitFor(() => expect(page.getCurrent()).toMatchObject({status: 'success'}))
-    request.mockReturnValueOnce(of(undefined)).mockReturnValueOnce(of({data: [], nextCursor: null}))
+    request
+      .mockReturnValueOnce(of(undefined))
+      .mockReturnValueOnce(of({data: [], nextCursor: null}).pipe(delay(1)))
 
     await updateUserPreferenceListItem(instance, {
       userId: 'user-1',
@@ -164,7 +166,7 @@ describe('preference items', () => {
       value: undefined,
     })
 
-    await vi.waitFor(() => expect(page.getCurrent()).toMatchObject({data: [{data: []}]}))
+    expect(page.getCurrent()).toMatchObject({data: [{data: []}]})
     expect(request).toHaveBeenNthCalledWith(2, {
       url: `${ITEMS}/q1`,
       method: 'DELETE',
