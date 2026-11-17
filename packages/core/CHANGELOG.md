@@ -1,5 +1,17 @@
 # Changelog
 
+## 3.14.0
+
+### Minor Changes
+
+- [#1585](https://github.com/sanity-io/sdk/pull/1585) [`ca0be05`](https://github.com/sanity-io/sdk/commit/ca0be058155c7e4fc0ac3f6513b49fe526afabf2) Thanks [@joshuaellis](https://github.com/joshuaellis)! - Dashboard apps hosted on sanity.run load from their new address, `<slug>--apps--<organization-id>.sanity.run`.
+
+### Patch Changes
+
+- [#1582](https://github.com/sanity-io/sdk/pull/1582) [`8a66d6a`](https://github.com/sanity-io/sdk/commit/8a66d6a3eeeee35dded6e14d3b2a31abc193ffc9) Thanks [@RostiMelk](https://github.com/RostiMelk)! - `updateUserPreferenceListItem` resolves with `invalidated`, like the SDK's other mutations, which settles once the cached lists show the change. A caller that needs the list to include its change can wait for it instead of reading the list again.
+
+- [#1586](https://github.com/sanity-io/sdk/pull/1586) [`b47dfbb`](https://github.com/sanity-io/sdk/commit/b47dfbb20d434019d0fd3f0870c9a7628c5ce066) Thanks [@ryanbonial](https://github.com/ryanbonial)! - After a login that returns the session ID in the URL hash (`#sid=…`), the `sid` is now removed from the URL along with the other login params. Before, it stayed in the address bar, and reloading the page tried to exchange it again and failed with "The session ID is invalid or expired".
+
 ## 3.13.0
 
 ### Minor Changes

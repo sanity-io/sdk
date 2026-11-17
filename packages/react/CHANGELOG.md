@@ -1,5 +1,16 @@
 # Changelog
 
+## 3.14.0
+
+### Minor Changes
+
+- [#1585](https://github.com/sanity-io/sdk/pull/1585) [`ca0be05`](https://github.com/sanity-io/sdk/commit/ca0be058155c7e4fc0ac3f6513b49fe526afabf2) Thanks [@joshuaellis](https://github.com/joshuaellis)! - Dashboard apps hosted on sanity.run load from their new address, `<slug>--apps--<organization-id>.sanity.run`.
+
+### Patch Changes
+
+- Updated dependencies [[`8a66d6a`](https://github.com/sanity-io/sdk/commit/8a66d6a3eeeee35dded6e14d3b2a31abc193ffc9), [`ca0be05`](https://github.com/sanity-io/sdk/commit/ca0be058155c7e4fc0ac3f6513b49fe526afabf2), [`b47dfbb`](https://github.com/sanity-io/sdk/commit/b47dfbb20d434019d0fd3f0870c9a7628c5ce066)]:
+  - @sanity/sdk@3.14.0
+
 ## 3.13.0
 
 ### Minor Changes
