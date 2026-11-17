@@ -20,7 +20,7 @@ export function getApplicationOrigin(
   const staging = (globalThis as SanityGlobal).__SANITY_STAGING__ === true
   if (application.isSingleton) {
     const domain = staging ? 'run.sanity.work' : 'sanity.run'
-    return `https://${application.slug}-apps-${application.organizationId}.${domain}`
+    return `https://${application.slug}--apps--${application.organizationId}.${domain}`
   }
 
   const domain = staging ? 'studio.sanity.work' : 'sanity.studio'

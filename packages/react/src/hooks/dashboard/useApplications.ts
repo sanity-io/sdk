@@ -144,7 +144,7 @@ const toInstallation = (installation: DashboardTopicInstallation): DashboardAppl
   // `id` is the installation record's id, not its `applicationId`, so two installs of one app never
   // collide. `organizationId` is the publisher's: the singleton bundle is hosted under the org that
   // published it, and `isSingleton: true` with `externalUrl: null` routes the origin through
-  // `getApplicationOrigin`'s singleton branch (`https://<slug>-apps-<publisherOrgId>.sanity.run`).
+  // `getApplicationOrigin`'s singleton branch (`https://<slug>--apps--<publisherOrgId>.sanity.run`).
   // The installing org stays on the raw record. The workbench always serves installations
   // federated, so their interfaces are never gated.
   const base: DashboardApplicationBase = {
