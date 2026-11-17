@@ -517,8 +517,8 @@ function readTogether(instance: SanityInstance, path: string, key: string) {
   return read.answer
 }
 
-// What a function or a list's difference starts from when nothing the API answered is on screen:
-// what's stored, not the default that shows while the API can't be reached
+// What a function or a list's difference starts from when nothing is on screen yet: what's stored,
+// not the default that shows while the API can't be reached
 async function readStored(
   instance: SanityInstance,
   userId: string,
@@ -526,7 +526,7 @@ async function readStored(
   options: UserPreferenceOptions,
 ): Promise<UserPreference> {
   const read = await userPreference.resolveState(instance, userId, key, options)
-  if (read.canEdit !== undefined) return read
+  if (!userPreference.getState(instance, userId, key, options).getCurrent().isFallback) return read
   return userPreference.refetch(instance, userId, key, options)
 }
 
@@ -743,8 +743,9 @@ export async function updateUserPreference<K extends PreferenceKey>(
   const {list} = lookUpKey(key)
   let current: UserPreference | undefined
   if (list || typeof value === 'function') {
-    current = userPreference.getState(instance, userId, key, options).getCurrent().data
-    if (current?.canEdit === undefined) current = await readStored(instance, userId, key, options)
+    const shown = userPreference.getState(instance, userId, key, options).getCurrent()
+    current = shown.isFallback ? undefined : shown.data
+    current ??= await readStored(instance, userId, key, options)
   }
   const next: unknown =
     typeof value === 'function' ? value(current?.value as PreferenceValue<K>) : value

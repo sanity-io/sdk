@@ -207,9 +207,11 @@ describe('fetcherStore', () => {
       onTestFinished(source.subscribe())
 
       await expect(fetcher.resolveState(instance)).resolves.toBe('fallback')
+      expect(source.getCurrent()).toMatchObject({status: 'success', isFallback: true})
 
       await vi.advanceTimersByTimeAsync(OUT_OF_SYNC_RETRY_MAX_DELAY)
       expect(source.getCurrent()).toMatchObject({status: 'success', data: 'back'})
+      expect(source.getCurrent().isFallback).toBeUndefined()
     })
 
     it('resolves with the fallback once the retries run out, without fetching again', async () => {

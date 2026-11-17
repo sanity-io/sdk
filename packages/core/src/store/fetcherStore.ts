@@ -70,6 +70,7 @@ export type FetcherSnapshot<TData> =
       error: undefined
       isFetching: boolean
       dataUpdatedAt: undefined
+      isFallback?: never
     }
   | {
       /** Data available — possibly stale, possibly revalidating */
@@ -80,6 +81,8 @@ export type FetcherSnapshot<TData> =
       isFetching: boolean
       /** Epoch ms of the fetch that produced `data` */
       dataUpdatedAt: number
+      /** `data` is the definition's `fallbackData`, not an answer */
+      isFallback?: true
     }
   | {
       /** The last fetch failed and no data exists to serve */
@@ -88,6 +91,7 @@ export type FetcherSnapshot<TData> =
       error: unknown
       isFetching: boolean
       dataUpdatedAt: undefined
+      isFallback?: never
     }
 
 /**
@@ -395,13 +399,22 @@ const toSnapshot = <TData>(entry: CacheEntry<TData> | undefined): FetcherSnapsho
   if (cached) return cached as FetcherSnapshot<TData>
 
   let snapshot: FetcherSnapshot<TData>
-  if (entry.status === 'success' || entry.fallback !== undefined) {
+  if (entry.status === 'success') {
     snapshot = {
       status: 'success',
-      data: entry.status === 'success' ? entry.data : (entry.fallback as TData),
+      data: entry.data,
       error: entry.error,
       isFetching: entry.isFetching,
-      dataUpdatedAt: entry.dataUpdatedAt ?? 0,
+      dataUpdatedAt: entry.dataUpdatedAt,
+    }
+  } else if (entry.fallback !== undefined) {
+    snapshot = {
+      status: 'success',
+      data: entry.fallback as TData,
+      error: entry.error,
+      isFetching: entry.isFetching,
+      dataUpdatedAt: 0,
+      isFallback: true,
     }
   } else if (entry.status === 'error') {
     snapshot = {
@@ -630,11 +643,7 @@ const startFetch = (
           const current = state.get().entries[key]
           // An entry with nothing confirmed, like one showing only a change or a fallback, has
           // nothing newer than this result, so it takes it
-          if (
-            current &&
-            current.version !== record.startVersion &&
-            (current.confirmed ?? current).data !== undefined
-          ) {
+          if (current && current.version !== record.startVersion && hasConfirmedData(current)) {
             // A write (optimistic mutation) landed mid-fetch: discard the now-stale
             // server result and keep the written data. Tear the fetch down here —
             // a non-completing source won't fire `complete` to clear `isFetching`.
@@ -701,6 +710,10 @@ const startFetch = (
   return promise
 }
 
+// Data the entry shows without changes still in flight
+const hasConfirmedData = (entry: CacheEntry): boolean =>
+  (entry.confirmed ?? entry).data !== undefined
+
 // A fallback only stands in for a failure a retry may fix, on an entry with nothing confirmed
 const updateFallback = (
   state: StoreState<CacheState>,
@@ -715,7 +728,7 @@ const updateFallback = (
   updateEntry(state, key, 'fetchFallback', (prev) => {
     if (!prev || transient === (prev.fallback !== undefined)) return prev
     if (!transient) return {...prev, fallback: undefined}
-    if ((prev.confirmed ?? prev).data !== undefined) return prev
+    if (hasConfirmedData(prev)) return prev
     return {...prev, fallback: fallbackData(prev.instance, ...params)}
   })
 }
