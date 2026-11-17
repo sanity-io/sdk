@@ -366,7 +366,7 @@ describe('queryStore', () => {
     unsubscribe()
   })
 
-  it('refetches a query that failed with a 401 once the token changes', async () => {
+  it('stops throwing a 401 and refetches the query once the token changes', async () => {
     const sessionExpired = new ClientError({
       statusCode: 401,
       headers: {},
@@ -383,6 +383,7 @@ describe('queryStore', () => {
     expect(fetch).toHaveBeenCalledTimes(1)
 
     setAuthToken(instance, 'renewed-token')
+    expect(state.getCurrent()).toBeUndefined()
     await vi.advanceTimersByTimeAsync(0)
 
     expect(fetch).toHaveBeenCalledTimes(2)
