@@ -998,7 +998,7 @@ export interface CursorPage {
 export interface PagedFetcherDefinition<
   TParams extends unknown[],
   TPage extends CursorPage,
-> extends Omit<FetcherDefinition<TParams, TPage[]>, 'fetch' | 'initialData'> {
+> extends Omit<FetcherDefinition<TParams, TPage[]>, 'fetch' | 'initialData' | 'fallbackData'> {
   /**
    * Reads one page: the first without a cursor, each one after with the `nextCursor` of the page
    * before. Return an observable that emits the page.
