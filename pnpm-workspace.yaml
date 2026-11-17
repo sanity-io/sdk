@@ -5,6 +5,9 @@ packages:
   - apps/*
   - '@repo/package.config'
 
+lockfile:
+  format: v13
+
 allowBuilds:
   esbuild: true
   unrs-resolver: false
