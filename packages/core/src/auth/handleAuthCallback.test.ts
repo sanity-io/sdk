@@ -52,6 +52,9 @@ let instance: SanityInstance | undefined
 describe('handleCallback', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // clearAllMocks keeps implementations, so drop the real functions a test installed
+    vi.mocked(getAuthCode).mockReset()
+    vi.mocked(getTokenFromLocation).mockReset()
     vi.mocked(subscribeToStateAndFetchCurrentUser).mockImplementation(() => NEVER.subscribe())
     vi.mocked(subscribeToStorageEventsAndSetToken).mockImplementation(() => NEVER.subscribe())
   })
@@ -103,6 +106,31 @@ describe('handleCallback', () => {
       url: '/auth/fetch',
     })
     expect(setItem).toHaveBeenCalledWith('__sanity_auth_token', '{"token":"new-token"}')
+  })
+
+  it('exchanges a sid from the hash and returns a URL without it', async () => {
+    const request = vi.fn().mockResolvedValue({token: 'new-token'})
+    const clientFactory = vi.fn().mockReturnValue({request})
+    vi.mocked(getTokenFromStorage).mockReturnValue(null)
+    const original = await vi.importActual<typeof import('./utils')>('./utils')
+    vi.mocked(getAuthCode).mockImplementation(original.getAuthCode)
+    vi.mocked(getTokenFromLocation).mockImplementation(original.getTokenFromLocation)
+
+    instance = createSanityInstance({
+      projectId: 'p',
+      dataset: 'd',
+      auth: {clientFactory, storageArea: {setItem: vi.fn()} as unknown as Storage},
+    })
+
+    const result = await handleAuthCallback(
+      instance,
+      'https://example.com/callback?foo=bar#sid=hash-sid&keep=1',
+    )
+
+    expect(request).toHaveBeenLastCalledWith(
+      expect.objectContaining({url: '/auth/fetch', query: {sid: 'hash-sid'}}),
+    )
+    expect(result).toBe('https://example.com/callback?foo=bar#keep=1')
   })
 
   it('returns early if there is a provided token', async () => {
