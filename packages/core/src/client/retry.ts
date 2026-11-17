@@ -72,7 +72,12 @@ function isMissingAccess(error: unknown): boolean {
   )
 }
 
-function classify(error: unknown): 'session' | 'access' | 'transient' | 'terminal' {
+/**
+ * How {@link retryRead} treats a failed read: `transient` retries after a backoff, `session` once
+ * the token changes, `access` both ways, and `terminal` not at all.
+ * @internal
+ */
+export function classifyFailure(error: unknown): 'session' | 'access' | 'transient' | 'terminal' {
   if (error instanceof DocumentInaccessibleError) return 'session'
   if (error instanceof OutOfSyncError || isTransientError(error)) return 'transient'
 
@@ -80,7 +85,7 @@ function classify(error: unknown): 'session' | 'access' | 'transient' | 'termina
   if (statusCode === 401) return isMissingAccess(error) ? 'access' : 'session'
   // Preferences wraps request errors to give them its own codes; the request error inside decides
   if (statusCode === undefined && error instanceof Error && error.cause !== undefined) {
-    return classify(error.cause)
+    return classifyFailure(error.cause)
   }
 
   return 'terminal'
@@ -176,7 +181,7 @@ export function retryRead<T>(
 ): MonoTypeOperatorFunction<T> {
   return (source) =>
     defer(() => {
-      let shown: ReturnType<typeof classify> | undefined
+      let shown: ReturnType<typeof classifyFailure> | undefined
       const clearError = () => {
         if (!shown) return
         shown = undefined
@@ -185,7 +190,7 @@ export function retryRead<T>(
       const recovering = source.pipe(tap(clearError))
 
       return retryWithCredential(recovering, credential, (error, retryCount, changed) => {
-        const failure = classify(error)
+        const failure = classifyFailure(error)
         const credentialChanged = changed.pipe(tap(clearError))
 
         if (failure === 'terminal') {

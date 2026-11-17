@@ -3,7 +3,7 @@ import {concatWith, NEVER, type Observable, of, startWith, Subject, throwError} 
 import {afterEach, beforeEach, describe, expect, it, onTestFinished, vi} from 'vitest'
 
 import {setAuthToken} from '../auth/authStore'
-import {OUT_OF_SYNC_RETRY_MAX_DELAY} from '../document/documentConstants'
+import {OUT_OF_SYNC_RETRY_COUNT, OUT_OF_SYNC_RETRY_MAX_DELAY} from '../document/documentConstants'
 import {createSanityInstance, type SanityInstance} from './createSanityInstance'
 import {UPSTREAM_CLOSE_DELAY_MS} from './createStoreInstance'
 import {defineFetcher, defineMutation, definePagedFetcher, type Fetcher} from './fetcherStore'
@@ -183,6 +183,124 @@ describe('fetcherStore', () => {
 
     await vi.advanceTimersByTimeAsync(OUT_OF_SYNC_RETRY_MAX_DELAY)
     expect(source.getCurrent()).toMatchObject({status: 'success', data: 'back', error: undefined})
+  })
+
+  describe('with fallbackData', () => {
+    const withFallback = (name: string, fetchSpy: () => Observable<string>) =>
+      defineFetcher<[], string>({
+        name,
+        getKey: () => 'k',
+        fetch: () => fetchSpy,
+        fallbackData: () => 'fallback',
+      })
+
+    it('shows the fallback while a fetch that failed with a 5xx retries, then the answer', async () => {
+      vi.useFakeTimers()
+      const fetcher = withFallback(
+        'fallback-retry',
+        answerInTurn(
+          throwError(() => unavailable),
+          of('back'),
+        ),
+      )
+      const source = fetcher.getState(instance)
+      onTestFinished(source.subscribe())
+
+      await expect(fetcher.resolveState(instance)).resolves.toBe('fallback')
+
+      await vi.advanceTimersByTimeAsync(OUT_OF_SYNC_RETRY_MAX_DELAY)
+      expect(source.getCurrent()).toMatchObject({status: 'success', data: 'back'})
+    })
+
+    it('resolves with the fallback once the retries run out, without fetching again', async () => {
+      vi.useFakeTimers()
+      const fetchSpy = vi.fn(() => throwError(() => unavailable))
+      const fetcher = withFallback('fallback-retries-run-out', fetchSpy)
+      onTestFinished(fetcher.getState(instance).subscribe())
+      await vi.advanceTimersByTimeAsync(OUT_OF_SYNC_RETRY_MAX_DELAY * OUT_OF_SYNC_RETRY_COUNT)
+      const fetches = fetchSpy.mock.calls.length
+
+      await expect(fetcher.resolveState(instance)).resolves.toBe('fallback')
+      expect(fetchSpy).toHaveBeenCalledTimes(fetches)
+    })
+
+    it('errors when a retry fails in a way retrying cannot fix', async () => {
+      vi.useFakeTimers()
+      const fetcher = withFallback(
+        'fallback-refused',
+        answerInTurn<string>(
+          throwError(() => unavailable),
+          refusal('Not allowed'),
+        ),
+      )
+      const source = fetcher.getState(instance)
+      onTestFinished(source.subscribe())
+
+      await vi.advanceTimersByTimeAsync(OUT_OF_SYNC_RETRY_MAX_DELAY)
+      expect(source.getCurrent()).toMatchObject({status: 'error', data: undefined})
+    })
+
+    // Shows `value` over the fallback until `refuse` is called
+    const changeOver = (fetcher: Fetcher<[], string>, value: string) => {
+      const answer = new Subject<never>()
+      const change = defineMutation<string, never>({
+        name: 'change-over-fallback',
+        mutationFn: () => () => answer,
+        onMutate: (write, input) => write(fetcher, [], input),
+      })(instance, value).catch(() => {})
+      return () => {
+        answer.error(new Error('Not allowed'))
+        return change
+      }
+    }
+
+    it.each([
+      ['after', true],
+      ['before', false],
+    ])(
+      'takes the answer of a fetch that lands %s a change over the fallback is refused',
+      async (_, refuseFirst) => {
+        vi.useFakeTimers()
+        const answer = new Subject<string>()
+        const fetcher = withFallback(
+          `fallback-change-${refuseFirst}`,
+          answerInTurn(
+            throwError(() => unavailable),
+            answer,
+          ),
+        )
+        const source = fetcher.getState(instance)
+        onTestFinished(source.subscribe())
+        await vi.advanceTimersByTimeAsync(OUT_OF_SYNC_RETRY_MAX_DELAY)
+
+        const refuse = changeOver(fetcher, 'mine')
+        if (refuseFirst) await refuse()
+        answer.next('stored')
+        if (!refuseFirst) await refuse()
+
+        expect(source.getCurrent()).toMatchObject({status: 'success', data: 'stored'})
+      },
+    )
+
+    it('stops showing the fallback when a retry fails in a way retrying cannot fix under a change', async () => {
+      vi.useFakeTimers()
+      const fetcher = withFallback(
+        'fallback-refused-under-change',
+        answerInTurn<string>(
+          throwError(() => unavailable),
+          refusal('Not allowed'),
+        ),
+      )
+      const source = fetcher.getState(instance)
+      onTestFinished(source.subscribe())
+      await vi.advanceTimersByTimeAsync(0)
+
+      const refuse = changeOver(fetcher, 'mine')
+      await vi.advanceTimersByTimeAsync(OUT_OF_SYNC_RETRY_MAX_DELAY)
+      await refuse()
+
+      expect(source.getCurrent().data).toBeUndefined()
+    })
   })
 
   it('shows an error the fetch raised itself straight away, without retrying', async () => {

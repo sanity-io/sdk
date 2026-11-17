@@ -59,7 +59,7 @@ const stored = (
   key: string,
   activeValue: unknown,
   activeLevel = 'user@project',
-  canEdit?: boolean,
+  canEdit = true,
 ) => ({key, activeValue, activeLevel, canEdit})
 
 const refusal = (statusCode: number, code: string, message: string) =>
@@ -262,6 +262,7 @@ describe('preferences', () => {
         value: 'compact',
         isDefault: false,
         shared: false,
+        canEdit: true,
         resourceType: 'project',
       })
       // On the project's host, which a browser on the project's CORS origins can call
@@ -333,19 +334,33 @@ describe('preferences', () => {
     it.each([
       ['a request the browser could not send', 'networkError', new TypeError('Failed to fetch')],
       ['a 5xx', 'requestFailed', new ServerError({statusCode: 503, headers: {}, body: {}})],
-    ])('reports %s as %s once its retries run out', async (_, code, failure) => {
-      vi.useFakeTimers({
-        toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'],
-      })
-      request.mockReturnValue(throwError(() => failure))
+    ])(
+      'shows the default after %s, with %s on error, until the API answers',
+      async (_, code, failure) => {
+        vi.useFakeTimers({
+          toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'],
+        })
+        request.mockReturnValue(throwError(() => failure))
+        const preference = userPreference.getState(instance, 'user-1', LAYOUT)
+        onTestFinished(preference.subscribe())
 
-      const read = userPreference.resolveState(instance, 'user-1', LAYOUT).catch((error) => error)
-      await vi.advanceTimersByTimeAsync(OUT_OF_SYNC_RETRY_MAX_DELAY)
-      expect(request.mock.calls.length).toBeGreaterThan(1)
-      await vi.advanceTimersByTimeAsync(RETRIES_RUN_OUT)
+        const read = userPreference.resolveState(instance, 'user-1', LAYOUT)
+        // The default shows once the first attempt fails, before any retry
+        await vi.advanceTimersByTimeAsync(OUT_OF_SYNC_RETRY_BASE_DELAY)
+        expect(request).toHaveBeenCalledTimes(1)
 
-      expect(await read).toMatchObject({code})
-    })
+        await expect(read).resolves.toStrictEqual({
+          key: LAYOUT,
+          value: 'default',
+          isDefault: true,
+          shared: false,
+          canEdit: undefined,
+        })
+        expect(storage.size).toBe(0)
+        await vi.advanceTimersByTimeAsync(RETRIES_RUN_OUT)
+        expect(preference.getCurrent()).toMatchObject({data: {value: 'default'}, error: {code}})
+      },
+    )
 
     it('reads a preference again once the token changes after its read failed with a 401', async () => {
       // Answers the current user's read, which a new token starts, instead of the real API
@@ -502,7 +517,7 @@ describe('preferences', () => {
       )
     })
 
-    it("sends a change with a function made after the read's network error showed, once the network is back", async () => {
+    it('sends a change with a function made while the default shows for a failed read, once the network is back', async () => {
       vi.useFakeTimers({
         toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'],
       })
@@ -511,7 +526,7 @@ describe('preferences', () => {
       onTestFinished(preference.subscribe())
       await vi.advanceTimersByTimeAsync(RETRIES_RUN_OUT)
       expect(preference.getCurrent()).toMatchObject({
-        status: 'error',
+        data: {value: 'default', isDefault: true},
         error: {code: 'networkError'},
       })
 
@@ -733,6 +748,7 @@ describe('preferences', () => {
         value: pinned('a'),
         isDefault: false,
         shared: false,
+        canEdit: true,
       })
       expect(request).toHaveBeenCalledWith(expect.objectContaining({url: USER_PATH}))
     })
