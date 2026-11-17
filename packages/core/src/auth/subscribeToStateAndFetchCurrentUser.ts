@@ -1,3 +1,4 @@
+import {ClientError} from '@sanity/client'
 import {type CurrentUser} from '@sanity/types'
 import {
   catchError,
@@ -26,12 +27,14 @@ import {AuthStateType} from './authStateType'
 import {type AuthStoreState} from './authStore'
 
 /**
- * Subscribes to auth state changes and fetches the current user when
- * the state transitions to `LOGGED_IN` without a `currentUser`.
+ * Subscribes to auth state changes and fetches the current user whenever
+ * the `LOGGED_IN` token changes.
  *
  * Transient failures (see {@link isTransientError}) retry with a backoff before the
  * state becomes `ERROR`. Other failures set `ERROR` right away. A new token cancels a
  * pending retry, and a failure doesn't set `ERROR` once the user is no longer logged in.
+ * While a user is cached, only a 401 sets `ERROR`, so a failed fetch after a token
+ * refresh keeps the session.
  *
  * @param context - The store context for the auth store.
  * @param fetchOptions - Configuration options. When `useProjectHostname` is
@@ -54,8 +57,7 @@ export const subscribeToStateAndFetchCurrentUser = (
     .pipe(
       filter(
         ({authState}) =>
-          authState.type === AuthStateType.LOGGED_OUT ||
-          (authState.type === AuthStateType.LOGGED_IN && !authState.currentUser),
+          authState.type === AuthStateType.LOGGED_OUT || authState.type === AuthStateType.LOGGED_IN,
       ),
       map(({authState, options: storeOptions}) =>
         authState.type === AuthStateType.LOGGED_IN
@@ -115,7 +117,9 @@ export const subscribeToStateAndFetchCurrentUser = (
             catchError((error) => {
               logger.error('Failed to fetch current user', {error})
               state.set('setError', (prev) =>
-                prev.authState.type === AuthStateType.LOGGED_IN
+                prev.authState.type === AuthStateType.LOGGED_IN &&
+                (!prev.authState.currentUser ||
+                  (error instanceof ClientError && error.statusCode === 401))
                   ? {authState: {type: AuthStateType.ERROR, error}}
                   : prev,
               )
@@ -134,7 +138,8 @@ export const subscribeToStateAndFetchCurrentUser = (
       logger.debug('Current user details', {userId: currentUser.id})
       state.set('setCurrentUser', (prev) => ({
         authState:
-          prev.authState.type === AuthStateType.LOGGED_IN
+          prev.authState.type === AuthStateType.LOGGED_IN &&
+          prev.authState.currentUser?.id !== currentUser.id
             ? {...prev.authState, currentUser}
             : prev.authState,
       }))

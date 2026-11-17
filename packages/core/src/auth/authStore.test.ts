@@ -1,6 +1,6 @@
-import {type ClientConfig, createClient, type SanityClient} from '@sanity/client'
+import {type ClientConfig, ClientError, createClient, type SanityClient} from '@sanity/client'
 import {type CurrentUser} from '@sanity/types'
-import {NEVER, type Subscription} from 'rxjs'
+import {NEVER, type Observable, of, type Subscription, throwError} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {uninstallTestMessageBus} from '../dashboard/messageBus/__fixtures__/uninstallTestMessageBus'
@@ -16,6 +16,7 @@ import {
   getCurrentUserState,
   getLoginUrlState,
   getTokenState,
+  setAuthToken,
 } from './authStore'
 import {handleAuthCallback} from './handleAuthCallback'
 import {checkForCookieAuth, getStudioTokenFromLocalStorage} from './studioModeAuth'
@@ -761,6 +762,88 @@ describe('authStore', () => {
       instance = createSanityInstance({projectId: 'p', dataset: 'd'})
       const {getCurrent} = getCurrentUserState(instance)
       expect(getCurrent()).toBe(null)
+    })
+
+    async function setupWithUsers(users: Record<string, Observable<CurrentUser>>) {
+      const actual = await vi.importActual<typeof import('./subscribeToStateAndFetchCurrentUser')>(
+        './subscribeToStateAndFetchCurrentUser',
+      )
+      vi.mocked(subscribeToStateAndFetchCurrentUser).mockImplementation(
+        actual.subscribeToStateAndFetchCurrentUser,
+      )
+      const clientFactory = (config: ClientConfig) =>
+        ({observable: {request: () => users[config.token!]}}) as unknown as SanityClient
+      instance = createSanityInstance({projectId: 'p', dataset: 'd', auth: {clientFactory}})
+    }
+
+    it('returns the new user after setAuthToken sets a token for another user', async () => {
+      await setupWithUsers({
+        'token-a': of({id: 'user-a'} as CurrentUser),
+        'token-b': of({id: 'user-b'} as CurrentUser),
+      })
+      const {getCurrent} = getCurrentUserState(instance)
+
+      setAuthToken(instance, 'token-a')
+      expect(getCurrent()?.id).toBe('user-a')
+
+      setAuthToken(instance, 'token-b')
+      expect(getCurrent()?.id).toBe('user-b')
+    })
+
+    it('keeps the user while setAuthToken refreshes the token', async () => {
+      const user = {id: 'user-a'} as CurrentUser
+      await setupWithUsers({'token-a': of(user), 'token-a-refreshed': NEVER})
+      const {getCurrent} = getCurrentUserState(instance)
+      setAuthToken(instance, 'token-a')
+
+      setAuthToken(instance, 'token-a-refreshed')
+
+      expect(getCurrent()).toBe(user)
+    })
+
+    it('keeps the same user object once the refreshed token returns that user', async () => {
+      const user = {id: 'user-a'} as CurrentUser
+      await setupWithUsers({
+        'token-a': of(user),
+        'token-a-refreshed': of({id: 'user-a'} as CurrentUser),
+      })
+      const {getCurrent} = getCurrentUserState(instance)
+      setAuthToken(instance, 'token-a')
+
+      setAuthToken(instance, 'token-a-refreshed')
+
+      expect(getCurrent()).toBe(user)
+    })
+
+    it('keeps the session when fetching the user for a refreshed token fails with a 403', async () => {
+      const user = {id: 'user-a'} as CurrentUser
+      const forbidden = new ClientError({statusCode: 403, headers: {}, body: {}})
+      await setupWithUsers({'token-a': of(user), 'token-a-refreshed': throwError(() => forbidden)})
+      setAuthToken(instance, 'token-a')
+
+      setAuthToken(instance, 'token-a-refreshed')
+
+      expect(getAuthState(instance).getCurrent()).toStrictEqual({
+        type: AuthStateType.LOGGED_IN,
+        token: 'token-a-refreshed',
+        currentUser: user,
+      })
+    })
+
+    it('sets an auth error when the refreshed token is rejected with a 401', async () => {
+      const unauthorized = new ClientError({statusCode: 401, headers: {}, body: {}})
+      await setupWithUsers({
+        'token-a': of({id: 'user-a'} as CurrentUser),
+        'token-a-refreshed': throwError(() => unauthorized),
+      })
+      setAuthToken(instance, 'token-a')
+
+      setAuthToken(instance, 'token-a-refreshed')
+
+      expect(getAuthState(instance).getCurrent()).toStrictEqual({
+        type: AuthStateType.ERROR,
+        error: unauthorized,
+      })
     })
   })
 
