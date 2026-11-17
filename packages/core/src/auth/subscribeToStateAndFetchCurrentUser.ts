@@ -26,8 +26,8 @@ import {AuthStateType} from './authStateType'
 import {type AuthStoreState} from './authStore'
 
 /**
- * Subscribes to auth state changes and fetches the current user when
- * the state transitions to `LOGGED_IN` without a `currentUser`.
+ * Subscribes to auth state changes and fetches the current user whenever
+ * the `LOGGED_IN` token changes.
  *
  * Transient failures (see {@link isTransientError}) retry with a backoff before the
  * state becomes `ERROR`. Other failures set `ERROR` right away. A new token cancels a
@@ -54,8 +54,7 @@ export const subscribeToStateAndFetchCurrentUser = (
     .pipe(
       filter(
         ({authState}) =>
-          authState.type === AuthStateType.LOGGED_OUT ||
-          (authState.type === AuthStateType.LOGGED_IN && !authState.currentUser),
+          authState.type === AuthStateType.LOGGED_OUT || authState.type === AuthStateType.LOGGED_IN,
       ),
       map(({authState, options: storeOptions}) =>
         authState.type === AuthStateType.LOGGED_IN

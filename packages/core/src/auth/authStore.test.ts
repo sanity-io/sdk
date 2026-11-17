@@ -1,6 +1,6 @@
 import {type ClientConfig, createClient, type SanityClient} from '@sanity/client'
 import {type CurrentUser} from '@sanity/types'
-import {NEVER, type Subscription} from 'rxjs'
+import {NEVER, type Observable, of, type Subscription} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {uninstallTestMessageBus} from '../dashboard/messageBus/__fixtures__/uninstallTestMessageBus'
@@ -16,6 +16,7 @@ import {
   getCurrentUserState,
   getLoginUrlState,
   getTokenState,
+  setAuthToken,
 } from './authStore'
 import {handleAuthCallback} from './handleAuthCallback'
 import {checkForCookieAuth, getStudioTokenFromLocalStorage} from './studioModeAuth'
@@ -761,6 +762,43 @@ describe('authStore', () => {
       instance = createSanityInstance({projectId: 'p', dataset: 'd'})
       const {getCurrent} = getCurrentUserState(instance)
       expect(getCurrent()).toBe(null)
+    })
+
+    async function setupWithUsers(users: Record<string, Observable<CurrentUser>>) {
+      const actual = await vi.importActual<typeof import('./subscribeToStateAndFetchCurrentUser')>(
+        './subscribeToStateAndFetchCurrentUser',
+      )
+      vi.mocked(subscribeToStateAndFetchCurrentUser).mockImplementation(
+        actual.subscribeToStateAndFetchCurrentUser,
+      )
+      const clientFactory = (config: ClientConfig) =>
+        ({observable: {request: () => users[config.token!]}}) as unknown as SanityClient
+      instance = createSanityInstance({projectId: 'p', dataset: 'd', auth: {clientFactory}})
+    }
+
+    it('returns the new user after setAuthToken sets a token for another user', async () => {
+      await setupWithUsers({
+        'token-a': of({id: 'user-a'} as CurrentUser),
+        'token-b': of({id: 'user-b'} as CurrentUser),
+      })
+      const {getCurrent} = getCurrentUserState(instance)
+
+      setAuthToken(instance, 'token-a')
+      expect(getCurrent()?.id).toBe('user-a')
+
+      setAuthToken(instance, 'token-b')
+      expect(getCurrent()?.id).toBe('user-b')
+    })
+
+    it('keeps the user while setAuthToken refreshes the token', async () => {
+      const user = {id: 'user-a'} as CurrentUser
+      await setupWithUsers({'token-a': of(user), 'token-a-refreshed': NEVER})
+      const {getCurrent} = getCurrentUserState(instance)
+      setAuthToken(instance, 'token-a')
+
+      setAuthToken(instance, 'token-a-refreshed')
+
+      expect(getCurrent()).toBe(user)
     })
   })
 
