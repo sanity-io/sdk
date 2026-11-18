@@ -19,6 +19,10 @@ test('Organization — literal flags narrow members and features', () => {
   expectTypeOf<keyof Organization<false, false> & ('members' | 'features')>().toEqualTypeOf<never>()
 })
 
+test('Organization — logoUrl is always present, null when the organization has no logo', () => {
+  expectTypeOf<Organization<false, false>['logoUrl']>().toEqualTypeOf<string | null>()
+})
+
 test('organization.getState — exposes the snapshot envelope', () => {
   expectTypeOf(organization.getState(instance, {organizationId: 'org_1'})).toEqualTypeOf<
     StateSource<FetcherSnapshot<Organization<boolean, boolean>>>

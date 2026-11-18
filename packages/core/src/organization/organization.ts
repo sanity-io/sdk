@@ -36,6 +36,8 @@ export interface OrganizationBase {
   id: string
   name: string
   slug: string | null
+  /** Bare CDN URL of the logo; append image-pipeline params (`?w=&h=&fit=crop&auto=format`) for display. */
+  logoUrl: string | null
   createdAt: string
   createdByUserId: string
   updatedAt: string
