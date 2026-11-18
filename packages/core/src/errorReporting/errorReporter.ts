@@ -1,4 +1,4 @@
-import {CORE_SDK_VERSION} from '../version'
+import {version} from '../../package.json'
 import {
   getSdkDelivery,
   hasDebugFlag,
@@ -170,7 +170,9 @@ export function createErrorReporter(options: ErrorReporterOptions = {}): {
         const client = new sentry.BrowserClient({
           dsn: SDK_DSN,
           tunnel: SDK_TUNNEL,
-          release: String(CORE_SDK_VERSION),
+          // The published package version. `CORE_SDK_VERSION` reads `PKG_VERSION` from the app's
+          // environment at runtime, which apps do not set, so it falls back to `<version>-development`
+          release: version,
           environment: getEnvironment(),
           dataCollection: sdkSentryDataCollection,
           stackParser: sentry.defaultStackParser,
