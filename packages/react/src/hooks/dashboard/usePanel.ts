@@ -7,11 +7,19 @@ import {useView} from './useView'
 /**
  * Returns the panel view, the onClose handler, and setMode, which sends `panels.mode.set`.
  *
- * Throws when the component does not render in a panel view.
+ * Throws when the component does not render in a panel view, or outside a `ResourceProvider`.
  *
  * @example
  * ```tsx
  * export default function MyPanel() {
+ *   return (
+ *     <ResourceProvider fallback={null}>
+ *       <PanelHeader />
+ *     </ResourceProvider>
+ *   )
+ * }
+ *
+ * function PanelHeader() {
  *   const {view, onClose, setMode} = usePanel()
  *   return (
  *     <header>
