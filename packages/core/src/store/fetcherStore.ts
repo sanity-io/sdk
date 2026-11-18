@@ -15,7 +15,7 @@ import {
 } from 'rxjs'
 
 import {getClientAuthState} from '../auth/authStore'
-import {retryRead} from '../client/retry'
+import {classifyFailure, retryRead} from '../client/retry'
 import {setCleanupInterval, setCleanupTimeout} from '../utils/setCleanupTimeout'
 import {bindActionGlobally} from './createActionBinder'
 import {type SanityInstance} from './createSanityInstance'
@@ -70,6 +70,7 @@ export type FetcherSnapshot<TData> =
       error: undefined
       isFetching: boolean
       dataUpdatedAt: undefined
+      isFallback?: never
     }
   | {
       /** Data available — possibly stale, possibly revalidating */
@@ -80,6 +81,8 @@ export type FetcherSnapshot<TData> =
       isFetching: boolean
       /** Epoch ms of the fetch that produced `data` */
       dataUpdatedAt: number
+      /** `data` is the definition's `fallbackData`, not an answer */
+      isFallback?: true
     }
   | {
       /** The last fetch failed and no data exists to serve */
@@ -88,6 +91,7 @@ export type FetcherSnapshot<TData> =
       error: unknown
       isFetching: boolean
       dataUpdatedAt: undefined
+      isFallback?: never
     }
 
 /**
@@ -152,6 +156,13 @@ export interface FetcherDefinition<TParams extends unknown[], TData> {
     instance: SanityInstance,
     ...params: TParams
   ) => {data: TData; dataUpdatedAt: number} | undefined
+  /**
+   * Data to show while an entry has none and its fetch fails in a way a retry may fix, like a
+   * network error or a 5xx. It shows as stale data while the fetch keeps retrying, with the
+   * failure on `error` once the retries run out, and the next success replaces it. A failure that
+   * retrying can't fix still errors.
+   */
+  fallbackData?: (instance: SanityInstance, ...params: TParams) => TData
 }
 
 /**
@@ -167,7 +178,8 @@ export interface Fetcher<TParams extends unknown[], TData> {
   /**
    * Resolves with the entry's first available data — the promise a suspending
    * component throws. Rejects when the fetch fails, which for a network error
-   * or 5xx is once its retries run out. When the entry's last fetch failed,
+   * or 5xx is once its retries run out, unless the definition has `fallbackData`:
+   * then it resolves with that. When the entry's last fetch failed,
    * fetches again straight away, even if a retry is still waiting.
    */
   resolveState: (instance: SanityInstance, ...params: TParams) => Promise<TData>
@@ -277,6 +289,8 @@ interface CacheEntryMeta {
   pending: PendingChange[]
   /** What the entry shows without `pending`; only set while there are pending changes */
   confirmed: Confirmed | undefined
+  /** The definition's `fallbackData`, shown while the entry has no data and its fetch is retried */
+  fallback?: unknown
 }
 
 /** One optimistic write, tagged with the mutation call that made it. */
@@ -392,6 +406,15 @@ const toSnapshot = <TData>(entry: CacheEntry<TData> | undefined): FetcherSnapsho
       error: entry.error,
       isFetching: entry.isFetching,
       dataUpdatedAt: entry.dataUpdatedAt,
+    }
+  } else if (entry.fallback !== undefined) {
+    snapshot = {
+      status: 'success',
+      data: entry.fallback as TData,
+      error: entry.error,
+      isFetching: entry.isFetching,
+      dataUpdatedAt: 0,
+      isFallback: true,
     }
   } else if (entry.status === 'error') {
     snapshot = {
@@ -590,7 +613,12 @@ const startFetch = (
     })
       .pipe(
         take(1),
-        tap({error: (error: unknown) => (record.failure = {error})}),
+        tap({
+          error: (error: unknown) => {
+            record.failure = {error}
+            updateFallback(state, def, key, params, error)
+          },
+        }),
         retryRead(getClientAuthState(instance), (error) => {
           // A shown failure comes off once the read recovers, or moves on to one not shown yet
           if (error === undefined) {
@@ -613,9 +641,9 @@ const startFetch = (
       .subscribe({
         next: (data) => {
           const current = state.get().entries[key]
-          // An entry still without data, like one whose only change was refused mid-fetch, has
+          // An entry with nothing confirmed, like one showing only a change or a fallback, has
           // nothing newer than this result, so it takes it
-          if (current && current.version !== record.startVersion && current.data !== undefined) {
+          if (current && current.version !== record.startVersion && hasConfirmedData(current)) {
             // A write (optimistic mutation) landed mid-fetch: discard the now-stale
             // server result and keep the written data. Tear the fetch down here —
             // a non-completing source won't fire `complete` to clear `isFetching`.
@@ -680,6 +708,29 @@ const startFetch = (
   )
 
   return promise
+}
+
+// Data the entry shows without changes still in flight
+const hasConfirmedData = (entry: CacheEntry): boolean =>
+  (entry.confirmed ?? entry).data !== undefined
+
+// A fallback only stands in for a failure a retry may fix, on an entry with nothing confirmed
+const updateFallback = (
+  state: StoreState<CacheState>,
+  def: AnyDefinition,
+  key: string,
+  params: unknown[],
+  error: unknown,
+): void => {
+  const {fallbackData} = def
+  if (!fallbackData) return
+  const transient = classifyFailure(error) === 'transient'
+  updateEntry(state, key, 'fetchFallback', (prev) => {
+    if (!prev || transient === (prev.fallback !== undefined)) return prev
+    if (!transient) return {...prev, fallback: undefined}
+    if (hasConfirmedData(prev)) return prev
+    return {...prev, fallback: fallbackData(prev.instance, ...params)}
+  })
 }
 
 /**
@@ -866,7 +917,8 @@ export function defineFetcher<TParams extends unknown[], TData>(
       // An error left by an earlier fetch is not an answer: fetch again now, restarting a retry
       // that is waiting on a backoff or a new token, keeping garbage collection off the entry
       // until that fetch settles
-      if (state.get().entries[key]?.status === 'error') {
+      const entry = state.get().entries[key]
+      if (entry?.status === 'error' && entry.fallback === undefined) {
         cancelGc(key)
         const retrying = inflight.get(key)?.failure !== undefined
         return (startFetch(state, def, instance, params, retrying) as Promise<TData>).finally(
@@ -946,7 +998,7 @@ export interface CursorPage {
 export interface PagedFetcherDefinition<
   TParams extends unknown[],
   TPage extends CursorPage,
-> extends Omit<FetcherDefinition<TParams, TPage[]>, 'fetch' | 'initialData'> {
+> extends Omit<FetcherDefinition<TParams, TPage[]>, 'fetch' | 'initialData' | 'fallbackData'> {
   /**
    * Reads one page: the first without a cursor, each one after with the `nextCursor` of the page
    * before. Return an observable that emits the page.

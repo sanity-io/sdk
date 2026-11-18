@@ -20,8 +20,9 @@ const useUserPreferenceFetcher = createFetcherHook(userPreference) as <K extends
 
 /**
  * Reads a preference of the signed-in user. Suspends until the user and a value are known: the
- * value cached from the user's last visit, or else the API's. Change it with
- * {@link useUpdateUserPreference}.
+ * value cached from the user's last visit, or else the API's. When the API can't be reached, it
+ * shows the key's default, with the failure on `error`, and reads again until the API answers.
+ * Change it with {@link useUpdateUserPreference}.
  *
  * The options say where to read, and only take the places the key is stored in. Without a
  * `projectId`, it uses the project of the nearest resource; without an `organizationId`, the

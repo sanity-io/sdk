@@ -517,6 +517,19 @@ function readTogether(instance: SanityInstance, path: string, key: string) {
   return read.answer
 }
 
+// What a function or a list's difference starts from when nothing is on screen yet: what's stored,
+// not the default that shows while the API can't be reached
+async function readStored(
+  instance: SanityInstance,
+  userId: string,
+  key: PreferenceKey,
+  options: UserPreferenceOptions,
+): Promise<UserPreference> {
+  const read = await userPreference.resolveState(instance, userId, key, options)
+  if (!userPreference.getState(instance, userId, key, options).getCurrent().isFallback) return read
+  return userPreference.refetch(instance, userId, key, options)
+}
+
 /**
  * Fetcher for one preference of the signed-in user, on the shared fetcher cache. It starts from
  * the value cached on the user's last visit, when there is one, and reads the API in the
@@ -536,6 +549,11 @@ export const userPreference = defineFetcher<
     // From an earlier visit, so it counts as stale and is read again straight away
     return cached ? {data: cached, dataUpdatedAt: 0} : undefined
   },
+  fallbackData: (instance, _userId, key, options) =>
+    toPreference(
+      {key, activeValue: undefined, activeLevel: 'default'},
+      resolveKey(instance, key, options).defaultValue,
+    ),
   refetchInterval: REFETCH_INTERVAL_MS,
   // A user's own read answers with the shared value when they haven't set one, so a change to the
   // shared value refetches it
@@ -725,11 +743,9 @@ export async function updateUserPreference<K extends PreferenceKey>(
   const {list} = lookUpKey(key)
   let current: UserPreference | undefined
   if (list || typeof value === 'function') {
-    // Read first when nothing is cached, so a function or a list's difference starts from what's
-    // stored, not the default
-    current =
-      userPreference.getState(instance, userId, key, options).getCurrent().data ??
-      (await userPreference.resolveState(instance, userId, key, options))
+    const shown = userPreference.getState(instance, userId, key, options).getCurrent()
+    current = shown.isFallback ? undefined : shown.data
+    current ??= await readStored(instance, userId, key, options)
   }
   const next: unknown =
     typeof value === 'function' ? value(current?.value as PreferenceValue<K>) : value

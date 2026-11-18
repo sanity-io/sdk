@@ -13,7 +13,10 @@ import {withSdkOrigin} from './withSdkOrigin'
  * @category Platform
  */
 export interface FetcherHookResult<TData> {
-  /** The resolved data. Guaranteed present — the hook suspends until the first fetch succeeds. */
+  /**
+   * The resolved data. Always present: the hook suspends until the first fetch succeeds, or until
+   * it shows a fallback, like a preference's default while the API can't be reached.
+   */
   data: TData
   /** A fetch for this entry is in flight (background revalidation or a `refetch()`). */
   isFetching: boolean
