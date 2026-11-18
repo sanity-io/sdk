@@ -1,5 +1,6 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
+import {version} from '../../package.json'
 import {ActionError} from '../document/processActions/shared'
 import {createErrorReporter} from './errorReporter'
 import {markSdkError} from './sdkErrorOrigin'
@@ -87,7 +88,7 @@ describe('createErrorReporter', () => {
     expect(sent).toHaveLength(1)
     expect(sent[0]?.tags).toMatchObject({handled: 'no', errorBoundary: 'AuthBoundary'})
     expect(sent[0]?.user).toEqual({ip_address: '0.0.0.0'})
-    expect(sent[0]?.release).toEqual(expect.any(String))
+    expect(sent[0]?.release).toBe(version)
   })
 
   it('drops errors thrown by app code', async () => {
