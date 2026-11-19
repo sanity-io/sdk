@@ -250,7 +250,7 @@ export interface MessageBus<TTopics = MessageBusTopics> {
  * @public
  * @category Message Bus
  */
-export interface WebWorkerInfo {
+export interface WebWorker {
   readonly name: string
   readonly type: string
 }
@@ -318,7 +318,7 @@ export interface WebWorkerBus extends Omit<MessageBus, 'subscribe'> {
  */
 export interface WebWorkerProps {
   readonly bus: WebWorkerBus
-  readonly worker: WebWorkerInfo
+  readonly worker: WebWorker
 }
 
 /**
