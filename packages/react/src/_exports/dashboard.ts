@@ -99,5 +99,8 @@ export type {
   TopicResult,
   Topics,
   ValueOf,
+  WebWorkerBus,
+  WebWorkerInfo,
+  WebWorkerProps,
 } from '@sanity/sdk/dashboard'
 export {capabilities, connectMessageBus, MessageBusError, TopicError} from '@sanity/sdk/dashboard'
