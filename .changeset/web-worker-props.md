@@ -3,4 +3,4 @@
 '@sanity/sdk-react': minor
 ---
 
-Export `WebWorker`, `WebWorkerBus` and `WebWorkerProps` from the `dashboard` entries.
+Export `WebWorkerProps` from the `dashboard` entries.

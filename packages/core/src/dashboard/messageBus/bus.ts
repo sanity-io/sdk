@@ -246,37 +246,6 @@ export interface MessageBus<TTopics = MessageBusTopics> {
 }
 
 /**
- * The web worker's own declaration.
- * @public
- * @category Message Bus
- */
-export interface WebWorker {
-  readonly name: string
-  readonly type: string
-}
-
-/**
- * The message bus a web worker receives. `subscribe` takes a handler instead of returning an
- * observable, so the worker doesn't need rxjs.
- * @public
- * @category Message Bus
- */
-export interface WebWorkerBus extends Omit<MessageBus, 'subscribe'> {
-  /** Runs a responder for each event until its signal aborts. */
-  subscribe<K extends EventTopic>(
-    type: K,
-    handler: (message: MessageBusMessage<PayloadOf<K>, ReplyOf<K>, K>) => void,
-    options?: MessageBusAbortOptions,
-  ): void
-  /** Runs a handler for each state value until its signal aborts. */
-  subscribe<K extends StateTopic>(
-    type: K,
-    handler: (value: ValueOf<K>) => void,
-    options?: MessageBusAbortOptions,
-  ): void
-}
-
-/**
  * Props the default export of a web worker's `src` file receives when the worker starts. It can
  * return a disposer, which runs when Dashboard stops the worker.
  *
@@ -296,8 +265,22 @@ export interface WebWorkerBus extends Omit<MessageBus, 'subscribe'> {
  * @category Message Bus
  */
 export interface WebWorkerProps {
-  readonly bus: WebWorkerBus
-  readonly worker: WebWorker
+  /** The message bus, with a `subscribe` that takes a handler so the worker doesn't need rxjs. */
+  readonly bus: Omit<MessageBus, 'subscribe'> & {
+    /** Runs a responder for each event until its signal aborts. */
+    subscribe<K extends EventTopic>(
+      type: K,
+      handler: (message: MessageBusMessage<PayloadOf<K>, ReplyOf<K>, K>) => void,
+      options?: MessageBusAbortOptions,
+    ): void
+    /** Runs a handler for each state value until its signal aborts. */
+    subscribe<K extends StateTopic>(
+      type: K,
+      handler: (value: ValueOf<K>) => void,
+      options?: MessageBusAbortOptions,
+    ): void
+  }
+  readonly worker: {readonly name: string; readonly type: string}
 }
 
 /**

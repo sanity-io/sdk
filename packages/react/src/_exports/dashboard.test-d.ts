@@ -72,7 +72,7 @@ test('dashboard entrypoint exposes the message bus public types', () => {
   expectTypeOf<MessageBusHost['connections']['subscribe']>().toBeFunction()
 })
 
-test('WebWorkerBus.subscribe takes a handler and has no observable form', () => {
+test('WebWorkerProps bus.subscribe takes a handler and has no observable form', () => {
   const worker = ({bus}: WebWorkerProps) => {
     bus.subscribe('workers.post', (message) => {
       expectTypeOf(message.type).toEqualTypeOf<'workers.post'>()
