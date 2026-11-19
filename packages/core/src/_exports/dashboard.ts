@@ -13,6 +13,7 @@ export type {
   MessageBusMeta,
   MessageBusQueryOptions,
   MessageBusStateSource,
+  WebWorkerProps,
 } from '../dashboard/messageBus/bus'
 export {connectMessageBus} from '../dashboard/messageBus/bus'
 export {MessageBusError} from '../dashboard/messageBus/bus'

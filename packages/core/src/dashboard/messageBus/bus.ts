@@ -246,6 +246,44 @@ export interface MessageBus<TTopics = MessageBusTopics> {
 }
 
 /**
+ * Props the default export of a web worker's `src` file receives when the worker starts. It can
+ * return a disposer, which runs when Dashboard stops the worker.
+ *
+ * @example
+ * ```ts
+ * import {type WebWorkerProps} from '@sanity/sdk-react/dashboard'
+ *
+ * export default ({bus}: WebWorkerProps) => {
+ *   const controller = new AbortController()
+ *   bus.subscribe('workers.post', (message) => message.reply(snapshot), {
+ *     signal: controller.signal,
+ *   })
+ *   return () => controller.abort()
+ * }
+ * ```
+ * @public
+ * @category Message Bus
+ */
+export interface WebWorkerProps {
+  /** The message bus, with a `subscribe` that takes a handler so the worker doesn't need rxjs. */
+  readonly bus: Omit<MessageBus, 'subscribe'> & {
+    /** Runs a responder for each event until its signal aborts. */
+    subscribe<K extends EventTopic>(
+      type: K,
+      handler: (message: MessageBusMessage<PayloadOf<K>, ReplyOf<K>, K>) => void,
+      options?: MessageBusAbortOptions,
+    ): void
+    /** Runs a handler for each state value until its signal aborts. */
+    subscribe<K extends StateTopic>(
+      type: K,
+      handler: (value: ValueOf<K>) => void,
+      options?: MessageBusAbortOptions,
+    ): void
+  }
+  readonly worker: {readonly name: string; readonly type: string}
+}
+
+/**
  * A message bus connection that can be torn down independently of its siblings.
  * @public
  * @category Message Bus

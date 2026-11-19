@@ -23,6 +23,7 @@ import {
   type Topics,
   useApplicationBasePath,
   useCapabilities,
+  type WebWorkerProps,
 } from './dashboard'
 import {
   type ApplicationStatus,
@@ -69,6 +70,22 @@ test('dashboard entrypoint exposes the message bus public types', () => {
   expectTypeOf<ReturnType<typeof useApplicationBasePath>>().toEqualTypeOf<string>()
   expectTypeOf<ReturnType<typeof useCapabilities>>().toEqualTypeOf<CapabilityRecord>()
   expectTypeOf<MessageBusHost['connections']['subscribe']>().toBeFunction()
+})
+
+test('WebWorkerProps bus.subscribe takes a handler and has no observable form', () => {
+  const worker = ({bus}: WebWorkerProps) => {
+    bus.subscribe('workers.post', (message) => {
+      expectTypeOf(message.type).toEqualTypeOf<'workers.post'>()
+    })
+    bus.subscribe('auth.token', (value) => {
+      expectTypeOf(value).toEqualTypeOf<string | null>()
+    })
+    // @ts-expect-error an event topic cannot be subscribed to without a handler
+    bus.subscribe('workers.post')
+    // @ts-expect-error a state topic cannot be subscribed to without a handler
+    bus.subscribe('auth.token')
+  }
+  expectTypeOf(worker).toBeFunction()
 })
 
 test('internal entrypoint exposes dashboard internals', () => {
