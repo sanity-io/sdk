@@ -148,8 +148,11 @@ export interface ApplicationContext {
     readonly id: string
     readonly type: 'dataset' | 'media-library' | 'canvas'
   }
-  /** The open document, or `null` when none is open. */
-  readonly document: {readonly id: string} | null
+  /**
+   * The open document, or `null` when none is open. `type` is the document's `_type`, so a panel
+   * can tell, for example, `sanity.asset` from `sanity.asset.collection`.
+   */
+  readonly document: {readonly id: string; readonly type: string} | null
 }
 
 /**

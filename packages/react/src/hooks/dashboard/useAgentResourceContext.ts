@@ -26,6 +26,11 @@ export interface AgentResourceContextOptions {
    * Optional document ID if the user is viewing/editing a specific document
    */
   documentId?: string
+  /**
+   * The document's `_type`. Required alongside `documentId` in a federated app: without it no
+   * document is reported. Ignored in iframe apps.
+   */
+  documentType?: string
 }
 
 /**
@@ -40,7 +45,7 @@ export interface AgentResourceContextOptions {
  *   `applications.context.update` topic. Reach for `useApplicationContext` directly in new code.
  *
  * @category Agent Actions
- * @param options - The resource context options containing projectId, dataset, and optional documentId
+ * @param options - The resource context options containing projectId, dataset, and optional documentId and documentType
  *
  * @example
  * ```tsx
@@ -48,12 +53,14 @@ export interface AgentResourceContextOptions {
  *
  * function MyComponent() {
  *   const documentId = 'my-document-id'
+ *   const documentType = 'article'
  *
  *   // Automatically updates the Agent's context whenever the document changes
  *   useAgentResourceContext({
  *     projectId: 'my-project',
  *     dataset: 'production',
  *     documentId,
+ *     documentType,
  *   })
  *
  *   return <div>Editing document: {documentId}</div>
@@ -69,17 +76,32 @@ export function useAgentResourceContext(options: AgentResourceContextOptions): v
   return useComlinkAgentResourceContext(options)
 }
 
-function useBusAgentResourceContext({projectId, dataset, documentId}: AgentResourceContextOptions) {
+function useBusAgentResourceContext({
+  projectId,
+  dataset,
+  documentId,
+  documentType,
+}: AgentResourceContextOptions) {
   const context = useMemo<ApplicationContext | null>(
     () =>
       projectId && dataset
         ? {
             resource: {id: `${projectId}.${dataset}`, type: 'dataset'},
-            document: documentId ? {id: documentId} : null,
+            document: documentId && documentType ? {id: documentId, type: documentType} : null,
           }
         : null,
-    [projectId, dataset, documentId],
+    [projectId, dataset, documentId, documentType],
   )
+
+  useEffect(() => {
+    if (documentId && !documentType) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        '[useAgentResourceContext] documentId was passed without documentType, so the Dashboard is not told which document is open. Pass the _type of the document as documentType.',
+      )
+    }
+  }, [documentId, documentType])
+
   useApplicationContext(context)
 }
 

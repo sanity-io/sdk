@@ -271,10 +271,17 @@ describe('useAgentResourceContext (message bus)', () => {
     const payloads = collect()
 
     renderHookWithInstance(() =>
-      useAgentResourceContext({projectId: 'proj', dataset: 'ds', documentId: 'doc'}),
+      useAgentResourceContext({
+        projectId: 'proj',
+        dataset: 'ds',
+        documentId: 'doc',
+        documentType: 'sanity.asset',
+      }),
     )
 
-    expect(payloads).toEqual([{resource: {id: 'proj.ds', type: 'dataset'}, document: {id: 'doc'}}])
+    expect(payloads).toEqual([
+      {resource: {id: 'proj.ds', type: 'dataset'}, document: {id: 'doc', type: 'sanity.asset'}},
+    ])
     expect(useWindowConnection).not.toHaveBeenCalled()
   })
 
@@ -282,19 +289,58 @@ describe('useAgentResourceContext (message bus)', () => {
     const payloads = collect()
 
     const {rerender} = renderHookWithInstance((options) => useAgentResourceContext(options), {
-      initialProps: {projectId: 'proj', dataset: 'ds', documentId: 'doc'},
+      initialProps: {projectId: 'proj', dataset: 'ds', documentId: 'doc', documentType: 'article'},
     })
-    rerender({projectId: 'proj', dataset: 'ds', documentId: 'doc'})
+    rerender({projectId: 'proj', dataset: 'ds', documentId: 'doc', documentType: 'article'})
 
     expect(payloads).toHaveLength(1)
   })
 
-  it('sets document to null when no documentId is given', () => {
+  it('sets document to null without warning when no documentId is given', () => {
+    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
     const payloads = collect()
 
     renderHookWithInstance(() => useAgentResourceContext({projectId: 'proj', dataset: 'ds'}))
 
     expect(payloads).toEqual([{resource: {id: 'proj.ds', type: 'dataset'}, document: null}])
+    expect(consoleWarnSpy).not.toHaveBeenCalled()
+
+    consoleWarnSpy.mockRestore()
+  })
+
+  it('sets document to null and warns when documentId is given without documentType', () => {
+    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const payloads = collect()
+
+    renderHookWithInstance(() =>
+      useAgentResourceContext({projectId: 'proj', dataset: 'ds', documentId: 'doc'}),
+    )
+
+    expect(payloads).toEqual([{resource: {id: 'proj.ds', type: 'dataset'}, document: null}])
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      expect.stringContaining(
+        '[useAgentResourceContext] documentId was passed without documentType',
+      ),
+    )
+
+    consoleWarnSpy.mockRestore()
+  })
+
+  it('does not warn when documentId and documentType are both given', () => {
+    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    renderHookWithInstance(() =>
+      useAgentResourceContext({
+        projectId: 'proj',
+        dataset: 'ds',
+        documentId: 'doc',
+        documentType: 'article',
+      }),
+    )
+
+    expect(consoleWarnSpy).not.toHaveBeenCalled()
+
+    consoleWarnSpy.mockRestore()
   })
 
   it.each([

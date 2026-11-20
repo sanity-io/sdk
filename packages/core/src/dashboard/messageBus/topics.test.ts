@@ -122,6 +122,13 @@ describe('dashboard topic types', () => {
     >().toEqualTypeOf<ApplicationContext | null>()
   })
 
+  it('requires the open document to carry its type', () => {
+    expectTypeOf<ApplicationContext['document']>().toEqualTypeOf<{
+      readonly id: string
+      readonly type: string
+    } | null>()
+  })
+
   it('types the access request topic', () => {
     expectTypeOf<PayloadOf<'access.request'>>().toEqualTypeOf<{
       resourceType: 'organization' | 'project'
