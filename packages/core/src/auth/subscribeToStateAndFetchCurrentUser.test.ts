@@ -72,6 +72,33 @@ describe('subscribeToStateAndFetchCurrentUser', () => {
     subscription.unsubscribe()
   })
 
+  it('appends configured requestTagPrefix before auth when fetching the current user', () => {
+    const mockUser = {id: 'example-user'} as CurrentUser
+    const mockRequest = vi.fn().mockReturnValue(of(mockUser))
+    const clientFactory = vi.fn().mockReturnValue({observable: {request: mockRequest}})
+    const instance = createSanityInstance({
+      projectId: 'p',
+      dataset: 'd',
+      requestTagPrefix: 'workbench',
+      auth: {clientFactory},
+    })
+
+    const state = createStoreState(authStore.getInitialState(instance, null))
+    const subscription = subscribeToStateAndFetchCurrentUser({state, instance, key: null})
+
+    state.set('setLoggedIn', {
+      authState: {type: AuthStateType.LOGGED_IN, token: 'new-token', currentUser: null},
+    })
+
+    expect(clientFactory).toHaveBeenCalledWith(
+      expect.objectContaining({
+        requestTagPrefix: 'sanity.sdk.workbench.auth',
+      }),
+    )
+
+    subscription.unsubscribe()
+  })
+
   it("doesn't set the current user if the state is not logged in", () => {
     const mockUser = {id: 'example-user'} as CurrentUser
     const mockRequest = vi.fn().mockReturnValue(of(mockUser).pipe(delay(0)))

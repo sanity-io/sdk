@@ -2,6 +2,7 @@ import {type Subscription} from 'rxjs'
 
 import {type TokenSource} from '../config/sanityConfig'
 import {type StoreContext} from '../store/defineStore'
+import {resolveRequestTagPrefix} from '../utils/requestTagPrefix'
 import {AuthStateType} from './authStateType'
 import {type AuthStoreState, type LoggedInAuthState} from './authStore'
 import {type AuthStrategyOptions, type AuthStrategyResult} from './authStrategy'
@@ -213,16 +214,19 @@ function initializeWithFallback(
     if (!token) {
       const projectIdValue = instance.config.projectId
       const clientFactory = state.get().options.clientFactory
-      checkForCookieAuth(projectIdValue, clientFactory).then((isCookieAuthEnabled) => {
-        if (!isCookieAuthEnabled) return
-        state.set('enableCookieAuth', (prev) => ({
-          options: {...prev.options, authMethod: 'cookie'},
-          authState:
-            prev.authState.type === AuthStateType.LOGGED_IN
-              ? prev.authState
-              : createLoggedInAuthState('', null),
-        }))
-      })
+      const requestTagPrefix = resolveRequestTagPrefix(instance.config.requestTagPrefix, 'auth')
+      checkForCookieAuth(projectIdValue, clientFactory, requestTagPrefix).then(
+        (isCookieAuthEnabled) => {
+          if (!isCookieAuthEnabled) return
+          state.set('enableCookieAuth', (prev) => ({
+            options: {...prev.options, authMethod: 'cookie'},
+            authState:
+              prev.authState.type === AuthStateType.LOGGED_IN
+                ? prev.authState
+                : createLoggedInAuthState('', null),
+          }))
+        },
+      )
     }
   } catch {
     // best-effort cookie detection

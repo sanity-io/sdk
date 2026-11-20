@@ -1,5 +1,6 @@
 import {bindActionGlobally} from '../store/createActionBinder'
-import {DEFAULT_API_VERSION, REQUEST_TAG_PREFIX} from './authConstants'
+import {resolveRequestTagPrefix} from '../utils/requestTagPrefix'
+import {DEFAULT_API_VERSION} from './authConstants'
 import {getAuthLogger} from './authLogger'
 import {AuthStateType} from './authStateType'
 import {authStore, type AuthStoreState, type DashboardContext} from './authStore'
@@ -95,7 +96,7 @@ export const handleAuthCallback = bindActionGlobally(
     try {
       const client = clientFactory({
         apiVersion: DEFAULT_API_VERSION,
-        requestTagPrefix: REQUEST_TAG_PREFIX,
+        requestTagPrefix: resolveRequestTagPrefix(instance.config.requestTagPrefix, 'auth'),
         useProjectHostname: false,
         useCdn: false,
         ...(apiHost && {apiHost}),
