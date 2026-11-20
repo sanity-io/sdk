@@ -153,6 +153,7 @@ const installation = {
     icon: null,
     // Distinct from the installing org: the bundle is hosted under the publisher's org.
     organizationId: 'organization-publisher',
+    updatedAt: '2026-01-02T00:00:00.000Z',
   },
   interfaces: [
     {
