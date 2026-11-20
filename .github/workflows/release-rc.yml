@@ -37,7 +37,7 @@ jobs:
           # Run against the branch the workflow was dispatched from, and push
           # the version-bump commit back to it, rather than a hardcoded branch.
           ref: ${{ github.ref_name }}
-          # fetch-depth: 0 so @changesets/changelog-github can look up the commit
+          # fetch-depth: 0 so .changeset/changelog.mjs can look up the commit
           # that added each changeset file.
           fetch-depth: 0
           token: ${{ steps.generate-token.outputs.token }}
@@ -70,7 +70,7 @@ jobs:
       - name: Version rc
         run: pnpm changeset version
         env:
-          # changelog-github reads GITHUB_TOKEN when it runs changeset version.
+          # .changeset/changelog.mjs reads GITHUB_TOKEN when it runs changeset version.
           GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
       - name: Build packages
         run: pnpm build:packages

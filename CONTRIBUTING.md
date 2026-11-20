@@ -125,7 +125,7 @@ Pick the bump for the change:
 
 `chore` / `docs` / `test` / `ci` changes, and changes that only touch `apps/*`, carry no changeset and do not release. You can pick either published package when prompted — they are version-fixed, so both bump together. Commit the generated file under `.changeset/`.
 
-To preview the version bump and changelog entries locally, run `GITHUB_TOKEN=$(gh auth token) pnpm changeset version` — the `GITHUB_TOKEN` is required because `@changesets/changelog-github` calls the GitHub API to enrich each entry. Discard the result afterwards; the Version PR does this in CI.
+To preview the version bump and changelog entries locally, run `GITHUB_TOKEN=$(gh auth token) pnpm version-packages` — the `GITHUB_TOKEN` is required because `.changeset/changelog.mjs` calls the GitHub API to enrich each entry. Discard the result afterwards; the Version PR does this in CI.
 
 ### The Version PR
 
