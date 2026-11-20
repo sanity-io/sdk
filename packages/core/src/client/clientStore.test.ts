@@ -110,6 +110,51 @@ describe('clientStore', () => {
       expect(createRealClient(vi.mocked(createClient).mock.calls[0][0]).config().url).toBe(url)
     })
 
+    it('should append instance requestTagPrefix under sanity.sdk', () => {
+      const taggedInstance = createSanityInstance({
+        projectId: 'test-project',
+        dataset: 'test-dataset',
+        requestTagPrefix: 'workbench',
+      })
+      onTestFinished(() => taggedInstance.dispose())
+
+      const client = getClient(taggedInstance, {apiVersion: '2024-11-12'})
+
+      expect(client.config().requestTagPrefix).toBe('sanity.sdk.workbench')
+    })
+
+    it('should allow per-client requestTagPrefix to override the instance prefix', () => {
+      const taggedInstance = createSanityInstance({
+        projectId: 'test-project',
+        dataset: 'test-dataset',
+        requestTagPrefix: 'workbench',
+      })
+      onTestFinished(() => taggedInstance.dispose())
+
+      const client = getClient(taggedInstance, {
+        apiVersion: '2024-11-12',
+        requestTagPrefix: 'custom.prefix',
+      })
+
+      expect(client.config().requestTagPrefix).toBe('custom.prefix')
+    })
+
+    it('should cache clients separately when instances configure different requestTagPrefix values', () => {
+      const workbenchInstance = createSanityInstance({
+        projectId: 'test-project',
+        dataset: 'test-dataset',
+        requestTagPrefix: 'workbench',
+      })
+      onTestFinished(() => workbenchInstance.dispose())
+
+      const defaultClient = getClient(instance, {apiVersion: '2024-11-12'})
+      const workbenchClient = getClient(workbenchInstance, {apiVersion: '2024-11-12'})
+
+      expect(defaultClient).not.toBe(workbenchClient)
+      expect(defaultClient.config().requestTagPrefix).toBe('sanity.sdk')
+      expect(workbenchClient.config().requestTagPrefix).toBe('sanity.sdk.workbench')
+    })
+
     it('should throw when using disallowed configuration keys', () => {
       expect(() =>
         getClient(instance, {

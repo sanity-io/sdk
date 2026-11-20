@@ -102,6 +102,7 @@ interface SetupOptions {
   withOAuthConfig?: boolean
   oauthConfig?: {clientId: string; redirectUri: string; organizationId?: string}
   apiHost?: string
+  requestTagPrefix?: string
 }
 
 function setup(options: SetupOptions = {}) {
@@ -114,6 +115,7 @@ function setup(options: SetupOptions = {}) {
   instance = createSanityInstance({
     projectId: 'p',
     dataset: 'd',
+    ...(options.requestTagPrefix && {requestTagPrefix: options.requestTagPrefix}),
     auth: {
       clientFactory,
       storageArea,
@@ -520,6 +522,21 @@ describe('refreshOAuthTokens', () => {
 
     const body = parseBody(request.mock.calls[0][0].body)
     expect(body.has('resource')).toBe(false)
+  })
+
+  it('appends configured requestTagPrefix before auth on OAuth requests', async () => {
+    const {clientFactory} = setup({
+      requestTagPrefix: 'workbench',
+      storageSeed: {[OAUTH_TOKENS_KEY]: serializeTokens(seededTokens)},
+    })
+
+    await refreshOAuthTokens(instance!)
+
+    expect(clientFactory).toHaveBeenCalledWith(
+      expect.objectContaining({
+        requestTagPrefix: 'sanity.sdk.workbench.auth',
+      }),
+    )
   })
 
   it('shares a single in-flight request across concurrent callers', async () => {

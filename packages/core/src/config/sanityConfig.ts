@@ -170,6 +170,15 @@ export interface SanityConfig extends DatasetHandle, PerspectiveHandle {
    */
   useProjectHostname?: boolean
   /**
+   * Segment appended to the SDK's default request tag prefix (`sanity.sdk`) for
+   * outgoing Sanity API requests made by this instance, including auth and presence.
+   *
+   * For example, setting `requestTagPrefix: 'workbench'` produces request tags of the
+   * form `sanity.sdk.workbench.<tag>` (and `sanity.sdk.workbench.auth.<tag>` for auth
+   * requests). Must contain only alphanumeric characters, underscores, dashes, and dots.
+   */
+  requestTagPrefix?: string
+  /**
    * Whether the cached API data the app shows, such as projects, applications and preferences, is
    * fetched again when someone comes back to the app's tab. Data fetched in the last 30 seconds
    * isn't. Defaults to `true`. Like TanStack Query's option of the same name, it follows the tab's

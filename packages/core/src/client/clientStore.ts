@@ -20,9 +20,9 @@ import {createStateSourceAction} from '../store/createStateSourceAction'
 import {defineStore, type StoreContext} from '../store/defineStore'
 import {getStagingApiHost} from '../utils/getStagingApiHost'
 import {pickProperties} from '../utils/object'
+import {resolveRequestTagPrefix} from '../utils/requestTagPrefix'
 
 const DEFAULT_API_VERSION = '2024-11-12'
-const DEFAULT_REQUEST_TAG_PREFIX = 'sanity.sdk'
 
 type AllowedClientConfigKey =
   | 'useCdn'
@@ -63,7 +63,6 @@ const DEFAULT_CLIENT_CONFIG: ClientConfig = {
   useCdn: false,
   ignoreBrowserTokenWarning: true,
   allowReconfigure: false,
-  requestTagPrefix: DEFAULT_REQUEST_TAG_PREFIX,
 }
 
 /**
@@ -225,6 +224,8 @@ export const getClient = bindActionGlobally(
       token: getStaticToken(instance, state.get()),
       auth,
       ...options,
+      requestTagPrefix:
+        options.requestTagPrefix ?? resolveRequestTagPrefix(instance.config.requestTagPrefix),
       ...(projectId && {projectId}),
       ...(dataset && {dataset}),
       ...(resource ? {resource} : {resource: undefined}),
