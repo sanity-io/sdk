@@ -365,6 +365,12 @@ export const subscribeDocumentEvents = bindActionByResource(
   },
 )
 
+/** @internal */
+export const getSharedListenerEvents = bindActionByResource(
+  documentStore,
+  ({state}) => state.get().sharedListener.events,
+)
+
 function failTransactionOnUnreadableDocument({queued, documentStates}: DocumentStoreState): void {
   const transaction = queued.at(0)
   if (!transaction) return
