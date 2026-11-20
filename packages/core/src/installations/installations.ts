@@ -67,7 +67,7 @@ export interface InstallationBase {
     /** Qualified, globally-unique handle of the installed singleton (e.g. `sanity/<name>`). */
     reference: string
     slug: string | null
-    /** Sanitized SVG icon markup, or `null` when the singleton has no icon. */
+    /** URL of the icon image on `cdn.sanity.io`, or `null` when the singleton has no icon. */
     icon: string | null
     /** The singleton's publishing organization; the top-level `organizationId` is the installing one. */
     organizationId: string

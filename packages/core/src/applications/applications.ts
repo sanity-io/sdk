@@ -141,6 +141,7 @@ export interface ApplicationBase {
   name: string
   /** Qualified, globally-unique handle: `sanity/<name>` for singletons, `<organizationId>/<name>` otherwise. */
   reference: string
+  /** URL of the icon image on `cdn.sanity.io`, or `null` when the application has no icon. */
   icon: string | null
   isSingleton: boolean
   visibility: 'default' | 'unlisted' | 'disabled'
@@ -340,7 +341,7 @@ export type ApplicationVisibility = ApplicationBase['visibility']
  * @internal
  */
 export type UpdateApplicationInput = {applicationId: string} & Partial<
-  Pick<ApplicationBase, 'title' | 'icon' | 'visibility'>
+  Pick<ApplicationBase, 'title' | 'visibility'>
 >
 
 /**
