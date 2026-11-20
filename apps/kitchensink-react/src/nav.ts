@@ -1,5 +1,6 @@
 import {ActivityIcon} from '@sanity/icons/Activity'
 import {BlockContentIcon} from '@sanity/icons/BlockContent'
+import {ClockIcon} from '@sanity/icons/Clock'
 import {ComposeIcon} from '@sanity/icons/Compose'
 import {CubeIcon} from '@sanity/icons/Cube'
 import {DashboardIcon} from '@sanity/icons/Dashboard'
@@ -63,6 +64,7 @@ export const navGroups: NavGroup[] = [
       {path: 'document-list', title: 'Document list', icon: ListIcon},
       {path: 'document-grid', title: 'Document grid', icon: ThLargeIcon},
       {path: 'document-editor', title: 'Document editor', icon: EditIcon},
+      {path: 'document-history', title: 'Document history', icon: ClockIcon},
       {path: 'document-projection', title: 'Document projection', icon: SchemaIcon},
       {path: 'search', title: 'Search', icon: SearchIcon},
       {path: 'portable-text', title: 'Portable Text', icon: BlockContentIcon},

@@ -9,6 +9,7 @@ import {LegacyCommentsRoute} from './Comments/legacy/LegacyCommentsRoute'
 import {DocumentDashboardInteractionsRoute} from './DocumentCollection/DocumentDashboardInteractionsRoute'
 import {DocumentEditorRoute} from './DocumentCollection/DocumentEditorRoute'
 import {DocumentGridRoute} from './DocumentCollection/DocumentGridRoute'
+import {DocumentHistoryRoute} from './DocumentCollection/DocumentHistoryRoute'
 import {DocumentListRoute} from './DocumentCollection/DocumentListRoute'
 import {DocumentProjectionRoute} from './DocumentCollection/DocumentProjectionRoute'
 import {MultiResourceRoute} from './DocumentCollection/MultiResourceRoute'
@@ -49,6 +50,10 @@ const documentCollectionRoutes = [
   {
     path: 'document-editor',
     element: <DocumentEditorRoute />,
+  },
+  {
+    path: 'document-history',
+    element: <DocumentHistoryRoute />,
   },
   {
     path: 'portable-text',
