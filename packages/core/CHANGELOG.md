@@ -1,29 +1,5 @@
 # Changelog
 
-## 3.15.0
-
-### Minor Changes
-
-- [#1592](https://github.com/sanity-io/sdk/pull/1592) [`5e7ff00`](https://github.com/sanity-io/sdk/commit/5e7ff0063c31ccdbbcfe9367987e714869fcdf3f) Thanks [@RostiMelk](https://github.com/RostiMelk)! - `useUserPreference` shows the key's default while the preferences API can't be reached, instead of suspending through its retries and then throwing. The failure shows on `error` once the retries run out, and the next answer replaces the default. A change made with a function, or to a list, waits for the stored value instead of starting from the default.
-
-- [#1596](https://github.com/sanity-io/sdk/pull/1596) [`42bf0a3`](https://github.com/sanity-io/sdk/commit/42bf0a318f38b5a9b16dee73971fa0391674b510) Thanks [@joshuaellis](https://github.com/joshuaellis)! - Organisations returned by the organisation and organisations APIs include `logoUrl`, the bare CDN URL of the organisation's logo, or `null` when it has none.
-
-- [#1604](https://github.com/sanity-io/sdk/pull/1604) [`d48a668`](https://github.com/sanity-io/sdk/commit/d48a66834eafe5b40610a4e5fcc2776c61f61fc4) Thanks [@joshuaellis](https://github.com/joshuaellis)! - An application's `icon`, and an installation's `application.icon`, is the URL of an image on `cdn.sanity.io`. The API no longer returns SVG markup, so render it as an `<img>`. Studio workspace `icon` is still SVG markup. `updateApplication` no longer takes `icon`, since the API sets it on deploy. The applications API is experimental, so this change ships in a minor.
-
-- [#1603](https://github.com/sanity-io/sdk/pull/1603) [`dc3792b`](https://github.com/sanity-io/sdk/commit/dc3792bcc859093a67ee9ee9882a02a4bf07dcbb) Thanks [@joshuaellis](https://github.com/joshuaellis)! - Dashboard panels can tell what kind of document an app has open: `document.type` is now required on the application context. Pass the document's `_type` alongside its `id` to `useApplicationContext`. `useAgentResourceContext` takes a new `documentType` option, and in a federated app it sends no document without one.
-
-- [#1599](https://github.com/sanity-io/sdk/pull/1599) [`53fb00a`](https://github.com/sanity-io/sdk/commit/53fb00afe2640415658a7f643237a97703c3bece) Thanks [@gu-stav](https://github.com/gu-stav)! - Export `WebWorkerProps` from the `dashboard` entries.
-
-### Patch Changes
-
-- [#1491](https://github.com/sanity-io/sdk/pull/1491) [`48af28c`](https://github.com/sanity-io/sdk/commit/48af28c745e9ea03a9257b1b361645f91773f02a) Thanks [@gu-stav](https://github.com/gu-stav)! - Clear a failed read's error as soon as the token changes, so an error boundary that resets on the new token renders the retried read.
-
-- [#1595](https://github.com/sanity-io/sdk/pull/1595) [`28b382a`](https://github.com/sanity-io/sdk/commit/28b382a647fcfbb2c190b36867609cc5aaf1e6c3) Thanks [@squiggler-app](https://github.com/apps/squiggler-app)! - Update dependencies: `groq@6.24.0`, `sanity@6.24.0`
-
-- [#1565](https://github.com/sanity-io/sdk/pull/1565) [`ea4b036`](https://github.com/sanity-io/sdk/commit/ea4b0367fe9c7dd716e6840f05b04ffb2af976dd) Thanks [@squiggler-app](https://github.com/apps/squiggler-app)! - Update dependencies: `@sanity/types@6.24.0`
-
-- [#1590](https://github.com/sanity-io/sdk/pull/1590) [`1faea5e`](https://github.com/sanity-io/sdk/commit/1faea5eefddb1ac24579205622b6cbe54b88a6a2) Thanks [@gu-stav](https://github.com/gu-stav)! - Report the new user when `setAuthToken` sets a token for another user.
-
 ## 3.14.0
 
 ### Minor Changes
