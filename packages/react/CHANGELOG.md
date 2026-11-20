@@ -1,5 +1,25 @@
 # Changelog
 
+## 3.15.0
+
+### Minor Changes
+
+- [#1606](https://github.com/sanity-io/sdk/pull/1606) [`f5812db`](https://github.com/sanity-io/sdk/commit/f5812db48623b6a808a137fa7054dba3d30553c9) Thanks [@joshuaellis](https://github.com/joshuaellis)! - `usePanel` returns `setMode` to change the panel's mode.
+
+- [#1606](https://github.com/sanity-io/sdk/pull/1606) [`f5812db`](https://github.com/sanity-io/sdk/commit/f5812db48623b6a808a137fa7054dba3d30553c9) Thanks [@joshuaellis](https://github.com/joshuaellis)! - Dashboard panels can tell what kind of document an app has open: `document.type` is now required on the application context. Pass the document's `_type` alongside its `id` to `useApplicationContext`. `useAgentResourceContext` takes a new `documentType` option, and in a federated app it sends no document without one.
+
+- [#1606](https://github.com/sanity-io/sdk/pull/1606) [`f5812db`](https://github.com/sanity-io/sdk/commit/f5812db48623b6a808a137fa7054dba3d30553c9) Thanks [@joshuaellis](https://github.com/joshuaellis)! - Export `WebWorkerProps` from the `dashboard` entries.
+
+### Patch Changes
+
+- [#1601](https://github.com/sanity-io/sdk/pull/1601) [`78ffd13`](https://github.com/sanity-io/sdk/commit/78ffd137086de1cdb3029c71747facd4ffdd8cb7) Thanks [@squiggler-app](https://github.com/apps/squiggler-app)! - Update dependencies: `groq-js@2.0.3`
+
+- [#1606](https://github.com/sanity-io/sdk/pull/1606) [`f5812db`](https://github.com/sanity-io/sdk/commit/f5812db48623b6a808a137fa7054dba3d30553c9) Thanks [@joshuaellis](https://github.com/joshuaellis)! - Update dependencies: `groq@6.24.0`, `sanity@6.24.0`
+
+- [#1606](https://github.com/sanity-io/sdk/pull/1606) [`f5812db`](https://github.com/sanity-io/sdk/commit/f5812db48623b6a808a137fa7054dba3d30553c9) Thanks [@joshuaellis](https://github.com/joshuaellis)! - Update dependencies: `@sanity/types@6.24.0`
+- Updated dependencies [[`f5812db`](https://github.com/sanity-io/sdk/commit/f5812db48623b6a808a137fa7054dba3d30553c9), [`78ffd13`](https://github.com/sanity-io/sdk/commit/78ffd137086de1cdb3029c71747facd4ffdd8cb7), [`f5812db`](https://github.com/sanity-io/sdk/commit/f5812db48623b6a808a137fa7054dba3d30553c9), [`f5812db`](https://github.com/sanity-io/sdk/commit/f5812db48623b6a808a137fa7054dba3d30553c9), [`f5812db`](https://github.com/sanity-io/sdk/commit/f5812db48623b6a808a137fa7054dba3d30553c9), [`f5812db`](https://github.com/sanity-io/sdk/commit/f5812db48623b6a808a137fa7054dba3d30553c9), [`f5812db`](https://github.com/sanity-io/sdk/commit/f5812db48623b6a808a137fa7054dba3d30553c9), [`f5812db`](https://github.com/sanity-io/sdk/commit/f5812db48623b6a808a137fa7054dba3d30553c9), [`f5812db`](https://github.com/sanity-io/sdk/commit/f5812db48623b6a808a137fa7054dba3d30553c9), [`f5812db`](https://github.com/sanity-io/sdk/commit/f5812db48623b6a808a137fa7054dba3d30553c9)]:
+  - @sanity/sdk@3.15.0
+
 ## 3.14.0
 
 ### Minor Changes
