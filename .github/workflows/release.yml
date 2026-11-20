@@ -32,7 +32,7 @@ jobs:
           private-key: ${{ secrets.ECOSPARK_APP_PRIVATE_KEY }}
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          # fetch-depth: 0 so @changesets/changelog-github can look up the commit
+          # fetch-depth: 0 so .changeset/changelog.mjs can look up the commit
           # that added each changeset file.
           fetch-depth: 0
           # Use the app token so pushes to the Version PR branch trigger CI.
@@ -53,13 +53,14 @@ jobs:
         uses: changesets/action@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
         with:
           github-token: ${{ steps.generate-token.outputs.token }}
+          version-script: pnpm version-packages
           pr-title: 'chore: release'
           commit-message: 'chore: release'
           # We cut a single sdk-vX.Y.Z tag + release ourselves below.
           create-github-releases: false
           push-git-tags: false
         env:
-          # changelog-github reads GITHUB_TOKEN when the action runs changeset version.
+          # .changeset/changelog.mjs reads GITHUB_TOKEN when the action runs changeset version.
           GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
 
       - name: Assert changesets action output
@@ -122,23 +123,37 @@ jobs:
 
       # Single tag + release the rest of the pipeline keys off (release-notes,
       # upload-docs, Linear). release-notes.yml posts the release body
-      # to Slack, so the body is the Changesets text: the top section of each
-      # package changelog.
+      # to Slack, so lift the shared compare link + date once to the top and
+      # include each package's sections underneath.
       - name: Create tag and GitHub release
         if: steps.publish.outputs.published == 'true'
         env:
           GH_TOKEN: ${{ steps.generate-token.outputs.token }}
           VERSION: ${{ steps.version.outputs.version }}
         run: |
-          {
-            echo '### @sanity/sdk'
-            echo ''
-            awk '/^## /{n++} n==1' packages/core/CHANGELOG.md
-            echo ''
-            echo '### @sanity/sdk-react'
-            echo ''
-            awk '/^## /{n++} n==1' packages/react/CHANGELOG.md
-          } > notes.md
+          node -e '
+            const fs = require("node:fs")
+            const topSection = (file) => {
+              const content = fs.readFileSync(file, "utf8")
+              const start = content.match(/^## .*\n/m)
+              if (!start) return ""
+              const rest = content.slice(start.index + start[0].length)
+              const next = rest.match(/^## /m)
+              return (next ? rest.slice(0, next.index) : rest).trim()
+            }
+            const headerRe = /^(?:\[Compare changes\]\([^\n]+\)\n*|_\d{4}-\d{2}-\d{2}_\n*)+/
+            const core = topSection("packages/core/CHANGELOG.md")
+            const react = topSection("packages/react/CHANGELOG.md")
+            const header = (core.match(headerRe)?.[0] || "").trim()
+            const coreBody = core.replace(headerRe, "").trim()
+            const reactBody = react.replace(headerRe, "").trim()
+            const parts = [
+              header,
+              coreBody && `## @sanity/sdk\n\n${coreBody}`,
+              reactBody && `## @sanity/sdk-react\n\n${reactBody}`,
+            ].filter(Boolean)
+            fs.writeFileSync("notes.md", parts.join("\n\n") + "\n")
+          '
           gh release create "sdk-v$VERSION" --target "$GITHUB_SHA" --title "sdk-v$VERSION" --notes-file notes.md
 
       # Point `next` at this stable release so it never trails `latest`. The
@@ -175,7 +190,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          # fetch-depth: 0 so @changesets/changelog-github can look up the commit
+          # fetch-depth: 0 so .changeset/changelog.mjs can look up the commit
           # that added each changeset file.
           fetch-depth: 0
       - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6
@@ -187,7 +202,7 @@ jobs:
       - run: pnpm install --ignore-scripts --no-runtime
 
       # Calculate the snapshot version from the pending changesets, e.g.
-      # 3.3.0-next.20260915103000. changelog-github runs here too, but its
+      # 3.3.0-next.20260915103000. .changeset/changelog.mjs runs here too, but its
       # changelog edits are thrown away with the runner.
       - name: Version snapshot
         run: pnpm changeset version --snapshot next

@@ -7,7 +7,8 @@
     "packages/@repo/e2e/src/setup-standalone/*.setup.ts",
     "bundle-stats.config.ts",
     "**/*.test-d.ts",
-    "**/oxlint.config.mts"
+    "**/oxlint.config.mts",
+    ".changeset/changelog.mjs"
   ],
   "ignoreDependencies": [
     "@google-cloud/storage",
