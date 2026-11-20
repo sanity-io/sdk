@@ -21,7 +21,7 @@ let host: MessageBusHost
 
 const context: ApplicationContext = {
   resource: {id: 'proj.ds', type: 'dataset'},
-  document: {id: 'doc'},
+  document: {id: 'a1', type: 'sanity.asset'},
 }
 
 describe('useApplicationContext', () => {

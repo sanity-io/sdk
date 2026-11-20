@@ -67,6 +67,7 @@ export function AgentResourceContextRoute(): JSX.Element {
       projectId,
       dataset,
       documentId: includeDocumentId ? selectedDocumentId : undefined,
+      documentType: 'author',
     }),
     [projectId, dataset, includeDocumentId, selectedDocumentId],
   )

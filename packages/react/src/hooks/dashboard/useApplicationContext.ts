@@ -22,10 +22,13 @@ import {useEmit} from './useEmit'
  * import {useApplicationContext} from '@sanity/sdk-react/dashboard'
  * import {useMemo} from 'react'
  *
- * function DocumentView({documentId}: {documentId: string}) {
+ * function DocumentView({documentId, documentType}: {documentId: string; documentType: string}) {
  *   const context = useMemo(
- *     () => ({resource: {id: 'my-project.production', type: 'dataset' as const}, document: {id: documentId}}),
- *     [documentId],
+ *     () => ({
+ *       resource: {id: 'my-project.production', type: 'dataset' as const},
+ *       document: {id: documentId, type: documentType},
+ *     }),
+ *     [documentId, documentType],
  *   )
  *   useApplicationContext(context)
  *   return <div>Editing {documentId}</div>
