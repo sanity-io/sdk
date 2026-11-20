@@ -1,6 +1,7 @@
 import {ClientError} from '@sanity/client'
 
 import {type StoreContext} from '../../store/defineStore'
+import {resolveRequestTagPrefix} from '../../utils/requestTagPrefix'
 import {getAuthLogger} from '../authLogger'
 import {AuthStateType} from '../authStateType'
 import {type AuthStoreState} from '../authStore'
@@ -150,7 +151,10 @@ async function doRefreshOAuthTokens(
   }
 
   try {
-    const client = createOAuthClient(options)
+    const client = createOAuthClient(
+      options,
+      resolveRequestTagPrefix(instance.config.requestTagPrefix, 'auth'),
+    )
     const params = new URLSearchParams({
       grant_type: 'refresh_token',
       refresh_token: current.refreshToken,

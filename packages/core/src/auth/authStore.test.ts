@@ -435,7 +435,35 @@ describe('authStore', () => {
       // Trigger store creation + initialize
       getAuthState(instance)
 
-      expect(checkForCookieAuth).toHaveBeenCalledWith(projectId, expect.any(Function))
+      expect(checkForCookieAuth).toHaveBeenCalledWith(
+        projectId,
+        expect.any(Function),
+        'sanity.sdk.auth',
+      )
+    })
+
+    it('forwards configured requestTagPrefix to cookie auth checks in studio mode', () => {
+      const projectId = 'studio-project'
+      const mockStorage = {} as Storage
+
+      vi.mocked(getStudioTokenFromLocalStorage).mockReturnValue(null)
+      vi.mocked(checkForCookieAuth).mockResolvedValue(true)
+
+      instance = createSanityInstance({
+        projectId,
+        dataset: 'd',
+        requestTagPrefix: 'workbench',
+        studio: {},
+        auth: {storageArea: mockStorage},
+      })
+
+      getAuthState(instance)
+
+      expect(checkForCookieAuth).toHaveBeenCalledWith(
+        projectId,
+        expect.any(Function),
+        'sanity.sdk.workbench.auth',
+      )
     })
 
     it('starts in LOGGING_IN state when studio config with tokenSource is provided', () => {
@@ -717,7 +745,11 @@ describe('authStore', () => {
 
       // Wait for async cookie check
       await vi.waitFor(() => {
-        expect(checkForCookieAuth).toHaveBeenCalledWith(projectId, expect.any(Function))
+        expect(checkForCookieAuth).toHaveBeenCalledWith(
+          projectId,
+          expect.any(Function),
+          'sanity.sdk.auth',
+        )
       })
 
       // Logger should have been called during initialization

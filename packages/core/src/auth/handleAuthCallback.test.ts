@@ -108,6 +108,32 @@ describe('handleCallback', () => {
     expect(setItem).toHaveBeenCalledWith('__sanity_auth_token', '{"token":"new-token"}')
   })
 
+  it('appends configured requestTagPrefix before auth when exchanging a token', async () => {
+    const request = vi.fn().mockResolvedValue({token: 'new-token'})
+    const clientFactory = vi.fn().mockReturnValue({request})
+    const setItem = vi.fn()
+    vi.mocked(getTokenFromStorage).mockReturnValue(null)
+    vi.mocked(getAuthCode).mockReturnValue('auth-code')
+
+    instance = createSanityInstance({
+      projectId: 'p',
+      dataset: 'd',
+      requestTagPrefix: 'workbench',
+      auth: {
+        clientFactory,
+        storageArea: {setItem} as unknown as Storage,
+      },
+    })
+
+    await handleAuthCallback(instance, 'https://example.com/callback?foo=bar#withSid=code')
+
+    expect(clientFactory).toHaveBeenCalledWith(
+      expect.objectContaining({
+        requestTagPrefix: 'sanity.sdk.workbench.auth',
+      }),
+    )
+  })
+
   it('exchanges a sid from the hash and returns a URL without it', async () => {
     const request = vi.fn().mockResolvedValue({token: 'new-token'})
     const clientFactory = vi.fn().mockReturnValue({request})

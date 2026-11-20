@@ -106,6 +106,22 @@ describe('checkForCookieAuth', () => {
       }),
     )
   })
+
+  it('should forward a custom requestTagPrefix to client factory', async () => {
+    const projectId = 'test-project'
+    const mockClient = {
+      request: vi.fn().mockResolvedValue({id: 'user-id'}),
+    } as unknown as SanityClient
+    const clientFactory = vi.fn().mockReturnValue(mockClient)
+
+    await checkForCookieAuth(projectId, clientFactory, 'sanity.sdk.workbench.auth')
+
+    expect(clientFactory).toHaveBeenCalledWith(
+      expect.objectContaining({
+        requestTagPrefix: 'sanity.sdk.workbench.auth',
+      }),
+    )
+  })
 })
 
 describe('getStudioTokenFromLocalStorage', () => {
