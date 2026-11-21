@@ -4,10 +4,10 @@ import {toArray} from 'rxjs/operators'
 import {describe, expect, it, vi} from 'vitest'
 
 import {
-  applyEffects,
   DeadlineExceededError,
   type ListenerEvent,
   MaxBufferExceededError,
+  remoteAfter,
   sortListenerEvents,
   type SyncEvent,
 } from './listen'
@@ -264,9 +264,9 @@ describe('sortListenerEvents operator', () => {
   })
 })
 
-describe('applyEffects', () => {
-  // A real listener event's effects for: set title to "Hello brave world", insert "tech" after
-  // the last tag. Content Lake computed them without `_rev`.
+describe('remoteAfter', () => {
+  // A real listener event for: set title to "Hello brave world", insert "tech" after the last
+  // tag. Content Lake computed the effects without `_rev`.
   const previous = {
     _id: 'drafts.post-1',
     _type: 'post',
@@ -276,41 +276,65 @@ describe('applyEffects', () => {
     _updatedAt: '2026-11-20T13:56:19.700Z',
     _rev: 'rev-1',
   }
-  const effects = [
-    11,
-    3,
-    23,
-    0,
-    20,
-    22,
-    '811',
-    23,
-    23,
-    24,
-    15,
-    11,
-    4,
-    21,
-    0,
-    2,
-    20,
-    'tech',
-    15,
-    11,
-    5,
-    23,
-    0,
-    6,
-    22,
-    'brave ',
-    23,
-    6,
-    11,
-    15,
+  // Content Lake uses the transaction id as the resulting revision.
+  const event = {
+    ...createMutationEvent({
+      id: 'rev-2',
+      previousRev: 'rev-1',
+      resultRev: 'rev-2',
+      docId: 'drafts.post-1',
+    }),
+    transactionId: 'rev-2',
+  }
+  const mutations = [
+    {
+      patch: {
+        id: 'drafts.post-1',
+        set: {title: 'Hello brave world'},
+        insert: {after: 'tags[-1]', items: ['tech']},
+      },
+    },
   ]
+  const effects = {
+    apply: [
+      11,
+      3,
+      23,
+      0,
+      20,
+      22,
+      '811',
+      23,
+      23,
+      24,
+      15,
+      11,
+      4,
+      21,
+      0,
+      2,
+      20,
+      'tech',
+      15,
+      11,
+      5,
+      23,
+      0,
+      6,
+      22,
+      'brave ',
+      23,
+      6,
+      11,
+      15,
+    ],
+    revert: [],
+  }
 
-  it('builds the stored document and takes _rev from the resulting revision', () => {
-    expect(applyEffects(previous, effects, 'rev-2')).toEqual({
+  it("builds the stored document from the event's effects, with _rev from the result", () => {
+    expect(
+      remoteAfter({...event, mutations, effects} as MutationEvent, 'drafts.post-1', previous),
+    ).toEqual({
       ...previous,
       title: 'Hello brave world',
       tags: ['news', 'sports', 'tech'],
@@ -319,9 +343,13 @@ describe('applyEffects', () => {
     })
   })
 
-  it('creates a document that did not exist and removes one that is deleted', () => {
-    const {_rev, ...created} = previous
-    expect(applyEffects(null, [0, created], 'rev-1')).toEqual({...created, _rev: 'rev-1'})
-    expect(applyEffects(previous, [0, null], 'rev-2')).toBeNull()
+  it('replays the mutations when the event has no effects', () => {
+    expect(
+      remoteAfter({...event, mutations} as MutationEvent, 'drafts.post-1', previous),
+    ).toMatchObject({
+      title: 'Hello brave world',
+      tags: ['news', 'sports', 'tech'],
+      _rev: 'rev-2',
+    })
   })
 })

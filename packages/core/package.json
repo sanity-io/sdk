@@ -92,6 +92,7 @@
     "@sanity/comlink": "catalog:",
     "@sanity/diff-match-patch": "^3.2.1",
     "@sanity/diff-patch": "^7.0.0",
+    "@sanity/document-sync": "https://pkg.pr.new/sanity-labs/document-sync/@sanity/document-sync@1307781",
     "@sanity/id-utils": "^1.1.0",
     "@sanity/image-url": "^2.2.0",
     "@sanity/json-match": "^1.0.5",
@@ -102,7 +103,6 @@
     "@sentry/browser": "^11.8.0",
     "groq": "catalog:",
     "groq-js": "catalog:",
-    "mendoza": "^3.0.8",
     "reselect": "^5.3.0",
     "rxjs": "catalog:",
     "zustand": "^5.1.0"

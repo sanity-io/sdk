@@ -1,6 +1,6 @@
 import {type MutationEvent} from '@sanity/client'
+import {applyEffect} from '@sanity/document-sync'
 import {type Mutation, type SanityDocument} from '@sanity/types'
-import {applyPatch} from 'mendoza'
 import {
   concat,
   concatMap,
@@ -232,36 +232,24 @@ export function sortListenerEvents(options?: SortListenerEventsOptions) {
 }
 
 /**
- * Applies a listener event's mendoza effects to the document at the event's previous revision.
- * Content Lake computes effects without `_rev`, and mendoza addresses object fields by their
- * index among the sorted keys, so the effects are applied to the document without `_rev`, and
- * `_rev` is set from the event's resulting revision.
- *
- * @internal
- */
-export function applyEffects(
-  previous: SanityDocument | null | undefined,
-  effects: unknown[],
-  resultRev: string,
-): SanityDocument | null {
-  const {_rev, ...base} = previous ?? ({} as SanityDocument)
-  const next = applyPatch(previous ? base : null, effects) as SanityDocument | null
-  return next && {...next, _rev: resultRev}
-}
-
-/**
  * The remote document after a mutation event. Prefers the server's own mendoza effects: they
  * describe what Content Lake stored, so the remote copy cannot drift from it the way replaying
  * `mutations` with our own patch code can (patch operation order, `merge`, operations we do not
  * implement). Falls back to replaying `mutations` when an event carries no effects.
+ *
+ * `applyEffect` comes from `@sanity/document-sync`: it applies the effects to the document
+ * without `_rev`, since Content Lake computes them without it and mendoza addresses fields by
+ * their index among the sorted keys, then sets `_rev` from the resulting revision.
+ *
+ * @internal
  */
-function remoteAfter(
+export function remoteAfter(
   event: MutationEvent,
   documentId: string,
   remote: SanityDocument | null | undefined,
 ): SanityDocument | null | undefined {
   if (event.effects?.apply) {
-    return applyEffects(remote, event.effects.apply, event.resultRev ?? event.transactionId)
+    return applyEffect(remote ?? null, event.effects.apply, event.resultRev ?? event.transactionId)
   }
   return Object.values(
     processMutations({
