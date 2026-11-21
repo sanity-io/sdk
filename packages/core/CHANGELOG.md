@@ -1,5 +1,16 @@
 # Changelog
 
+## 3.16.0
+
+[Compare changes](https://github.com/sanity-io/sdk/compare/sdk-v3.15.0...sdk-v3.16.0)
+
+_2026-11-21_
+
+### Features
+
+- When someone comes back to an app's tab, the projects, applications, preferences and other cached API data it shows are fetched again if they're more than 30 seconds old. Set `refetchOnWindowFocus: false` in the app's config to turn this off. ([#1575](https://github.com/sanity-io/sdk/pull/1575)) ([f90b767](https://github.com/sanity-io/sdk/commit/f90b76709c477bef9693117a730b87fab996be12)) by [@joshuaellis](https://github.com/joshuaellis)
+- An installation's `application` now has `updatedAt`, when the installed app last changed. Pass `organization` in `include` to also get `application.organization.logoUrl`, the logo of the organization that publishes the app. ([#1608](https://github.com/sanity-io/sdk/pull/1608)) ([9d63774](https://github.com/sanity-io/sdk/commit/9d63774fc19038e4568512aee608cf6a4d8f7112)) by [@joshuaellis](https://github.com/joshuaellis)
+
 ## 3.15.0
 
 ### Minor Changes
