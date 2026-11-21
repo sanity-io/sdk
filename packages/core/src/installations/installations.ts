@@ -2,6 +2,7 @@ import {switchMap} from 'rxjs'
 
 import {type Application, type ApplicationInterface} from '../applications/applications'
 import {getClientState} from '../client/clientStore'
+import {type OrganizationBase} from '../organization/organization'
 import {defineFetcher, definePagedFetcher} from '../store/fetcherStore'
 import {buildQuery} from '../utils/buildQuery'
 import {type Included} from '../utils/includeShape'
@@ -16,7 +17,12 @@ const API_VERSION = 'vX'
  * @see https://www.sanity.io/docs/http-reference/applications-api
  * @public
  */
-export type InstallationInclude = 'activeConfig' | 'access' | 'interfaces' | 'config.mfManifest'
+export type InstallationInclude =
+  | 'activeConfig'
+  | 'access'
+  | 'interfaces'
+  | 'config.mfManifest'
+  | 'organization'
 
 /**
  * A resource an installation accesses, embedded when `access` is included.
@@ -71,14 +77,16 @@ export interface InstallationBase {
     icon: string | null
     /** The singleton's publishing organization; the top-level `organizationId` is the installing one. */
     organizationId: string
+    /** When the singleton's application record last changed, including deploys. */
+    updatedAt: string
   }
 }
 
 /**
  * An active singleton installation as returned by the Installations API
  * (`/installations`). `activeConfig`, `access` and `interfaces` are top-level
- * fields, each present only when the matching {@link InstallationInclude} token
- * was requested.
+ * fields, and `organization` a field of `application`, each present only when
+ * the matching {@link InstallationInclude} token was requested.
  *
  * @see https://www.sanity.io/docs/http-reference/applications-api
  * @public
@@ -93,6 +101,18 @@ export type Installation<Include extends InstallationInclude = never> = Installa
         ([InstallationInclude] extends [Include]
           ? Partial<Pick<Application<'config.mfManifest'>, 'config'>>
           : Pick<Application<'config.mfManifest'>, 'config'>)
+    }
+  > &
+  Included<
+    InstallationInclude,
+    'organization',
+    Include,
+    {
+      // Embedded because a caller outside the publishing organization can't read it.
+      application: InstallationBase['application'] &
+        ([InstallationInclude] extends [Include]
+          ? {organization?: Pick<OrganizationBase, 'logoUrl'>}
+          : {organization: Pick<OrganizationBase, 'logoUrl'>})
     }
   > &
   Included<

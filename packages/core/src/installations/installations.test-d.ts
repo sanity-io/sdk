@@ -1,6 +1,7 @@
 import {expectTypeOf, test} from 'vitest'
 
 import {type ApplicationInterface} from '../applications/applications'
+import {type OrganizationBase} from '../organization/organization'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {type StateSource} from '../store/createStateSourceAction'
 import {type FetcherSnapshot} from '../store/fetcherStore'
@@ -27,12 +28,25 @@ test('Installation — no includes: only the base shape', () => {
   expectTypeOf<Installation>().toEqualTypeOf<InstallationBase>()
   expectTypeOf<Installation<never>>().toEqualTypeOf<InstallationBase>()
   expectTypeOf<Extract<keyof Installation, IncludeKeys>>().toEqualTypeOf<never>()
-  expectTypeOf<Extract<keyof Installation['application'], 'config'>>().toEqualTypeOf<never>()
+  expectTypeOf<
+    Extract<keyof Installation['application'], 'config' | 'organization'>
+  >().toEqualTypeOf<never>()
 })
 
 test('InstallationBase — the application sub-object carries name and reference', () => {
   expectTypeOf<InstallationBase['application']['name']>().toEqualTypeOf<string>()
   expectTypeOf<InstallationBase['application']['reference']>().toEqualTypeOf<string>()
+  expectTypeOf<InstallationBase['application']['updatedAt']>().toEqualTypeOf<string>()
+})
+
+test('Installation — organization include adds the publishing organization to the application', () => {
+  type Item = Installation<'organization'>
+  expectTypeOf<Item['application']['organization']>().toEqualTypeOf<
+    Pick<OrganizationBase, 'logoUrl'>
+  >()
+  expectTypeOf<KeyModifier<Item['application'], 'organization'>>().toEqualTypeOf<'required'>()
+  expectTypeOf<Extract<keyof Item, IncludeKeys>>().toEqualTypeOf<never>()
+  expectTypeOf<Extract<keyof Item['application'], 'config'>>().toEqualTypeOf<never>()
 })
 
 test('Installation — each token adds its top-level field, required, others absent', () => {
@@ -69,6 +83,7 @@ test('Installation — a wide include array makes the fields optional', () => {
   expectTypeOf<KeyModifier<Wide, 'interfaces'>>().toEqualTypeOf<'optional'>()
   expectTypeOf<KeyModifier<Wide, 'activeConfig'>>().toEqualTypeOf<'optional'>()
   expectTypeOf<KeyModifier<Wide['application'], 'config'>>().toEqualTypeOf<'optional'>()
+  expectTypeOf<KeyModifier<Wide['application'], 'organization'>>().toEqualTypeOf<'optional'>()
 })
 
 test('installations.resolveState — resolves the pages read so far, each the wide list envelope', () => {
