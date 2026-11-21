@@ -4,6 +4,7 @@ import {toArray} from 'rxjs/operators'
 import {describe, expect, it, vi} from 'vitest'
 
 import {
+  applyEffects,
   DeadlineExceededError,
   type ListenerEvent,
   MaxBufferExceededError,
@@ -260,5 +261,67 @@ describe('sortListenerEvents operator', () => {
     const source$ = of(sync, replayedA, replayedB, fresh)
     const events = await lastValueFrom(source$.pipe(sortListenerEvents(), toArray()))
     expect(events).toEqual([sync, fresh])
+  })
+})
+
+describe('applyEffects', () => {
+  // A real listener event's effects for: set title to "Hello brave world", insert "tech" after
+  // the last tag. Content Lake computed them without `_rev`.
+  const previous = {
+    _id: 'drafts.post-1',
+    _type: 'post',
+    title: 'Hello world',
+    tags: ['news', 'sports'],
+    _createdAt: '2026-11-20T13:56:19.700Z',
+    _updatedAt: '2026-11-20T13:56:19.700Z',
+    _rev: 'rev-1',
+  }
+  const effects = [
+    11,
+    3,
+    23,
+    0,
+    20,
+    22,
+    '811',
+    23,
+    23,
+    24,
+    15,
+    11,
+    4,
+    21,
+    0,
+    2,
+    20,
+    'tech',
+    15,
+    11,
+    5,
+    23,
+    0,
+    6,
+    22,
+    'brave ',
+    23,
+    6,
+    11,
+    15,
+  ]
+
+  it('builds the stored document and takes _rev from the resulting revision', () => {
+    expect(applyEffects(previous, effects, 'rev-2')).toEqual({
+      ...previous,
+      title: 'Hello brave world',
+      tags: ['news', 'sports', 'tech'],
+      _updatedAt: '2026-11-20T13:56:19.811Z',
+      _rev: 'rev-2',
+    })
+  })
+
+  it('creates a document that did not exist and removes one that is deleted', () => {
+    const {_rev, ...created} = previous
+    expect(applyEffects(null, [0, created], 'rev-1')).toEqual({...created, _rev: 'rev-1'})
+    expect(applyEffects(previous, [0, null], 'rev-2')).toBeNull()
   })
 })

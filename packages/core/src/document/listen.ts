@@ -1,5 +1,6 @@
 import {type MutationEvent} from '@sanity/client'
 import {type Mutation, type SanityDocument} from '@sanity/types'
+import {applyPatch} from 'mendoza'
 import {
   concat,
   concatMap,
@@ -230,6 +231,48 @@ export function sortListenerEvents(options?: SortListenerEventsOptions) {
   }
 }
 
+/**
+ * Applies a listener event's mendoza effects to the document at the event's previous revision.
+ * Content Lake computes effects without `_rev`, and mendoza addresses object fields by their
+ * index among the sorted keys, so the effects are applied to the document without `_rev`, and
+ * `_rev` is set from the event's resulting revision.
+ *
+ * @internal
+ */
+export function applyEffects(
+  previous: SanityDocument | null | undefined,
+  effects: unknown[],
+  resultRev: string,
+): SanityDocument | null {
+  const {_rev, ...base} = previous ?? ({} as SanityDocument)
+  const next = applyPatch(previous ? base : null, effects) as SanityDocument | null
+  return next && {...next, _rev: resultRev}
+}
+
+/**
+ * The remote document after a mutation event. Prefers the server's own mendoza effects: they
+ * describe what Content Lake stored, so the remote copy cannot drift from it the way replaying
+ * `mutations` with our own patch code can (patch operation order, `merge`, operations we do not
+ * implement). Falls back to replaying `mutations` when an event carries no effects.
+ */
+function remoteAfter(
+  event: MutationEvent,
+  documentId: string,
+  remote: SanityDocument | null | undefined,
+): SanityDocument | null | undefined {
+  if (event.effects?.apply) {
+    return applyEffects(remote, event.effects.apply, event.resultRev ?? event.transactionId)
+  }
+  return Object.values(
+    processMutations({
+      documents: {[documentId]: remote},
+      mutations: event.mutations as Mutation[],
+      transactionId: event.transactionId,
+      timestamp: event.timestamp,
+    }),
+  )[0]
+}
+
 export const listen = (
   {state}: StoreContext<DocumentStoreState>,
   documentId: string,
@@ -269,20 +312,7 @@ export const listen = (
         }
       }
 
-      // TODO: from manual testing, mendoza patches seem to be applying
-      // let document
-      // if (next.effects?.apply) {
-      //   document = applyPatch(omit(documentState.remote, '_rev'), next.effects?.apply)
-      // }
-
-      const [document] = Object.values(
-        processMutations({
-          documents: {[documentId]: documentState.remote},
-          mutations: next.mutations as Mutation[],
-          transactionId: next.transactionId,
-          timestamp: next.timestamp,
-        }),
-      )
+      const document = remoteAfter(next, documentId, documentState.remote)
 
       const {previousRev, transactionId, timestamp} = next
 

@@ -56,6 +56,7 @@ describe('createSharedListener', () => {
         includeResult: false,
         includeAllVersions: true,
         tag: 'document-listener',
+        effectFormat: 'mendoza',
       },
     )
   })

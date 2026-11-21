@@ -102,6 +102,7 @@
     "@sentry/browser": "^11.8.0",
     "groq": "catalog:",
     "groq-js": "catalog:",
+    "mendoza": "^3.0.8",
     "reselect": "^5.3.0",
     "rxjs": "catalog:",
     "zustand": "^5.1.0"

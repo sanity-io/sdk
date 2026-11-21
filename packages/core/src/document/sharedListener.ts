@@ -55,10 +55,9 @@ export function createSharedListener(
           // the document store handles version documents, so we need to include all versions
           includeAllVersions: true,
           tag: 'document-listener',
-          // // from manual testing, it seems like mendoza patches may be
-          // // causing some ambiguity/wonkiness
-          // includeMutations: false,
-          // effectFormat: 'mendoza',
+          // mendoza effects describe what the server stored, so the remote copy is built from
+          // them (see listen.ts); mutations stay included for the remote patches channel
+          effectFormat: 'mendoza',
         },
       ),
     ),
