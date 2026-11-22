@@ -44,9 +44,27 @@ describe('applyWithEngine', () => {
       discardDocument(handle),
     ])
     expect(calls).toEqual(['edit', 'publish', 'discard'])
-    expect(engine.edit).toHaveBeenCalledWith([{set: {name: 'y'}}])
     // The local view from before the actions, for `ActionsResult.previous`.
     expect(routed?.previous).toEqual(draft)
+  })
+
+  it('re-derives an edit as the queue does, so a string set goes out as a diffMatchPatch', () => {
+    const {engine} = fakeEngine()
+    applyWithEngine(stateWith({a: engine}), [editDocument(handle, {set: {name: 'xy'}})])
+    expect(engine.edit).toHaveBeenCalledWith([{diffMatchPatch: {name: '@@ -1 +1,2 @@\n x\n+y\n'}}])
+  })
+
+  it('sends the patches as given with preserveOperations', () => {
+    const {engine} = fakeEngine()
+    const action = editDocument(handle, {set: {name: 'xy'}}, {preserveOperations: true})
+    applyWithEngine(stateWith({a: engine}), [action])
+    expect(engine.edit).toHaveBeenCalledWith([{set: {name: 'xy'}}])
+  })
+
+  it('sends nothing for an edit that changes nothing', () => {
+    const {engine} = fakeEngine()
+    applyWithEngine(stateWith({a: engine}), [editDocument(handle, {set: {name: 'x'}})])
+    expect(engine.edit).not.toHaveBeenCalled()
   })
 
   it('finds the engine from a draft id', () => {

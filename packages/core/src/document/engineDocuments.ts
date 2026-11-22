@@ -1,4 +1,5 @@
 import {type Action as ClientAction, type SanityClient} from '@sanity/client'
+import {diffValue} from '@sanity/diff-patch'
 import {
   createDocumentSync,
   type DocumentSync,
@@ -6,7 +7,8 @@ import {
   type PatchOps,
   type Transport,
 } from '@sanity/document-sync'
-import {DocumentId, getPublishedId, isDraftId, isVersionId} from '@sanity/id-utils'
+import {DocumentId, getDraftId, getPublishedId, isDraftId, isVersionId} from '@sanity/id-utils'
+import {type PatchOperations} from '@sanity/types'
 import {distinctUntilChanged, filter, firstValueFrom, forkJoin, map, type Subscription} from 'rxjs'
 
 import {getClientState} from '../client/clientStore'
@@ -15,9 +17,11 @@ import {isReleasePerspective} from '../releases/utils/isReleasePerspective'
 import {type BoundResourceKey} from '../store/createActionBinder'
 import {type StoreContext} from '../store/defineStore'
 import {type ResolveDocument} from '../typegen/resolve'
-import {type Action} from './actions'
+import {type Action, type EditDocumentAction} from './actions'
 import {API_VERSION} from './documentConstants'
 import {type DocumentStoreState} from './documentStore'
+import {preserveNumericOperations} from './processActions/shared'
+import {processMutations} from './processMutations'
 
 // Prototype for `experimental_documentSync`: one `@sanity/document-sync` engine per document
 // (published plus draft), kept in `DocumentStoreState.engines` by published id.
@@ -128,6 +132,27 @@ export function engineLocalDocument(
   return engine ? (engine.local() as ResolveDocument | null) : undefined
 }
 
+/**
+ * The patches the engine sends for an edit. As on the transaction queue, they are re-derived by
+ * diffing the local view before and after the edit, so a whole-value `set` of a string goes out
+ * as a `diffMatchPatch` and merges with other writers' edits. `preserveOperations` sends the
+ * patches as given.
+ */
+function editPatches(engine: DocumentSync, action: EditDocumentAction): PatchOps[] {
+  const patches = action.patches ?? []
+  const local = engine.local()
+  if (action.preserveOperations || !local) return patches as PatchOps[]
+  const draftId = getDraftId(DocumentId(action.documentId))
+  const before = {...local, _id: draftId}
+  const after = processMutations({
+    documents: {[draftId]: before},
+    mutations: patches.map((patch) => ({patch: {...patch, id: draftId}})),
+    transactionId: before._rev ?? '',
+  })[draftId]
+  const diffed = diffValue(before, after) as PatchOperations[]
+  return preserveNumericOperations(before, patches, diffed) as PatchOps[]
+}
+
 type EngineAction = Extract<
   Action,
   {type: 'document.edit' | 'document.publish' | 'document.discard'}
@@ -160,8 +185,11 @@ export function applyWithEngine(
   for (const action of actions as EngineAction[]) {
     if (action.type === 'document.publish') engine.publish()
     else if (action.type === 'document.discard') engine.discard()
-    // Sent as given, as with `preserveOperations`: the engine does not re-derive patches.
-    else if (action.patches?.length) engine.edit(action.patches as PatchOps[])
+    else {
+      const patches = editPatches(engine, action)
+      // An edit that changes nothing sends nothing, as on the transaction queue.
+      if (patches.length) engine.edit(patches)
+    }
   }
   return {engine, handle: leading, previous}
 }
