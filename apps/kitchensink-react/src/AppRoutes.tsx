@@ -22,6 +22,7 @@ import {AgentResourceContextRoute} from './routes/AgentResourceContextRoute'
 import {CanvasRoute} from './routes/CanvasRoute'
 import {DashboardContextRoute} from './routes/DashboardContextRoute'
 import {DashboardWorkspacesRoute} from './routes/DashboardWorkspacesRoute'
+import {DocumentStoreEngineRoute} from './routes/DocumentStoreEngineRoute'
 import {MediaLibraryRoute} from './routes/MediaLibraryRoute'
 import {PerspectivesRoute} from './routes/PerspectivesRoute'
 import {PortableTextCollaborationRoute} from './routes/PortableTextCollaborationRoute'
@@ -147,6 +148,7 @@ export function AppRoutes(): JSX.Element {
           <Route path="perspectives" element={<PerspectivesRoute />} />
           <Route path="todo" element={<TodoRoute />} />
           <Route path="studio-demo" element={<StudioDemoRoute />} />
+          <Route path="document-store-engine" element={<DocumentStoreEngineRoute />} />
         </Route>
         <Route path="comlink-demo">
           {frameRoutes.map((route) => (

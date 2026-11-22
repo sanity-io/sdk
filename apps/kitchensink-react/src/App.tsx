@@ -57,7 +57,13 @@ export default function App(): JSX.Element {
     <ThemedApp>
       <SanityApp
         fallback={<Spinner />}
-        config={{auth: isE2E ? {apiHost: 'https://api.sanity.work'} : devAuth}}
+        config={{
+          auth: isE2E ? {apiHost: 'https://api.sanity.work'} : devAuth,
+          // `?documentSync` turns on the document-sync engine prototype for the whole app.
+          experimental_documentSync: new URLSearchParams(window.location.search).has(
+            'documentSync',
+          ),
+        }}
         resources={isE2E ? e2eResources : devResources}
         inferMediaLibraryAndCanvas
       >
