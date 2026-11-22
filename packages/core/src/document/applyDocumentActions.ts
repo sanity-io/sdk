@@ -1,3 +1,4 @@
+import {DocumentId, getDraftId} from '@sanity/id-utils'
 import {distinctUntilChanged, filter, first, firstValueFrom, map, race} from 'rxjs'
 
 import {type DocumentResource} from '../config/sanityConfig'
@@ -8,6 +9,7 @@ import {type ResolveDocument} from '../typegen/resolve'
 import {randomUuid} from '../utils/ids'
 import {type Action} from './actions'
 import {documentStore, type DocumentStoreState, getStoreError} from './documentStore'
+import {applyWithEngine} from './engineDocuments'
 import {type DocumentTransactionSubmissionResult} from './events'
 import {type DocumentSet} from './processMutations'
 import {type AppliedTransaction, type QueuedTransaction, queueTransaction} from './reducers'
@@ -70,7 +72,23 @@ export function applyDocumentActions(
   return boundApplyDocumentActions(...args)
 }
 
-const boundApplyDocumentActions = bindActionByResource(documentStore, _applyDocumentActions)
+const boundApplyDocumentActions = bindActionByResource(documentStore, applyThroughEngineOrQueue)
+
+// `experimental_documentSync` prototype: a document's engine takes the actions it can handle,
+// and the rest go to the transaction queue. The transaction id is the caller's; the engine sends
+// under its own.
+function applyThroughEngineOrQueue(
+  context: StoreContext<DocumentStoreState>,
+  options: ApplyDocumentActionsOptions,
+): Promise<ActionsResult> {
+  const {actions, resource, transactionId = randomUuid()} = options
+  const routed = applyWithEngine(
+    context.state.get(),
+    normalizeActionsForResource(actions, resource),
+  )
+  if (routed) return Promise.resolve(engineActionsResult(routed, transactionId))
+  return _applyDocumentActions(context, {...options, transactionId})
+}
 
 /**
  * Returns the result of a transaction with no actions. `batchAppliedTransactions`
@@ -92,6 +110,28 @@ function emptyActionsResult(transactionId: string): ActionsResult {
 }
 
 /** @internal */
+function engineActionsResult(
+  {engine, handle, previous: before}: NonNullable<ReturnType<typeof applyWithEngine>>,
+  transactionId: string,
+): ActionsResult {
+  const draftId = getDraftId(DocumentId(handle.documentId))
+  const previous = {[draftId]: before}
+  const documents = {[draftId]: engine.local() as ResolveDocument | null}
+  return {
+    transactionId,
+    documents,
+    previous,
+    previousRevs: {[draftId]: previous[draftId]?._rev},
+    appeared: previous[draftId] ? [] : [draftId],
+    updated: previous[draftId] ? [draftId] : [],
+    disappeared: [],
+    submitted: async () => {
+      await engine.whenSubmitted()
+      return {transactionId}
+    },
+  }
+}
+
 async function _applyDocumentActions(
   {state}: StoreContext<DocumentStoreState>,
   {actions, resource, transactionId = randomUuid(), disableBatching}: ApplyDocumentActionsOptions,

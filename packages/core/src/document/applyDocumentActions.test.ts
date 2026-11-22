@@ -1,3 +1,4 @@
+import {type DocumentSync} from '@sanity/document-sync'
 import {type SanityDocument} from '@sanity/types'
 import {Subject} from 'rxjs'
 import {describe, expect, it} from 'vitest'
@@ -17,7 +18,7 @@ vi.mock('../store/createActionBinder', async (importOriginal) => ({
 
 type TestState = Pick<
   DocumentStoreState,
-  'documentStates' | 'queued' | 'applied' | 'outgoing' | 'error' | 'events'
+  'documentStates' | 'queued' | 'applied' | 'outgoing' | 'error' | 'events' | 'engines'
 >
 
 const exampleDoc: SanityDocument = {
@@ -43,6 +44,7 @@ describe('applyDocumentActions', () => {
       outgoing: undefined,
       error: undefined,
       events: eventsSubject,
+      engines: {},
     }
     state = createStoreState(initialState)
     instance = createSanityInstance({projectId: 'p', dataset: 'd'})
@@ -244,5 +246,40 @@ describe('applyDocumentActions', () => {
     expect(queued).toBeDefined()
     const [queuedAction] = queued!.actions
     expect(queuedAction).toMatchObject({type: 'document.edit', liveEdit: true})
+  })
+  it('hands edits of a document with a ready engine to the engine instead of the queue', async () => {
+    let local: SanityDocument = {...exampleDoc, _id: 'drafts.doc1'}
+    let resolveSubmitted!: () => void
+    const engine = {
+      remote: () => ({draft: local, published: null}),
+      local: () => local,
+      edit: vi.fn(() => (local = {...local, _rev: 'txn-engine'})),
+      whenSubmitted: () => new Promise<void>((resolve) => (resolveSubmitted = resolve)),
+    }
+    state.set('addEngine', {engines: {doc1: engine as unknown as DocumentSync}})
+
+    const result = await applyDocumentActions(instance, {
+      actions: [
+        {
+          type: 'document.edit',
+          documentId: 'doc1',
+          documentType: 'author',
+          patches: [{set: {name: 'y'}}],
+        },
+      ],
+      transactionId: 'txn-caller',
+    })
+
+    expect(engine.edit).toHaveBeenCalledWith([{set: {name: 'y'}}])
+    expect(state.get().queued).toEqual([])
+    expect(result).toMatchObject({
+      transactionId: 'txn-caller',
+      previous: {'drafts.doc1': {_rev: 'txn0'}},
+      documents: {'drafts.doc1': {_rev: 'txn-engine'}},
+      updated: ['drafts.doc1'],
+    })
+    const submitted = result.submitted()
+    resolveSubmitted()
+    await expect(submitted).resolves.toEqual({transactionId: 'txn-caller'})
   })
 })

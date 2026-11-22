@@ -1,4 +1,5 @@
 import {type Action, type Mutation, type SanityClient} from '@sanity/client'
+import {type DocumentSync} from '@sanity/document-sync'
 import {DocumentId, getDraftId} from '@sanity/id-utils'
 import {jsonMatch} from '@sanity/json-match'
 import {type ExprNode} from 'groq-js'
@@ -55,6 +56,11 @@ import {
   SUBMISSION_RETRY_MAX_DELAY,
 } from './documentConstants'
 import {
+  engineForHandle,
+  engineLocalDocument,
+  subscribeToSubscriptionsAndRunEngines,
+} from './engineDocuments'
+import {
   type DocumentEvent,
   type DocumentTransactionSubmissionResult,
   getDocumentEvents,
@@ -103,6 +109,13 @@ export interface DocumentStoreState {
   sharedListener: SharedListener
   fetchDocument: (documentId: string) => Observable<ResolveDocument | null>
   events: Subject<DocumentEvent>
+  /**
+   * `experimental_documentSync` prototype: one document-sync engine per subscribed document,
+   * by published id.
+   */
+  engines: {[TPublishedId in string]?: DocumentSync}
+  /** Bumped on every engine change, so selectors that read an engine run again. */
+  engineChanges: number
 }
 
 export const getStoreError = ({error, aclError}: DocumentStoreState): unknown => error ?? aclError
@@ -161,6 +174,8 @@ export const documentStore = defineStore<DocumentStoreState, BoundResourceKey>({
     sharedListener: createSharedListener(instance, resource),
     fetchDocument: createFetchDocument(instance, resource),
     events: new Subject(),
+    engines: {},
+    engineChanges: 0,
   }),
   initialize(context) {
     const {sharedListener} = context.state.get()
@@ -170,6 +185,7 @@ export const documentStore = defineStore<DocumentStoreState, BoundResourceKey>({
       subscribeToAppliedAndSubmitNextTransaction(context),
       subscribeToClientAndFetchDatasetAcl(context),
       subscribeToCurrentUserAndSetIdentity(context),
+      subscribeToSubscriptionsAndRunEngines(context),
     ]
 
     return () => {
@@ -258,10 +274,11 @@ const _getDocumentState = bindActionByResource(
       const {path} = options
       const error = getStoreError(state)
       if (error) throw error
-      const document = selectLocalDocument(
-        state.documentStates,
-        getDocumentIdsFromHandleLikes([options]),
-      )
+      const engineDocument = engineLocalDocument(state, options)
+      const document =
+        engineDocument !== undefined
+          ? engineDocument
+          : selectLocalDocument(state.documentStates, getDocumentIdsFromHandleLikes([options]))
       if (document === undefined) return undefined
 
       if (!path) return document
@@ -315,6 +332,8 @@ export const getDocumentSyncStatus = bindActionByResource(
       const error = getStoreError(state)
       if (error) throw error
       const {documentStates: documents, outgoing, applied, queued} = state
+      const engine = engineForHandle(state, doc)
+      if (engine) return !engine.hasPending()
       if (!hasEveryDocumentArrived(documents, getDocumentIdsFromHandleLikes([doc])))
         return undefined
       return !queued.length && !applied.length && !outgoing
