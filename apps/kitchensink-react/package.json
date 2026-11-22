@@ -23,7 +23,7 @@
     "@portabletext/plugin-sdk-value": "8.1.20",
     "@portabletext/toolbar": "^9.0.26",
     "@sanity/diff-match-patch": "^3.2.1",
-    "@sanity/document-sync": "https://pkg.pr.new/sanity-labs/document-sync/@sanity/document-sync@1307781",
+    "@sanity/document-sync": "https://pkg.pr.new/sanity-labs/document-sync/@sanity/document-sync@35cdbda",
     "@sanity/icons": "^5.3.0",
     "@sanity/sdk": "workspace:*",
     "@sanity/sdk-react": "workspace:*",

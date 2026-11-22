@@ -1,5 +1,5 @@
 import {makePatches, stringifyPatches} from '@sanity/diff-match-patch'
-import {createDocumentSync, type DocumentSync, type ListenEvent} from '@sanity/document-sync'
+import {clientTransport, createDocumentSync, type DocumentSync} from '@sanity/document-sync'
 import {useClient, useDocuments, useResource} from '@sanity/sdk-react'
 import {type JSX, Suspense, useCallback, useEffect, useState} from 'react'
 import {Box, Card, Spinner, Text, VStack} from 'ui5'
@@ -38,37 +38,24 @@ function useDocumentSync(documentId: string): SpikeEngine | null {
       // "accepted" must not undo "confirmed".
       if (entry && entry.status !== 'confirmed') Object.assign(entry, update)
     }
+    // The shared transport from document-sync, wrapped only to record what the spike displays.
+    const transport = clientTransport(client, {tag: 'document-sync-spike'})
     const sync = createDocumentSync({
       documentId,
       transport: {
-        fetch: (ids) => client.getDocuments(ids) as never,
-        listen(ids, onEvent) {
-          const subscription = client
-            .listen(
-              '*[_id in $ids]',
-              {ids},
-              {
-                events: ['welcome', 'mutation', 'reconnect', 'reset', 'welcomeback'],
-                effectFormat: 'mendoza',
-                includeResult: false,
-                enableResume: true,
-                tag: 'document-sync-spike',
-              },
-            )
-            .subscribe((event) => {
-              const listenEvent = event as ListenEvent
-              if (listenEvent.type === 'mutation')
-                track(listenEvent.transactionId, {status: 'confirmed'})
-              onEvent(listenEvent)
-            })
-          return () => subscription.unsubscribe()
-        },
-        submit: async ({transactionId, actions}) => {
+        fetch: transport.fetch,
+        listen: (ids, onEvent) =>
+          transport.listen(ids, (event) => {
+            if (event.type === 'mutation') track(event.transactionId, {status: 'confirmed'})
+            onEvent(event)
+          }),
+        submit: async (transaction) => {
+          const {transactionId} = transaction
           if (!sent.some((t) => t.transactionId === transactionId)) {
             sent.unshift({transactionId, status: 'sending'})
           }
           try {
-            await client.action(actions as never, {transactionId, tag: 'document-sync-spike'})
+            await transport.submit(transaction)
             track(transactionId, {status: 'accepted'})
           } catch (error) {
             track(transactionId, {status: 'failed', detail: String(error)})
