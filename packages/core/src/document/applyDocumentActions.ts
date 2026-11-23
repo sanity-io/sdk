@@ -3,6 +3,7 @@ import {distinctUntilChanged, filter, first, firstValueFrom, map, race} from 'rx
 import {type DocumentResource} from '../config/sanityConfig'
 import {bindActionByResource} from '../store/createActionBinder'
 import {type SanityInstance} from '../store/createSanityInstance'
+import {type StoreState} from '../store/createStoreState'
 import {type StoreContext} from '../store/defineStore'
 import {type ResolveDocument} from '../typegen/resolve'
 import {randomUuid} from '../utils/ids'
@@ -91,6 +92,17 @@ function emptyActionsResult(transactionId: string): ActionsResult {
   }
 }
 
+function watchStateError(
+  state: StoreState<DocumentStoreState>,
+  selectError: (s: DocumentStoreState) => unknown,
+) {
+  return state.observable.pipe(
+    map(selectError),
+    first(Boolean),
+    map((error) => ({type: 'error', error}) as const),
+  )
+}
+
 /** @internal */
 async function _applyDocumentActions(
   {state}: StoreContext<DocumentStoreState>,
@@ -111,11 +123,10 @@ async function _applyDocumentActions(
     ...(disableBatching && {disableBatching}),
   }
 
-  const fatalError$ = state.observable.pipe(
-    map(getStoreError),
-    first(Boolean),
-    map((error) => ({type: 'error', error}) as const),
-  )
+  const storeError$ = watchStateError(state, getStoreError)
+  // Only permanent store errors (`state.error`) stop the submission pipeline.
+  // Recoverable `aclError` values do not stop an already-applied submission.
+  const fatalError$ = watchStateError(state, (s) => s.error)
 
   const transactionError$ = events.pipe(
     filter((e) => e.type === 'error'),
@@ -140,10 +151,10 @@ async function _applyDocumentActions(
   )
 
   const appliedTransactionOrError = firstValueFrom(
-    race([fatalError$, transactionError$, appliedTransaction$]),
+    race([storeError$, transactionError$, appliedTransaction$]),
   )
   const acceptedOrRejectedTransaction = firstValueFrom(
-    race([successfulTransaction$, rejectedTransaction$, transactionError$]),
+    race([successfulTransaction$, rejectedTransaction$, transactionError$, fatalError$]),
   )
 
   state.set('queueTransaction', (prev) => queueTransaction(prev, transaction))
