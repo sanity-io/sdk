@@ -18,6 +18,7 @@ import {
 import {type DocumentStoreState} from './documentStore'
 import {
   applyWithEngine,
+  discardOtherUsersEdits,
   emitAccepted,
   emitDropped,
   emitSubmitFailed,
@@ -350,6 +351,45 @@ describe('document events', () => {
   })
 })
 
+describe('signed-in user changes', () => {
+  function sentBy(author: string | undefined) {
+    const {engine} = fakeEngine()
+    const discardPending = vi.fn()
+    const retryNow = vi.fn()
+    Object.assign(engine, {discardPending, retryNow})
+    const state = stateWith({a: engine})
+    const events: DocumentEvent[] = []
+    state.events.subscribe((event) => events.push(event))
+    applyWithEngine(state, [editDocument(handle, {set: {name: 'y'}})], 'caller', author)
+    return {state, events, discardPending, retryNow}
+  }
+
+  it("drops another user's unsent transactions from their engine and wakes every engine", () => {
+    const {state, discardPending, retryNow} = sentBy('user-a')
+    discardOtherUsersEdits(state, 'user-b')
+    expect(discardPending).toHaveBeenCalledWith(['caller'])
+    expect(retryNow).toHaveBeenCalled()
+  })
+
+  it('binds a transaction with no author to the confirmed user and keeps it', () => {
+    const {state, discardPending} = sentBy(undefined)
+    discardOtherUsersEdits(state, 'user-b')
+    expect(discardPending).not.toHaveBeenCalled()
+    expect(state.engineTransactions.get('caller')?.author).toBe('user-b')
+  })
+
+  it('reports a discarded transaction as reverted, with the user-changed message', async () => {
+    const {state, events} = sentBy('user-a')
+    const {settled} = state.engineTransactions.get('caller')!
+    const transaction = {transactionId: 'caller', actions: [], submitted: false}
+    emitDropped(state, {transaction, reason: 'discarded'})
+    expect(events).toMatchObject([
+      {type: 'reverted', message: expect.stringMatching(/signed-in user changed/)},
+    ])
+    await expect(settled).resolves.toMatchObject({error: expect.any(Error)})
+  })
+})
+
 describe('engineLocalDocument', () => {
   it("reads the ready engine's local view", () => {
     const {engine} = fakeEngine()
@@ -380,7 +420,9 @@ describe('subscribeToSubscriptionsAndRunEngines', () => {
     const subscription = subscribeToSubscriptionsAndRunEngines({instance, state, key})
     const subscribe = (...ids: string[]) =>
       state.set('documentStates', {
-        documentStates: Object.fromEntries(ids.map((id) => [id, {id, subscriptions: ['s']}])),
+        documentStates: Object.fromEntries(
+          ids.map((id) => [id, {id, subscriptions: ['s'], local: null}]),
+        ),
       })
     return {state, subscription, subscribe}
   }
@@ -391,6 +433,25 @@ describe('subscribeToSubscriptionsAndRunEngines', () => {
     expect(Object.keys(state.get().engines)).toEqual(['a'])
     subscribe()
     expect(state.get().engines).toEqual({})
+    subscription.unsubscribe()
+  })
+
+  it('starts an engine only once the queue has loaded the draft and the published document', () => {
+    const {state, subscription} = setup(true)
+    state.set('documentStates', {
+      documentStates: {
+        'a': {id: 'a', subscriptions: ['s']},
+        'drafts.a': {id: 'drafts.a', subscriptions: ['s']},
+      },
+    } as never)
+    expect(state.get().engines).toEqual({})
+    state.set('documentStates', {
+      documentStates: {
+        'a': {id: 'a', subscriptions: ['s'], local: null},
+        'drafts.a': {id: 'drafts.a', subscriptions: ['s'], local: null},
+      },
+    } as never)
+    expect(Object.keys(state.get().engines)).toEqual(['a'])
     subscription.unsubscribe()
   })
 

@@ -16,6 +16,7 @@ import {
   applyRemoteDocument,
   batchAppliedTransactions,
   cleanupOutgoingTransaction,
+  discardOtherUsersTransactions,
   holdForEngineTransactions,
   type QueuedTransaction,
   queueTransaction,
@@ -1787,5 +1788,69 @@ describe('engine transactions', () => {
     const many = Array.from({length: 60}, (_, i) => `t${i}`)
     const capped = addOwnTransactionIds(stateWith(['sub']), ids, many)
     expect(capped.documentStates['doc']?.recentOwnTransactionIds).toEqual(many.slice(-50))
+  })
+})
+
+describe('discardOtherUsersTransactions', () => {
+  const draftId = getDraftId(DocumentId('doc1'))
+  const remote = {...exampleDoc, _id: draftId, foo: 'remote', _rev: 'rev1'}
+  const edit = (transactionId: string, foo: string, author?: string): AppliedTransaction => ({
+    transactionId,
+    ...(author && {author}),
+    actions: [
+      {type: 'document.edit', documentId: 'doc1', documentType: 'book', patches: [{set: {foo}}]},
+    ],
+    disableBatching: true,
+    outgoingActions: [],
+    outgoingMutations: [],
+    base: {[draftId]: remote},
+    working: {[draftId]: {...remote, foo}},
+    previous: {[draftId]: remote},
+    previousRevs: {[draftId]: 'rev1'},
+    timestamp: '2025-02-06T00:04:00.000Z',
+  })
+  const state = (
+    applied: AppliedTransaction[],
+    queued: QueuedTransaction[] = [],
+  ): SyncTransactionState => ({
+    queued,
+    applied,
+    outgoing: undefined,
+    grants,
+    documentStates: {
+      [draftId]: {
+        id: draftId,
+        subscriptions: [
+          'sub',
+          ...applied.map((t) => t.transactionId),
+          ...queued.map((t) => t.transactionId),
+        ],
+        remote,
+        local: {...remote, foo: applied.at(-1)?.working[draftId]?.['foo'] as string},
+      },
+    },
+  })
+
+  it("removes another user's queued and applied edits and rebuilds the local document without them", () => {
+    const {actions} = edit('q-a', 'queued by a')
+    const queuedByA: QueuedTransaction = {transactionId: 'q-a', author: 'user-a', actions}
+    const {state: next, discarded} = discardOtherUsersTransactions(
+      state([edit('t-b', 'by b', 'user-b'), edit('t-a', 'by a', 'user-a')], [queuedByA]),
+      'user-b',
+    )
+    expect(discarded.map((t) => t.transactionId)).toEqual(['q-a', 't-a'])
+    expect(next.applied.map((t) => t.transactionId)).toEqual(['t-b'])
+    expect(next.queued).toEqual([])
+    expect(next.documentStates[draftId]?.local).toMatchObject({foo: 'by b'})
+    expect(next.documentStates[draftId]?.subscriptions).toEqual(['sub', 't-b'])
+  })
+
+  it('binds edits with no author to the confirmed user and keeps them', () => {
+    const {state: next, discarded} = discardOtherUsersTransactions(
+      state([edit('t', 'x')]),
+      'user-b',
+    )
+    expect(discarded).toEqual([])
+    expect(next.applied[0]?.author).toBe('user-b')
   })
 })

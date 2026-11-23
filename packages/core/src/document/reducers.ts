@@ -97,6 +97,11 @@ export interface QueuedTransaction {
    */
   transactionId: string
   /**
+   * The id of the user the transaction is sent as: the user confirmed for the current token when
+   * it was queued, or the first one confirmed after that. Another user never sends it.
+   */
+  author?: string
+  /**
    * the high-level actions associated with this transaction. note that these
    * actions don't mention draft IDs and is meant to abstract away the draft
    * model from users.
@@ -309,6 +314,8 @@ export function batchAppliedTransactions([curr, ...rest]: AppliedTransaction[]):
   const next = batchAppliedTransactions(rest)
   if (!next) return undefined
   if (next.disableBatching) return editAction
+  // Each outgoing transaction is sent as one user.
+  if (next.author !== curr.author) return editAction
 
   // Don't batch a liveEdit edit with a non-liveEdit edit — they route to different APIs
   const nextFirst = next.actions[0]
@@ -317,6 +324,7 @@ export function batchAppliedTransactions([curr, ...rest]: AppliedTransaction[]):
 
   return {
     disableBatching: false,
+    author: curr.author,
     // Use the transactionId from the later (next) transaction.
     transactionId: next.transactionId,
     // Accumulate actions: current action first, then later ones.
@@ -447,6 +455,88 @@ export function releaseEngineHolds(
     )
     return held.reduce((next, id) => removeSubscriptionIdFromDocument(next, documentId, id), acc)
   }, prev)
+}
+
+/** The `reverted` message for edits discarded because the signed-in user changed. */
+const USER_CHANGED_MESSAGE =
+  'The signed-in user changed, so edits made by the previous user were discarded without being sent.'
+
+/** Thrown before a submission whose author is not the user confirmed for the current token. */
+export class UserChangedError extends Error {
+  constructor() {
+    super(USER_CHANGED_MESSAGE)
+    this.name = 'UserChangedError'
+  }
+}
+
+/**
+ * Binds transactions with no author to `userId` and discards the queued and applied transactions
+ * another user made, rebuilding the local documents without them. The outgoing transaction is
+ * left to its submission, which refuses to send it as `userId` (`UserChangedError`).
+ */
+export function discardOtherUsersTransactions(
+  prev: SyncTransactionState,
+  userId: string,
+): {state: SyncTransactionState; discarded: QueuedTransaction[]} {
+  const byOther = (t: QueuedTransaction) => t.author !== undefined && t.author !== userId
+  const bind = <T extends QueuedTransaction>(t: T): T => (t.author ? t : {...t, author: userId})
+  const discarded = [...prev.queued, ...prev.applied].filter(byOther)
+  const bound = {
+    ...prev,
+    queued: prev.queued.filter((t) => !byOther(t)).map(bind),
+    applied: prev.applied.filter((t) => !byOther(t)).map(bind),
+    outgoing: prev.outgoing && bind(prev.outgoing),
+  }
+  if (!discarded.length) return {state: bound, discarded}
+  let unsubscribed: SyncTransactionState = bound
+  for (const transaction of discarded) {
+    for (const documentId of getDocumentIdsFromHandleLikes(transaction.actions)) {
+      unsubscribed = removeSubscriptionIdFromDocument(
+        unsubscribed,
+        documentId,
+        transaction.transactionId,
+      )
+    }
+  }
+  const keepOutgoing = !prev.outgoing || !byOther(prev.outgoing)
+  return {state: rebuildLocalDocuments(unsubscribed, keepOutgoing), discarded}
+}
+
+/**
+ * Rebuilds the local documents from `remote`, the outgoing transaction (when `keepOutgoing`) and
+ * the applied transactions, as `revertOutgoingTransaction` does, keeping the outgoing transaction
+ * in place.
+ */
+function rebuildLocalDocuments(
+  prev: SyncTransactionState,
+  keepOutgoing: boolean,
+): SyncTransactionState {
+  if (!prev.grants) return prev
+  let working = Object.fromEntries(
+    Object.entries(prev.documentStates).map(([id, documentState]) => [id, documentState?.remote]),
+  )
+  const applied: AppliedTransaction[] = []
+  for (const t of [...(prev.outgoing && keepOutgoing ? [prev.outgoing] : []), ...prev.applied]) {
+    try {
+      const processed = processActions({
+        ...t,
+        working,
+        grants: prev.grants,
+        identity: prev.identity,
+      })
+      working = processed.working
+      if (t !== prev.outgoing) applied.push({...t, ...processed})
+    } catch (error) {
+      if (!(error instanceof ActionError)) throw error
+    }
+  }
+  const documentStates = Object.fromEntries(
+    Object.entries(prev.documentStates).map(([id, documentState]) => [
+      id,
+      documentState && id in working ? {...documentState, local: working[id]} : documentState,
+    ]),
+  )
+  return {...prev, applied, documentStates: evictOrphanedDocumentStates(documentStates)}
 }
 
 export function cleanupOutgoingTransaction(prev: SyncTransactionState): SyncTransactionState {

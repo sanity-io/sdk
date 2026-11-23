@@ -9,8 +9,17 @@ import {
   type Transport,
 } from '@sanity/document-sync'
 import {DocumentId, getDraftId, getPublishedId, isDraftId, isVersionId} from '@sanity/id-utils'
-import {distinctUntilChanged, filter, firstValueFrom, forkJoin, map, type Subscription} from 'rxjs'
+import {
+  distinctUntilChanged,
+  filter,
+  first,
+  firstValueFrom,
+  forkJoin,
+  map,
+  type Subscription,
+} from 'rxjs'
 
+import {getConfirmedUserState} from '../auth/authStore'
 import {getClientState} from '../client/clientStore'
 import {type DocumentHandle} from '../config/sanityConfig'
 import {isReleasePerspective} from '../releases/utils/isReleasePerspective'
@@ -19,12 +28,22 @@ import {type StoreContext} from '../store/defineStore'
 import {type ResolveDocument} from '../typegen/resolve'
 import {setCleanupTimeout} from '../utils/setCleanupTimeout'
 import {type Action} from './actions'
-import {API_VERSION, DOCUMENT_STATE_CLEAR_DELAY} from './documentConstants'
+import {
+  API_VERSION,
+  DOCUMENT_STATE_CLEAR_DELAY,
+  SUBMISSION_RETRY_BASE_DELAY,
+  SUBMISSION_RETRY_MAX_DELAY,
+} from './documentConstants'
 import {type DocumentStoreState} from './documentStore'
 import {type DocumentTransactionSubmissionResult, getDocumentEvents} from './events'
 import {processActions} from './processActions/processActions'
 import {type DocumentSet} from './processMutations'
-import {type HttpAction, type OutgoingTransaction, releaseEngineHolds} from './reducers'
+import {
+  type HttpAction,
+  type OutgoingTransaction,
+  releaseEngineHolds,
+  UserChangedError,
+} from './reducers'
 import {classifySubmissionError} from './submissionErrors'
 
 // Prototype for `experimental_documentSync`: one `@sanity/document-sync` engine per document
@@ -41,7 +60,16 @@ export interface EngineTransaction {
   working: DocumentSet
   /** Submissions that failed and will be retried, for `submission-failed`'s `attempt`. */
   failedAttempts: number
+  /** The user it is sent as, as on the queue (`QueuedTransaction.author`). */
+  author?: string
+  /** Settles once the server accepts it (no error) or it is reverted or discarded (the error). */
+  settled: Promise<{error?: unknown}>
+  settle: (outcome: {error?: unknown}) => void
 }
+
+/** The published id of the document an engine transaction writes. */
+const publishedIdOf = ({actions}: EngineTransaction) =>
+  getPublishedId(DocumentId((actions[0] as EngineAction & {documentId: string}).documentId))
 
 /**
  * The engine's transport over the store's own connections: snapshots from `fetchDocument`,
@@ -66,6 +94,20 @@ function createStoreTransport(
       return () => subscription.unsubscribe()
     },
     submit: async ({transactionId, actions}) => {
+      // As on the queue: wait until the user for the current token is confirmed, and never send a
+      // transaction as anyone but its author. Another user's transaction is dropped from the
+      // engine, which reports it (`emitDropped`), and nothing is sent.
+      const user = await firstValueFrom(
+        getConfirmedUserState(instance).observable.pipe(first((u) => u !== undefined)),
+      )
+      const transaction = state.get().engineTransactions.get(transactionId)
+      if (transaction && user) {
+        transaction.author ??= user.id
+        if (transaction.author !== user.id) {
+          state.get().engines[publishedIdOf(transaction)]?.discardPending([transactionId])
+          return
+        }
+      }
       const client: SanityClient = await firstValueFrom(client$)
       let result
       try {
@@ -121,6 +163,7 @@ export function emitAccepted(
   const outgoing = engineOutgoing(transaction, transactionId, outgoingActions)
   for (const event of getDocumentEvents(outgoing)) events.next(event)
   events.next({type: 'accepted', outgoing, result})
+  transaction.settle({})
 }
 
 const errorMessage = (error: unknown) => (error instanceof Error ? error.message : 'Request failed')
@@ -166,16 +209,19 @@ export function emitDropped(
   {engineTransactions, events}: DocumentStoreState,
   dropped: DroppedEdit,
 ): void {
-  if (dropped.reason !== 'rejected') return
+  if (dropped.reason === 'no-op') return
   const {transactionId, actions} = dropped.transaction
   const transaction = engineTransactions.get(transactionId)
   if (!transaction) return
   engineTransactions.delete(transactionId)
   const outgoing = engineOutgoing(transaction, transactionId, actions as HttpAction[])
+  // `discarded`: the engine dropped another user's transaction (see `discardOtherUsersEdits`).
+  const error = dropped.reason === 'rejected' ? dropped.error : new UserChangedError()
+  transaction.settle({error})
   events.next({
     type: 'reverted',
-    message: errorMessage(dropped.error),
-    error: dropped.error,
+    message: errorMessage(error),
+    error,
     outgoing,
   })
 }
@@ -193,13 +239,27 @@ function releaseHolds(state: StoreContext<DocumentStoreState>['state'], publishe
   }, DOCUMENT_STATE_CLEAR_DELAY)
 }
 
-/** Published ids of the documents with subscribers, leaving out release versions. */
+/**
+ * Published ids of the documents with subscribers, leaving out release versions, once the queue
+ * has loaded both the draft and the published document. The engine cannot serve a document
+ * before that (`queueHasLoaded`), and starting it later keeps it from reading a document the
+ * queue could not read.
+ */
 function enginePublishedIds(documentStates: DocumentStoreState['documentStates']): string[] {
   const ids = Object.keys(documentStates).filter((id) => !isVersionId(DocumentId(id)))
-  return [
-    ...new Set(ids.map((id) => (isDraftId(DocumentId(id)) ? getPublishedId(DocumentId(id)) : id))),
-  ]
+  const publishedIds = new Set(
+    ids.map((id) => (isDraftId(DocumentId(id)) ? getPublishedId(DocumentId(id)) : id)),
+  )
+  return [...publishedIds].filter(
+    (id) =>
+      documentStates[id]?.local !== undefined &&
+      documentStates[getDraftId(DocumentId(id))]?.local !== undefined,
+  )
 }
+
+/** The queue's backoff for retried submissions, read on each retry. */
+const submissionRetryDelay = (attempt: number) =>
+  Math.min(SUBMISSION_RETRY_BASE_DELAY * 2 ** (attempt - 1), SUBMISSION_RETRY_MAX_DELAY)
 
 /**
  * Keeps one engine per subscribed document while `experimental_documentSync` is on. Each engine
@@ -221,7 +281,11 @@ export function subscribeToSubscriptionsAndRunEngines(
       const ids = joined ? joined.split(',') : []
       for (const id of ids) {
         if (cleanups.has(id)) continue
-        const sync = createDocumentSync({documentId: id, transport})
+        const sync = createDocumentSync({
+          documentId: id,
+          transport,
+          retryDelay: submissionRetryDelay,
+        })
         const unsubscribe = sync.subscribe(() => {
           state.set('engineChanged', (prev) => ({engineChanges: prev.engineChanges + 1}))
           if (!sync.hasPending()) releaseHolds(state, id)
@@ -245,7 +309,38 @@ export function subscribeToSubscriptionsAndRunEngines(
       }
     })
   subscription.add(() => cleanups.forEach((cleanup) => cleanup()))
+  subscription.add(
+    getConfirmedUserState(instance)
+      .observable.pipe(
+        map((user) => user?.id),
+        filter((userId): userId is string => !!userId),
+      )
+      .subscribe((userId) => discardOtherUsersEdits(state.get(), userId)),
+  )
   return subscription
+}
+
+/**
+ * When a user is confirmed, as on the queue: binds unattributed engine transactions to them,
+ * drops the ones another user made from their engines (reported as `reverted`), and wakes every
+ * engine, so writes held for this user's token go out without waiting out the backoff.
+ * @internal
+ */
+export function discardOtherUsersEdits(
+  {engineTransactions, engines}: DocumentStoreState,
+  userId: string,
+): void {
+  const byEngine = new Map<string, string[]>()
+  for (const [transactionId, transaction] of engineTransactions) {
+    transaction.author ??= userId
+    if (transaction.author === userId) continue
+    const publishedId = publishedIdOf(transaction)
+    byEngine.set(publishedId, [...(byEngine.get(publishedId) ?? []), transactionId])
+  }
+  for (const [publishedId, transactionIds] of byEngine) {
+    engines[publishedId]?.discardPending(transactionIds)
+  }
+  for (const engine of Object.values(engines)) engine?.retryNow()
 }
 
 /** The ready engine for a handle's document, or `undefined` when the engine does not handle it. */
@@ -385,6 +480,7 @@ export function applyWithEngine(
   state: DocumentStoreState,
   actions: Action[],
   transactionId: string,
+  author?: string,
 ):
   | {
       engine: DocumentSync
@@ -410,10 +506,15 @@ export function applyWithEngine(
   const operations = processed.outgoingActions.map(toOperation)
   const transactionIds = operations.length ? [engine.apply(operations, {transactionId})] : []
   for (const id of transactionIds) {
+    let settle!: EngineTransaction['settle']
+    const settled = new Promise<{error?: unknown}>((resolve) => (settle = resolve))
     state.engineTransactions.set(id, {
+      settled,
+      settle,
       actions,
       callerTransactionId: transactionId,
       failedAttempts: 0,
+      ...(author && {author}),
       previous: processed.previous,
       working: processed.working,
     })

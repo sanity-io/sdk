@@ -27,7 +27,7 @@ import {
   timer,
 } from 'rxjs'
 
-import {getClientAuthState, getCurrentUserState} from '../auth/authStore'
+import {getClientAuthState, getConfirmedUserState, getCurrentUserState} from '../auth/authStore'
 import {type ClientOptions, getClientState} from '../client/clientStore'
 import {retryRead, retryWithCredential} from '../client/retry'
 import {
@@ -82,6 +82,7 @@ import {
   applyFirstQueuedTransaction,
   applyRemoteDocument,
   cleanupOutgoingTransaction,
+  discardOtherUsersTransactions,
   getDocumentIdsFromHandleLikes,
   manageSubscriberIds,
   type OutgoingTransaction,
@@ -91,6 +92,7 @@ import {
   throwDocumentError,
   transitionAppliedTransactionsToOutgoing,
   type UnverifiedDocumentRevision,
+  UserChangedError,
 } from './reducers'
 import {createFetchDocument, createSharedListener, type SharedListener} from './sharedListener'
 import {classifySubmissionError} from './submissionErrors'
@@ -192,6 +194,7 @@ export const documentStore = defineStore<DocumentStoreState, BoundResourceKey>({
       subscribeToAppliedAndSubmitNextTransaction(context),
       subscribeToClientAndFetchDatasetAcl(context),
       subscribeToCurrentUserAndSetIdentity(context),
+      subscribeToConfirmedUserAndDiscardOthersEdits(context),
       subscribeToSubscriptionsAndRunEngines(context),
     ]
 
@@ -498,10 +501,15 @@ const subscribeToAppliedAndSubmitNextTransaction = ({
         return retryWithCredential(
           clients$.pipe(
             first(),
-            concatMap((client) => submitOutgoingTransaction(client, outgoing)),
+            concatMap((client) =>
+              sendableAs(instance, outgoing.author).pipe(
+                concatMap(() => submitOutgoingTransaction(client, outgoing)),
+              ),
+            ),
           ),
           credential,
           (error, retryCount, credentialChanged) => {
+            if (error instanceof UserChangedError) return throwError(() => error)
             if (classifySubmissionError(error) !== 'retry') return throwError(() => error)
 
             // keep the transaction and its optimistic local state. the
@@ -650,6 +658,69 @@ const subscribeToClientAndFetchDatasetAcl = ({
     .subscribe({
       error: (error) => state.set('setError', {error}),
     })
+}
+
+/**
+ * Waits until the user for the current token is confirmed, then fails with `UserChangedError` when
+ * it is not `author`. After a token change the previous user is still cached until `/users/me`
+ * answers for the new token, so a write waits rather than going out as whoever holds it.
+ */
+function sendableAs(instance: SanityInstance, author: string | undefined): Observable<void> {
+  return getConfirmedUserState(instance).observable.pipe(
+    first((user) => user !== undefined),
+    map((user) => {
+      if (user && author && user.id !== author) throw new UserChangedError()
+    }),
+  )
+}
+
+/**
+ * When a user is confirmed, binds unattributed pending transactions to them and discards the ones
+ * another user made, reporting each as `reverted`. A user's unsent edits are never sent as, or
+ * kept for, the next user.
+ */
+const subscribeToConfirmedUserAndDiscardOthersEdits = ({
+  instance,
+  state,
+}: StoreContext<DocumentStoreState, BoundResourceKey>) =>
+  getConfirmedUserState(instance)
+    .observable.pipe(
+      map((user) => user?.id),
+      filter((id): id is string => !!id),
+    )
+    .subscribe((userId) => {
+      let discarded: QueuedTransaction[] = []
+      state.set('discardOtherUsersTransactions', (prev) => {
+        const result = discardOtherUsersTransactions(prev, userId)
+        discarded = result.discarded
+        return result.state
+      })
+      const {events} = state.get()
+      const error = new UserChangedError()
+      for (const transaction of discarded) {
+        events.next({
+          type: 'reverted',
+          message: error.message,
+          error,
+          outgoing: asOutgoing(transaction),
+        })
+      }
+    })
+
+/** A pending transaction in the shape `reverted` carries. */
+function asOutgoing(transaction: QueuedTransaction): OutgoingTransaction {
+  return {
+    working: {},
+    previous: {},
+    base: {},
+    previousRevs: {},
+    timestamp: new Date().toISOString(),
+    outgoingActions: [],
+    outgoingMutations: [],
+    ...transaction,
+    disableBatching: !!transaction.disableBatching,
+    batchedTransactionIds: [transaction.transactionId],
+  }
 }
 
 const subscribeToCurrentUserAndSetIdentity = ({

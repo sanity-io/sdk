@@ -260,7 +260,6 @@ describe('applyDocumentActions', () => {
   /** A loaded document `doc1` served by a fake engine. */
   function engineServes() {
     let local: SanityDocument = {...exampleDoc, _id: 'drafts.doc1'}
-    let resolveSubmitted!: () => void
     const engine = {
       remote: () => ({draft: local, published: null}),
       local: () => local,
@@ -269,7 +268,6 @@ describe('applyDocumentActions', () => {
         return transactionId
       }),
       localDocuments: () => ({draft: local, published: null}),
-      whenSubmitted: () => new Promise<void>((resolve) => (resolveSubmitted = resolve)),
     }
     // The engine serves a document only once the queue has loaded it and the grants.
     state.set('loaded', {
@@ -283,11 +281,11 @@ describe('applyDocumentActions', () => {
     })
     state.set('addEngine', {engines: {doc1: engine as unknown as DocumentSync}})
 
-    return {engine, resolveSubmitted: () => resolveSubmitted()}
+    return {engine}
   }
 
   it('hands edits of a document with a ready engine to the engine instead of the queue', async () => {
-    const {engine, resolveSubmitted} = engineServes()
+    const {engine} = engineServes()
     const result = await applyDocumentActions(instance, {
       actions: [
         {
@@ -310,9 +308,31 @@ describe('applyDocumentActions', () => {
       documents: {'drafts.doc1': {_rev: 'txn-caller'}},
       updated: ['drafts.doc1'],
     })
+    // Resolves once the server accepts the transaction (`emitAccepted` settles it).
     const submitted = result.submitted()
-    resolveSubmitted()
+    state.get().engineTransactions.get('txn-caller')?.settle({})
     await expect(submitted).resolves.toEqual({transactionId: 'txn-caller'})
+  })
+
+  it('rejects submitted() for an engine transaction that is reverted', async () => {
+    engineServes()
+    const result = await applyDocumentActions(instance, {
+      actions: [
+        {
+          type: 'document.edit',
+          documentId: 'doc1',
+          documentType: 'author',
+          patches: [{set: {name: 'y'}}],
+        },
+      ],
+      transactionId: 'txn-caller',
+    })
+    const submitted = result.submitted()
+    state
+      .get()
+      .engineTransactions.get('txn-caller')
+      ?.settle({error: new Error('discarded')})
+    await expect(submitted).rejects.toThrow('discarded')
   })
 
   it('records the engine transaction as its own, so its echo is labelled local', async () => {

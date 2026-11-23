@@ -1,6 +1,7 @@
 import {DocumentId, getDraftId, getPublishedId} from '@sanity/id-utils'
 import {distinctUntilChanged, filter, first, firstValueFrom, map, race} from 'rxjs'
 
+import {getConfirmedUserState} from '../auth/authStore'
 import {type DocumentResource} from '../config/sanityConfig'
 import {bindActionByResource} from '../store/createActionBinder'
 import {type SanityInstance} from '../store/createSanityInstance'
@@ -95,6 +96,7 @@ function applyThroughEngineOrQueue(
       context.state.get(),
       normalizeActionsForResource(actions, resource),
       transactionId,
+      getConfirmedUserState(context.instance).getCurrent()?.id,
     )
   } catch (error) {
     // As on the queue, an action the store's rules reject is reported as an `error` event too.
@@ -119,7 +121,8 @@ function applyThroughEngineOrQueue(
         routed.transactionIds,
       ),
     )
-    return Promise.resolve(engineActionsResult(routed, transactionId))
+    const {settled} = context.state.get().engineTransactions.get(transactionId) ?? {}
+    return Promise.resolve(engineActionsResult(routed, transactionId, settled))
   }
   return _applyDocumentActions(context, {...options, transactionId})
 }
@@ -147,6 +150,7 @@ function emptyActionsResult(transactionId: string): ActionsResult {
 function engineActionsResult(
   {engine, handle, previous: before}: NonNullable<ReturnType<typeof applyWithEngine>>,
   transactionId: string,
+  settled: Promise<{error?: unknown}> | undefined,
 ): ActionsResult {
   const draftId = getDraftId(DocumentId(handle.documentId))
   const previous = {[draftId]: before}
@@ -159,15 +163,24 @@ function engineActionsResult(
     appeared: previous[draftId] ? [] : [draftId],
     updated: previous[draftId] ? [draftId] : [],
     disappeared: [],
+    // As on the queue: resolves once the server accepts the transaction, and rejects when it is
+    // reverted or discarded. An edit that changed nothing sent nothing and resolves at once.
     submitted: async () => {
-      await engine.whenSubmitted()
+      const {error} = (await settled) ?? {}
+      if (error) throw error
       return {transactionId}
     },
   }
 }
 
+/** The confirmed user a new transaction is sent as, when one is confirmed. */
+function authorOf(instance: SanityInstance): {author?: string} {
+  const author = getConfirmedUserState(instance).getCurrent()?.id
+  return author ? {author} : {}
+}
+
 async function _applyDocumentActions(
-  {state}: StoreContext<DocumentStoreState>,
+  {state, instance}: StoreContext<DocumentStoreState>,
   {actions, resource, transactionId = randomUuid(), disableBatching}: ApplyDocumentActionsOptions,
 ): Promise<ActionsResult> {
   if (!actions.length) return emptyActionsResult(transactionId)
@@ -182,6 +195,7 @@ async function _applyDocumentActions(
   const transaction: QueuedTransaction = {
     transactionId,
     actions: normalizedActions,
+    ...authorOf(instance),
     ...(disableBatching && {disableBatching}),
   }
 
