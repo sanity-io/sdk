@@ -19,6 +19,10 @@ test('Project — literal flags narrow members and features', () => {
   expectTypeOf<keyof Project<false, false> & ('members' | 'features')>().toEqualTypeOf<never>()
 })
 
+test('Project — logoUrl is always present, null when the project has no logo', () => {
+  expectTypeOf<Project<false, false>['logoUrl']>().toEqualTypeOf<string | null>()
+})
+
 test('Project<boolean, boolean> — members and features are optional', () => {
   type Item = Project<boolean, boolean>
   expectTypeOf<Item['members']>().toEqualTypeOf<ProjectMember[] | undefined>()
