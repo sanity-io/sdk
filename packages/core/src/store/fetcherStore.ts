@@ -347,6 +347,9 @@ const definitions = new Map<string, AnyDefinition>()
 // So a mutation's writes, which name a fetcher, reach its definition
 const fetcherDefinitions = new WeakMap<object, AnyDefinition>()
 const inflight = new Map<string, InflightFetch>()
+// `resolveState` calls waiting on one entry share one subscription. A reader per call would
+// unsubscribe once answered and wake the next one in the same call stack, overflowing it
+const waits = new Map<string, Promise<unknown>>()
 // Per mutation scope, when the last mutation in it settles. A later one's request waits for it, so
 // answers come back in the order the changes were made
 const lastWrites = new Map<string, Promise<void>>()
@@ -470,6 +473,7 @@ const cacheStore = defineStore<CacheState>({
       intervalTimers.clear()
       stopTimers.clear()
       inflight.clear()
+      waits.clear()
       lastWrites.clear()
     }
   },
@@ -963,7 +967,9 @@ export function defineFetcher<TParams extends unknown[], TData>(
           },
         )
       }
-      return firstValueFrom(
+      const waiting = waits.get(key)
+      if (waiting) return waiting as Promise<TData>
+      const wait = firstValueFrom(
         getState(instance, ...params).observable.pipe(
           filter(
             (snapshot): snapshot is Exclude<FetcherSnapshot<TData>, {status: 'pending'}> =>
@@ -974,7 +980,9 @@ export function defineFetcher<TParams extends unknown[], TData>(
             return snapshot.data
           }),
         ),
-      )
+      ).finally(() => waits.delete(key))
+      waits.set(key, wait)
+      return wait
     },
   )
 

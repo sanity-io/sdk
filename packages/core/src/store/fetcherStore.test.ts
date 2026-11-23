@@ -1,5 +1,5 @@
 import {ClientError, ServerError} from '@sanity/client'
-import {concatWith, NEVER, type Observable, of, startWith, Subject, throwError} from 'rxjs'
+import {concatWith, config, NEVER, type Observable, of, startWith, Subject, throwError} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, onTestFinished, vi} from 'vitest'
 
 import {setAuthToken} from '../auth/authStore'
@@ -408,6 +408,85 @@ describe('fetcherStore', () => {
 
     expect(await retries).toEqual(['back', 'back'])
     expect(fetchSpy).toHaveBeenCalledTimes(2)
+  })
+
+  describe('with many resolveState calls waiting on one entry', () => {
+    const readers = 1_000
+
+    const waitingOn = (name: string, options: Partial<FetcherDefinition<[], string>> = {}) => {
+      const answer = new Subject<string>()
+      const fetcher = defineFetcher<[], string>({
+        name,
+        getKey: () => 'k',
+        fetch: () => () => answer,
+        ...options,
+      })
+      const waits = Array.from({length: readers}, () => fetcher.resolveState(instance))
+      return {answer, fetcher, waits}
+    }
+
+    it('resolves every call with the answer, without an error', async () => {
+      const unhandled: unknown[] = []
+      const {onUnhandledError} = config
+      config.onUnhandledError = (error) => unhandled.push(error)
+      onTestFinished(() => void (config.onUnhandledError = onUnhandledError))
+      const {answer, waits} = waitingOn('many-readers')
+      await flush()
+
+      answer.next('answer')
+
+      expect(await Promise.all(waits)).toEqual(Array(readers).fill('answer'))
+      // rxjs reports an error thrown while unsubscribing on a timeout
+      await flush()
+      expect(unhandled.map(String)).toEqual([])
+    })
+
+    it('rejects every call when the fetch fails', async () => {
+      const {answer, waits} = waitingOn('many-readers-refused')
+      await flush()
+
+      const refused = new ClientError({statusCode: 400, headers: {}, body: {message: 'refused'}})
+      answer.error(refused)
+
+      expect(await Promise.allSettled(waits)).toEqual(
+        Array(readers).fill({status: 'rejected', reason: refused}),
+      )
+    })
+
+    it('collects the entry once every call has settled', async () => {
+      const {answer, fetcher, waits} = waitingOn('many-readers-collected', {gcTime: 5})
+      await flush()
+
+      answer.next('answer')
+      await Promise.all(waits)
+
+      await vi.waitFor(() => expect(fetcher.getState(instance).getCurrent().status).toBe('pending'))
+    })
+
+    it('resolves a later call with the data as it is then', async () => {
+      const {answer, fetcher, waits} = waitingOn('many-readers-later')
+      await flush()
+      answer.next('answer')
+      await Promise.all(waits)
+
+      writePending(instance, fetcher, 'changed')
+
+      expect(await fetcher.resolveState(instance)).toBe('changed')
+    })
+
+    it('waits afresh once the cache they were waiting in is disposed', async () => {
+      const {answer, fetcher} = waitingOn('many-readers-disposed')
+      await flush()
+      instance.dispose()
+      const next = createSanityInstance({projectId: 'p', dataset: 'd'})
+      onTestFinished(() => next.dispose())
+
+      const wait = fetcher.resolveState(next)
+      await flush()
+      answer.next('answer')
+
+      expect(await wait).toBe('answer')
+    })
   })
 
   it('resolveState settles a retry still in flight when the failed entry is due to be collected, and collects it after', async () => {
