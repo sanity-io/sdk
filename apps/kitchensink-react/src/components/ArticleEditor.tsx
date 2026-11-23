@@ -258,21 +258,24 @@ function ArticleWorkspaceBody({
       </Box>
       {renderSidePanel && (
         <Box borderLeft padding={3} style={{flex: '0 0 320px'}}>
-          {renderSidePanel(handle)}
+          <Suspense key={activeId} fallback={<Spinner />}>
+            {renderSidePanel(handle)}
+          </Suspense>
         </Box>
       )}
     </Flex>
   )
 }
 
-function resolveActiveArticleId(
-  selectedId: string | null,
-  firstArticle: ArticleHandle | undefined,
-  autoSelectFirst?: boolean,
-): string | null {
-  if (selectedId) return selectedId
-  if (!autoSelectFirst || !firstArticle) return null
-  return firstArticle.documentId
+function useAutoSelectedId(
+  candidateId: string | undefined,
+  enabled: boolean,
+): [string | null, (documentId: string) => void] {
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  if (!selectedId && enabled && candidateId) {
+    setSelectedId(candidateId)
+  }
+  return [selectedId, setSelectedId]
 }
 
 /**
@@ -297,10 +300,12 @@ export function ArticleWorkspace({
     documentType: DOCUMENT_TYPE,
     orderings: [{field: '_updatedAt', direction: 'desc'}],
   })
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [selectedId, setSelectedId] = useAutoSelectedId(
+    articles[0]?.documentId,
+    Boolean(autoSelectFirst),
+  )
   const createArticle = useCreateDocument({documentType: DOCUMENT_TYPE})
 
-  const activeId = resolveActiveArticleId(selectedId, articles[0], autoSelectFirst)
   const sidebarWidth = renderSidePanel ? '0 0 240px' : '0 0 320px'
 
   const handleCreate = async () => {
@@ -319,12 +324,12 @@ export function ArticleWorkspace({
             onCreate={() => void handleCreate()}
             onLoadMore={loadMore}
             onSelect={setSelectedId}
-            selectedId={activeId}
+            selectedId={selectedId}
           />
         </Box>
         <Box flexGrow={1}>
           <ArticleWorkspaceBody
-            activeId={activeId}
+            activeId={selectedId}
             renderSidePanel={renderSidePanel}
             showAllActions={Boolean(showAllActions)}
           />
