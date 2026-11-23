@@ -337,6 +337,44 @@ describe('applyDocumentActions', () => {
     await expect(submitted).rejects.toThrow('discarded')
   })
 
+  it('rejects submitted() for an engine transaction when a fatal store error occurs', async () => {
+    engineServes()
+    const result = await applyDocumentActions(instance, {
+      actions: [
+        {
+          type: 'document.edit',
+          documentId: 'doc1',
+          documentType: 'author',
+          patches: [{set: {name: 'y'}}],
+        },
+      ],
+      transactionId: 'txn-caller',
+    })
+    const submitted = result.submitted()
+    const fatalError = new Error('Client stream completed empty')
+    state.set('setError', {error: fatalError})
+    await expect(submitted).rejects.toBe(fatalError)
+  })
+
+  it('ignores a recoverable aclError while an engine transaction is pending', async () => {
+    engineServes()
+    const result = await applyDocumentActions(instance, {
+      actions: [
+        {
+          type: 'document.edit',
+          documentId: 'doc1',
+          documentType: 'author',
+          patches: [{set: {name: 'y'}}],
+        },
+      ],
+      transactionId: 'txn-caller',
+    })
+    const submitted = result.submitted()
+    state.set('setAclError', {aclError: new Error('ACL 401')})
+    state.get().engineTransactions.get('txn-caller')?.settle({})
+    await expect(submitted).resolves.toEqual({transactionId: 'txn-caller'})
+  })
+
   it('records the engine transaction as its own, so its echo is labelled local', async () => {
     engineServes()
     await applyDocumentActions(instance, {

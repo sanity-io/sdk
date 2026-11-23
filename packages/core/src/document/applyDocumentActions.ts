@@ -1,5 +1,5 @@
 import {DocumentId, getDraftId, getPublishedId} from '@sanity/id-utils'
-import {distinctUntilChanged, filter, first, firstValueFrom, map, race} from 'rxjs'
+import {distinctUntilChanged, filter, first, firstValueFrom, from, map, race} from 'rxjs'
 
 import {getConfirmedUserState} from '../auth/authStore'
 import {type DocumentResource} from '../config/sanityConfig'
@@ -123,7 +123,7 @@ function applyThroughEngineOrQueue(
       ),
     )
     const {settled} = context.state.get().engineTransactions.get(transactionId) ?? {}
-    return Promise.resolve(engineActionsResult(routed, transactionId, settled))
+    return Promise.resolve(engineActionsResult(routed, transactionId, context.state, settled))
   }
   return _applyDocumentActions(context, {...options, transactionId})
 }
@@ -162,8 +162,15 @@ function watchStateError(
 function engineActionsResult(
   {engine, handle, previous: before}: NonNullable<ReturnType<typeof applyWithEngine>>,
   transactionId: string,
+  state: StoreState<DocumentStoreState>,
   settled: Promise<{error?: unknown}> | undefined,
 ): ActionsResult {
+  // As on the queue: the outcome is the transaction's own (accepted, reverted or discarded) or a
+  // permanent store error, whichever comes first. A recoverable `aclError` does not end it. Raced
+  // from the start, so the store subscription ends as soon as the transaction settles.
+  const outcome = settled
+    ? firstValueFrom(race([from(settled), watchStateError(state, (s) => s.error)]))
+    : Promise.resolve({error: undefined})
   const draftId = getDraftId(DocumentId(handle.documentId))
   const previous = {[draftId]: before}
   const documents = {[draftId]: engine.local() as ResolveDocument | null}
@@ -175,10 +182,10 @@ function engineActionsResult(
     appeared: previous[draftId] ? [] : [draftId],
     updated: previous[draftId] ? [draftId] : [],
     disappeared: [],
-    // As on the queue: resolves once the server accepts the transaction, and rejects when it is
-    // reverted or discarded. An edit that changed nothing sent nothing and resolves at once.
+    // Resolves once the server accepts the transaction, and rejects when it is reverted or
+    // discarded or the store fails. An edit that changed nothing sent nothing and resolves at once.
     submitted: async () => {
-      const {error} = (await settled) ?? {}
+      const {error} = await outcome
       if (error) throw error
       return {transactionId}
     },
