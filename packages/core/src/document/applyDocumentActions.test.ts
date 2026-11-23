@@ -18,7 +18,7 @@ vi.mock('../store/createActionBinder', async (importOriginal) => ({
 
 type TestState = Pick<
   DocumentStoreState,
-  'documentStates' | 'queued' | 'applied' | 'outgoing' | 'error' | 'events' | 'engines'
+  'documentStates' | 'queued' | 'applied' | 'outgoing' | 'error' | 'events' | 'engines' | 'grants'
 >
 
 const exampleDoc: SanityDocument = {
@@ -254,8 +254,17 @@ describe('applyDocumentActions', () => {
       remote: () => ({draft: local, published: null}),
       local: () => local,
       edit: vi.fn(() => (local = {...local, _rev: 'txn-engine'})),
+      localDocuments: () => ({draft: local, published: null}),
       whenSubmitted: () => new Promise<void>((resolve) => (resolveSubmitted = resolve)),
     }
+    // The engine serves a document only once the queue has loaded it and the grants.
+    state.set('loaded', {
+      grants: {} as DocumentStoreState['grants'],
+      documentStates: {
+        'doc1': {id: 'doc1', local: null},
+        'drafts.doc1': {id: 'drafts.doc1', local},
+      } as unknown as DocumentStoreState['documentStates'],
+    })
     state.set('addEngine', {engines: {doc1: engine as unknown as DocumentSync}})
 
     const result = await applyDocumentActions(instance, {

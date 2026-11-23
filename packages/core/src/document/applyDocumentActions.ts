@@ -82,10 +82,16 @@ function applyThroughEngineOrQueue(
   options: ApplyDocumentActionsOptions,
 ): Promise<ActionsResult> {
   const {actions, resource, transactionId = randomUuid()} = options
-  const routed = applyWithEngine(
-    context.state.get(),
-    normalizeActionsForResource(actions, resource),
-  )
+  let routed
+  try {
+    routed = applyWithEngine(
+      context.state.get(),
+      normalizeActionsForResource(actions, resource),
+      transactionId,
+    )
+  } catch (error) {
+    return Promise.reject(error)
+  }
   if (routed) return Promise.resolve(engineActionsResult(routed, transactionId))
   return _applyDocumentActions(context, {...options, transactionId})
 }

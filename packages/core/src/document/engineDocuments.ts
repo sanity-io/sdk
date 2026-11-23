@@ -20,7 +20,7 @@ import {type ResolveDocument} from '../typegen/resolve'
 import {type Action, type EditDocumentAction} from './actions'
 import {API_VERSION} from './documentConstants'
 import {type DocumentStoreState} from './documentStore'
-import {preserveNumericOperations} from './processActions/shared'
+import {ActionError, preserveNumericOperations} from './processActions/shared'
 import {processMutations} from './processMutations'
 
 // Prototype for `experimental_documentSync`: one `@sanity/document-sync` engine per document
@@ -119,8 +119,45 @@ export function engineForHandle(
   // The engine handles a published document and its draft; liveEdit and release versions stay
   // on the transaction queue.
   if (handle.liveEdit || isReleasePerspective(handle.perspective)) return undefined
+  if (!queueHasLoaded(state, handle.documentId) || queueOwnsDocument(state, handle.documentId))
+    return undefined
   const engine = state.engines[getPublishedId(DocumentId(handle.documentId))]
   return engine?.remote() === undefined ? undefined : engine
+}
+
+/**
+ * Whether the transaction queue could apply an action to the document right now: grants and both
+ * the published and draft documents are loaded. Until then the engine does not serve the document
+ * either, so a write made in that window queues behind the same load in both modes.
+ */
+function queueHasLoaded(state: DocumentStoreState, documentId: string): boolean {
+  const publishedId = getPublishedId(DocumentId(documentId))
+  const draftId = getDraftId(DocumentId(documentId))
+  return (
+    !!state.grants &&
+    state.documentStates[publishedId]?.local !== undefined &&
+    state.documentStates[draftId]?.local !== undefined
+  )
+}
+
+/**
+ * Whether the transaction queue has a transaction for the document (published or draft) that it
+ * has not finished. While it does, the queue owns the document: reads and writes stay there, so
+ * they see its optimistic state and keep their order.
+ */
+function queueOwnsDocument(state: DocumentStoreState, documentId: string): boolean {
+  const publishedId = getPublishedId(DocumentId(documentId))
+  const touches = (action: Action) =>
+    'documentId' in action &&
+    typeof action.documentId === 'string' &&
+    !isReleasePerspective(action.perspective) &&
+    getPublishedId(DocumentId(action.documentId)) === publishedId
+  const unfinished = [
+    ...state.queued,
+    ...state.applied,
+    ...(state.outgoing ? [state.outgoing] : []),
+  ]
+  return unfinished.some((transaction) => transaction.actions.some(touches))
 }
 
 /** The engine's local view for a handle, or `undefined` when the engine does not handle it. */
@@ -153,24 +190,79 @@ function editPatches(engine: DocumentSync, action: EditDocumentAction): PatchOps
   return preserveNumericOperations(before, patches, diffed) as PatchOps[]
 }
 
-type EngineAction = Extract<
-  Action,
-  {type: 'document.edit' | 'document.publish' | 'document.discard'}
->
+const engineActionTypes = [
+  'document.create',
+  'document.edit',
+  'document.publish',
+  'document.unpublish',
+  'document.discard',
+  'document.delete',
+] as const
+type EngineAction = Extract<Action, {type: (typeof engineActionTypes)[number]}>
 
-const isEngineAction = (action: Action): action is EngineAction =>
-  action.type === 'document.edit' ||
-  action.type === 'document.publish' ||
-  action.type === 'document.discard'
+const isEngineAction = (action: Action): action is EngineAction & {documentId: string} =>
+  (engineActionTypes as readonly string[]).includes(action.type) &&
+  typeof (action as {documentId?: unknown}).documentId === 'string'
+
+/** Why the local view rules out a create, delete or unpublish, with the queue's message. */
+function engineActionError(
+  action: EngineAction & {documentId: string},
+  {draft, published}: {draft: unknown; published: unknown},
+): string | undefined {
+  if (action.type === 'document.create' && draft) {
+    return 'A draft of this document already exists. Please use or discard the existing draft before creating a new one.'
+  }
+  if (action.type === 'document.delete' && !published) {
+    return draft
+      ? 'Cannot delete a document without a published version.'
+      : 'The document you are trying to delete does not exist.'
+  }
+  if (action.type === 'document.unpublish' && !published) {
+    return `Cannot unpublish because the document "${action.documentId}" is not currently published.`
+  }
+  return undefined
+}
 
 /**
- * Sends the actions through a document's engine when it can take all of them: edits, publishes
- * and discards of one document the engine handles. Returns the engine, the document's handle and
- * its local view from before the actions, or `undefined` to use the transaction queue.
+ * Sends one action to the engine. Create, delete and unpublish fail as they do on the queue
+ * when the local view does not allow them.
+ */
+function sendToEngine(
+  engine: DocumentSync,
+  action: EngineAction & {documentId: string},
+  transactionId: string,
+): void {
+  const docs = engine.localDocuments() ?? {draft: null, published: null}
+  const message = engineActionError(action, docs)
+  if (message) throw new ActionError({documentId: action.documentId, transactionId, message})
+  if (action.type === 'document.create') {
+    const {_id, _rev, ...base} = docs.published ?? {}
+    engine.create({...base, _type: action.documentType, ...action.initialValue})
+  } else if (action.type === 'document.edit') {
+    const patches = editPatches(engine, action)
+    // An edit that changes nothing sends nothing, as on the transaction queue.
+    if (patches.length) engine.edit(patches)
+  } else {
+    const send = {
+      'document.publish': () => engine.publish(),
+      'document.unpublish': () => engine.unpublish(),
+      'document.discard': () => engine.discard(),
+      'document.delete': () => engine.delete(),
+    }
+    send[action.type]()
+  }
+}
+
+/**
+ * Sends the actions through a document's engine when it can take all of them: creates, edits,
+ * publishes, unpublishes, discards and deletes of one document the engine handles. Returns the
+ * engine, the document's handle and its local view from before the actions, or `undefined` to use
+ * the transaction queue. Each action goes out as its own engine transaction.
  */
 export function applyWithEngine(
   state: DocumentStoreState,
   actions: Action[],
+  transactionId: string,
 ): {engine: DocumentSync; handle: DocumentHandle; previous: ResolveDocument | null} | undefined {
   const [leading] = actions
   if (!leading || !isEngineAction(leading)) return undefined
@@ -182,14 +274,7 @@ export function applyWithEngine(
   const engine = sameDocument ? engineForHandle(state, leading) : undefined
   if (!engine) return undefined
   const previous = engine.local() as ResolveDocument | null
-  for (const action of actions as EngineAction[]) {
-    if (action.type === 'document.publish') engine.publish()
-    else if (action.type === 'document.discard') engine.discard()
-    else {
-      const patches = editPatches(engine, action)
-      // An edit that changes nothing sends nothing, as on the transaction queue.
-      if (patches.length) engine.edit(patches)
-    }
-  }
+  for (const action of actions as (EngineAction & {documentId: string})[])
+    sendToEngine(engine, action, transactionId)
   return {engine, handle: leading, previous}
 }

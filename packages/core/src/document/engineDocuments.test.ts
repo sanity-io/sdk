@@ -5,7 +5,15 @@ import {afterEach, describe, expect, it, vi} from 'vitest'
 
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {createStoreState} from '../store/createStoreState'
-import {discardDocument, editDocument, publishDocument} from './actions'
+import {
+  type Action,
+  createDocument,
+  deleteDocument,
+  discardDocument,
+  editDocument,
+  publishDocument,
+  unpublishDocument,
+} from './actions'
 import {type DocumentStoreState} from './documentStore'
 import {
   applyWithEngine,
@@ -15,8 +23,11 @@ import {
 
 const draft = {_id: 'drafts.a', _type: 'author', _rev: 'r1', name: 'x'} as unknown as SanityDocument
 
-function fakeEngine(ready = true) {
-  let local: SanityDocument | null = draft
+function fakeEngine(
+  ready = true,
+  docs: {draft: SanityDocument | null; published: SanityDocument | null} = {draft, published: null},
+) {
+  let local: SanityDocument | null = docs.draft ?? docs.published
   const calls: string[] = []
   const engine = {
     remote: () => (ready ? {draft, published: null} : undefined),
@@ -27,22 +38,38 @@ function fakeEngine(ready = true) {
     }),
     publish: vi.fn(() => calls.push('publish')),
     discard: vi.fn(() => calls.push('discard')),
+    localDocuments: () =>
+      ready ? {draft: docs.draft ? local : null, published: docs.published} : undefined,
+    create: vi.fn(() => calls.push('create')),
+    delete: vi.fn(() => calls.push('delete')),
+    unpublish: vi.fn(() => calls.push('unpublish')),
   }
   return {engine: engine as unknown as DocumentSync, calls}
 }
 
-const stateWith = (engines: DocumentStoreState['engines']) =>
-  ({engines, documentStates: {}}) as unknown as DocumentStoreState
+/** A store whose queue has loaded grants and document `a`, with nothing unfinished. */
+const stateWith = (
+  engines: DocumentStoreState['engines'],
+  queue: Partial<DocumentStoreState> = {},
+) =>
+  ({
+    engines,
+    grants: {},
+    documentStates: {'a': {id: 'a', local: null}, 'drafts.a': {id: 'drafts.a', local: draft}},
+    queued: [],
+    applied: [],
+    ...queue,
+  }) as unknown as DocumentStoreState
 const handle = {documentId: 'a', documentType: 'author'}
 
 describe('applyWithEngine', () => {
   it('sends edits, publishes and discards of one document to its engine, in order', () => {
     const {engine, calls} = fakeEngine()
-    const routed = applyWithEngine(stateWith({a: engine}), [
-      editDocument(handle, {set: {name: 'y'}}),
-      publishDocument(handle),
-      discardDocument(handle),
-    ])
+    const routed = applyWithEngine(
+      stateWith({a: engine}),
+      [editDocument(handle, {set: {name: 'y'}}), publishDocument(handle), discardDocument(handle)],
+      't',
+    )
     expect(calls).toEqual(['edit', 'publish', 'discard'])
     // The local view from before the actions, for `ActionsResult.previous`.
     expect(routed?.previous).toEqual(draft)
@@ -50,27 +77,27 @@ describe('applyWithEngine', () => {
 
   it('re-derives an edit as the queue does, so a string set goes out as a diffMatchPatch', () => {
     const {engine} = fakeEngine()
-    applyWithEngine(stateWith({a: engine}), [editDocument(handle, {set: {name: 'xy'}})])
+    applyWithEngine(stateWith({a: engine}), [editDocument(handle, {set: {name: 'xy'}})], 't')
     expect(engine.edit).toHaveBeenCalledWith([{diffMatchPatch: {name: '@@ -1 +1,2 @@\n x\n+y\n'}}])
   })
 
   it('sends the patches as given with preserveOperations', () => {
     const {engine} = fakeEngine()
     const action = editDocument(handle, {set: {name: 'xy'}}, {preserveOperations: true})
-    applyWithEngine(stateWith({a: engine}), [action])
+    applyWithEngine(stateWith({a: engine}), [action], 't')
     expect(engine.edit).toHaveBeenCalledWith([{set: {name: 'xy'}}])
   })
 
   it('sends nothing for an edit that changes nothing', () => {
     const {engine} = fakeEngine()
-    applyWithEngine(stateWith({a: engine}), [editDocument(handle, {set: {name: 'x'}})])
+    applyWithEngine(stateWith({a: engine}), [editDocument(handle, {set: {name: 'x'}})], 't')
     expect(engine.edit).not.toHaveBeenCalled()
   })
 
   it('finds the engine from a draft id', () => {
     const {engine} = fakeEngine()
     const actions = [editDocument({...handle, documentId: 'drafts.a'}, {set: {name: 'y'}})]
-    expect(applyWithEngine(stateWith({a: engine}), actions)?.engine).toBe(engine)
+    expect(applyWithEngine(stateWith({a: engine}), actions, 't')?.engine).toBe(engine)
   })
 
   it.each([
@@ -91,14 +118,84 @@ describe('applyWithEngine', () => {
     ],
   ])('leaves %s to the transaction queue', (_name, engines, actions) => {
     const {engine} = fakeEngine()
-    expect(applyWithEngine(stateWith(engines ?? {a: engine}), actions)).toBeUndefined()
+    expect(applyWithEngine(stateWith(engines ?? {a: engine}), actions, 't')).toBeUndefined()
     expect(engine.edit).not.toHaveBeenCalled()
   })
 
   it('leaves a document to the transaction queue until its engine has a snapshot', () => {
     const {engine} = fakeEngine(false)
     const actions = [editDocument(handle, {set: {name: 'y'}})]
-    expect(applyWithEngine(stateWith({a: engine}), actions)).toBeUndefined()
+    expect(applyWithEngine(stateWith({a: engine}), actions, 't')).toBeUndefined()
+  })
+})
+
+describe('create, delete and unpublish', () => {
+  const published = {
+    _id: 'a',
+    _type: 'author',
+    _rev: 'p1',
+    name: 'pub',
+  } as unknown as SanityDocument
+
+  it('creates the draft from the published document plus the initial value', () => {
+    const {engine} = fakeEngine(true, {draft: null, published})
+    applyWithEngine(stateWith({a: engine}), [createDocument(handle, {name: 'new'})], 't')
+    expect(engine.create).toHaveBeenCalledWith({_type: 'author', name: 'new'})
+  })
+
+  it('sends delete and unpublish of a published document to the engine', () => {
+    const {engine, calls} = fakeEngine(true, {draft, published})
+    const actions = [unpublishDocument(handle), deleteDocument(handle)]
+    applyWithEngine(stateWith({a: engine}), actions, 't')
+    expect(calls).toEqual(['unpublish', 'delete'])
+  })
+
+  it.each([
+    ['create with a draft', {draft, published: null}, createDocument(handle), /draft of this/],
+    ['delete of a draft only', {draft, published: null}, deleteDocument(handle), /without a pub/],
+    ['delete of nothing', {draft: null, published: null}, deleteDocument(handle), /not exist/],
+    ['unpublish of a draft', {draft, published: null}, unpublishDocument(handle), /not currently/],
+  ])('fails %s as the queue does', (_name, docs, action, message) => {
+    const {engine, calls} = fakeEngine(true, docs)
+    expect(() => applyWithEngine(stateWith({a: engine}), [action], 't')).toThrow(message)
+    expect(calls).toEqual([])
+  })
+})
+
+describe('queue ownership', () => {
+  const queued = (...actions: Action[]) => ({queued: [{transactionId: 't', actions}]})
+
+  it.each([
+    ['queued', queued(createDocument({documentId: 'drafts.a', documentType: 'author'}))],
+    ['applied', {applied: [{transactionId: 't', actions: [unpublishDocument(handle)]}]}],
+    ['outgoing', {outgoing: {transactionId: 't', actions: [publishDocument(handle)]}}],
+  ])('leaves a document to the queue while it has a %s transaction for it', (_name, queue) => {
+    const {engine} = fakeEngine()
+    const state = stateWith({a: engine}, queue as Partial<DocumentStoreState>)
+    expect(engineLocalDocument(state, handle)).toBeUndefined()
+    expect(applyWithEngine(state, [editDocument(handle, {set: {name: 'y'}})], 't')).toBeUndefined()
+    expect(engine.edit).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['another document', queued(editDocument({documentId: 'b', documentType: 'author'}, {}))],
+    [
+      'a release version of it',
+      queued(editDocument({...handle, perspective: {releaseName: 'r'}}, {set: {n: 1}})),
+    ],
+  ])('keeps the engine when the queue only has %s', (_name, queue) => {
+    const {engine} = fakeEngine()
+    expect(engineLocalDocument(stateWith({a: engine}, queue), handle)).toEqual(draft)
+  })
+
+  it.each([
+    ['grants', {grants: undefined}],
+    ['the draft', {documentStates: {a: {id: 'a', local: null}}}],
+    ['the published document', {documentStates: {'drafts.a': {id: 'drafts.a', local: draft}}}],
+  ])('leaves a document to the queue until the queue has loaded %s', (_name, queue) => {
+    const {engine} = fakeEngine()
+    const state = stateWith({a: engine}, queue as Partial<DocumentStoreState>)
+    expect(engineLocalDocument(state, handle)).toBeUndefined()
   })
 })
 
