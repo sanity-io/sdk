@@ -2,7 +2,11 @@ import {type SanityClient} from '@sanity/client'
 import {firstValueFrom, of} from 'rxjs'
 import {describe, expect, it, vi} from 'vitest'
 
-import {fetchDocumentsHistoryEvents, type RawDocumentHistoryEvent} from './historyClient'
+import {
+  fetchDocumentsHistoryEvents,
+  fetchDocumentTransactions,
+  type RawDocumentHistoryEvent,
+} from './historyClient'
 
 function createMockClient(
   requestImpl: (options: {url: string; query?: Record<string, string>; tag?: string}) => unknown,
@@ -110,5 +114,79 @@ describe('fetchDocumentsHistoryEvents', () => {
       tag: 'history.events',
     })
     expect(result).toEqual({eventsByVariant: {}, nextCursor: ''})
+  })
+})
+
+describe('fetchDocumentTransactions', () => {
+  const makeTx = (id: string) => ({
+    id,
+    author: 'user-1',
+    timestamp: '2025-05-06T10:00:00Z',
+    documentIDs: ['drafts.doc-1'],
+    effects: {
+      'drafts.doc-1': {apply: [1, 'a'], revert: [1, 'b']},
+    },
+  })
+
+  it('parses NDJSON lines and filters out fromTransaction when range is distinct', async () => {
+    const ndjson = [makeTx('rev-0'), makeTx('rev-1'), makeTx('rev-2')]
+      .map((item) => JSON.stringify(item))
+      .join('\n')
+
+    const {client, request} = createMockClient(() => `${ndjson}\n`)
+
+    const result = await firstValueFrom(
+      fetchDocumentTransactions(client, {
+        variantId: 'drafts.doc-1',
+        fromTransaction: 'rev-0',
+      }),
+    )
+
+    expect(request).toHaveBeenCalledWith({
+      url: '/data/history/production/transactions/drafts.doc-1',
+      query: {
+        excludeContent: 'true',
+        includeIdentifiedDocumentsOnly: 'true',
+        effectFormat: 'mendoza',
+        limit: '50',
+        fromTransaction: 'rev-0',
+      },
+      tag: 'history.transactions',
+    })
+    expect(result.map((tx) => tx.id)).toEqual(['rev-1', 'rev-2'])
+  })
+
+  it('paginates 50-item chunks until a partial page or toTransaction is reached', async () => {
+    const page1 = Array.from({length: 50}, (_, i) => makeTx(`rev-${i}`))
+    const page2 = [makeTx('rev-49'), makeTx('rev-50')]
+
+    let call = 0
+    const {client, request} = createMockClient(() => {
+      call += 1
+      const items = call === 1 ? page1 : page2
+      return items.map((item) => JSON.stringify(item)).join('\n')
+    })
+
+    const result = await firstValueFrom(
+      fetchDocumentTransactions(client, {
+        variantId: 'drafts.doc-1',
+        toTransaction: 'rev-50',
+      }),
+    )
+
+    expect(request).toHaveBeenCalledTimes(2)
+    expect(result).toHaveLength(51)
+    expect(result[0]?.id).toBe('rev-0')
+    expect(result[50]?.id).toBe('rev-50')
+  })
+
+  it('throws when an NDJSON record contains an error payload', async () => {
+    const {client} = createMockClient(() =>
+      JSON.stringify({error: {description: 'Retention expired'}}),
+    )
+
+    await expect(
+      firstValueFrom(fetchDocumentTransactions(client, {variantId: 'drafts.doc-1'})),
+    ).rejects.toThrow('Retention expired')
   })
 })

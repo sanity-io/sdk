@@ -204,6 +204,10 @@ export type {
 } from '../favorites/favorites'
 export {favorites, setFavorite} from '../favorites/favorites'
 export {
+  documentHistoryEventEdits,
+  isExpandableHistoryEvent,
+} from '../history/documentHistoryEventEdits'
+export {
   getDocumentsHistoryErrorState,
   getDocumentsHistoryHasMoreState,
   getDocumentsHistoryState,
@@ -219,12 +223,14 @@ export {
   type DocumentHistoryEditedEvent,
   type DocumentHistoryEditTransaction,
   type DocumentHistoryEvent,
+  type DocumentHistoryEventEditsOptions,
   type DocumentHistoryEventType,
   type DocumentHistoryPublishCause,
   type DocumentHistoryPublishedEvent,
   type DocumentHistoryUnpublishedEvent,
   type DocumentsHistoryOptions,
   type DocumentVariantType,
+  type ExpandableDocumentHistoryEvent,
   type ResolveDocumentsHistoryOptions,
 } from '../history/types'
 export {installation, installations} from '../installations/installations'

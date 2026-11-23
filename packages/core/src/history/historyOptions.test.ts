@@ -5,10 +5,12 @@ import {
   DEFAULT_HISTORY_LIMIT,
   getDocumentsHistoryOptionsKey,
   getDocumentVariantType,
+  getHistoryResourceKey,
   MAX_HISTORY_DOCUMENTS,
   parseDocumentsHistoryOptionsKey,
   resolveDocumentsHistoryRequest,
   resolveHistoryDocumentId,
+  resolveHistoryResource,
 } from './historyOptions'
 
 describe('resolveHistoryDocumentId', () => {
@@ -251,5 +253,47 @@ describe('getDocumentsHistoryOptionsKey & parseDocumentsHistoryOptionsKey', () =
       documents: [docA, docB],
       limit: 25,
     })
+  })
+})
+
+describe('resolveHistoryResource & getHistoryResourceKey', () => {
+  it('resolves explicit resource, projectId/dataset options, and instance config defaults', () => {
+    const instance = createSanityInstance({projectId: 'inst-proj', dataset: 'production'})
+
+    expect(resolveHistoryResource(instance, {resource: {canvasId: 'c-1'}})).toEqual({
+      canvasId: 'c-1',
+    })
+
+    expect(resolveHistoryResource(instance, {projectId: 'opt-proj', dataset: 'staging'})).toEqual({
+      projectId: 'opt-proj',
+      dataset: 'staging',
+    })
+
+    expect(resolveHistoryResource(instance)).toEqual({
+      projectId: 'inst-proj',
+      dataset: 'production',
+    })
+
+    const resourceInstance = createSanityInstance({
+      resource: {mediaLibraryId: 'ml-1'},
+    })
+    expect(resolveHistoryResource(resourceInstance)).toEqual({
+      mediaLibraryId: 'ml-1',
+    })
+
+    const bare = createSanityInstance()
+    expect(() => resolveHistoryResource(bare)).toThrow(
+      'This API requires a project ID and dataset configured.',
+    )
+
+    instance.dispose()
+    resourceInstance.dispose()
+    bare.dispose()
+  })
+
+  it('produces deterministic cache keys for dataset, media-library, and canvas resources', () => {
+    expect(getHistoryResourceKey({projectId: 'p1', dataset: 'prod'})).toBe('p1.prod')
+    expect(getHistoryResourceKey({mediaLibraryId: 'ml-1'})).toBe('media-library:ml-1')
+    expect(getHistoryResourceKey({canvasId: 'c-1'})).toBe('canvas:c-1')
   })
 })
