@@ -389,6 +389,30 @@ export function transitionAppliedTransactionsToOutgoing(
   }
 }
 
+/**
+ * Records transactions sent outside the queue (by a document-sync engine) as this client's own,
+ * so `remote-patches` events label their echoes `local`.
+ */
+export function addOwnTransactionIds(
+  prev: SyncTransactionState,
+  documentIds: string[],
+  transactionIds: string[],
+): SyncTransactionState {
+  const documentStates = {...prev.documentStates}
+  for (const documentId of documentIds) {
+    const documentState = documentStates[documentId]
+    if (!documentState) continue
+    documentStates[documentId] = {
+      ...documentState,
+      recentOwnTransactionIds: [
+        ...(documentState.recentOwnTransactionIds ?? []),
+        ...transactionIds,
+      ].slice(-MAX_RECENT_OWN_TRANSACTION_IDS),
+    }
+  }
+  return {...prev, documentStates}
+}
+
 export function cleanupOutgoingTransaction(prev: SyncTransactionState): SyncTransactionState {
   const {outgoing} = prev
   if (!outgoing) return prev

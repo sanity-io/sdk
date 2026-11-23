@@ -58,6 +58,7 @@ import {
 import {
   engineForHandle,
   engineLocalDocument,
+  type EngineTransaction,
   subscribeToSubscriptionsAndRunEngines,
 } from './engineDocuments'
 import {
@@ -116,6 +117,11 @@ export interface DocumentStoreState {
   engines: {[TPublishedId in string]?: DocumentSync}
   /** Bumped on every engine change, so selectors that read an engine run again. */
   engineChanges: number
+  /**
+   * The SDK action behind each engine transaction, by the engine's transaction id, for the
+   * document events. Not reactive: entries are added and removed in place.
+   */
+  engineTransactions: Map<string, EngineTransaction>
 }
 
 export const getStoreError = ({error, aclError}: DocumentStoreState): unknown => error ?? aclError
@@ -176,6 +182,7 @@ export const documentStore = defineStore<DocumentStoreState, BoundResourceKey>({
     events: new Subject(),
     engines: {},
     engineChanges: 0,
+    engineTransactions: new Map(),
   }),
   initialize(context) {
     const {sharedListener} = context.state.get()

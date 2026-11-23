@@ -1,4 +1,4 @@
-import {DocumentId, getDraftId} from '@sanity/id-utils'
+import {DocumentId, getDraftId, getPublishedId} from '@sanity/id-utils'
 import {distinctUntilChanged, filter, first, firstValueFrom, map, race} from 'rxjs'
 
 import {type DocumentResource} from '../config/sanityConfig'
@@ -11,8 +11,14 @@ import {type Action} from './actions'
 import {documentStore, type DocumentStoreState, getStoreError} from './documentStore'
 import {applyWithEngine} from './engineDocuments'
 import {type DocumentTransactionSubmissionResult} from './events'
+import {ActionError} from './processActions/shared'
 import {type DocumentSet} from './processMutations'
-import {type AppliedTransaction, type QueuedTransaction, queueTransaction} from './reducers'
+import {
+  addOwnTransactionIds,
+  type AppliedTransaction,
+  type QueuedTransaction,
+  queueTransaction,
+} from './reducers'
 import {normalizeActionsForResource} from './resourceRules'
 
 /** @beta */
@@ -90,9 +96,26 @@ function applyThroughEngineOrQueue(
       transactionId,
     )
   } catch (error) {
+    // As on the queue, an action the store's rules reject is reported as an `error` event too.
+    if (error instanceof ActionError) {
+      context.state.get().events.next({
+        type: 'error',
+        message: error.message,
+        documentId: error.documentId,
+        transactionId: error.transactionId,
+        error,
+      })
+    }
     return Promise.reject(error)
   }
-  if (routed) return Promise.resolve(engineActionsResult(routed, transactionId))
+  if (routed) {
+    const {documentId} = routed.handle
+    const ids = [getDraftId(DocumentId(documentId)), getPublishedId(DocumentId(documentId))]
+    context.state.set('addEngineTransactionIds', (prev) =>
+      addOwnTransactionIds(prev, ids, routed.transactionIds),
+    )
+    return Promise.resolve(engineActionsResult(routed, transactionId))
+  }
   return _applyDocumentActions(context, {...options, transactionId})
 }
 

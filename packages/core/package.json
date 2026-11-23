@@ -92,7 +92,7 @@
     "@sanity/comlink": "catalog:",
     "@sanity/diff-match-patch": "^3.2.1",
     "@sanity/diff-patch": "^7.0.0",
-    "@sanity/document-sync": "https://pkg.pr.new/sanity-labs/document-sync/@sanity/document-sync@191ec2c",
+    "@sanity/document-sync": "https://pkg.pr.new/sanity-labs/document-sync/@sanity/document-sync@95a59b7",
     "@sanity/id-utils": "^1.1.0",
     "@sanity/image-url": "^2.2.0",
     "@sanity/json-match": "^1.0.5",

@@ -3,6 +3,7 @@ import {diffValue} from '@sanity/diff-patch'
 import {
   createDocumentSync,
   type DocumentSync,
+  type DroppedEdit,
   type ListenEvent,
   type PatchOps,
   type Transport,
@@ -20,12 +21,28 @@ import {type ResolveDocument} from '../typegen/resolve'
 import {type Action, type EditDocumentAction} from './actions'
 import {API_VERSION} from './documentConstants'
 import {type DocumentStoreState} from './documentStore'
+import {type DocumentTransactionSubmissionResult, getDocumentEvents} from './events'
 import {processActions} from './processActions/processActions'
 import {preserveNumericOperations} from './processActions/shared'
 import {type DocumentSet, processMutations} from './processMutations'
+import {type HttpAction, type OutgoingTransaction} from './reducers'
+import {classifySubmissionError} from './submissionErrors'
 
 // Prototype for `experimental_documentSync`: one `@sanity/document-sync` engine per document
 // (published plus draft), kept in `DocumentStoreState.engines` by published id.
+
+/** An engine transaction as the SDK sent it, for the document events. */
+export interface EngineTransaction {
+  /** The SDK action the engine transaction carries. */
+  action: Action
+  /** The transaction id the caller passed to `applyDocumentActions`. */
+  callerTransactionId: string
+  /** The engine's local documents before and after the action. */
+  previous: DocumentSet
+  working: DocumentSet
+  /** Submissions that failed and will be retried, for `submission-failed`'s `attempt`. */
+  failedAttempts: number
+}
 
 /**
  * The engine's transport over the store's own connections: snapshots from `fetchDocument`,
@@ -51,13 +68,117 @@ function createStoreTransport(
     },
     submit: async ({transactionId, actions}) => {
       const client: SanityClient = await firstValueFrom(client$)
-      await client.action(actions as ClientAction[], {
-        transactionId,
-        skipCrossDatasetReferenceValidation: true,
-        tag: 'document.action',
-      })
+      let result
+      try {
+        result = await client.action(actions as ClientAction[], {
+          transactionId,
+          skipCrossDatasetReferenceValidation: true,
+          tag: 'document.action',
+        })
+      } catch (error) {
+        emitSubmitFailed(state.get(), transactionId, actions as HttpAction[], error)
+        throw error
+      }
+      emitAccepted(state.get(), transactionId, actions as HttpAction[], result)
     },
   }
+}
+
+/** The engine transaction as the queue's `OutgoingTransaction`, the shape the events carry. */
+function engineOutgoing(
+  {action, callerTransactionId, previous, working}: EngineTransaction,
+  transactionId: string,
+  outgoingActions: HttpAction[],
+): OutgoingTransaction {
+  return {
+    transactionId,
+    actions: [action],
+    // The caller's id, so code that waits on its own transaction id finds this one.
+    batchedTransactionIds: [callerTransactionId],
+    disableBatching: false,
+    previous,
+    working,
+    base: previous,
+    previousRevs: Object.fromEntries(Object.entries(previous).map(([id, doc]) => [id, doc?._rev])),
+    timestamp: new Date().toISOString(),
+    outgoingActions,
+    outgoingMutations: [],
+  }
+}
+
+/**
+ * Emits the per-document events and `accepted` for an engine transaction the server accepted.
+ * @internal
+ */
+export function emitAccepted(
+  {engineTransactions, events}: DocumentStoreState,
+  transactionId: string,
+  outgoingActions: HttpAction[],
+  result: DocumentTransactionSubmissionResult,
+): void {
+  const transaction = engineTransactions.get(transactionId)
+  if (!transaction) return
+  engineTransactions.delete(transactionId)
+  const outgoing = engineOutgoing(transaction, transactionId, outgoingActions)
+  for (const event of getDocumentEvents(outgoing)) events.next(event)
+  events.next({type: 'accepted', outgoing, result})
+}
+
+const errorMessage = (error: unknown) => (error instanceof Error ? error.message : 'Request failed')
+
+/**
+ * Emits the events for a failed submission, classified as the queue does: a retry is a
+ * `submission-failed`, and a resend of a transaction that already landed is an ack. A rejection
+ * is reported when the engine drops the transaction (`emitDropped`).
+ * @internal
+ */
+export function emitSubmitFailed(
+  state: DocumentStoreState,
+  transactionId: string,
+  outgoingActions: HttpAction[],
+  error: unknown,
+): void {
+  const transaction = state.engineTransactions.get(transactionId)
+  if (!transaction) return
+  const kind = classifySubmissionError(error)
+  if (kind === 'accepted') {
+    emitAccepted(state, transactionId, outgoingActions, {
+      transactionId,
+      documentIds: [],
+      results: [],
+    })
+  } else if (kind === 'retry') {
+    transaction.failedAttempts++
+    state.events.next({
+      type: 'submission-failed',
+      message: errorMessage(error),
+      error,
+      outgoing: engineOutgoing(transaction, transactionId, outgoingActions),
+      attempt: transaction.failedAttempts,
+    })
+  }
+}
+
+/**
+ * Emits `reverted` for an engine transaction the server rejected and the engine dropped.
+ * @internal
+ */
+export function emitDropped(
+  {engineTransactions, events}: DocumentStoreState,
+  dropped: DroppedEdit,
+): void {
+  if (dropped.reason !== 'rejected') return
+  const {transactionId, actions} = dropped.transaction
+  const transaction = engineTransactions.get(transactionId)
+  if (!transaction) return
+  engineTransactions.delete(transactionId)
+  const outgoing = engineOutgoing(transaction, transactionId, actions as HttpAction[])
+  events.next({
+    type: 'reverted',
+    message: errorMessage(dropped.error),
+    error: dropped.error,
+    outgoing,
+  })
 }
 
 /** Published ids of the documents with subscribers, leaving out release versions. */
@@ -92,8 +213,10 @@ export function subscribeToSubscriptionsAndRunEngines(
         const unsubscribe = sync.subscribe(() => {
           state.set('engineChanged', (prev) => ({engineChanges: prev.engineChanges + 1}))
         })
+        const unsubscribeDropped = sync.onDropped((dropped) => emitDropped(state.get(), dropped))
         cleanups.set(id, () => {
           unsubscribe()
+          unsubscribeDropped()
           sync.dispose()
         })
         state.set('addEngine', (prev) => ({engines: {...prev.engines, [id]: sync}}))
@@ -206,15 +329,18 @@ const isEngineAction = (action: Action): action is EngineAction & {documentId: s
   typeof (action as {documentId?: unknown}).documentId === 'string'
 
 /** Sends one action to the engine, already checked by `checkAsQueue`. */
-function sendToEngine(engine: DocumentSync, action: EngineAction & {documentId: string}): void {
+function sendToEngine(
+  engine: DocumentSync,
+  action: EngineAction & {documentId: string},
+): string | undefined {
   const docs = engine.localDocuments() ?? {draft: null, published: null}
   if (action.type === 'document.create') {
     const {_id, _rev, ...base} = docs.published ?? {}
-    engine.create({...base, _type: action.documentType, ...action.initialValue})
+    return engine.create({...base, _type: action.documentType, ...action.initialValue})
   } else if (action.type === 'document.edit') {
     const patches = editPatches(engine, action)
     // An edit that changes nothing sends nothing, as on the transaction queue.
-    if (patches.length) engine.edit(patches)
+    return patches.length ? engine.edit(patches) : undefined
   } else {
     const send = {
       'document.publish': () => engine.publish(),
@@ -222,8 +348,17 @@ function sendToEngine(engine: DocumentSync, action: EngineAction & {documentId: 
       'document.discard': () => engine.discard(),
       'document.delete': () => engine.delete(),
     }
-    send[action.type]()
+    return send[action.type]()
   }
+}
+
+/** The engine's local draft and published documents, by id. */
+function localDocumentSet(engine: DocumentSync, documentId: string): DocumentSet {
+  const {draft, published} = engine.localDocuments() ?? {draft: null, published: null}
+  return {
+    [getDraftId(DocumentId(documentId))]: draft,
+    [getPublishedId(DocumentId(documentId))]: published,
+  } as DocumentSet
 }
 
 /**
@@ -239,11 +374,7 @@ function checkAsQueue(
 ): void {
   if (!grants) return
   const [leading] = actions as (EngineAction & {documentId: string})[]
-  const {draft, published} = engine.localDocuments() ?? {draft: null, published: null}
-  const documents = {
-    [getDraftId(DocumentId(leading!.documentId))]: draft,
-    [getPublishedId(DocumentId(leading!.documentId))]: published,
-  } as DocumentSet
+  const documents = localDocumentSet(engine, leading!.documentId)
   processActions({
     actions,
     transactionId,
@@ -265,7 +396,15 @@ export function applyWithEngine(
   state: DocumentStoreState,
   actions: Action[],
   transactionId: string,
-): {engine: DocumentSync; handle: DocumentHandle; previous: ResolveDocument | null} | undefined {
+):
+  | {
+      engine: DocumentSync
+      handle: DocumentHandle
+      previous: ResolveDocument | null
+      /** The ids of the engine transactions the actions went out as. */
+      transactionIds: string[]
+    }
+  | undefined {
   const [leading] = actions
   if (!leading || !isEngineAction(leading)) return undefined
   const publishedId = getPublishedId(DocumentId(leading.documentId))
@@ -277,7 +416,19 @@ export function applyWithEngine(
   if (!engine) return undefined
   const previous = engine.local() as ResolveDocument | null
   checkAsQueue(state, engine, actions, transactionId)
-  for (const action of actions as (EngineAction & {documentId: string})[])
-    sendToEngine(engine, action)
-  return {engine, handle: leading, previous}
+  const transactionIds: string[] = []
+  for (const action of actions as (EngineAction & {documentId: string})[]) {
+    const before = localDocumentSet(engine, action.documentId)
+    const engineTransactionId = sendToEngine(engine, action)
+    if (!engineTransactionId) continue
+    transactionIds.push(engineTransactionId)
+    state.engineTransactions.set(engineTransactionId, {
+      action,
+      callerTransactionId: transactionId,
+      failedAttempts: 0,
+      previous: before,
+      working: localDocumentSet(engine, action.documentId),
+    })
+  }
+  return {engine, handle: leading, previous, transactionIds}
 }

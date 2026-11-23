@@ -19,7 +19,15 @@ vi.mock('../store/createActionBinder', async (importOriginal) => ({
 
 type TestState = Pick<
   DocumentStoreState,
-  'documentStates' | 'queued' | 'applied' | 'outgoing' | 'error' | 'events' | 'engines' | 'grants'
+  | 'documentStates'
+  | 'queued'
+  | 'applied'
+  | 'outgoing'
+  | 'error'
+  | 'events'
+  | 'engines'
+  | 'grants'
+  | 'engineTransactions'
 >
 
 const exampleDoc: SanityDocument = {
@@ -46,6 +54,7 @@ describe('applyDocumentActions', () => {
       error: undefined,
       events: eventsSubject,
       engines: {},
+      engineTransactions: new Map(),
     }
     state = createStoreState(initialState)
     instance = createSanityInstance({projectId: 'p', dataset: 'd'})
@@ -248,13 +257,17 @@ describe('applyDocumentActions', () => {
     const [queuedAction] = queued!.actions
     expect(queuedAction).toMatchObject({type: 'document.edit', liveEdit: true})
   })
-  it('hands edits of a document with a ready engine to the engine instead of the queue', async () => {
+  /** A loaded document `doc1` served by a fake engine whose edits go out as `txn-engine`. */
+  function engineServes() {
     let local: SanityDocument = {...exampleDoc, _id: 'drafts.doc1'}
     let resolveSubmitted!: () => void
     const engine = {
       remote: () => ({draft: local, published: null}),
       local: () => local,
-      edit: vi.fn(() => (local = {...local, _rev: 'txn-engine'})),
+      edit: vi.fn(() => {
+        local = {...local, _rev: 'txn-engine'}
+        return 'txn-engine'
+      }),
       localDocuments: () => ({draft: local, published: null}),
       whenSubmitted: () => new Promise<void>((resolve) => (resolveSubmitted = resolve)),
     }
@@ -270,6 +283,11 @@ describe('applyDocumentActions', () => {
     })
     state.set('addEngine', {engines: {doc1: engine as unknown as DocumentSync}})
 
+    return {engine, resolveSubmitted: () => resolveSubmitted()}
+  }
+
+  it('hands edits of a document with a ready engine to the engine instead of the queue', async () => {
+    const {engine, resolveSubmitted} = engineServes()
     const result = await applyDocumentActions(instance, {
       actions: [
         {
@@ -293,5 +311,36 @@ describe('applyDocumentActions', () => {
     const submitted = result.submitted()
     resolveSubmitted()
     await expect(submitted).resolves.toEqual({transactionId: 'txn-caller'})
+  })
+
+  it('records the engine transaction as its own, so its echo is labelled local', async () => {
+    engineServes()
+    await applyDocumentActions(instance, {
+      actions: [
+        {
+          type: 'document.edit',
+          documentId: 'doc1',
+          documentType: 'author',
+          patches: [{set: {name: 'y'}}],
+        },
+      ],
+      transactionId: 'txn-caller',
+    })
+    expect(state.get().documentStates['drafts.doc1']?.recentOwnTransactionIds).toEqual([
+      'txn-engine',
+    ])
+  })
+
+  it('emits an error event and rejects when the engine path rejects an action', async () => {
+    engineServes()
+    const events: DocumentEvent[] = []
+    eventsSubject.subscribe((event) => events.push(event))
+    await expect(
+      applyDocumentActions(instance, {
+        actions: [{type: 'document.create', documentId: 'doc1', documentType: 'author'}],
+        transactionId: 'txn-caller',
+      }),
+    ).rejects.toThrow(/already exists/)
+    expect(events).toMatchObject([{type: 'error', documentId: 'doc1', transactionId: 'txn-caller'}])
   })
 })

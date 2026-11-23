@@ -1,3 +1,4 @@
+import {ClientError, ServerError} from '@sanity/client'
 import {type DocumentSync} from '@sanity/document-sync'
 import {type SanityDocument} from '@sanity/types'
 import {of, Subject} from 'rxjs'
@@ -17,9 +18,13 @@ import {
 import {type DocumentStoreState} from './documentStore'
 import {
   applyWithEngine,
+  emitAccepted,
+  emitDropped,
+  emitSubmitFailed,
   engineLocalDocument,
   subscribeToSubscriptionsAndRunEngines,
 } from './engineDocuments'
+import {type DocumentEvent} from './events'
 import {createGrantsLookup, type DatasetAcl} from './permissions'
 import {PermissionActionError} from './processActions/shared'
 
@@ -42,14 +47,15 @@ function fakeEngine(
     edit: vi.fn(() => {
       calls.push('edit')
       local = {...draft, name: 'y'}
+      return 'e-edit'
     }),
-    publish: vi.fn(() => calls.push('publish')),
-    discard: vi.fn(() => calls.push('discard')),
+    publish: vi.fn(() => (calls.push('publish'), 'e-publish')),
+    discard: vi.fn(() => (calls.push('discard'), 'e-discard')),
     localDocuments: () =>
       ready ? {draft: docs.draft ? local : null, published: docs.published} : undefined,
-    create: vi.fn(() => calls.push('create')),
-    delete: vi.fn(() => calls.push('delete')),
-    unpublish: vi.fn(() => calls.push('unpublish')),
+    create: vi.fn(() => (calls.push('create'), 'e-create')),
+    delete: vi.fn(() => (calls.push('delete'), 'e-delete')),
+    unpublish: vi.fn(() => (calls.push('unpublish'), 'e-unpublish')),
   }
   return {engine: engine as unknown as DocumentSync, calls}
 }
@@ -65,6 +71,8 @@ const stateWith = (
     documentStates: {'a': {id: 'a', local: null}, 'drafts.a': {id: 'drafts.a', local: draft}},
     queued: [],
     applied: [],
+    engineTransactions: new Map(),
+    events: new Subject(),
     ...queue,
   }) as unknown as DocumentStoreState
 const handle = {documentId: 'a', documentType: 'author'}
@@ -248,6 +256,77 @@ describe('queue ownership', () => {
     const {engine} = fakeEngine()
     const state = stateWith({a: engine}, queue as Partial<DocumentStoreState>)
     expect(engineLocalDocument(state, handle)).toBeUndefined()
+  })
+})
+
+describe('document events', () => {
+  const editAction = editDocument(handle, {set: {name: 'y'}})
+  const httpEdit = [
+    {actionType: 'sanity.action.document.edit', draftId: 'drafts.a', publishedId: 'a'},
+  ]
+
+  function sent() {
+    const {engine} = fakeEngine()
+    const state = stateWith({a: engine})
+    const events: DocumentEvent[] = []
+    state.events.subscribe((event) => events.push(event))
+    const routed = applyWithEngine(state, [editAction], 'caller')
+    return {state, events, routed}
+  }
+
+  it('records each engine transaction with the SDK action and the caller id', () => {
+    const {state, routed} = sent()
+    expect(routed?.transactionIds).toEqual(['e-edit'])
+    expect(state.engineTransactions.get('e-edit')).toMatchObject({
+      action: editAction,
+      callerTransactionId: 'caller',
+      previous: {'drafts.a': draft, 'a': null},
+      working: {'drafts.a': {name: 'y'}},
+    })
+  })
+
+  it('emits the per-document event and accepted once the server accepts it', () => {
+    const {state, events} = sent()
+    emitAccepted(state, 'e-edit', httpEdit as never, {transactionId: 'e-edit'} as never)
+    expect(events.map((event) => event.type)).toEqual(['edited', 'accepted'])
+    expect(events[0]).toMatchObject({
+      documentId: 'a',
+      outgoing: {transactionId: 'e-edit', batchedTransactionIds: ['caller'], actions: [editAction]},
+    })
+    expect(state.engineTransactions.has('e-edit')).toBe(false)
+  })
+
+  it('emits submission-failed with a growing attempt count for a retried submission', () => {
+    const {state, events} = sent()
+    const unavailable = new ServerError({statusCode: 503, headers: {}, body: {}})
+    emitSubmitFailed(state, 'e-edit', httpEdit as never, unavailable)
+    emitSubmitFailed(state, 'e-edit', httpEdit as never, unavailable)
+    expect(events).toMatchObject([
+      {type: 'submission-failed', attempt: 1},
+      {type: 'submission-failed', attempt: 2},
+    ])
+  })
+
+  it('treats a resend of a transaction that already landed as accepted', () => {
+    const {state, events} = sent()
+    const exists = new ClientError({
+      statusCode: 409,
+      headers: {},
+      body: {error: {type: 'transactionAlreadyExistsError', description: 'exists'}},
+    })
+    emitSubmitFailed(state, 'e-edit', httpEdit as never, exists)
+    expect(events.map((event) => event.type)).toEqual(['edited', 'accepted'])
+  })
+
+  it('emits reverted when the engine drops a rejected transaction, and nothing for a no-op', () => {
+    const {state, events} = sent()
+    const transaction = {transactionId: 'e-edit', actions: httpEdit, submitted: true}
+    emitDropped(state, {transaction, reason: 'no-op', noOps: []} as never)
+    expect(events).toEqual([])
+    emitDropped(state, {transaction, reason: 'rejected', error: new Error('no')} as never)
+    expect(events).toMatchObject([
+      {type: 'reverted', message: 'no', outgoing: {batchedTransactionIds: ['caller']}},
+    ])
   })
 })
 
