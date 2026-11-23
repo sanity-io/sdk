@@ -108,6 +108,12 @@ export interface AuthStoreState {
    * settles, so clients hold requests instead of sending the outgoing token.
    */
   pendingCredential?: Promise<ClientAuth>
+  /**
+   * The token `authState.currentUser` was fetched with. After a token change the previous user
+   * stays in `currentUser` until `/users/me` answers for the new token, so the user is confirmed
+   * for the current token only while this matches `authState.token`.
+   */
+  currentUserToken?: string
 }
 
 // ---------------------------------------------------------------------------
@@ -249,6 +255,21 @@ export const authStore = defineStore<AuthStoreState>({
 // ---------------------------------------------------------------------------
 // Public bound actions
 // ---------------------------------------------------------------------------
+
+/**
+ * The signed-in user confirmed for the current token: `undefined` while `/users/me` has not
+ * answered for it, `null` when logged out. Writes are sent only as this user.
+ *
+ * @internal
+ */
+export const getConfirmedUserState = bindActionGlobally(
+  authStore,
+  createStateSourceAction(({state: {authState, currentUserToken}}) => {
+    if (authState.type === AuthStateType.LOGGED_OUT) return null
+    if (authState.type !== AuthStateType.LOGGED_IN) return undefined
+    return currentUserToken === authState.token ? authState.currentUser : undefined
+  }),
+)
 
 /**
  * @public
