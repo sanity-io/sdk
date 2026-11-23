@@ -203,6 +203,30 @@ export type {
   SetFavoriteInput,
 } from '../favorites/favorites'
 export {favorites, setFavorite} from '../favorites/favorites'
+export {
+  getDocumentsHistoryErrorState,
+  getDocumentsHistoryHasMoreState,
+  getDocumentsHistoryState,
+  loadMoreDocumentsHistory,
+  refetchDocumentsHistory,
+  resolveDocumentsHistory,
+} from '../history/historyStore'
+export {
+  type DocumentHistoryBaseEvent,
+  type DocumentHistoryCreatedEvent,
+  type DocumentHistoryDeletedEvent,
+  type DocumentHistoryDiscardedEvent,
+  type DocumentHistoryEditedEvent,
+  type DocumentHistoryEditTransaction,
+  type DocumentHistoryEvent,
+  type DocumentHistoryEventType,
+  type DocumentHistoryPublishCause,
+  type DocumentHistoryPublishedEvent,
+  type DocumentHistoryUnpublishedEvent,
+  type DocumentsHistoryOptions,
+  type DocumentVariantType,
+  type ResolveDocumentsHistoryOptions,
+} from '../history/types'
 export {installation, installations} from '../installations/installations'
 export {
   type Installation,
