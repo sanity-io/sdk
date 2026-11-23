@@ -1,5 +1,5 @@
 import {type SanityClient} from '@sanity/client'
-import {EmptyError, NEVER, ReplaySubject, Subject} from 'rxjs'
+import {defer, EmptyError, NEVER, ReplaySubject, Subject} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {getCurrentUserState} from '../auth/authStore'
@@ -7,7 +7,7 @@ import {getClientState} from '../client/clientStore'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {createStoreState, type StoreState} from '../store/createStoreState'
 import {type DocumentAction, editDocument, publishDocument} from './actions'
-import {EDIT_BATCH_INTERVAL} from './documentConstants'
+import {EDIT_BATCH_INTERVAL, SUBMISSION_RETRY_BASE_DELAY} from './documentConstants'
 import {documentStore, type DocumentStoreState} from './documentStore'
 import {type AppliedTransaction} from './reducers'
 
@@ -38,6 +38,7 @@ describe('document submission with the production edit interval', () => {
   let state: StoreState<DocumentStoreState>
   let clients: ReplaySubject<SanityClient>
   let client: SanityClient
+  let clientSubscriptions: number
   let action: ReturnType<typeof vi.fn>
   let cleanup: (() => void) | undefined
   let responses: Subject<{transactionId: string}>[]
@@ -46,6 +47,7 @@ describe('document submission with the production edit interval', () => {
     vi.useFakeTimers()
     instance = createSanityInstance({projectId: 'test', dataset: 'test'})
     clients = new ReplaySubject(1)
+    clientSubscriptions = 0
     responses = []
     action = vi.fn(() => {
       const response = new Subject<{transactionId: string}>()
@@ -54,7 +56,10 @@ describe('document submission with the production edit interval', () => {
     })
     client = {observable: {action, request: () => NEVER}} as unknown as SanityClient
     vi.mocked(getClientState).mockReturnValue({
-      observable: clients,
+      observable: defer(() => {
+        clientSubscriptions++
+        return clients
+      }),
       getCurrent: () => client,
       subscribe: () => () => {},
     })
@@ -76,6 +81,8 @@ describe('document submission with the production edit interval', () => {
       state,
       key: {name: 'test.test', resource: {projectId: 'test', dataset: 'test'}},
     })
+    // Ignore the initial ACL subscription made during store initialization.
+    clientSubscriptions = 0
   })
 
   afterEach(() => {
@@ -104,8 +111,35 @@ describe('document submission with the production edit interval', () => {
     expect(action).not.toHaveBeenCalled()
     clients.next(client)
     clients.next(client)
+    expect(clientSubscriptions).toBe(1)
     expect(action).toHaveBeenCalledTimes(1)
     acknowledge(0)
+    expect(state.get().outgoing).toBeUndefined()
+  })
+
+  it('re-reads the client source when retrying a failed submission', async () => {
+    clients.next(client)
+    enqueue('retrying')
+    await vi.advanceTimersByTimeAsync(0)
+    expect(clientSubscriptions).toBe(1)
+    expect(action).toHaveBeenCalledTimes(1)
+
+    const retryResponse = new Subject<{transactionId: string}>()
+    const retryAction = vi.fn(() => retryResponse)
+    const retryClient = {
+      observable: {action: retryAction, request: () => NEVER},
+    } as unknown as SanityClient
+    clients.next(retryClient)
+
+    responses[0].error(new Error('network blip'))
+    await vi.advanceTimersByTimeAsync(SUBMISSION_RETRY_BASE_DELAY)
+
+    expect(clientSubscriptions).toBe(2)
+    expect(action).toHaveBeenCalledTimes(1)
+    expect(retryAction).toHaveBeenCalledTimes(1)
+
+    retryResponse.next({transactionId: state.get().outgoing!.transactionId})
+    retryResponse.complete()
     expect(state.get().outgoing).toBeUndefined()
   })
 

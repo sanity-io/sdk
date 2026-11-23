@@ -5,6 +5,7 @@ import {type ExprNode} from 'groq-js'
 import {
   catchError,
   concatMap,
+  defer,
   distinctUntilChanged,
   EMPTY,
   filter,
@@ -447,23 +448,25 @@ const subscribeToAppliedAndSubmitNextTransaction = ({
 
   return scheduleOutgoingTransactions(state)
     .pipe(
-      // The scheduler has already moved this transaction to `outgoing`. Wait for a client
-      // instead of dropping the transaction, which would leave the queue blocked for good.
-      // An empty client source errors here, outside the submission retry.
+      // Wait for the initial client outside `retryWithCredential` so an empty
+      // client source errors the store instead of looping in submission retry.
       concatMap((outgoing) =>
         clients$.pipe(
           first(),
-          map(() => outgoing),
+          map((client) => [outgoing, client] as const),
         ),
       ),
-      concatMap((outgoing) => {
+      concatMap(([outgoing, initialClient]) => {
+        let nextClient: SanityClient | undefined = initialClient
+
         // once the credential changes, a retry after a 401 can go right away
         // instead of waiting out the backoff
         return retryWithCredential(
-          clients$.pipe(
-            first(),
-            concatMap((client) => submitOutgoingTransaction(client, outgoing)),
-          ),
+          defer(() => {
+            const client = nextClient
+            nextClient = undefined
+            return client ? of(client) : clients$.pipe(first())
+          }).pipe(concatMap((client) => submitOutgoingTransaction(client, outgoing))),
           credential,
           (error, retryCount, credentialChanged) => {
             if (classifySubmissionError(error) !== 'retry') return throwError(() => error)

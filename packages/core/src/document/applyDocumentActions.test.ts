@@ -17,7 +17,7 @@ vi.mock('../store/createActionBinder', async (importOriginal) => ({
 
 type TestState = Pick<
   DocumentStoreState,
-  'documentStates' | 'queued' | 'applied' | 'outgoing' | 'error' | 'events'
+  'documentStates' | 'queued' | 'applied' | 'outgoing' | 'error' | 'aclError' | 'events'
 >
 
 const exampleDoc: SanityDocument = {
@@ -42,6 +42,7 @@ describe('applyDocumentActions', () => {
       applied: [],
       outgoing: undefined,
       error: undefined,
+      aclError: undefined,
       events: eventsSubject,
     }
     state = createStoreState(initialState)
@@ -244,5 +245,82 @@ describe('applyDocumentActions', () => {
     expect(queued).toBeDefined()
     const [queuedAction] = queued!.actions
     expect(queuedAction).toMatchObject({type: 'document.edit', liveEdit: true})
+  })
+
+  it('rejects submitted() when a fatal store error occurs after apply', async () => {
+    const action: DocumentAction = {
+      type: 'document.edit',
+      documentId: 'doc1',
+      documentType: 'example',
+      patches: [{set: {foo: 'bar'}}],
+    }
+
+    const applyPromise = applyDocumentActions(instance, {
+      actions: [action],
+      transactionId: 'txn-fatal-submit',
+      resource: {projectId: 'p', dataset: 'd'},
+    })
+
+    const appliedTx: AppliedTransaction = {
+      transactionId: 'txn-fatal-submit',
+      actions: [action],
+      disableBatching: false,
+      outgoingActions: [],
+      outgoingMutations: [],
+      base: {doc1: {...exampleDoc, _id: 'doc1', foo: 'old', _rev: 'rev-old'}},
+      working: {doc1: {...exampleDoc, _id: 'doc1', foo: 'bar', _rev: 'rev-new'}},
+      previous: {doc1: {...exampleDoc, _id: 'doc1', foo: 'old', _rev: 'rev-old'}},
+      previousRevs: {doc1: 'rev-old'},
+      timestamp: new Date().toISOString(),
+    }
+    state.set('simulateApplied', {applied: [appliedTx]})
+
+    const result = await applyPromise
+    const submittedPromise = result.submitted()
+    const fatalError = new Error('Client stream completed empty')
+    state.set('setError', {error: fatalError})
+
+    await expect(submittedPromise).rejects.toBe(fatalError)
+  })
+
+  it('ignores recoverable aclError while waiting for submitted()', async () => {
+    const action: DocumentAction = {
+      type: 'document.edit',
+      documentId: 'doc1',
+      documentType: 'example',
+      patches: [{set: {foo: 'bar'}}],
+    }
+
+    const applyPromise = applyDocumentActions(instance, {
+      actions: [action],
+      transactionId: 'txn-acl-submit',
+      resource: {projectId: 'p', dataset: 'd'},
+    })
+
+    const appliedTx: AppliedTransaction = {
+      transactionId: 'txn-acl-submit',
+      actions: [action],
+      disableBatching: false,
+      outgoingActions: [],
+      outgoingMutations: [],
+      base: {doc1: {...exampleDoc, _id: 'doc1', foo: 'old', _rev: 'rev-old'}},
+      working: {doc1: {...exampleDoc, _id: 'doc1', foo: 'bar', _rev: 'rev-new'}},
+      previous: {doc1: {...exampleDoc, _id: 'doc1', foo: 'old', _rev: 'rev-old'}},
+      previousRevs: {doc1: 'rev-old'},
+      timestamp: new Date().toISOString(),
+    }
+    state.set('simulateApplied', {applied: [appliedTx]})
+
+    const result = await applyPromise
+    state.set('setAclError', {aclError: new Error('ACL 401')})
+
+    const acceptedResult = {transactionId: 'txn-acl-submit'}
+    eventsSubject.next({
+      type: 'accepted',
+      outgoing: {batchedTransactionIds: ['txn-acl-submit']} as OutgoingTransaction,
+      result: acceptedResult,
+    })
+
+    await expect(result.submitted()).resolves.toEqual(acceptedResult)
   })
 })
