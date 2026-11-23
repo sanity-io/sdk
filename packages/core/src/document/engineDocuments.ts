@@ -1,15 +1,14 @@
 import {type Action as ClientAction, type SanityClient} from '@sanity/client'
-import {diffValue} from '@sanity/diff-patch'
 import {
   createDocumentSync,
   type DocumentSync,
   type DroppedEdit,
   type ListenEvent,
+  type Operation,
   type PatchOps,
   type Transport,
 } from '@sanity/document-sync'
 import {DocumentId, getDraftId, getPublishedId, isDraftId, isVersionId} from '@sanity/id-utils'
-import {type PatchOperations} from '@sanity/types'
 import {distinctUntilChanged, filter, firstValueFrom, forkJoin, map, type Subscription} from 'rxjs'
 
 import {getClientState} from '../client/clientStore'
@@ -18,14 +17,14 @@ import {isReleasePerspective} from '../releases/utils/isReleasePerspective'
 import {type BoundResourceKey} from '../store/createActionBinder'
 import {type StoreContext} from '../store/defineStore'
 import {type ResolveDocument} from '../typegen/resolve'
-import {type Action, type EditDocumentAction} from './actions'
-import {API_VERSION} from './documentConstants'
+import {setCleanupTimeout} from '../utils/setCleanupTimeout'
+import {type Action} from './actions'
+import {API_VERSION, DOCUMENT_STATE_CLEAR_DELAY} from './documentConstants'
 import {type DocumentStoreState} from './documentStore'
 import {type DocumentTransactionSubmissionResult, getDocumentEvents} from './events'
 import {processActions} from './processActions/processActions'
-import {preserveNumericOperations} from './processActions/shared'
-import {type DocumentSet, processMutations} from './processMutations'
-import {type HttpAction, type OutgoingTransaction} from './reducers'
+import {type DocumentSet} from './processMutations'
+import {type HttpAction, type OutgoingTransaction, releaseEngineHolds} from './reducers'
 import {classifySubmissionError} from './submissionErrors'
 
 // Prototype for `experimental_documentSync`: one `@sanity/document-sync` engine per document
@@ -33,8 +32,8 @@ import {classifySubmissionError} from './submissionErrors'
 
 /** An engine transaction as the SDK sent it, for the document events. */
 export interface EngineTransaction {
-  /** The SDK action the engine transaction carries. */
-  action: Action
+  /** The SDK actions the engine transaction carries. */
+  actions: Action[]
   /** The transaction id the caller passed to `applyDocumentActions`. */
   callerTransactionId: string
   /** The engine's local documents before and after the action. */
@@ -86,13 +85,13 @@ function createStoreTransport(
 
 /** The engine transaction as the queue's `OutgoingTransaction`, the shape the events carry. */
 function engineOutgoing(
-  {action, callerTransactionId, previous, working}: EngineTransaction,
+  {actions, callerTransactionId, previous, working}: EngineTransaction,
   transactionId: string,
   outgoingActions: HttpAction[],
 ): OutgoingTransaction {
   return {
     transactionId,
-    actions: [action],
+    actions,
     // The caller's id, so code that waits on its own transaction id finds this one.
     batchedTransactionIds: [callerTransactionId],
     disableBatching: false,
@@ -181,6 +180,19 @@ export function emitDropped(
   })
 }
 
+/**
+ * Releases the engine's hold on a document once it has nothing pending. Deferred by the usual
+ * clear delay, so the queue's listener has processed the echo against the document state first.
+ */
+function releaseHolds(state: StoreContext<DocumentStoreState>['state'], publishedId: string): void {
+  setCleanupTimeout(() => {
+    // A transaction queued during the delay holds the documents again.
+    if (state.get().engines[publishedId]?.hasPending()) return
+    const ids = [getDraftId(DocumentId(publishedId)), publishedId]
+    state.set('releaseEngineHolds', (prev) => releaseEngineHolds(prev, ids))
+  }, DOCUMENT_STATE_CLEAR_DELAY)
+}
+
 /** Published ids of the documents with subscribers, leaving out release versions. */
 function enginePublishedIds(documentStates: DocumentStoreState['documentStates']): string[] {
   const ids = Object.keys(documentStates).filter((id) => !isVersionId(DocumentId(id)))
@@ -212,6 +224,7 @@ export function subscribeToSubscriptionsAndRunEngines(
         const sync = createDocumentSync({documentId: id, transport})
         const unsubscribe = sync.subscribe(() => {
           state.set('engineChanged', (prev) => ({engineChanges: prev.engineChanges + 1}))
+          if (!sync.hasPending()) releaseHolds(state, id)
         })
         const unsubscribeDropped = sync.onDropped((dropped) => emitDropped(state.get(), dropped))
         cleanups.set(id, () => {
@@ -293,27 +306,6 @@ export function engineLocalDocument(
   return engine ? (engine.local() as ResolveDocument | null) : undefined
 }
 
-/**
- * The patches the engine sends for an edit. As on the transaction queue, they are re-derived by
- * diffing the local view before and after the edit, so a whole-value `set` of a string goes out
- * as a `diffMatchPatch` and merges with other writers' edits. `preserveOperations` sends the
- * patches as given.
- */
-function editPatches(engine: DocumentSync, action: EditDocumentAction): PatchOps[] {
-  const patches = action.patches ?? []
-  const local = engine.local()
-  if (action.preserveOperations || !local) return patches as PatchOps[]
-  const draftId = getDraftId(DocumentId(action.documentId))
-  const before = {...local, _id: draftId}
-  const after = processMutations({
-    documents: {[draftId]: before},
-    mutations: patches.map((patch) => ({patch: {...patch, id: draftId}})),
-    transactionId: before._rev ?? '',
-  })[draftId]
-  const diffed = diffValue(before, after) as PatchOperations[]
-  return preserveNumericOperations(before, patches, diffed) as PatchOps[]
-}
-
 const engineActionTypes = [
   'document.create',
   'document.edit',
@@ -328,27 +320,23 @@ const isEngineAction = (action: Action): action is EngineAction & {documentId: s
   (engineActionTypes as readonly string[]).includes(action.type) &&
   typeof (action as {documentId?: unknown}).documentId === 'string'
 
-/** Sends one action to the engine, already checked by `checkAsQueue`. */
-function sendToEngine(
-  engine: DocumentSync,
-  action: EngineAction & {documentId: string},
-): string | undefined {
-  const docs = engine.localDocuments() ?? {draft: null, published: null}
-  if (action.type === 'document.create') {
-    const {_id, _rev, ...base} = docs.published ?? {}
-    return engine.create({...base, _type: action.documentType, ...action.initialValue})
-  } else if (action.type === 'document.edit') {
-    const patches = editPatches(engine, action)
-    // An edit that changes nothing sends nothing, as on the transaction queue.
-    return patches.length ? engine.edit(patches) : undefined
-  } else {
-    const send = {
-      'document.publish': () => engine.publish(),
-      'document.unpublish': () => engine.unpublish(),
-      'document.discard': () => engine.discard(),
-      'document.delete': () => engine.delete(),
-    }
-    return send[action.type]()
+/** An Actions API payload the queue would send, as the engine operation that sends it. */
+function toOperation(action: HttpAction): Operation {
+  switch (action.actionType) {
+    case 'sanity.action.document.edit':
+      return {type: 'edit', patches: [action.patch as PatchOps]}
+    case 'sanity.action.document.version.create':
+      return {type: 'create', attributes: action.attributes}
+    case 'sanity.action.document.publish':
+      return {type: 'publish'}
+    case 'sanity.action.document.unpublish':
+      return {type: 'unpublish'}
+    case 'sanity.action.document.version.discard':
+      return {type: 'discard'}
+    case 'sanity.action.document.delete':
+      return {type: 'delete'}
+    default:
+      throw new Error(`The engine does not send ${action.actionType}`)
   }
 }
 
@@ -362,20 +350,20 @@ function localDocumentSet(engine: DocumentSync, documentId: string): DocumentSet
 }
 
 /**
- * Checks the actions the way the transaction queue does, against the engine's local view: the
- * queue's state checks and grant checks. Throws the queue's `ActionError` or
- * `PermissionActionError` before anything reaches the engine.
+ * Runs the actions through the transaction queue's `processActions` against the engine's local
+ * view: the queue's state and grant checks, which throw its `ActionError` or
+ * `PermissionActionError`, and the Actions API payloads it would send, with edits re-derived by
+ * diffing as on the queue.
  */
-function checkAsQueue(
-  {grants, identity}: DocumentStoreState,
+function processAsQueue(
+  {grants, identity}: DocumentStoreState & {grants: NonNullable<DocumentStoreState['grants']>},
   engine: DocumentSync,
   actions: Action[],
   transactionId: string,
-): void {
-  if (!grants) return
+) {
   const [leading] = actions as (EngineAction & {documentId: string})[]
   const documents = localDocumentSet(engine, leading!.documentId)
-  processActions({
+  return processActions({
     actions,
     transactionId,
     base: documents,
@@ -390,7 +378,8 @@ function checkAsQueue(
  * Sends the actions through a document's engine when it can take all of them: creates, edits,
  * publishes, unpublishes, discards and deletes of one document the engine handles. Returns the
  * engine, the document's handle and its local view from before the actions, or `undefined` to use
- * the transaction queue. Each action goes out as its own engine transaction.
+ * the transaction queue. The actions go out as one engine transaction under the caller's
+ * transaction id.
  */
 export function applyWithEngine(
   state: DocumentStoreState,
@@ -401,7 +390,7 @@ export function applyWithEngine(
       engine: DocumentSync
       handle: DocumentHandle
       previous: ResolveDocument | null
-      /** The ids of the engine transactions the actions went out as. */
+      /** The ids of the engine transactions the actions went out as: none, or the caller's id. */
       transactionIds: string[]
     }
   | undefined {
@@ -413,21 +402,20 @@ export function applyWithEngine(
       isEngineAction(action) && getPublishedId(DocumentId(action.documentId)) === publishedId,
   )
   const engine = sameDocument ? engineForHandle(state, leading) : undefined
-  if (!engine) return undefined
+  const {grants} = state
+  if (!engine || !grants) return undefined
   const previous = engine.local() as ResolveDocument | null
-  checkAsQueue(state, engine, actions, transactionId)
-  const transactionIds: string[] = []
-  for (const action of actions as (EngineAction & {documentId: string})[]) {
-    const before = localDocumentSet(engine, action.documentId)
-    const engineTransactionId = sendToEngine(engine, action)
-    if (!engineTransactionId) continue
-    transactionIds.push(engineTransactionId)
-    state.engineTransactions.set(engineTransactionId, {
-      action,
+  const processed = processAsQueue({...state, grants}, engine, actions, transactionId)
+  // An edit that changes nothing sends nothing, as on the transaction queue.
+  const operations = processed.outgoingActions.map(toOperation)
+  const transactionIds = operations.length ? [engine.apply(operations, {transactionId})] : []
+  for (const id of transactionIds) {
+    state.engineTransactions.set(id, {
+      actions,
       callerTransactionId: transactionId,
       failedAttempts: 0,
-      previous: before,
-      working: localDocumentSet(engine, action.documentId),
+      previous: processed.previous,
+      working: processed.working,
     })
   }
   return {engine, handle: leading, previous, transactionIds}

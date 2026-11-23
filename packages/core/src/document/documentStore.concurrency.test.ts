@@ -881,8 +881,8 @@ async function runCollision(
 
     const txnA = await actAndHold(scenario.actA, clientA)
     const txnB = await actAndHold(scenario.actB, clientB)
-    // The engine picks its own transaction ids; the queue uses the ids the scenario passes.
-    expect([txnA, txnB].includes('txn-a')).toBe(!documentSync)
+    // Both the queue and the engine send under the ids the scenario passes.
+    expect([txnA, txnB]).toContain('txn-a')
 
     const [firstTxn, secondTxn] = order === 'a-first' ? [txnA, txnB] : [txnB, txnA]
     await server.release(firstTxn)
@@ -1309,8 +1309,8 @@ async function runRebaseCollision(
     await scenario.actA3?.(clientA)
     const txnB = await actAndHold(scenario.actB, clientB)
     const txnsB = [txnB]
-    // The engine picks its own transaction ids; the queue uses the ids the scenario passes.
-    expect(txnA1 === 'txn-a1').toBe(!documentSync)
+    // Both the queue and the engine send under the ids the scenario passes.
+    expect(txnA1).toBe('txn-a1')
 
     const [firstTxn, secondTxn] = order === 'a-first' ? [txnA1, txnB] : [txnB, txnA1]
     await server.release(firstTxn)

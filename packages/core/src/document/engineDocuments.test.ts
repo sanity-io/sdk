@@ -1,5 +1,5 @@
 import {ClientError, ServerError} from '@sanity/client'
-import {type DocumentSync} from '@sanity/document-sync'
+import {type DocumentSync, type Operation} from '@sanity/document-sync'
 import {type SanityDocument} from '@sanity/types'
 import {of, Subject} from 'rxjs'
 import {afterEach, describe, expect, it, vi} from 'vitest'
@@ -44,21 +44,24 @@ function fakeEngine(
   const engine = {
     remote: () => (ready ? {draft, published: null} : undefined),
     local: () => local,
-    edit: vi.fn(() => {
-      calls.push('edit')
-      local = {...draft, name: 'y'}
-      return 'e-edit'
-    }),
-    publish: vi.fn(() => (calls.push('publish'), 'e-publish')),
-    discard: vi.fn(() => (calls.push('discard'), 'e-discard')),
     localDocuments: () =>
       ready ? {draft: docs.draft ? local : null, published: docs.published} : undefined,
-    create: vi.fn(() => (calls.push('create'), 'e-create')),
-    delete: vi.fn(() => (calls.push('delete'), 'e-delete')),
-    unpublish: vi.fn(() => (calls.push('unpublish'), 'e-unpublish')),
+    apply: vi.fn((operations: Operation[], {transactionId = 'random'} = {}) => {
+      calls.push(...operations.map((operation) => operation.type))
+      if (operations.some((operation) => operation.type === 'edit')) local = {...draft, name: 'y'}
+      return transactionId
+    }),
   }
   return {engine: engine as unknown as DocumentSync, calls}
 }
+
+/** The patches of the edit operations the engine was given. */
+const sentPatches = (engine: DocumentSync) =>
+  vi
+    .mocked(engine.apply)
+    .mock.calls.flatMap(([operations]) =>
+      operations.flatMap((operation) => (operation.type === 'edit' ? operation.patches : [])),
+    )
 
 /** A store whose queue has loaded grants and document `a`, with nothing unfinished. */
 const stateWith = (
@@ -90,6 +93,20 @@ describe('applyWithEngine', () => {
     expect(routed?.previous).toEqual(draft)
   })
 
+  it('sends all the actions of one call as one transaction under the caller id', () => {
+    const {engine} = fakeEngine()
+    applyWithEngine(
+      stateWith({a: engine}),
+      [editDocument(handle, {set: {name: 'y'}}), publishDocument(handle)],
+      'caller',
+    )
+    expect(engine.apply).toHaveBeenCalledTimes(1)
+    expect(engine.apply).toHaveBeenCalledWith(
+      [{type: 'edit', patches: [expect.anything()]}, {type: 'publish'}],
+      {transactionId: 'caller'},
+    )
+  })
+
   it('sends a discard to the engine', () => {
     const {engine, calls} = fakeEngine()
     applyWithEngine(stateWith({a: engine}), [discardDocument(handle)], 't')
@@ -99,20 +116,20 @@ describe('applyWithEngine', () => {
   it('re-derives an edit as the queue does, so a string set goes out as a diffMatchPatch', () => {
     const {engine} = fakeEngine()
     applyWithEngine(stateWith({a: engine}), [editDocument(handle, {set: {name: 'xy'}})], 't')
-    expect(engine.edit).toHaveBeenCalledWith([{diffMatchPatch: {name: '@@ -1 +1,2 @@\n x\n+y\n'}}])
+    expect(sentPatches(engine)).toEqual([{diffMatchPatch: {name: '@@ -1 +1,2 @@\n x\n+y\n'}}])
   })
 
   it('sends the patches as given with preserveOperations', () => {
     const {engine} = fakeEngine()
     const action = editDocument(handle, {set: {name: 'xy'}}, {preserveOperations: true})
     applyWithEngine(stateWith({a: engine}), [action], 't')
-    expect(engine.edit).toHaveBeenCalledWith([{set: {name: 'xy'}}])
+    expect(sentPatches(engine)).toEqual([{set: {name: 'xy'}}])
   })
 
   it('sends nothing for an edit that changes nothing', () => {
     const {engine} = fakeEngine()
     applyWithEngine(stateWith({a: engine}), [editDocument(handle, {set: {name: 'x'}})], 't')
-    expect(engine.edit).not.toHaveBeenCalled()
+    expect(engine.apply).not.toHaveBeenCalled()
   })
 
   it('finds the engine from a draft id', () => {
@@ -140,7 +157,7 @@ describe('applyWithEngine', () => {
   ])('leaves %s to the transaction queue', (_name, engines, actions) => {
     const {engine} = fakeEngine()
     expect(applyWithEngine(stateWith(engines ?? {a: engine}), actions, 't')).toBeUndefined()
-    expect(engine.edit).not.toHaveBeenCalled()
+    expect(engine.apply).not.toHaveBeenCalled()
   })
 
   it('leaves a document to the transaction queue until its engine has a snapshot', () => {
@@ -161,7 +178,10 @@ describe('create, delete and unpublish', () => {
   it('creates the draft from the published document plus the initial value', () => {
     const {engine} = fakeEngine(true, {draft: null, published})
     applyWithEngine(stateWith({a: engine}), [createDocument(handle, {name: 'new'})], 't')
-    expect(engine.create).toHaveBeenCalledWith({_type: 'author', name: 'new'})
+    expect(engine.apply).toHaveBeenCalledWith(
+      [{type: 'create', attributes: expect.objectContaining({_type: 'author', name: 'new'})}],
+      {transactionId: 't'},
+    )
   })
 
   it.each([
@@ -234,7 +254,7 @@ describe('queue ownership', () => {
     const state = stateWith({a: engine}, queue as Partial<DocumentStoreState>)
     expect(engineLocalDocument(state, handle)).toBeUndefined()
     expect(applyWithEngine(state, [editDocument(handle, {set: {name: 'y'}})], 't')).toBeUndefined()
-    expect(engine.edit).not.toHaveBeenCalled()
+    expect(engine.apply).not.toHaveBeenCalled()
   })
 
   it.each([
@@ -274,11 +294,11 @@ describe('document events', () => {
     return {state, events, routed}
   }
 
-  it('records each engine transaction with the SDK action and the caller id', () => {
+  it('records the engine transaction under the caller id, with the SDK actions', () => {
     const {state, routed} = sent()
-    expect(routed?.transactionIds).toEqual(['e-edit'])
-    expect(state.engineTransactions.get('e-edit')).toMatchObject({
-      action: editAction,
+    expect(routed?.transactionIds).toEqual(['caller'])
+    expect(state.engineTransactions.get('caller')).toMatchObject({
+      actions: [editAction],
       callerTransactionId: 'caller',
       previous: {'drafts.a': draft, 'a': null},
       working: {'drafts.a': {name: 'y'}},
@@ -287,20 +307,20 @@ describe('document events', () => {
 
   it('emits the per-document event and accepted once the server accepts it', () => {
     const {state, events} = sent()
-    emitAccepted(state, 'e-edit', httpEdit as never, {transactionId: 'e-edit'} as never)
+    emitAccepted(state, 'caller', httpEdit as never, {transactionId: 'caller'} as never)
     expect(events.map((event) => event.type)).toEqual(['edited', 'accepted'])
     expect(events[0]).toMatchObject({
       documentId: 'a',
-      outgoing: {transactionId: 'e-edit', batchedTransactionIds: ['caller'], actions: [editAction]},
+      outgoing: {transactionId: 'caller', batchedTransactionIds: ['caller'], actions: [editAction]},
     })
-    expect(state.engineTransactions.has('e-edit')).toBe(false)
+    expect(state.engineTransactions.has('caller')).toBe(false)
   })
 
   it('emits submission-failed with a growing attempt count for a retried submission', () => {
     const {state, events} = sent()
     const unavailable = new ServerError({statusCode: 503, headers: {}, body: {}})
-    emitSubmitFailed(state, 'e-edit', httpEdit as never, unavailable)
-    emitSubmitFailed(state, 'e-edit', httpEdit as never, unavailable)
+    emitSubmitFailed(state, 'caller', httpEdit as never, unavailable)
+    emitSubmitFailed(state, 'caller', httpEdit as never, unavailable)
     expect(events).toMatchObject([
       {type: 'submission-failed', attempt: 1},
       {type: 'submission-failed', attempt: 2},
@@ -314,13 +334,13 @@ describe('document events', () => {
       headers: {},
       body: {error: {type: 'transactionAlreadyExistsError', description: 'exists'}},
     })
-    emitSubmitFailed(state, 'e-edit', httpEdit as never, exists)
+    emitSubmitFailed(state, 'caller', httpEdit as never, exists)
     expect(events.map((event) => event.type)).toEqual(['edited', 'accepted'])
   })
 
   it('emits reverted when the engine drops a rejected transaction, and nothing for a no-op', () => {
     const {state, events} = sent()
-    const transaction = {transactionId: 'e-edit', actions: httpEdit, submitted: true}
+    const transaction = {transactionId: 'caller', actions: httpEdit, submitted: true}
     emitDropped(state, {transaction, reason: 'no-op', noOps: []} as never)
     expect(events).toEqual([])
     emitDropped(state, {transaction, reason: 'rejected', error: new Error('no')} as never)

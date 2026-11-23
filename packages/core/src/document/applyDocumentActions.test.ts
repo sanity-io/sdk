@@ -257,16 +257,16 @@ describe('applyDocumentActions', () => {
     const [queuedAction] = queued!.actions
     expect(queuedAction).toMatchObject({type: 'document.edit', liveEdit: true})
   })
-  /** A loaded document `doc1` served by a fake engine whose edits go out as `txn-engine`. */
+  /** A loaded document `doc1` served by a fake engine. */
   function engineServes() {
     let local: SanityDocument = {...exampleDoc, _id: 'drafts.doc1'}
     let resolveSubmitted!: () => void
     const engine = {
       remote: () => ({draft: local, published: null}),
       local: () => local,
-      edit: vi.fn(() => {
-        local = {...local, _rev: 'txn-engine'}
-        return 'txn-engine'
+      apply: vi.fn((_operations: unknown, {transactionId}: {transactionId: string}) => {
+        local = {...local, _rev: transactionId}
+        return transactionId
       }),
       localDocuments: () => ({draft: local, published: null}),
       whenSubmitted: () => new Promise<void>((resolve) => (resolveSubmitted = resolve)),
@@ -300,12 +300,14 @@ describe('applyDocumentActions', () => {
       transactionId: 'txn-caller',
     })
 
-    expect(engine.edit).toHaveBeenCalledWith([{set: {name: 'y'}}])
+    expect(engine.apply).toHaveBeenCalledWith([{type: 'edit', patches: [{set: {name: 'y'}}]}], {
+      transactionId: 'txn-caller',
+    })
     expect(state.get().queued).toEqual([])
     expect(result).toMatchObject({
       transactionId: 'txn-caller',
       previous: {'drafts.doc1': {_rev: 'txn0'}},
-      documents: {'drafts.doc1': {_rev: 'txn-engine'}},
+      documents: {'drafts.doc1': {_rev: 'txn-caller'}},
       updated: ['drafts.doc1'],
     })
     const submitted = result.submitted()
@@ -327,7 +329,7 @@ describe('applyDocumentActions', () => {
       transactionId: 'txn-caller',
     })
     expect(state.get().documentStates['drafts.doc1']?.recentOwnTransactionIds).toEqual([
-      'txn-engine',
+      'txn-caller',
     ])
   })
 
