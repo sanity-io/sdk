@@ -20,6 +20,13 @@ import {
   engineLocalDocument,
   subscribeToSubscriptionsAndRunEngines,
 } from './engineDocuments'
+import {createGrantsLookup, type DatasetAcl} from './permissions'
+import {PermissionActionError} from './processActions/shared'
+
+/** Read, update and create on every document. */
+const fullGrants = createGrantsLookup([
+  {filter: '_id in path("**")', permissions: ['read', 'update', 'create', 'history']},
+] as DatasetAcl)
 
 const draft = {_id: 'drafts.a', _type: 'author', _rev: 'r1', name: 'x'} as unknown as SanityDocument
 
@@ -54,7 +61,7 @@ const stateWith = (
 ) =>
   ({
     engines,
-    grants: {},
+    grants: fullGrants,
     documentStates: {'a': {id: 'a', local: null}, 'drafts.a': {id: 'drafts.a', local: draft}},
     queued: [],
     applied: [],
@@ -63,16 +70,22 @@ const stateWith = (
 const handle = {documentId: 'a', documentType: 'author'}
 
 describe('applyWithEngine', () => {
-  it('sends edits, publishes and discards of one document to its engine, in order', () => {
+  it('sends the actions of one document to its engine, in order', () => {
     const {engine, calls} = fakeEngine()
     const routed = applyWithEngine(
       stateWith({a: engine}),
-      [editDocument(handle, {set: {name: 'y'}}), publishDocument(handle), discardDocument(handle)],
+      [editDocument(handle, {set: {name: 'y'}}), publishDocument(handle)],
       't',
     )
-    expect(calls).toEqual(['edit', 'publish', 'discard'])
+    expect(calls).toEqual(['edit', 'publish'])
     // The local view from before the actions, for `ActionsResult.previous`.
     expect(routed?.previous).toEqual(draft)
+  })
+
+  it('sends a discard to the engine', () => {
+    const {engine, calls} = fakeEngine()
+    applyWithEngine(stateWith({a: engine}), [discardDocument(handle)], 't')
+    expect(calls).toEqual(['discard'])
   })
 
   it('re-derives an edit as the queue does, so a string set goes out as a diffMatchPatch', () => {
@@ -143,11 +156,13 @@ describe('create, delete and unpublish', () => {
     expect(engine.create).toHaveBeenCalledWith({_type: 'author', name: 'new'})
   })
 
-  it('sends delete and unpublish of a published document to the engine', () => {
+  it.each([
+    ['unpublish', unpublishDocument(handle)],
+    ['delete', deleteDocument(handle)],
+  ])('sends %s of a published document to the engine', (name, action) => {
     const {engine, calls} = fakeEngine(true, {draft, published})
-    const actions = [unpublishDocument(handle), deleteDocument(handle)]
-    applyWithEngine(stateWith({a: engine}), actions, 't')
-    expect(calls).toEqual(['unpublish', 'delete'])
+    applyWithEngine(stateWith({a: engine}), [action], 't')
+    expect(calls).toEqual([name])
   })
 
   it.each([
@@ -158,6 +173,43 @@ describe('create, delete and unpublish', () => {
   ])('fails %s as the queue does', (_name, docs, action, message) => {
     const {engine, calls} = fakeEngine(true, docs)
     expect(() => applyWithEngine(stateWith({a: engine}), [action], 't')).toThrow(message)
+    expect(calls).toEqual([])
+  })
+})
+
+describe('permissions', () => {
+  const readOnly = createGrantsLookup([
+    {filter: '_id in path("**")', permissions: ['read']},
+  ] as DatasetAcl)
+  const published = {
+    _id: 'a',
+    _type: 'author',
+    _rev: 'p1',
+    name: 'pub',
+  } as unknown as SanityDocument
+
+  it.each([
+    [
+      'an edit',
+      {draft, published: null},
+      editDocument(handle, {set: {name: 'y'}}),
+      /edit document/,
+    ],
+    ['a create', {draft: null, published}, createDocument(handle), /create a draft/],
+    ['a delete', {draft: null, published}, deleteDocument(handle), /delete this document/],
+    ['an unpublish', {draft: null, published}, unpublishDocument(handle), /unpublish/],
+  ])('rejects %s the grants do not allow, as the queue does', (_name, docs, action, message) => {
+    const {engine, calls} = fakeEngine(true, docs)
+    const state = stateWith({a: engine}, {grants: readOnly})
+    expect(() => applyWithEngine(state, [action], 't')).toThrow(PermissionActionError)
+    expect(() => applyWithEngine(state, [action], 't')).toThrow(message)
+    expect(calls).toEqual([])
+  })
+
+  it('sends nothing when a later action in the call fails', () => {
+    const {engine, calls} = fakeEngine()
+    const actions = [editDocument(handle, {set: {name: 'y'}}), createDocument(handle)]
+    expect(() => applyWithEngine(stateWith({a: engine}), actions, 't')).toThrow(/already exists/)
     expect(calls).toEqual([])
   })
 })

@@ -20,8 +20,9 @@ import {type ResolveDocument} from '../typegen/resolve'
 import {type Action, type EditDocumentAction} from './actions'
 import {API_VERSION} from './documentConstants'
 import {type DocumentStoreState} from './documentStore'
-import {ActionError, preserveNumericOperations} from './processActions/shared'
-import {processMutations} from './processMutations'
+import {processActions} from './processActions/processActions'
+import {preserveNumericOperations} from './processActions/shared'
+import {type DocumentSet, processMutations} from './processMutations'
 
 // Prototype for `experimental_documentSync`: one `@sanity/document-sync` engine per document
 // (published plus draft), kept in `DocumentStoreState.engines` by published id.
@@ -204,37 +205,9 @@ const isEngineAction = (action: Action): action is EngineAction & {documentId: s
   (engineActionTypes as readonly string[]).includes(action.type) &&
   typeof (action as {documentId?: unknown}).documentId === 'string'
 
-/** Why the local view rules out a create, delete or unpublish, with the queue's message. */
-function engineActionError(
-  action: EngineAction & {documentId: string},
-  {draft, published}: {draft: unknown; published: unknown},
-): string | undefined {
-  if (action.type === 'document.create' && draft) {
-    return 'A draft of this document already exists. Please use or discard the existing draft before creating a new one.'
-  }
-  if (action.type === 'document.delete' && !published) {
-    return draft
-      ? 'Cannot delete a document without a published version.'
-      : 'The document you are trying to delete does not exist.'
-  }
-  if (action.type === 'document.unpublish' && !published) {
-    return `Cannot unpublish because the document "${action.documentId}" is not currently published.`
-  }
-  return undefined
-}
-
-/**
- * Sends one action to the engine. Create, delete and unpublish fail as they do on the queue
- * when the local view does not allow them.
- */
-function sendToEngine(
-  engine: DocumentSync,
-  action: EngineAction & {documentId: string},
-  transactionId: string,
-): void {
+/** Sends one action to the engine, already checked by `checkAsQueue`. */
+function sendToEngine(engine: DocumentSync, action: EngineAction & {documentId: string}): void {
   const docs = engine.localDocuments() ?? {draft: null, published: null}
-  const message = engineActionError(action, docs)
-  if (message) throw new ActionError({documentId: action.documentId, transactionId, message})
   if (action.type === 'document.create') {
     const {_id, _rev, ...base} = docs.published ?? {}
     engine.create({...base, _type: action.documentType, ...action.initialValue})
@@ -251,6 +224,35 @@ function sendToEngine(
     }
     send[action.type]()
   }
+}
+
+/**
+ * Checks the actions the way the transaction queue does, against the engine's local view: the
+ * queue's state checks and grant checks. Throws the queue's `ActionError` or
+ * `PermissionActionError` before anything reaches the engine.
+ */
+function checkAsQueue(
+  {grants, identity}: DocumentStoreState,
+  engine: DocumentSync,
+  actions: Action[],
+  transactionId: string,
+): void {
+  if (!grants) return
+  const [leading] = actions as (EngineAction & {documentId: string})[]
+  const {draft, published} = engine.localDocuments() ?? {draft: null, published: null}
+  const documents = {
+    [getDraftId(DocumentId(leading!.documentId))]: draft,
+    [getPublishedId(DocumentId(leading!.documentId))]: published,
+  } as DocumentSet
+  processActions({
+    actions,
+    transactionId,
+    base: documents,
+    working: documents,
+    timestamp: new Date().toISOString(),
+    grants,
+    identity,
+  })
 }
 
 /**
@@ -274,7 +276,8 @@ export function applyWithEngine(
   const engine = sameDocument ? engineForHandle(state, leading) : undefined
   if (!engine) return undefined
   const previous = engine.local() as ResolveDocument | null
+  checkAsQueue(state, engine, actions, transactionId)
   for (const action of actions as (EngineAction & {documentId: string})[])
-    sendToEngine(engine, action, transactionId)
+    sendToEngine(engine, action)
   return {engine, handle: leading, previous}
 }

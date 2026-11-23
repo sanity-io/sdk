@@ -9,6 +9,7 @@ import {createStoreState, type StoreState} from '../store/createStoreState'
 import {type DocumentAction} from './actions'
 import {type DocumentStoreState} from './documentStore'
 import {type DocumentEvent} from './events'
+import {createGrantsLookup, type DatasetAcl} from './permissions'
 import {type AppliedTransaction, type OutgoingTransaction} from './reducers'
 
 vi.mock('../store/createActionBinder', async (importOriginal) => ({
@@ -259,7 +260,9 @@ describe('applyDocumentActions', () => {
     }
     // The engine serves a document only once the queue has loaded it and the grants.
     state.set('loaded', {
-      grants: {} as DocumentStoreState['grants'],
+      grants: createGrantsLookup([
+        {filter: '_id in path("**")', permissions: ['read', 'update', 'create']},
+      ] as DatasetAcl),
       documentStates: {
         'doc1': {id: 'doc1', local: null},
         'drafts.doc1': {id: 'drafts.doc1', local},
