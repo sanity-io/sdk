@@ -16,6 +16,7 @@ import {type DocumentSet} from './processMutations'
 import {
   addOwnTransactionIds,
   type AppliedTransaction,
+  holdForEngineTransactions,
   type QueuedTransaction,
   queueTransaction,
 } from './reducers'
@@ -112,7 +113,11 @@ function applyThroughEngineOrQueue(
     const {documentId} = routed.handle
     const ids = [getDraftId(DocumentId(documentId)), getPublishedId(DocumentId(documentId))]
     context.state.set('addEngineTransactionIds', (prev) =>
-      addOwnTransactionIds(prev, ids, routed.transactionIds),
+      holdForEngineTransactions(
+        addOwnTransactionIds(prev, ids, routed.transactionIds),
+        ids,
+        routed.transactionIds,
+      ),
     )
     return Promise.resolve(engineActionsResult(routed, transactionId))
   }

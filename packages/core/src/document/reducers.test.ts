@@ -9,14 +9,17 @@ import {type DocumentEvent} from './events'
 import {type RemoteDocument} from './listen'
 import {type DocumentSet} from './processMutations'
 import {
+  addOwnTransactionIds,
   addSubscriptionIdToDocument,
   type AppliedTransaction,
   applyFirstQueuedTransaction,
   applyRemoteDocument,
   batchAppliedTransactions,
   cleanupOutgoingTransaction,
+  holdForEngineTransactions,
   type QueuedTransaction,
   queueTransaction,
+  releaseEngineHolds,
   removeQueuedTransaction,
   removeSubscriptionIdFromDocument,
   revertOutgoingTransaction,
@@ -1746,5 +1749,43 @@ describe('removeSubscriptionIdFromDocument', () => {
     }
     const newState = removeSubscriptionIdFromDocument(initialState, 'nonexistent', 'subX')
     expect(newState).toEqual(initialState)
+  })
+})
+
+describe('engine transactions', () => {
+  const stateWith = (subscriptions: string[]): SyncTransactionState => ({
+    queued: [],
+    applied: [],
+    outgoing: undefined,
+    grants,
+    documentStates: {
+      'doc': {id: 'doc', subscriptions, local: null},
+      'drafts.doc': {id: 'drafts.doc', subscriptions, local: null},
+    },
+  })
+  const ids = ['drafts.doc', 'doc']
+
+  it('holds the documents an engine transaction writes past their last subscriber', () => {
+    const held = holdForEngineTransactions(stateWith(['sub']), ids, ['t1'])
+    const left = ids.reduce((acc, id) => removeSubscriptionIdFromDocument(acc, id, 'sub'), held)
+    expect(left.documentStates['drafts.doc']?.subscriptions).toEqual(['engine:t1'])
+    expect(left.documentStates['doc']?.subscriptions).toEqual(['engine:t1'])
+  })
+
+  it('releases every engine hold, evicting documents with no other subscriber', () => {
+    const held = holdForEngineTransactions(stateWith([]), ids, ['t1', 't2'])
+    expect(releaseEngineHolds(held, ids).documentStates).toEqual({})
+    const subscribed = holdForEngineTransactions(stateWith(['sub']), ids, ['t1'])
+    expect(releaseEngineHolds(subscribed, ids).documentStates['doc']?.subscriptions).toEqual([
+      'sub',
+    ])
+  })
+
+  it('records engine transactions as own, keeping the most recent', () => {
+    const next = addOwnTransactionIds(stateWith(['sub']), ids, ['t1', 't2'])
+    expect(next.documentStates['drafts.doc']?.recentOwnTransactionIds).toEqual(['t1', 't2'])
+    const many = Array.from({length: 60}, (_, i) => `t${i}`)
+    const capped = addOwnTransactionIds(stateWith(['sub']), ids, many)
+    expect(capped.documentStates['doc']?.recentOwnTransactionIds).toEqual(many.slice(-50))
   })
 })

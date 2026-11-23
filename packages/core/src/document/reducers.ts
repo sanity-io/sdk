@@ -23,6 +23,8 @@ const EMPTY_REVISIONS: NonNullable<Required<DocumentState['unverifiedRevisions']
  * between submitting a transaction and observing its listener echo.
  */
 const MAX_RECENT_OWN_TRANSACTION_IDS = 50
+// Prefix of the subscription ids an engine transaction holds its documents with.
+const ENGINE_HOLD = 'engine:'
 
 export type SyncTransactionState = Pick<
   DocumentStoreState,
@@ -411,6 +413,40 @@ export function addOwnTransactionIds(
     }
   }
   return {...prev, documentStates}
+}
+
+/**
+ * Keeps the documents an engine transaction writes subscribed until the engine has nothing pending,
+ * as the queue does for its own transactions, so their states (and engines) outlive the last
+ * subscriber while a write is in flight.
+ */
+export function holdForEngineTransactions(
+  prev: SyncTransactionState,
+  documentIds: string[],
+  transactionIds: string[],
+): SyncTransactionState {
+  return documentIds.reduce(
+    (acc, documentId) =>
+      transactionIds.reduce(
+        (held, transactionId) =>
+          addSubscriptionIdToDocument(held, documentId, `${ENGINE_HOLD}${transactionId}`),
+        acc,
+      ),
+    prev,
+  )
+}
+
+/** Releases the documents held by {@link holdForEngineTransactions}. */
+export function releaseEngineHolds(
+  prev: SyncTransactionState,
+  documentIds: string[],
+): SyncTransactionState {
+  return documentIds.reduce((acc, documentId) => {
+    const held = (acc.documentStates[documentId]?.subscriptions ?? []).filter((id) =>
+      id.startsWith(ENGINE_HOLD),
+    )
+    return held.reduce((next, id) => removeSubscriptionIdFromDocument(next, documentId, id), acc)
+  }, prev)
 }
 
 export function cleanupOutgoingTransaction(prev: SyncTransactionState): SyncTransactionState {
