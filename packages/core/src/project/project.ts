@@ -49,6 +49,8 @@ export interface ProjectBase {
   isDisabled: boolean
   isDisabledByUser: boolean
   activityFeedEnabled: boolean
+  /** Bare CDN URL of the logo; append image-pipeline params (`?w=&h=&fit=crop&auto=format`) for display. */
+  logoUrl: string | null
   createdAt: string
   updatedAt: string
 }
