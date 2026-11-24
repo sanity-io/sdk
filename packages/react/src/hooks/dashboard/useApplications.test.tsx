@@ -214,18 +214,6 @@ describe('useApplications', () => {
       activeDeployment: {id: 'deployment-1'},
       config: {mfManifest: {}},
     })
-    const inboxViewApplication = {
-      id: 'application-1',
-      type: 'coreApp',
-      name: 'inbox',
-      title: 'Inbox',
-      reference: 'sanity/inbox',
-      icon: null,
-      slug: 'inbox',
-      organizationId: 'organization-1',
-      isLocal: false,
-    }
-    expect(federated?.webWorkers[0]?.application).toEqual(inboxViewApplication)
     expect(federated?.views).toEqual([
       {
         id: 'view-1',
@@ -235,7 +223,6 @@ describe('useApplications', () => {
         version: '1',
         moduleId: 'App',
         metadata: {dock: {group: 'applications', order: 1}},
-        application: inboxViewApplication,
         module: {
           entry: 'https://inbox--apps--organization-1.sanity.run',
           moduleId: 'application-1/App',
@@ -275,7 +262,6 @@ describe('useApplications', () => {
     const local = result.current[1]
     expect(local).toMatchObject({type: 'coreApp', local: {host: 'localhost', port: 3333}})
     expect(local?.views[0]?.module.entry).toBe('http://localhost:3333')
-    expect(local?.views[0]?.application).toMatchObject({id: 'application-5', isLocal: true})
   })
 
   it('shapes installations alongside applications in one consistent shape', () => {
@@ -303,17 +289,6 @@ describe('useApplications', () => {
     // Raw record fields must not leak onto the shaped entry.
     expect(shaped).not.toHaveProperty('applicationId')
     expect(shaped).not.toHaveProperty('installedBy')
-    expect(shaped?.views[0]?.application).toEqual({
-      id: 'installation-1',
-      type: 'installation',
-      name: 'remote',
-      title: 'Remote App',
-      reference: 'sanity/remote',
-      icon: null,
-      slug: 'remote',
-      organizationId: 'organization-publisher',
-      isLocal: false,
-    })
     expect(shaped?.views).toEqual([
       expect.objectContaining({
         name: 'remote',

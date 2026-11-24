@@ -1,8 +1,23 @@
 import {type AssetSourceView, type PanelView, type TileView} from '@sanity/sdk/dashboard'
-import {useContext, useMemo} from 'react'
+import {useContext} from 'react'
 
-import {getDashboardRootContext} from '../../dashboard/module'
-import {toView} from '../../dashboard/toView'
+import {getDashboardRootContext, type ViewRoot} from '../../dashboard/module'
+
+/**
+ * Returns what the host passed to `render()` for the current view.
+ *
+ * Throws when the component does not render in a Dashboard view.
+ * @internal
+ */
+export function useViewRoot(): ViewRoot {
+  const root = useContext(getDashboardRootContext())
+
+  if (!root?.viewType || !root.props.view) {
+    throw new Error('useView must be called inside a Dashboard view')
+  }
+
+  return root
+}
 
 /**
  * Returns the current view.
@@ -21,13 +36,5 @@ import {toView} from '../../dashboard/toView'
  * @category Dashboard
  */
 export function useView(): PanelView | TileView | AssetSourceView {
-  const root = useContext(getDashboardRootContext())
-  const hostView = root?.viewType ? root.props.view : undefined
-  const view = useMemo(() => hostView && toView(hostView), [hostView])
-
-  if (!view) {
-    throw new Error('useView must be called inside a Dashboard view')
-  }
-
-  return view
+  return useViewRoot().props.view
 }

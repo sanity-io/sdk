@@ -1,7 +1,9 @@
 import {expectTypeOf, test} from 'vitest'
 
 import {
+  type AssetSourceView,
   type CapabilityRecord,
+  type DashboardApplication,
   type DashboardTopics,
   type EventTopic,
   type EventTopicDef,
@@ -16,13 +18,20 @@ import {
   type MessageBusMessage,
   type MessageBusMeta,
   type MessageBusQueryOptions,
+  type PanelView,
   type PayloadOf,
   type ReplyOf,
   type StateTopicDef,
+  type TileView,
   type TopicName,
   type Topics,
   useApplicationBasePath,
+  type useAssetSource,
   useCapabilities,
+  type usePanel,
+  type useTile,
+  type useView,
+  type ViewApplication,
   type WebWorkerProps,
 } from './dashboard'
 import {
@@ -70,6 +79,22 @@ test('dashboard entrypoint exposes the message bus public types', () => {
   expectTypeOf<ReturnType<typeof useApplicationBasePath>>().toEqualTypeOf<string>()
   expectTypeOf<ReturnType<typeof useCapabilities>>().toEqualTypeOf<CapabilityRecord>()
   expectTypeOf<MessageBusHost['connections']['subscribe']>().toBeFunction()
+})
+
+test('view hooks return views with their application, useApplications lists them without', () => {
+  expectTypeOf<ReturnType<typeof useView>>().toEqualTypeOf<PanelView | TileView | AssetSourceView>()
+  expectTypeOf<ReturnType<typeof usePanel>['view']>().toEqualTypeOf<PanelView>()
+  expectTypeOf<ReturnType<typeof useTile>['view']>().toEqualTypeOf<TileView>()
+  expectTypeOf<ReturnType<typeof useAssetSource>['view']>().toEqualTypeOf<AssetSourceView>()
+  expectTypeOf<ReturnType<typeof useView>['application']>().toEqualTypeOf<ViewApplication>()
+
+  type ListedView = DashboardApplication['views'][number]
+  expectTypeOf<ListedView>().not.toHaveProperty('application')
+  expectTypeOf<DashboardApplication['webWorkers'][number]>().not.toHaveProperty('application')
+  // `surface` still narrows `metadata` on a listed view.
+  expectTypeOf<Extract<ListedView, {surface: 'tile'}>['metadata']>().toEqualTypeOf<
+    TileView['metadata']
+  >()
 })
 
 test('WebWorkerProps bus.subscribe takes a handler and has no observable form', () => {

@@ -1,20 +1,14 @@
-import {type ApplicationInterface} from '@sanity/sdk'
-import {type ViewApplication} from '@sanity/sdk/dashboard'
+import {type AssetSourceView, type PanelView, type TileView} from '@sanity/sdk/dashboard'
 import {type AssetSourceComponentProps} from '@sanity/types'
 import * as React from 'react'
 
 const ROOT_SLOT_KEY = Symbol.for('sanity.os.root')
 
-type HostView<Type extends ApplicationInterface['type']> = Extract<
-  ApplicationInterface,
-  {type: Type}
-> & {application: ViewApplication}
-
 /** The props the host passed to `render()`, per view type. */
 export type ViewRoot =
-  | {viewType: 'panel'; props: {view: HostView<'panel'>; onClose: () => void}}
-  | {viewType: 'tile'; props: {view: HostView<'tile'>}}
-  | {viewType: 'asset_source'; props: AssetSourceComponentProps & {view: HostView<'asset_source'>}}
+  | {viewType: 'panel'; props: {view: PanelView; onClose: () => void}}
+  | {viewType: 'tile'; props: {view: TileView}}
+  | {viewType: 'asset_source'; props: AssetSourceComponentProps & {view: AssetSourceView}}
 
 /** The root a CLI-generated wrapper rendered the app into. */
 type DashboardRoot = {

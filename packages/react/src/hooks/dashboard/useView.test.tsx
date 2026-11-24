@@ -14,12 +14,12 @@ const view = {
   moduleId: 'views/inbox',
   name: 'inbox',
   title: 'Inbox',
-  type: 'tile',
+  surface: 'tile',
   version: '2',
 } as const
 
 describe('useView', () => {
-  it('returns the view the host passed to render(), with its type as surface', () => {
+  it('returns the view the host passed to render()', () => {
     const {result} = renderHook(() => useView(), {
       wrapper: ({children}: {children: ReactNode}) => (
         <RootContext.Provider
@@ -30,25 +30,7 @@ describe('useView', () => {
       ),
     })
 
-    const {type: _type, ...rest} = view
-    expect(result.current).toEqual({...rest, surface: 'tile'})
-  })
-
-  it('returns the same view across renders', () => {
-    const {result, rerender} = renderHook(() => useView(), {
-      wrapper: ({children}: {children: ReactNode}) => (
-        <RootContext.Provider
-          value={{signal: new AbortController().signal, viewType: 'tile', props: {view}}}
-        >
-          {children}
-        </RootContext.Provider>
-      ),
-    })
-    const first = result.current
-
-    rerender()
-
-    expect(result.current).toBe(first)
+    expect(result.current).toBe(view)
   })
 
   it('throws when the host passes no view', () => {

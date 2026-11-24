@@ -44,22 +44,18 @@ describe('usePanel', () => {
   })
 
   it('returns the panel view and the onClose the host passed to render()', () => {
-    const view = {...base, metadata: null, type: 'panel'} as const
+    const view = {...base, metadata: null, surface: 'panel'} as const
     const onClose = vi.fn()
 
     const {result} = renderInView({signal, viewType: 'panel', props: {onClose, view}})
 
-    expect(result.current).toEqual({
-      onClose,
-      view: {...base, metadata: null, surface: 'panel'},
-      setMode: expect.any(Function),
-    })
+    expect(result.current).toEqual({onClose, view, setMode: expect.any(Function)})
   })
 
   it('sends setMode payloads as panels.mode.set', () => {
     const payloads: PayloadOf<'panels.mode.set'>[] = []
     host.subscribe('panels.mode.set', (message) => payloads.push(message.payload))
-    const view = {...base, metadata: null, type: 'panel'} as const
+    const view = {...base, metadata: null, surface: 'panel'} as const
 
     const {result} = renderInView({signal, viewType: 'panel', props: {onClose: vi.fn(), view}})
     result.current.setMode({name: 'inbox', mode: 'full'})
@@ -68,7 +64,7 @@ describe('usePanel', () => {
   })
 
   it('throws in a view of another type', () => {
-    const view = {...base, metadata: {size: 'small'}, type: 'tile'} as const
+    const view = {...base, metadata: {size: 'small'}, surface: 'tile'} as const
 
     expect(() => renderInView({signal, viewType: 'tile', props: {view}})).toThrow(
       'usePanel must be called inside a panel view, not a tile view',

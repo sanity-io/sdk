@@ -20,13 +20,16 @@ type InterfaceOf<Type extends ApplicationInterface['type']> = Extract<
   {type: Type}
 >
 
-type ViewOf<Type extends ApplicationInterface['type'], Surface> = Omit<
-  InterfaceOf<Type>,
-  'type'
-> & {
-  surface: Surface
-  application: ViewApplication
-}
+// Views listed under their application, as on `useApplications`, leave `application` out.
+type MaybeApplication<WithApplication extends boolean> = WithApplication extends true
+  ? {application: ViewApplication}
+  : unknown
+
+type ViewOf<
+  Type extends ApplicationInterface['type'],
+  Surface,
+  WithApplication extends boolean,
+> = Omit<InterfaceOf<Type>, 'type'> & {surface: Surface} & MaybeApplication<WithApplication>
 
 /**
  * A view that opens as a full window.
@@ -34,7 +37,11 @@ type ViewOf<Type extends ApplicationInterface['type'], Surface> = Omit<
  * @category Types
  * @category Dashboard
  */
-export type WindowView = ViewOf<'app', 'window'>
+export type WindowView<WithApplication extends boolean = true> = ViewOf<
+  'app',
+  'window',
+  WithApplication
+>
 
 /**
  * A view that opens as a panel from the dock.
@@ -42,7 +49,11 @@ export type WindowView = ViewOf<'app', 'window'>
  * @category Types
  * @category Dashboard
  */
-export type PanelView = ViewOf<'panel', 'panel'>
+export type PanelView<WithApplication extends boolean = true> = ViewOf<
+  'panel',
+  'panel',
+  WithApplication
+>
 
 /**
  * A view that renders as a tile on the dashboard.
@@ -50,7 +61,11 @@ export type PanelView = ViewOf<'panel', 'panel'>
  * @category Types
  * @category Dashboard
  */
-export type TileView = ViewOf<'tile', 'tile'>
+export type TileView<WithApplication extends boolean = true> = ViewOf<
+  'tile',
+  'tile',
+  WithApplication
+>
 
 /**
  * A view that renders as an asset source.
@@ -58,7 +73,11 @@ export type TileView = ViewOf<'tile', 'tile'>
  * @category Types
  * @category Dashboard
  */
-export type AssetSourceView = ViewOf<'asset_source', 'asset_source'>
+export type AssetSourceView<WithApplication extends boolean = true> = ViewOf<
+  'asset_source',
+  'asset_source',
+  WithApplication
+>
 
 /**
  * A view exposed by an application or installation.
@@ -66,7 +85,11 @@ export type AssetSourceView = ViewOf<'asset_source', 'asset_source'>
  * @category Types
  * @category Dashboard
  */
-export type View = WindowView | PanelView | TileView | AssetSourceView
+export type View<WithApplication extends boolean = true> =
+  | WindowView<WithApplication>
+  | PanelView<WithApplication>
+  | TileView<WithApplication>
+  | AssetSourceView<WithApplication>
 
 /**
  * A web worker exposed by an application or installation.
@@ -74,4 +97,5 @@ export type View = WindowView | PanelView | TileView | AssetSourceView
  * @category Types
  * @category Dashboard
  */
-export type WebWorker = InterfaceOf<'worker'> & {application: ViewApplication}
+export type WebWorker<WithApplication extends boolean = true> = InterfaceOf<'worker'> &
+  MaybeApplication<WithApplication>

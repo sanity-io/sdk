@@ -1,9 +1,7 @@
 import {type PanelView} from '@sanity/sdk/dashboard'
-import {useContext} from 'react'
 
-import {getDashboardRootContext} from '../../dashboard/module'
 import {type TopicEmitter, useEmit} from './useEmit'
-import {useView} from './useView'
+import {useViewRoot} from './useView'
 
 /**
  * Returns the panel view, the onClose handler, and setMode, which sends `panels.mode.set`.
@@ -40,14 +38,13 @@ export function usePanel(): {
   onClose: () => void
   setMode: TopicEmitter<'panels.mode.set'>
 } {
-  const view = useView()
-  const root = useContext(getDashboardRootContext())
+  const root = useViewRoot()
 
-  if (root?.viewType !== 'panel' || view.surface !== 'panel') {
-    throw new Error(`usePanel must be called inside a panel view, not a ${view.surface} view`)
+  if (root.viewType !== 'panel') {
+    throw new Error(`usePanel must be called inside a panel view, not a ${root.viewType} view`)
   }
 
   const setMode = useEmit('panels.mode.set')
 
-  return {view, onClose: root.props.onClose, setMode}
+  return {...root.props, setMode}
 }

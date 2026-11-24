@@ -1,15 +1,8 @@
 import {type ApplicationBase, type Installation, type InstallationInclude} from '@sanity/sdk'
 import {getApplicationOrigin} from '@sanity/sdk/_internal'
-import {
-  type RemoteModuleRef,
-  type ValueOf,
-  type View,
-  type ViewApplication,
-  type WebWorker,
-} from '@sanity/sdk/dashboard'
+import {type RemoteModuleRef, type ValueOf, type View, type WebWorker} from '@sanity/sdk/dashboard'
 import {useMemo} from 'react'
 
-import {toView} from '../../dashboard/toView'
 import {useTopic} from './useTopic'
 
 type DashboardTopicEntry = Extract<
@@ -58,8 +51,8 @@ export type DashboardInstallation = Omit<DashboardApplicationBase, 'type'> & {
  */
 export type DashboardApplication = (DashboardTopicApplication | DashboardInstallation) &
   Pick<DashboardApplicationBase, 'isLocal'> & {
-    readonly views: (View & {readonly module: RemoteModuleRef})[]
-    readonly webWorkers: (WebWorker & {readonly module: RemoteModuleRef})[]
+    readonly views: (View<false> & {readonly module: RemoteModuleRef})[]
+    readonly webWorkers: (WebWorker<false> & {readonly module: RemoteModuleRef})[]
   }
 
 // Only a federated deployment (one with a module federation manifest) exposes loadable modules.
@@ -79,18 +72,6 @@ const loadModules = (
   const entry = interfaces.length === 0 ? null : getApplicationOrigin(base)
   if (entry === null) return {views: [], webWorkers: []}
 
-  const {id, type, name, title, reference, icon, slug, organizationId, isLocal} = base
-  const application: ViewApplication = {
-    id,
-    type,
-    name,
-    title,
-    reference,
-    icon,
-    slug,
-    organizationId,
-    isLocal,
-  }
   const views: DashboardApplication['views'] = []
   const webWorkers: DashboardApplication['webWorkers'] = []
 
@@ -102,11 +83,17 @@ const loadModules = (
     }
 
     if (extension.type === 'worker') {
-      webWorkers.push({...extension, application, module})
+      webWorkers.push({...extension, module})
       continue
     }
 
-    views.push({...toView({...extension, application}), module})
+    const {type, ...view} = extension
+    // TS can't correlate `surface` with the narrowed `type` across the union.
+    views.push({
+      ...view,
+      surface: type === 'app' ? 'window' : type,
+      module,
+    } as DashboardApplication['views'][number])
   }
 
   return {views, webWorkers}
