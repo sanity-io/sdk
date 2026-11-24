@@ -83,9 +83,12 @@ test('dashboard entrypoint exposes the message bus public types', () => {
 
 test('view hooks return views with their application, useApplications lists them without', () => {
   expectTypeOf<ReturnType<typeof useView>>().toEqualTypeOf<PanelView | TileView | AssetSourceView>()
-  expectTypeOf<ReturnType<typeof usePanel>['view']>().toEqualTypeOf<PanelView>()
-  expectTypeOf<ReturnType<typeof useTile>['view']>().toEqualTypeOf<TileView>()
-  expectTypeOf<ReturnType<typeof useAssetSource>['view']>().toEqualTypeOf<AssetSourceView>()
+  expectTypeOf<ReturnType<typeof usePanel>['view']['surface']>().toEqualTypeOf<'panel'>()
+  expectTypeOf<ReturnType<typeof useTile>['view']['surface']>().toEqualTypeOf<'tile'>()
+  expectTypeOf<
+    ReturnType<typeof useAssetSource>['view']['surface']
+  >().toEqualTypeOf<'asset_source'>()
+  expectTypeOf<ReturnType<typeof useView>>().not.toHaveProperty('type')
   expectTypeOf<ReturnType<typeof useView>['application']>().toEqualTypeOf<ViewApplication>()
 
   type ListedView = DashboardApplication['views'][number]
@@ -95,6 +98,13 @@ test('view hooks return views with their application, useApplications lists them
   expectTypeOf<Extract<ListedView, {surface: 'tile'}>['metadata']>().toEqualTypeOf<
     TileView['metadata']
   >()
+})
+
+test('WebWorkerProps describes the worker with its name and type', () => {
+  expectTypeOf<WebWorkerProps['worker']>().toEqualTypeOf<{
+    readonly name: string
+    readonly type: 'worker'
+  }>()
 })
 
 test('WebWorkerProps bus.subscribe takes a handler and has no observable form', () => {

@@ -238,11 +238,20 @@ describe('useApplications', () => {
       expect.objectContaining({name: 'library', surface: 'asset_source'}),
     ])
     expect(federated?.webWorkers).toEqual([
-      expect.objectContaining({
-        module: expect.objectContaining({moduleId: 'application-1/services/sync'}),
-        name: 'sync',
+      {
+        id: 'worker-1',
         type: 'worker',
-      }),
+        name: 'sync',
+        title: 'Sync',
+        version: '1',
+        moduleId: 'services/sync',
+        metadata: null,
+        module: {
+          entry: 'https://inbox--apps--organization-1.sanity.run',
+          moduleId: 'application-1/services/sync',
+          version: '1',
+        },
+      },
     ])
     expect(nonFederated).toMatchObject({views: [], webWorkers: []})
     expect(nonSingleton?.views[0]?.module.entry).toBe('https://canvas.sanity.studio')
