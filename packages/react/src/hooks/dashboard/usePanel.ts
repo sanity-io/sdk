@@ -1,7 +1,6 @@
-import {type PanelView} from '@sanity/sdk/dashboard'
 import {useContext} from 'react'
 
-import {getDashboardRootContext} from '../../dashboard/module'
+import {getDashboardRootContext, type ViewRootProps} from '../../dashboard/module'
 import {type TopicEmitter, useEmit} from './useEmit'
 import {useView} from './useView'
 
@@ -35,11 +34,7 @@ import {useView} from './useView'
  * @public
  * @category Dashboard
  */
-export function usePanel(): {
-  view: PanelView
-  onClose: () => void
-  setMode: TopicEmitter<'panels.mode.set'>
-} {
+export function usePanel(): ViewRootProps<'panel'> & {setMode: TopicEmitter<'panels.mode.set'>} {
   const view = useView()
   const root = useContext(getDashboardRootContext())
 

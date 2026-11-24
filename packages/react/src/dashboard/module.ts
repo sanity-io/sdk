@@ -10,6 +10,12 @@ type ViewRoot =
   | {viewType: 'tile'; props: {view: TileView}}
   | {viewType: 'asset_source'; props: AssetSourceComponentProps & {view: AssetSourceView}}
 
+/** The props the host passes to `render()` for a view type. */
+export type ViewRootProps<ViewType extends ViewRoot['viewType']> = Extract<
+  ViewRoot,
+  {viewType: ViewType}
+>['props']
+
 /** The root a CLI-generated wrapper rendered the app into. */
 type DashboardRoot = {
   /** Aborts when the host disposes the root, never when it hides it. */

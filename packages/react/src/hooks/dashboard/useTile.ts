@@ -1,7 +1,6 @@
-import {type TileView} from '@sanity/sdk/dashboard'
 import {useContext} from 'react'
 
-import {getDashboardRootContext} from '../../dashboard/module'
+import {getDashboardRootContext, type ViewRootProps} from '../../dashboard/module'
 import {useView} from './useView'
 
 /**
@@ -20,7 +19,7 @@ import {useView} from './useView'
  * @public
  * @category Dashboard
  */
-export function useTile(): {view: TileView} {
+export function useTile(): ViewRootProps<'tile'> {
   const view = useView()
   const root = useContext(getDashboardRootContext())
 
