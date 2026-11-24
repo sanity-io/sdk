@@ -1,10 +1,8 @@
-import {type MutationEvent} from '@sanity/client'
 import {type Mutation, type SanityDocument} from '@sanity/types'
 import {
   concat,
   concatMap,
   distinctUntilChanged,
-  EMPTY,
   filter,
   map,
   type Observable,
@@ -16,7 +14,9 @@ import {
 } from 'rxjs'
 import {mergeMap, scan} from 'rxjs/operators'
 
+import {type BoundResourceKey} from '../store/createActionBinder'
 import {type StoreContext} from '../store/defineStore'
+import {type DocumentMutationChangeEvent, observeDocumentChanges} from './documentChangeSource'
 import {type DocumentStoreState} from './documentStore'
 import {OutOfSyncError} from './outOfSyncError'
 import {processMutations} from './processMutations'
@@ -45,7 +45,7 @@ export interface SyncEvent {
   document: SanityDocument | null
 }
 
-export type ListenerEvent = SyncEvent | MutationEvent
+export type ListenerEvent = SyncEvent | DocumentMutationChangeEvent
 
 export interface ListenerSequenceState {
   /**
@@ -64,7 +64,7 @@ export interface ListenerSequenceState {
    * Buffer to keep track of events that doesn't line up in a [previousRev, resultRev] -- [previousRev, resultRev] sequence
    * This can happen if events arrive out of order, or if an event in the middle for some reason gets lost
    */
-  buffer: MutationEvent[]
+  buffer: DocumentMutationChangeEvent[]
 }
 
 export class DeadlineExceededError extends OutOfSyncError {
@@ -92,14 +92,14 @@ interface SortListenerEventsOptions {
  * `previousRev` matches no other event start a new chain. The buffer may have
  * multiple holes in it, so multiple chains can exist at once.
  */
-function toOrderedChains(events: MutationEvent[]): MutationEvent[][] {
+function toOrderedChains(events: DocumentMutationChangeEvent[]): DocumentMutationChangeEvent[][] {
   const chainStarts = events.filter(
     (event) => !events.some((other) => other.resultRev === event.previousRev),
   )
 
   return chainStarts.map((start) => {
-    const chain: MutationEvent[] = []
-    let current: MutationEvent | undefined = start
+    const chain: DocumentMutationChangeEvent[] = []
+    let current: DocumentMutationChangeEvent | undefined = start
     while (current) {
       chain.push(current)
       const currentResultRev: string | undefined = current.resultRev
@@ -115,7 +115,10 @@ function toOrderedChains(events: MutationEvent[]): MutationEvent[][] {
  * are already reflected in the current base (e.g. events replayed by a
  * resumed listener after the snapshot was refetched).
  */
-function discardChainTo(chain: MutationEvent[], revision: string | undefined): MutationEvent[] {
+function discardChainTo(
+  chain: DocumentMutationChangeEvent[],
+  revision: string | undefined,
+): DocumentMutationChangeEvent[] {
   const revisionIndex = chain.findIndex((event) => event.resultRev === revision)
   if (revisionIndex === -1) return chain
   return chain.slice(revisionIndex + 1)
@@ -201,7 +204,7 @@ export function sortListenerEvents(options?: SortListenerEventsOptions) {
         },
         {
           base: undefined,
-          buffer: [] as MutationEvent[],
+          buffer: [] as DocumentMutationChangeEvent[],
           emitEvents: [] as ListenerEvent[],
         },
       ),
@@ -231,24 +234,25 @@ export function sortListenerEvents(options?: SortListenerEventsOptions) {
 }
 
 export const listen = (
-  {state}: StoreContext<DocumentStoreState>,
+  {state, instance, key}: StoreContext<DocumentStoreState, BoundResourceKey>,
   documentId: string,
 ): Observable<RemoteDocument> => {
-  const {sharedListener, fetchDocument} = state.get()
+  const {fetchDocument} = state.get()
 
-  return sharedListener.events.pipe(
+  return observeDocumentChanges(instance, {
+    resource: key.resource,
+    documentIds: [documentId],
+  }).pipe(
     concatMap((e) => {
-      // `welcome` means a fresh listener connection and `reset` means a
-      // resumed listener could not replay what was missed; both require
-      // refetching the snapshot. a `welcomeback` means the resume succeeded
-      // and the missed events were replayed, so no refetch is needed
-      if (e.type === 'welcome' || e.type === 'reset') {
+      // `connected` kicks off the initial fetch and `resync` means a resumed
+      // listener could not replay what was missed; both require refetching the
+      // snapshot.
+      if (e.type === 'connected' || e.type === 'resync') {
         return fetchDocument(documentId).pipe(
           map((document): SyncEvent => ({type: 'sync', document})),
         )
       }
-      if (e.type === 'mutation' && e.documentId === documentId) return of(e)
-      return EMPTY
+      return of(e)
     }),
     sortListenerEvents(),
     withLatestFrom(
@@ -278,7 +282,7 @@ export const listen = (
       const [document] = Object.values(
         processMutations({
           documents: {[documentId]: documentState.remote},
-          mutations: next.mutations as Mutation[],
+          mutations: next.mutations,
           transactionId: next.transactionId,
           timestamp: next.timestamp,
         }),
@@ -292,7 +296,7 @@ export const listen = (
         document: document ?? null,
         revision: transactionId,
         timestamp,
-        mutations: next.mutations as Mutation[],
+        mutations: next.mutations,
         ...(previousRev && {previousRev}),
       }
     }),

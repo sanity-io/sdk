@@ -1,4 +1,4 @@
-import {type ListenEvent, type SanityClient, type SanityDocument} from '@sanity/client'
+import {type SanityClient} from '@sanity/client'
 import {DocumentId, getPublishedId} from '@sanity/id-utils'
 import {
   catchError,
@@ -26,7 +26,7 @@ import {getClientAuthState} from '../auth/authStore'
 import {getClientState} from '../client/clientStore'
 import {retryRead} from '../client/retry'
 import {type DocumentResource} from '../config/sanityConfig'
-import {getSharedListenerEvents} from '../document/documentStore'
+import {type DocumentChangeEvent, observeDocumentChanges} from '../document/documentChangeSource'
 import {bindActionByResource, type BoundResourceKey} from '../store/createActionBinder'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {
@@ -337,32 +337,36 @@ function fetchHistoryBatch(
 interface WatchedVariants {
   variantTypes: Map<string, DocumentVariantType>
   draftPublishedIds: Set<string>
+  documentIds: string[]
 }
 
 function buildWatchedVariants(variantIds: readonly string[]): WatchedVariants {
   const variantTypes = new Map<string, DocumentVariantType>()
   const draftPublishedIds = new Set<string>()
+  const documentIds = new Set<string>(variantIds)
   for (const variantId of variantIds) {
     const variantType = getDocumentVariantType(variantId)
     variantTypes.set(variantId, variantType)
     if (variantType === 'draft') {
-      draftPublishedIds.add(getPublishedId(DocumentId(variantId)))
+      const publishedId = getPublishedId(DocumentId(variantId))
+      draftPublishedIds.add(publishedId)
+      documentIds.add(publishedId)
     }
   }
-  return {variantTypes, draftPublishedIds}
+  return {variantTypes, draftPublishedIds, documentIds: Array.from(documentIds)}
 }
 
 /**
- * Returns a deduplication key when a listener event should trigger a reload:
- * - `null` for `'reset'` (never coalesced across resets)
+ * Returns a deduplication key when a document change event should trigger a reload:
+ * - `null` for `'resync'` (never coalesced across resyncs)
  * - `event.transactionId` for relevant mutations (coalesces multi-doc transactions)
  * - `undefined` when the event does not affect `/events/documents` for any watched variant
  */
 function classifyReloadTrigger(
-  event: ListenEvent<SanityDocument>,
+  event: DocumentChangeEvent,
   watched: WatchedVariants,
 ): string | null | undefined {
-  if (event.type === 'reset') return null
+  if (event.type === 'resync') return null
   if (event.type !== 'mutation') return undefined
 
   if (watched.draftPublishedIds.has(event.documentId)) {
@@ -421,7 +425,12 @@ function observeHistoryEntry(
     ),
   )
 
-  const watchLive$ = defer(() => getSharedListenerEvents(instance, {resource: key.resource})).pipe(
+  const watchLive$ = defer(() =>
+    observeDocumentChanges(instance, {
+      resource: key.resource,
+      documentIds: watched.documentIds,
+    }),
+  ).pipe(
     retryRead(credential, (error) => state.set('setHistoryError', setEntryError(entryKey, error))),
     map((event) => classifyReloadTrigger(event, watched)),
     filter((trigger): trigger is string | null => trigger !== undefined),

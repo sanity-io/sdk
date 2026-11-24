@@ -1,9 +1,9 @@
-import {ClientError, type ListenEvent, type SanityClient, type SanityDocument} from '@sanity/client'
+import {ClientError, type SanityClient} from '@sanity/client'
 import {BehaviorSubject, Observable, Subject} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {getClientState} from '../client/clientStore'
-import {getSharedListenerEvents} from '../document/documentStore'
+import {type DocumentChangeEvent, observeDocumentChanges} from '../document/documentChangeSource'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {type StateSource} from '../store/createStateSourceAction'
 import {fetchDocumentsHistoryEvents, type RawDocumentHistoryEvent} from './historyClient'
@@ -21,9 +21,9 @@ vi.mock('../client/clientStore', async (importOriginal) => ({
   getClientState: vi.fn(),
 }))
 
-vi.mock('../document/documentStore', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../document/documentStore')>()),
-  getSharedListenerEvents: vi.fn(),
+vi.mock('../document/documentChangeSource', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../document/documentChangeSource')>()),
+  observeDocumentChanges: vi.fn(),
 }))
 
 vi.mock('./historyClient', async (importOriginal) => ({
@@ -49,12 +49,12 @@ function emitEventsResponse(
 
 describe('historyStore', () => {
   let instance: SanityInstance
-  let listener$: Subject<ListenEvent<SanityDocument>>
+  let changes$: Subject<DocumentChangeEvent>
   let client$: BehaviorSubject<SanityClient>
 
   beforeEach(() => {
     vi.clearAllMocks()
-    listener$ = new Subject<ListenEvent<SanityDocument>>()
+    changes$ = new Subject<DocumentChangeEvent>()
     const mockClient = {} as SanityClient
     client$ = new BehaviorSubject<SanityClient>(mockClient)
 
@@ -64,7 +64,7 @@ describe('historyStore', () => {
       subscribe: () => () => {},
     } as StateSource<SanityClient>)
 
-    vi.mocked(getSharedListenerEvents).mockReturnValue(listener$.asObservable())
+    vi.mocked(observeDocumentChanges).mockReturnValue(changes$.asObservable())
     vi.mocked(fetchDocumentsHistoryEvents).mockImplementation(() => emitEventsResponse({}))
 
     instance = createSanityInstance({projectId: 'proj-1', dataset: 'production'})
@@ -324,63 +324,58 @@ describe('historyStore', () => {
       expect(state.getCurrent()).toHaveLength(1)
     })
 
+    // Initial connected signal does not trigger a redundant reload
+    changes$.next({type: 'connected'})
+    expect(fetchDocumentsHistoryEvents).toHaveBeenCalledTimes(1)
+
     // Intermediate draft 'update' does not produce /events/documents entries -> no reload
-    listener$.next({
+    changes$.next({
       type: 'mutation',
       documentId: 'drafts.doc-a',
-      eventId: 'ev-1',
       identity: 'user-1',
       mutations: [],
       timestamp: '2025-05-06T11:00:00.000Z',
       transactionId: 'tx-edit-1',
       transition: 'update',
-      visibility: 'query',
-      effects: {apply: [], revert: []},
       previousRev: 'rev-a1',
       resultRev: 'rev-a2',
-      transactionTotalEvents: 1,
-      transactionCurrentEvent: 1,
     })
     expect(fetchDocumentsHistoryEvents).toHaveBeenCalledTimes(1)
 
     // Multi-document publish emits two mutations with the same transactionId -> coalesced to ONE reload
-    listener$.next({
+    changes$.next({
       type: 'mutation',
       documentId: 'doc-a',
-      eventId: 'ev-2',
       identity: 'user-1',
       mutations: [],
       timestamp: '2025-05-06T12:00:00.000Z',
       transactionId: 'tx-publish',
       transition: 'appear',
-      visibility: 'query',
-      effects: {apply: [], revert: []},
       previousRev: 'rev-0',
       resultRev: 'tx-publish',
-      transactionTotalEvents: 2,
-      transactionCurrentEvent: 1,
     })
-    listener$.next({
+    changes$.next({
       type: 'mutation',
       documentId: 'doc-b',
-      eventId: 'ev-3',
       identity: 'user-1',
       mutations: [],
       timestamp: '2025-05-06T12:00:00.000Z',
       transactionId: 'tx-publish',
       transition: 'appear',
-      visibility: 'query',
-      effects: {apply: [], revert: []},
       previousRev: 'rev-0',
       resultRev: 'tx-publish',
-      transactionTotalEvents: 2,
-      transactionCurrentEvent: 2,
     })
 
     await vi.waitFor(() => {
       expect(state.getCurrent()).toHaveLength(2)
     })
     expect(fetchDocumentsHistoryEvents).toHaveBeenCalledTimes(2)
+
+    // Resync triggers a reload (and consecutive resyncs are not coalesced)
+    changes$.next({type: 'resync'})
+    await vi.waitFor(() => {
+      expect(fetchDocumentsHistoryEvents).toHaveBeenCalledTimes(3)
+    })
 
     unsub()
   })

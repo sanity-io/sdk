@@ -1,15 +1,7 @@
-import {
-  DocumentId,
-  getDraftId,
-  getPublishedId,
-  getVersionId,
-  isDraftId,
-  isVersionId,
-} from '@sanity/id-utils'
+import {DocumentId, isDraftId, isVersionId} from '@sanity/id-utils'
 
 import {type DocumentHandle, type DocumentResource} from '../config/sanityConfig'
-import {getEffectiveDocumentModel} from '../document/resourceRules'
-import {isReleasePerspective} from '../releases/utils/isReleasePerspective'
+import {getDocumentVariantId} from '../document/getDocumentVariantId'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {isDeepEqual} from '../utils/object'
 import {type DocumentsHistoryOptions, type DocumentVariantType} from './types'
@@ -49,25 +41,11 @@ export function resolveHistoryDocumentId(
   handle: Pick<DocumentHandle, 'documentId' | 'documentType' | 'liveEdit' | 'perspective'>,
   resource?: DocumentResource,
 ): string {
-  const docId = DocumentId(handle.documentId)
-  if (isVersionId(docId)) {
+  if (isVersionId(DocumentId(handle.documentId))) {
     return handle.documentId
   }
 
-  const model = getEffectiveDocumentModel(resource, handle.documentType)
-  if ((model.liveEdit ?? handle.liveEdit) === true) {
-    return getPublishedId(docId)
-  }
-
-  if (model.supportsReleases && isReleasePerspective(handle.perspective)) {
-    return getVersionId(docId, handle.perspective.releaseName)
-  }
-
-  if (handle.perspective === 'published') {
-    return getPublishedId(docId)
-  }
-
-  return getDraftId(docId)
+  return getDocumentVariantId(handle, resource)
 }
 
 /**
