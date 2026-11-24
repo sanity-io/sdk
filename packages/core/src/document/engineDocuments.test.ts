@@ -1,7 +1,7 @@
 import {ClientError, ServerError} from '@sanity/client'
 import {type DocumentSync, type Operation} from '@sanity/document-sync'
 import {type SanityDocument} from '@sanity/types'
-import {of, Subject} from 'rxjs'
+import {concat, defer, NEVER, type Observable, of, Subject, throwError} from 'rxjs'
 import {afterEach, describe, expect, it, vi} from 'vitest'
 
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
@@ -450,14 +450,21 @@ describe('subscribeToSubscriptionsAndRunEngines', () => {
   let instance: SanityInstance
   afterEach(() => instance.dispose())
 
-  function setup(experimental_documentSync: boolean) {
+  function setup(
+    experimental_documentSync: boolean,
+    {
+      events = new Subject<never>() as Observable<never>,
+      fetchDocument = () => of(null),
+    }: {events?: Observable<never>; fetchDocument?: (id: string) => Observable<null>} = {},
+  ) {
     instance = createSanityInstance({projectId: 'p', dataset: 'd', experimental_documentSync})
     const state = createStoreState({
       documentStates: {},
       engines: {},
       engineChanges: 0,
-      sharedListener: {events: new Subject(), dispose: () => {}},
-      fetchDocument: () => of(null),
+      engineTransactions: new Map(),
+      sharedListener: {events, dispose: () => {}},
+      fetchDocument,
     } as unknown as DocumentStoreState)
     const key = {name: 'p.d', resource: {projectId: 'p', dataset: 'd'}}
     const subscription = subscribeToSubscriptionsAndRunEngines({instance, state, key})
@@ -495,6 +502,36 @@ describe('subscribeToSubscriptionsAndRunEngines', () => {
       },
     } as never)
     expect(Object.keys(state.get().engines)).toEqual(['a'])
+    subscription.unsubscribe()
+  })
+
+  it('starts an engine from the documents the queue has loaded, without reading them again', async () => {
+    const fetchDocument = vi.fn(() => of(null))
+    // The shared listener replays its `welcome` to a late subscriber, which starts the fetch.
+    const events = concat(of({type: 'welcome'}), NEVER) as Observable<never>
+    const {state, subscription} = setup(true, {fetchDocument, events})
+    const published = {_id: 'a', _type: 'author', _rev: 'p1'}
+    const remoteDraft = {_id: 'drafts.a', _type: 'author', _rev: 'r1', name: 'loaded'}
+    state.set('documentStates', {
+      documentStates: {
+        'a': {id: 'a', subscriptions: ['s'], local: published, remote: published},
+        'drafts.a': {id: 'drafts.a', subscriptions: ['s'], local: remoteDraft, remote: remoteDraft},
+      },
+    } as never)
+    await state.get().engines['a']!.ready()
+    expect(fetchDocument).not.toHaveBeenCalled()
+    expect(state.get().engines['a']!.remote()).toEqual({draft: remoteDraft, published})
+    subscription.unsubscribe()
+  })
+
+  it("subscribes to the listener again after it errors, as the queue's listener does", async () => {
+    let subscriptions = 0
+    const events = defer(() =>
+      ++subscriptions === 1 ? throwError(() => new Error('Listener channel error')) : NEVER,
+    )
+    const {subscription, subscribe} = setup(true, {events: events as Observable<never>})
+    subscribe('drafts.a', 'a')
+    await vi.waitFor(() => expect(subscriptions).toBe(2))
     subscription.unsubscribe()
   })
 

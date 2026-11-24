@@ -9,6 +9,7 @@ import {
   type Transport,
 } from '@sanity/document-sync'
 import {DocumentId, getDraftId, getPublishedId, isDraftId, isVersionId} from '@sanity/id-utils'
+import {type SanityDocument} from '@sanity/types'
 import {
   distinctUntilChanged,
   filter,
@@ -16,7 +17,9 @@ import {
   firstValueFrom,
   forkJoin,
   map,
+  retry,
   type Subscription,
+  timer,
 } from 'rxjs'
 
 import {getConfirmedUserState} from '../auth/authStore'
@@ -32,6 +35,8 @@ import {
   API_VERSION,
   DOCUMENT_STATE_CLEAR_DELAY,
   EDIT_BATCH_INTERVAL,
+  OUT_OF_SYNC_RETRY_BASE_DELAY,
+  OUT_OF_SYNC_RETRY_MAX_DELAY,
   SUBMISSION_RETRY_BASE_DELAY,
   SUBMISSION_RETRY_MAX_DELAY,
 } from './documentConstants'
@@ -87,14 +92,34 @@ function createStoreTransport(
     resource: key.resource,
   }).observable
   return {
-    fetch: (ids) => firstValueFrom(forkJoin(ids.map((id) => fetchDocument(id)))),
+    // After the store is disposed the engine can still be mid-send or mid-retry. Its calls then
+    // never settle: a request would bind the disposed instance to the global auth store, which
+    // keeps that store, and its token, alive for every later instance.
+    fetch: (ids) =>
+      instance.isDisposed()
+        ? new Promise(() => {})
+        : firstValueFrom(forkJoin(ids.map((id) => fetchDocument(id)))),
     listen(ids, onEvent) {
       const subscription = sharedListener.events
-        .pipe(filter((event) => event.type !== 'mutation' || ids.includes(event.documentId)))
+        .pipe(
+          filter((event) => event.type !== 'mutation' || ids.includes(event.documentId)),
+          // As the queue's listener does: after a listener error, subscribe again, which opens a
+          // new connection. Its `welcome` makes the engine fetch a fresh snapshot.
+          retry({
+            delay: (_error, attempt) =>
+              timer(
+                Math.min(
+                  OUT_OF_SYNC_RETRY_BASE_DELAY * 2 ** (attempt - 1),
+                  OUT_OF_SYNC_RETRY_MAX_DELAY,
+                ),
+              ),
+          }),
+        )
         .subscribe((event) => onEvent(event as ListenEvent))
       return () => subscription.unsubscribe()
     },
     submit: async ({transactionId, actions, batchedTransactionIds}) => {
+      if (instance.isDisposed()) return new Promise<void>(() => {})
       // As on the queue: wait until the user for the current token is confirmed, and never send a
       // transaction as anyone but its author. Another user's transaction is dropped from the
       // engine, which reports it (`emitDropped`), and nothing is sent.
@@ -279,6 +304,30 @@ function enginePublishedIds(documentStates: DocumentStoreState['documentStates']
   )
 }
 
+/**
+ * The engine's transport, with its first snapshot fetch answered from the documents the queue has
+ * already loaded.
+ */
+function startingFromQueue(
+  state: StoreContext<DocumentStoreState>['state'],
+  transport: Transport,
+): Transport {
+  let firstFetch = true
+  return {
+    ...transport,
+    fetch(ids) {
+      // The queue's `remote` documents are built from the same listener and Mendoza effects. Only
+      // the first fetch uses them: a later one is a refetch after a gap, which needs the server.
+      const loaded = firstFetch ? ids.map((id) => state.get().documentStates[id]?.remote) : []
+      firstFetch = false
+      if (loaded.length && loaded.every((doc) => doc !== undefined)) {
+        return Promise.resolve(loaded as (SanityDocument | null)[])
+      }
+      return transport.fetch(ids)
+    },
+  }
+}
+
 /** The queue's backoff for retried submissions, read on each retry. */
 const submissionRetryDelay = (attempt: number) =>
   Math.min(SUBMISSION_RETRY_BASE_DELAY * 2 ** (attempt - 1), SUBMISSION_RETRY_MAX_DELAY)
@@ -305,7 +354,7 @@ export function subscribeToSubscriptionsAndRunEngines(
         if (cleanups.has(id)) continue
         const sync = createDocumentSync({
           documentId: id,
-          transport,
+          transport: startingFromQueue(state, transport),
           retryDelay: submissionRetryDelay,
           // As on the queue: edits go out together, at most once per interval.
           editBatchInterval: EDIT_BATCH_INTERVAL,
