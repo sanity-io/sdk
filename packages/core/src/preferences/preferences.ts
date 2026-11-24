@@ -210,6 +210,22 @@ export type UserPreferenceOptions<K extends PreferenceKey | PreferenceListKey = 
     : OptionsAt<PreferenceLevelsOf<K>, PreferenceLevelsOf<K>>
 
 /**
+ * Options for reading a preference: where it's stored, plus how often to poll for changes.
+ * @internal
+ */
+export type UserPreferenceReadOptions<K extends PreferenceKey | PreferenceListKey = PreferenceKey> =
+  UserPreferenceOptions<K> & {
+    /**
+     * How often, in milliseconds, to refetch the preference while it's on screen, or `false` to turn
+     * off polling. Defaults to 60 seconds.
+     *
+     * When multiple subscribers read the same preference with different intervals, the shortest
+     * positive interval applies; polling stops once every subscriber turns it off.
+     */
+    refetchInterval?: number | false
+  }
+
+/**
  * Input for {@link updateUserPreference}: the key and its next value, for the given user.
  * @internal
  */
@@ -538,7 +554,7 @@ async function readStored(
  * @internal
  */
 export const userPreference = defineFetcher<
-  [userId: string, key: PreferenceKey, options?: UserPreferenceOptions],
+  [userId: string, key: PreferenceKey, options?: UserPreferenceReadOptions],
   UserPreference
 >({
   name: 'userPreference',
@@ -554,7 +570,8 @@ export const userPreference = defineFetcher<
       {key, activeValue: undefined, activeLevel: 'default'},
       resolveKey(instance, key, options).defaultValue,
     ),
-  refetchInterval: REFETCH_INTERVAL_MS,
+  refetchInterval: (_instance, _userId, _key, options) =>
+    options?.refetchInterval ?? REFETCH_INTERVAL_MS,
   // A user's own read answers with the shared value when they haven't set one, so a change to the
   // shared value refetches it
   tags: (_data, userId, key, options) =>

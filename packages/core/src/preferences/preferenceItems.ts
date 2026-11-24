@@ -2,7 +2,13 @@ import {defer} from 'rxjs'
 
 import {type SanityInstance} from '../store/createSanityInstance'
 import {defineMutation, definePagedFetcher, type MutationResult} from '../store/fetcherStore'
-import {REFETCH_INTERVAL_MS, request, resolveKey, type UserPreferenceOptions} from './preferences'
+import {
+  REFETCH_INTERVAL_MS,
+  request,
+  resolveKey,
+  type UserPreferenceOptions,
+  type UserPreferenceReadOptions,
+} from './preferences'
 import {
   type PreferenceListItemKeyValue,
   type PreferenceListItemValue,
@@ -76,7 +82,7 @@ function itemsTag(userId: string, key: PreferenceListKey) {
  * @internal
  */
 export const userPreferenceList = definePagedFetcher<
-  [userId: string, key: PreferenceListKey, options?: UserPreferenceOptions],
+  [userId: string, key: PreferenceListKey, options?: UserPreferenceReadOptions],
   UserPreferenceListPage
 >({
   name: 'userPreferenceList',
@@ -90,7 +96,8 @@ export const userPreferenceList = definePagedFetcher<
         query: cursor ? {cursor} : {},
         tag: 'preferences.items.list',
       }),
-  refetchInterval: REFETCH_INTERVAL_MS,
+  refetchInterval: (_instance, _userId, _key, options) =>
+    options?.refetchInterval ?? REFETCH_INTERVAL_MS,
   tags: (_data, userId, key) => itemsTag(userId, key),
 })
 

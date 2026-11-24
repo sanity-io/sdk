@@ -142,9 +142,16 @@ export interface FetcherDefinition<TParams extends unknown[], TData> {
   gcTime?: number
   /**
    * Refetch on this interval (ms) while the entry has at least one subscriber,
-   * independent of staleness. Ticks are skipped while `document.hidden`. Off by default.
+   * independent of staleness, or `false` to disable polling. May be a function
+   * of `(instance, ...params)` when individual callers can override the interval.
+   * When multiple subscribers watch the same entry with different intervals, the
+   * shortest positive interval wins; polling stops once every subscriber opts out.
+   * Ticks are skipped while `document.hidden`. Off by default.
    */
-  refetchInterval?: number
+  refetchInterval?:
+    | number
+    | false
+    | ((instance: SanityInstance, ...params: TParams) => number | false | undefined)
   /**
    * Whether an entry with subscribers refetches when the tab becomes visible again: once stale
    * (`true`), never (`false`), or however fresh it is (`'always'`). `refetchOnWindowFocus: false`
@@ -353,8 +360,16 @@ const waits = new Map<string, Promise<unknown>>()
 // Per mutation scope, when the last mutation in it settles. A later one's request waits for it, so
 // answers come back in the order the changes were made
 const lastWrites = new Map<string, Promise<void>>()
+interface IntervalTimer {
+  timer: ReturnType<typeof setInterval>
+  ms: number
+}
+
 const gcTimers = new Map<string, ReturnType<typeof setTimeout>>()
-const intervalTimers = new Map<string, ReturnType<typeof setInterval>>()
+const intervalTimers = new Map<string, IntervalTimer>()
+// Active positive polling intervals per entry key, one token per polling subscriber.
+// The shortest interval among active subscribers drives the entry's timer.
+const subscriberIntervals = new Map<string, Map<symbol, number>>()
 const stopTimers = new Map<string, ReturnType<typeof setTimeout>>()
 const snapshotCache = new WeakMap<CacheEntry, FetcherSnapshot<unknown>>()
 
@@ -466,11 +481,12 @@ const cacheStore = defineStore<CacheState>({
     return () => {
       comeBack.unsubscribe()
       for (const timer of gcTimers.values()) clearTimeout(timer)
-      for (const timer of intervalTimers.values()) clearInterval(timer)
+      for (const {timer} of intervalTimers.values()) clearInterval(timer)
       for (const timer of stopTimers.values()) clearTimeout(timer)
       for (const fetch of inflight.values()) fetch.sub.unsubscribe()
       gcTimers.clear()
       intervalTimers.clear()
+      subscriberIntervals.clear()
       stopTimers.clear()
       inflight.clear()
       waits.clear()
@@ -767,24 +783,72 @@ const detach = (promise: Promise<unknown>): void => {
 const markStale = (state: StoreState<CacheState>, key: string): void =>
   updateEntry(state, key, 'markStale', (prev) => prev && {...prev, forcedStale: true})
 
-/** Polls an entry on `refetchInterval` while it has subscribers, skipping ticks while the tab is hidden. */
-const startInterval = (
-  state: StoreState<CacheState>,
+const resolveRefetchInterval = (
   def: AnyDefinition,
   instance: SanityInstance,
   params: unknown[],
-  key: string,
-): void => {
-  if (!def.refetchInterval || intervalTimers.has(key)) return
+): number | undefined => {
+  const interval =
+    typeof def.refetchInterval === 'function'
+      ? def.refetchInterval(instance, ...params)
+      : def.refetchInterval
+  return typeof interval === 'number' && Number.isFinite(interval) && interval > 0
+    ? interval
+    : undefined
+}
+
+/**
+ * Reconciles an entry's polling timer with its active subscribers' requested intervals.
+ * Runs at the shortest positive interval requested, or clears the timer when no subscriber polls.
+ * Skips ticks while the tab is hidden.
+ */
+const syncInterval = (state: StoreState<CacheState>, def: AnyDefinition, key: string): void => {
+  const active = subscriberIntervals.get(key)
+  const desiredMs = active && active.size > 0 ? Math.min(...active.values()) : undefined
+  const current = intervalTimers.get(key)
+  if (current?.ms === desiredMs) return
+
+  if (current) {
+    clearInterval(current.timer)
+    intervalTimers.delete(key)
+  }
+  if (desiredMs === undefined) return
+
   const timer = setCleanupInterval(() => {
     if (typeof document !== 'undefined' && document.hidden) return
     const entry = state.get().entries[key]
     // A poll would cancel the next page, as it reads only the pages before it. A next page that
     // keeps failing holds the poll off until it's read or nobody watches the list
     if (inflight.get(key)?.nextPage) return
-    if (entry && entry.subscriptions > 0) detach(startFetch(state, def, instance, params, true))
-  }, def.refetchInterval)
-  intervalTimers.set(key, timer)
+    if (entry && entry.subscriptions > 0) {
+      detach(startFetch(state, def, entry.instance, entry.params, true))
+    }
+  }, desiredMs)
+  intervalTimers.set(key, {timer, ms: desiredMs})
+}
+
+/** Registers a subscriber's polling interval and returns a cleanup callback to remove it. */
+const addSubscriberInterval = (
+  state: StoreState<CacheState>,
+  def: AnyDefinition,
+  instance: SanityInstance,
+  params: unknown[],
+  key: string,
+): (() => void) | undefined => {
+  const intervalMs = resolveRefetchInterval(def, instance, params)
+  if (intervalMs === undefined) return undefined
+  const token = Symbol()
+  const active = subscriberIntervals.get(key) ?? new Map<symbol, number>()
+  active.set(token, intervalMs)
+  subscriberIntervals.set(key, active)
+  syncInterval(state, def, key)
+  return () => {
+    active.delete(token)
+    if (active.size === 0 && subscriberIntervals.get(key) === active) {
+      subscriberIntervals.delete(key)
+    }
+    syncInterval(state, def, key)
+  }
 }
 
 /**
@@ -915,7 +979,7 @@ export function defineFetcher<TParams extends unknown[], TData>(
           instance,
           subscriptions: (prev?.subscriptions ?? 0) + 1,
         }))
-        startInterval(state, def, instance, params, key)
+        const removeInterval = addSubscriberInterval(state, def, instance, params, key)
 
         // Defer the fetch decision off the subscribe call stack to avoid a
         // re-entrant cache write during subscription setup.
@@ -927,6 +991,7 @@ export function defineFetcher<TParams extends unknown[], TData>(
         })
 
         return () => {
+          removeInterval?.()
           updateEntry(
             state,
             key,
@@ -936,11 +1001,6 @@ export function defineFetcher<TParams extends unknown[], TData>(
           const entry = state.get().entries[key]
           if (!entry || entry.subscriptions > 0) return
 
-          const interval = intervalTimers.get(key)
-          if (interval) {
-            clearInterval(interval)
-            intervalTimers.delete(key)
-          }
           scheduleGc(state, def, key)
           stopUnwatchedRetry(state, key)
         }
