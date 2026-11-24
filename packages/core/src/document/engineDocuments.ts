@@ -17,6 +17,7 @@ import {
   firstValueFrom,
   forkJoin,
   map,
+  type Observable,
   retry,
   type Subscription,
   timer,
@@ -134,6 +135,13 @@ function createStoreTransport(
           return
         }
       }
+      settleOnEcho(
+        state.get(),
+        sharedListener.events,
+        transactionId,
+        actions,
+        batchedTransactionIds,
+      )
       const client: SanityClient = await firstValueFrom(client$)
       let result
       try {
@@ -161,6 +169,42 @@ function createStoreTransport(
       )
     },
   }
+}
+
+/**
+ * Accepts a submission when the listener echoes it, until its transactions settle. When a write
+ * lands but its response is lost, the engine takes the echo as confirmation and does not resend,
+ * so the HTTP outcome alone would never settle `submitted()` or emit `accepted`. Whichever of the
+ * response and the echo comes first emits `accepted`; the other finds no transactions left.
+ * @internal
+ */
+export function settleOnEcho(
+  state: DocumentStoreState,
+  events: Observable<{type: string}>,
+  transactionId: string,
+  actions: unknown[],
+  batchedTransactionIds?: string[],
+): void {
+  const batch = batchOf(state, transactionId, batchedTransactionIds)
+  if (!batch.length) return
+  const subscription = events
+    .pipe(
+      first(
+        (event) =>
+          event.type === 'mutation' &&
+          (event as {transactionId?: string}).transactionId === transactionId,
+      ),
+    )
+    .subscribe(() =>
+      emitAccepted(
+        state,
+        transactionId,
+        actions as HttpAction[],
+        {transactionId, documentIds: [], results: []},
+        batchedTransactionIds,
+      ),
+    )
+  void Promise.all(batch.map((t) => t.settled)).then(() => subscription.unsubscribe())
 }
 
 /**

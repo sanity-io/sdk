@@ -23,6 +23,7 @@ import {
   emitDropped,
   emitSubmitFailed,
   engineLocalDocument,
+  settleOnEcho,
   subscribeToSubscriptionsAndRunEngines,
 } from './engineDocuments'
 import {type DocumentEvent} from './events'
@@ -337,6 +338,31 @@ describe('document events', () => {
     })
     emitSubmitFailed(state, 'caller', httpEdit as never, exists)
     expect(events.map((event) => event.type)).toEqual(['edited', 'accepted'])
+  })
+
+  it('accepts a submission when the listener echoes it, for a write whose response was lost', async () => {
+    const {state, events} = sent()
+    const listener = new Subject<{type: string; transactionId?: string}>()
+    settleOnEcho(state, listener, 'caller', httpEdit)
+    listener.next({type: 'mutation', transactionId: 'other'})
+    expect(events).toEqual([])
+    const settled = state.engineTransactions.get('caller')!.settled
+    listener.next({type: 'mutation', transactionId: 'caller'})
+    expect(events.map((event) => event.type)).toEqual(['edited', 'accepted'])
+    await expect(settled).resolves.toEqual({})
+    // The response arriving after the echo finds nothing left to accept.
+    emitAccepted(state, 'caller', httpEdit as never, {transactionId: 'caller'} as never)
+    expect(events).toHaveLength(2)
+    expect(listener.observed).toBe(false)
+  })
+
+  it('stops watching for the echo once the transaction is reverted', async () => {
+    const {state} = sent()
+    const listener = new Subject<{type: string}>()
+    settleOnEcho(state, listener, 'caller', httpEdit)
+    const transaction = {transactionId: 'caller', actions: httpEdit, submitted: true}
+    emitDropped(state, {transaction, reason: 'rejected', error: new Error('no')} as never)
+    await vi.waitFor(() => expect(listener.observed).toBe(false))
   })
 
   it('emits reverted when the engine drops a rejected transaction, and nothing for a no-op', () => {
