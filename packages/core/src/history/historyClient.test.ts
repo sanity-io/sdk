@@ -3,6 +3,7 @@ import {firstValueFrom, of} from 'rxjs'
 import {describe, expect, it, vi} from 'vitest'
 
 import {
+  fetchActiveVariantTransactions,
   fetchDocumentsHistoryEvents,
   fetchDocumentTransactions,
   type RawDocumentHistoryEvent,
@@ -188,5 +189,109 @@ describe('fetchDocumentTransactions', () => {
     await expect(
       firstValueFrom(fetchDocumentTransactions(client, {variantId: 'drafts.doc-1'})),
     ).rejects.toThrow('Retention expired')
+  })
+})
+
+describe('fetchActiveVariantTransactions', () => {
+  const makeTx = (
+    id: string,
+    effects: Record<string, {apply: [number, unknown]; revert: [number, unknown]}>,
+    timestamp = '2025-05-06T10:00:00.000Z',
+  ) => ({
+    id,
+    author: 'user-1',
+    timestamp,
+    documentIDs: Object.keys(effects),
+    effects,
+  })
+
+  it('short-circuits with empty object and zero requests when targets is empty', async () => {
+    const {client, request} = createMockClient(() => '')
+    const result = await firstValueFrom(fetchActiveVariantTransactions(client, []))
+    expect(result).toEqual({})
+    expect(request).not.toHaveBeenCalled()
+  })
+
+  it('batches open variants with reverse=true, stops at baseline/created/deleted, and returns ascending order', async () => {
+    const ndjson = [
+      makeTx('tx-3', {'drafts.doc-a': {apply: [1, 'a2'], revert: [1, 'a1']}}),
+      makeTx('tx-del-c', {'drafts.doc-c': {apply: [0, null], revert: [1, 'c1']}}),
+      makeTx('tx-2', {
+        'drafts.doc-a': {apply: [1, 'a1'], revert: [1, 'a0']},
+        'versions.r1.doc-b': {apply: [1, 'b1'], revert: [1, 'b0']},
+      }),
+      makeTx('tx-1', {'drafts.doc-a': {apply: [1, 'a0'], revert: [0, null]}}),
+      makeTx('tx-0', {'versions.r1.doc-b': {apply: [1, 'b0'], revert: [0, null]}}),
+    ]
+      .map((item) => JSON.stringify(item))
+      .join('\n')
+
+    const {client, request} = createMockClient(() => `${ndjson}\n`)
+
+    const result = await firstValueFrom(
+      fetchActiveVariantTransactions(client, [
+        {variantId: 'drafts.doc-a', baselineRevisionId: 'tx-1'},
+        {variantId: 'versions.r1.doc-b'},
+        {variantId: 'drafts.doc-c'},
+      ]),
+    )
+
+    expect(request).toHaveBeenCalledWith({
+      url: '/data/history/production/transactions/drafts.doc-a,versions.r1.doc-b,drafts.doc-c',
+      query: {
+        excludeContent: 'true',
+        excludeMutations: 'true',
+        includeIdentifiedDocumentsOnly: 'true',
+        effectFormat: 'mendoza',
+        reverse: 'true',
+        limit: '100',
+      },
+      tag: 'history.transactions',
+    })
+
+    expect(result['drafts.doc-a']?.transactions.map((tx) => tx.id)).toEqual(['tx-2', 'tx-3'])
+    expect(result['drafts.doc-a']?.boundaryRevisionId).toBe('tx-1')
+    expect(result['drafts.doc-a']?.truncated).toBe(false)
+
+    expect(result['versions.r1.doc-b']?.transactions.map((tx) => tx.id)).toEqual(['tx-2'])
+    expect(result['versions.r1.doc-b']?.boundaryRevisionId).toBe('tx-0')
+    expect(result['versions.r1.doc-b']?.truncated).toBe(false)
+
+    expect(result['drafts.doc-c']?.transactions).toEqual([])
+    expect(result['drafts.doc-c']?.truncated).toBe(false)
+  })
+
+  it('paginates backwards with toTransaction + toInclusive=false and marks truncated at the page cap', async () => {
+    let call = 0
+    const {client, request} = createMockClient(() => {
+      call += 1
+      const pageItems = Array.from({length: 100}, (_, i) => {
+        const index = (call - 1) * 100 + i
+        return makeTx(`tx-${400 - index}`, {
+          'drafts.doc-a': {apply: [1, `v${index}`], revert: [1, `v${index + 1}`]},
+        })
+      })
+      return pageItems.map((item) => JSON.stringify(item)).join('\n')
+    })
+
+    const result = await firstValueFrom(
+      fetchActiveVariantTransactions(client, [{variantId: 'drafts.doc-a'}]),
+    )
+
+    expect(request).toHaveBeenCalledTimes(4)
+    expect(request).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        query: expect.objectContaining({
+          reverse: 'true',
+          toTransaction: 'tx-301',
+          toInclusive: 'false',
+        }),
+      }),
+    )
+    expect(result['drafts.doc-a']?.transactions).toHaveLength(400)
+    expect(result['drafts.doc-a']?.transactions[0]?.id).toBe('tx-1')
+    expect(result['drafts.doc-a']?.transactions[399]?.id).toBe('tx-400')
+    expect(result['drafts.doc-a']?.truncated).toBe(true)
   })
 })

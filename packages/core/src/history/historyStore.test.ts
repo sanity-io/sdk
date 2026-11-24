@@ -1,12 +1,18 @@
 import {ClientError, type SanityClient} from '@sanity/client'
-import {BehaviorSubject, Observable, Subject} from 'rxjs'
+import {type TransactionLogEventWithEffects} from '@sanity/types'
+import {BehaviorSubject, Observable, of, Subject} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {getClientState} from '../client/clientStore'
 import {type DocumentChangeEvent, observeDocumentChanges} from '../document/documentChangeSource'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {type StateSource} from '../store/createStateSourceAction'
-import {fetchDocumentsHistoryEvents, type RawDocumentHistoryEvent} from './historyClient'
+import {
+  type ActiveVariantTransactionsResult,
+  fetchActiveVariantTransactions,
+  fetchDocumentsHistoryEvents,
+  type RawDocumentHistoryEvent,
+} from './historyClient'
 import {
   getDocumentsHistoryErrorState,
   getDocumentsHistoryHasMoreState,
@@ -29,6 +35,7 @@ vi.mock('../document/documentChangeSource', async (importOriginal) => ({
 vi.mock('./historyClient', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./historyClient')>()),
   fetchDocumentsHistoryEvents: vi.fn(),
+  fetchActiveVariantTransactions: vi.fn(),
 }))
 
 const DOC_A = {documentId: 'doc-a', documentType: 'article'}
@@ -45,6 +52,21 @@ function emitEventsResponse(
     sub.next({eventsByVariant, nextCursor})
     sub.complete()
   })
+}
+
+function makeEditTx(
+  id: string,
+  variantId: string,
+  author: string,
+  timestamp: string,
+): TransactionLogEventWithEffects {
+  return {
+    id,
+    author,
+    timestamp,
+    documentIDs: [variantId],
+    effects: {[variantId]: {apply: [1, id], revert: [1, 'prev']}},
+  }
 }
 
 describe('historyStore', () => {
@@ -66,6 +88,7 @@ describe('historyStore', () => {
 
     vi.mocked(observeDocumentChanges).mockReturnValue(changes$.asObservable())
     vi.mocked(fetchDocumentsHistoryEvents).mockImplementation(() => emitEventsResponse({}))
+    vi.mocked(fetchActiveVariantTransactions).mockImplementation(() => of({}))
 
     instance = createSanityInstance({projectId: 'proj-1', dataset: 'production'})
   })
@@ -277,7 +300,7 @@ describe('historyStore', () => {
     unsub()
   })
 
-  it('coalesces multi-document listener mutations sharing a transactionId and ignores draft update transitions', async () => {
+  it('coalesces multi-document listener mutations sharing a transactionId and appends draft update transitions in memory', async () => {
     const initialA: RawDocumentHistoryEvent = {
       type: 'createDocumentVersion',
       documentId: 'doc-a',
@@ -328,7 +351,7 @@ describe('historyStore', () => {
     changes$.next({type: 'connected'})
     expect(fetchDocumentsHistoryEvents).toHaveBeenCalledTimes(1)
 
-    // Intermediate draft 'update' does not produce /events/documents entries -> no reload
+    // Intermediate draft 'update' appends a live edited event in memory without reloading /events
     changes$.next({
       type: 'mutation',
       documentId: 'drafts.doc-a',
@@ -341,8 +364,13 @@ describe('historyStore', () => {
       resultRev: 'rev-a2',
     })
     expect(fetchDocumentsHistoryEvents).toHaveBeenCalledTimes(1)
+    expect(state.getCurrent()?.map((e) => `${e.type}:${e.id}`)).toEqual([
+      'edited:drafts.doc-a:rev-a2',
+      'created:drafts.doc-a:rev-a1',
+    ])
 
     // Multi-document publish emits two mutations with the same transactionId -> coalesced to ONE reload
+    // and clears the temporary active edit on drafts.doc-a
     changes$.next({
       type: 'mutation',
       documentId: 'doc-a',
@@ -367,7 +395,10 @@ describe('historyStore', () => {
     })
 
     await vi.waitFor(() => {
-      expect(state.getCurrent()).toHaveLength(2)
+      expect(state.getCurrent()?.map((e) => `${e.type}:${e.id}`)).toEqual([
+        'published:drafts.doc-a:rev-a2',
+        'published:drafts.doc-b:rev-b2',
+      ])
     })
     expect(fetchDocumentsHistoryEvents).toHaveBeenCalledTimes(2)
 
@@ -447,6 +478,473 @@ describe('historyStore', () => {
     await vi.waitFor(() => {
       expect(() => state.getCurrent()).toThrow(fatalError)
     })
+
+    unsub()
+  })
+
+  it('fetches batched active edits for open drafts and release versions before resolving initial load', async () => {
+    const createDraft: RawDocumentHistoryEvent = {
+      type: 'createDocumentVersion',
+      documentId: 'doc-a',
+      versionId: 'drafts.doc-a',
+      versionRevisionId: 'draft-create',
+      author: 'user-1',
+      timestamp: '2025-05-06T10:00:00Z',
+    }
+    const createVersion: RawDocumentHistoryEvent = {
+      type: 'createDocumentVersion',
+      documentId: 'doc-b',
+      versionId: 'versions.r1.doc-b',
+      versionRevisionId: 'ver-create',
+      releaseId: 'r1',
+      author: 'user-1',
+      timestamp: '2025-05-06T10:00:00Z',
+    }
+    const pubDoc: RawDocumentHistoryEvent = {
+      type: 'createLiveDocument',
+      documentId: 'doc-a',
+      revisionId: 'pub-create',
+      author: 'user-1',
+      timestamp: '2025-05-06T09:00:00Z',
+    }
+
+    vi.mocked(fetchDocumentsHistoryEvents).mockReturnValueOnce(
+      emitEventsResponse({
+        'drafts.doc-a': [createDraft],
+        'versions.r1.doc-b': [createVersion],
+        'doc-a': [pubDoc],
+      }),
+    )
+
+    const activeSubject = new Subject<Record<string, ActiveVariantTransactionsResult>>()
+    vi.mocked(fetchActiveVariantTransactions).mockReturnValueOnce(activeSubject.asObservable())
+
+    const options = {
+      documents: [
+        DOC_A,
+        {...DOC_A, perspective: 'published' as const},
+        {...DOC_B, perspective: {releaseName: 'r1'}},
+      ],
+    }
+
+    const resolvePromise = resolveDocumentsHistory(instance, options)
+
+    await vi.waitFor(() => {
+      expect(fetchActiveVariantTransactions).toHaveBeenCalledTimes(1)
+    })
+    expect(fetchActiveVariantTransactions).toHaveBeenCalledWith(expect.anything(), [
+      {variantId: 'drafts.doc-a', baselineRevisionId: 'draft-create'},
+      {variantId: 'versions.r1.doc-b', baselineRevisionId: 'ver-create'},
+    ])
+
+    activeSubject.next({
+      'drafts.doc-a': {
+        transactions: [
+          makeEditTx('draft-e1', 'drafts.doc-a', 'user-1', '2025-05-06T10:02:00.000Z'),
+          makeEditTx('draft-e2', 'drafts.doc-a', 'user-2', '2025-05-06T10:04:00.000Z'),
+        ],
+        boundaryRevisionId: 'draft-create',
+        truncated: false,
+      },
+      'versions.r1.doc-b': {
+        transactions: [
+          makeEditTx('ver-e1', 'versions.r1.doc-b', 'user-2', '2025-05-06T10:10:00.000Z'),
+        ],
+        boundaryRevisionId: 'ver-create',
+        truncated: false,
+      },
+    })
+    activeSubject.complete()
+
+    const resolved = await resolvePromise
+    expect(resolved.map((e) => `${e.type}:${e.id}`)).toEqual([
+      'edited:versions.r1.doc-b:ver-e1',
+      'edited:drafts.doc-a:draft-e2',
+      'created:drafts.doc-a:draft-create',
+      'created:versions.r1.doc-b:ver-create',
+      'created:doc-a:pub-create',
+    ])
+    expect(resolved[0]).toMatchObject({
+      type: 'edited',
+      previousRevisionId: 'ver-create',
+      contributors: ['user-2'],
+    })
+    expect(resolved[1]).toMatchObject({
+      type: 'edited',
+      previousRevisionId: 'draft-create',
+      contributors: ['user-2', 'user-1'],
+      transactions: [
+        {revisionId: 'draft-e2', author: 'user-2'},
+        {revisionId: 'draft-e1', author: 'user-1'},
+      ],
+    })
+  })
+
+  it('buffers live draft edits during initial load, handles multi-doc live edits, and clears old edits across rapid publish + recreate', async () => {
+    const createA: RawDocumentHistoryEvent = {
+      type: 'createDocumentVersion',
+      documentId: 'doc-a',
+      versionId: 'drafts.doc-a',
+      versionRevisionId: 'a-create-1',
+      author: 'user-1',
+      timestamp: '2025-05-06T10:00:00Z',
+    }
+    const createB: RawDocumentHistoryEvent = {
+      type: 'createDocumentVersion',
+      documentId: 'doc-b',
+      versionId: 'drafts.doc-b',
+      versionRevisionId: 'b-create-1',
+      author: 'user-1',
+      timestamp: '2025-05-06T10:00:00Z',
+    }
+
+    const initialEvents$ = new Subject<{
+      eventsByVariant: Record<string, RawDocumentHistoryEvent[]>
+      nextCursor: string
+    }>()
+    const recreateReload$ = new Subject<{
+      eventsByVariant: Record<string, RawDocumentHistoryEvent[]>
+      nextCursor: string
+    }>()
+
+    vi.mocked(fetchDocumentsHistoryEvents)
+      .mockReturnValueOnce(initialEvents$.asObservable())
+      .mockReturnValueOnce(new Observable(() => {})) // cancelled by rapid recreate
+      .mockReturnValueOnce(recreateReload$.asObservable())
+
+    const options = {documents: [DOC_A, DOC_B]}
+    const state = getDocumentsHistoryState(instance, options)
+    const unsub = state.subscribe(() => {})
+
+    // Live edit arrives BEFORE initial load completes -> buffered and applied once loaded
+    changes$.next({
+      type: 'mutation',
+      documentId: 'drafts.doc-a',
+      identity: 'user-2',
+      mutations: [],
+      timestamp: '2025-05-06T10:02:00.000Z',
+      transactionId: 'tx-buffered',
+      transition: 'update',
+      previousRev: 'a-create-1',
+      resultRev: 'a-edit-buffered',
+    })
+
+    initialEvents$.next({
+      eventsByVariant: {'drafts.doc-a': [createA], 'drafts.doc-b': [createB]},
+      nextCursor: '',
+    })
+    initialEvents$.complete()
+
+    await vi.waitFor(() => {
+      expect(state.getCurrent()?.map((e) => `${e.type}:${e.id}`)).toContain(
+        'edited:drafts.doc-a:a-edit-buffered',
+      )
+    })
+
+    // Multi-doc live transaction updates BOTH watched drafts sharing the same transactionId
+    changes$.next({
+      type: 'mutation',
+      documentId: 'drafts.doc-a',
+      identity: 'user-1',
+      mutations: [],
+      timestamp: '2025-05-06T10:15:00.000Z',
+      transactionId: 'tx-multi',
+      transition: 'update',
+      previousRev: 'a-edit-buffered',
+      resultRev: 'tx-multi',
+    })
+    changes$.next({
+      type: 'mutation',
+      documentId: 'drafts.doc-b',
+      identity: 'user-1',
+      mutations: [],
+      timestamp: '2025-05-06T10:15:00.000Z',
+      transactionId: 'tx-multi',
+      transition: 'update',
+      previousRev: 'b-create-1',
+      resultRev: 'tx-multi',
+    })
+
+    expect(state.getCurrent()?.map((e) => `${e.type}:${e.id}`)).toEqual(
+      expect.arrayContaining(['edited:drafts.doc-a:tx-multi', 'edited:drafts.doc-b:tx-multi']),
+    )
+
+    // Rapid publish (disappear) -> recreate (appear) -> immediate edit before reload settles
+    changes$.next({
+      type: 'mutation',
+      documentId: 'drafts.doc-a',
+      identity: 'user-1',
+      mutations: [],
+      timestamp: '2025-05-06T10:20:00.000Z',
+      transactionId: 'tx-pub-1',
+      transition: 'disappear',
+      previousRev: 'tx-multi',
+    })
+    changes$.next({
+      type: 'mutation',
+      documentId: 'drafts.doc-a',
+      identity: 'user-1',
+      mutations: [],
+      timestamp: '2025-05-06T10:20:00.500Z',
+      transactionId: 'a-create-2',
+      transition: 'appear',
+      resultRev: 'a-create-2',
+    })
+    changes$.next({
+      type: 'mutation',
+      documentId: 'drafts.doc-a',
+      identity: 'user-1',
+      mutations: [],
+      timestamp: '2025-05-06T10:21:00.000Z',
+      transactionId: 'a-edit-new',
+      transition: 'update',
+      previousRev: 'a-create-2',
+      resultRev: 'a-edit-new',
+    })
+
+    // Same-second publish + recreate returned in server newest-first order
+    const publishA: RawDocumentHistoryEvent = {
+      type: 'publishDocumentVersion',
+      documentId: 'doc-a',
+      revisionId: 'tx-pub-1',
+      versionId: 'drafts.doc-a',
+      versionRevisionId: 'tx-multi',
+      publishCause: 'document.publish',
+      author: 'user-1',
+      timestamp: '2025-05-06T10:20:00Z',
+    }
+    const createA2: RawDocumentHistoryEvent = {
+      type: 'createDocumentVersion',
+      documentId: 'doc-a',
+      versionId: 'drafts.doc-a',
+      versionRevisionId: 'a-create-2',
+      author: 'user-1',
+      timestamp: '2025-05-06T10:20:00Z',
+    }
+    recreateReload$.next({
+      eventsByVariant: {
+        'drafts.doc-a': [createA2, publishA, createA],
+        'drafts.doc-b': [createB],
+      },
+      nextCursor: '',
+    })
+    recreateReload$.complete()
+
+    await vi.waitFor(() => {
+      const docAEvents = state.getCurrent()?.filter((e) => e.documentId === 'doc-a')
+      expect(docAEvents?.map((e) => `${e.type}:${e.id}`)).toEqual([
+        'edited:drafts.doc-a:a-edit-new',
+        'created:drafts.doc-a:a-create-2',
+        'published:drafts.doc-a:tx-multi',
+      ])
+    })
+
+    // Folded published event points at old creation (a-create-1), NOT the newer same-second create (a-create-2)
+    const publishedEvent = state.getCurrent()?.find((e) => e.id === 'drafts.doc-a:tx-multi')
+    expect(publishedEvent).toMatchObject({
+      type: 'published',
+      creationEvent: {id: 'drafts.doc-a:a-create-1'},
+    })
+
+    unsub()
+  })
+
+  it('handles unpublish on existing draft without dropping earlier edits or colliding IDs, and treats unpublish on release versions as closed', async () => {
+    const unpublishDraft: RawDocumentHistoryEvent = {
+      type: 'unpublishDocument',
+      documentId: 'doc-a',
+      versionId: 'drafts.doc-a',
+      versionRevisionId: 'd3',
+      author: 'user-1',
+      timestamp: '2025-05-06T10:05:00Z',
+    }
+    const createDraft: RawDocumentHistoryEvent = {
+      type: 'createDocumentVersion',
+      documentId: 'doc-a',
+      versionId: 'drafts.doc-a',
+      versionRevisionId: 'd1',
+      author: 'user-1',
+      timestamp: '2025-05-06T10:00:00Z',
+    }
+    const unpublishVersion: RawDocumentHistoryEvent = {
+      type: 'unpublishDocument',
+      documentId: 'doc-b',
+      versionId: 'versions.r1.doc-b',
+      versionRevisionId: 'v2',
+      releaseId: 'r1',
+      author: 'user-1',
+      timestamp: '2025-05-06T10:05:00Z',
+    }
+
+    vi.mocked(fetchDocumentsHistoryEvents).mockReturnValueOnce(
+      emitEventsResponse({
+        'drafts.doc-a': [unpublishDraft, createDraft],
+        'versions.r1.doc-b': [unpublishVersion],
+      }),
+    )
+    vi.mocked(fetchActiveVariantTransactions).mockReturnValueOnce(
+      of({
+        'drafts.doc-a': {
+          transactions: [
+            makeEditTx('d2', 'drafts.doc-a', 'user-1', '2025-05-06T10:02:00.000Z'),
+            makeEditTx('d3', 'drafts.doc-a', 'user-2', '2025-05-06T10:03:00.000Z'),
+          ],
+          boundaryRevisionId: 'd1',
+          truncated: false,
+        },
+      }),
+    )
+
+    const resolved = await resolveDocumentsHistory(instance, {
+      documents: [DOC_A, {...DOC_B, perspective: {releaseName: 'r1'}}],
+    })
+
+    // Only drafts.doc-a is queried (baseline d1, not d3); versions.r1.doc-b is closed
+    expect(fetchActiveVariantTransactions).toHaveBeenCalledWith(expect.anything(), [
+      {variantId: 'drafts.doc-a', baselineRevisionId: 'd1'},
+    ])
+
+    const docAEvents = resolved.filter((e) => e.documentId === 'doc-a')
+    expect(docAEvents.map((e) => `${e.type}:${e.id}`)).toEqual([
+      'unpublished:drafts.doc-a:unpublish-d3',
+      'edited:drafts.doc-a:d3',
+      'created:drafts.doc-a:d1',
+    ])
+  })
+
+  it('preserves active edits across loadMore and refreshes active edits on resync and refetch', async () => {
+    const createDraft: RawDocumentHistoryEvent = {
+      type: 'createDocumentVersion',
+      documentId: 'doc-a',
+      versionId: 'drafts.doc-a',
+      versionRevisionId: 'd1',
+      author: 'user-1',
+      timestamp: '2025-05-06T12:00:00Z',
+    }
+    const olderPublish: RawDocumentHistoryEvent = {
+      type: 'publishDocumentVersion',
+      documentId: 'doc-a',
+      revisionId: 'pub-old',
+      versionId: 'drafts.doc-a',
+      versionRevisionId: 'd0',
+      publishCause: 'document.publish',
+      author: 'user-1',
+      timestamp: '2025-05-06T09:00:00Z',
+    }
+
+    vi.mocked(fetchDocumentsHistoryEvents)
+      .mockReturnValueOnce(emitEventsResponse({'drafts.doc-a': [createDraft]}, 'cursor-1'))
+      .mockReturnValueOnce(emitEventsResponse({'drafts.doc-a': [olderPublish]}))
+      .mockReturnValueOnce(emitEventsResponse({'drafts.doc-a': [createDraft]}))
+      .mockReturnValueOnce(emitEventsResponse({'drafts.doc-a': [createDraft]}))
+
+    vi.mocked(fetchActiveVariantTransactions)
+      .mockReturnValueOnce(
+        of({
+          'drafts.doc-a': {
+            transactions: [makeEditTx('d2', 'drafts.doc-a', 'user-1', '2025-05-06T12:01:00.000Z')],
+            boundaryRevisionId: 'd1',
+            truncated: false,
+          },
+        }),
+      )
+      .mockReturnValueOnce(
+        of({
+          'drafts.doc-a': {
+            transactions: [
+              makeEditTx('d2', 'drafts.doc-a', 'user-1', '2025-05-06T12:01:00.000Z'),
+              makeEditTx('d3', 'drafts.doc-a', 'user-2', '2025-05-06T12:10:00.000Z'),
+            ],
+            boundaryRevisionId: 'd1',
+            truncated: false,
+          },
+        }),
+      )
+      .mockReturnValueOnce(
+        of({
+          'drafts.doc-a': {
+            transactions: [
+              makeEditTx('d2', 'drafts.doc-a', 'user-1', '2025-05-06T12:01:00.000Z'),
+              makeEditTx('d3', 'drafts.doc-a', 'user-2', '2025-05-06T12:10:00.000Z'),
+              makeEditTx('d4', 'drafts.doc-a', 'user-1', '2025-05-06T12:20:00.000Z'),
+            ],
+            boundaryRevisionId: 'd1',
+            truncated: false,
+          },
+        }),
+      )
+
+    const options = {documents: [DOC_A]}
+    const state = getDocumentsHistoryState(instance, options)
+    const unsub = state.subscribe(() => {})
+
+    await vi.waitFor(() => {
+      expect(state.getCurrent()?.map((e) => `${e.type}:${e.id}`)).toEqual([
+        'edited:drafts.doc-a:d2',
+        'created:drafts.doc-a:d1',
+      ])
+    })
+
+    // loadMore preserves active edits without re-fetching /transactions
+    await loadMoreDocumentsHistory(instance, options)
+    expect(fetchActiveVariantTransactions).toHaveBeenCalledTimes(1)
+    expect(state.getCurrent()?.map((e) => `${e.type}:${e.id}`)).toEqual([
+      'edited:drafts.doc-a:d2',
+      'created:drafts.doc-a:d1',
+      'published:drafts.doc-a:d0',
+    ])
+
+    // resync refreshes active /transactions to pick up missed edits
+    changes$.next({type: 'resync'})
+    await vi.waitFor(() => {
+      expect(state.getCurrent()?.map((e) => `${e.type}:${e.id}`)).toContain(
+        'edited:drafts.doc-a:d3',
+      )
+    })
+
+    // manual refetch also refreshes active /transactions
+    await refetchDocumentsHistory(instance, options)
+    expect(state.getCurrent()?.map((e) => `${e.type}:${e.id}`)).toContain('edited:drafts.doc-a:d4')
+
+    unsub()
+  })
+
+  it('falls back gracefully to semantic events when active /transactions fails (e.g. 401 on public dataset)', async () => {
+    const createDraft: RawDocumentHistoryEvent = {
+      type: 'createDocumentVersion',
+      documentId: 'doc-a',
+      versionId: 'drafts.doc-a',
+      versionRevisionId: 'd1',
+      author: 'user-1',
+      timestamp: '2025-05-06T12:00:00Z',
+    }
+    const authError = new ClientError({
+      body: {error: 'Unauthorized', message: 'Auth required', statusCode: 401},
+      statusCode: 401,
+      url: '/data/history/production/transactions/drafts.doc-a',
+      method: 'GET',
+      headers: {},
+    })
+
+    vi.mocked(fetchDocumentsHistoryEvents).mockReturnValueOnce(
+      emitEventsResponse({'drafts.doc-a': [createDraft]}),
+    )
+    vi.mocked(fetchActiveVariantTransactions).mockReturnValueOnce(
+      new Observable((sub) => {
+        sub.error(authError)
+      }),
+    )
+
+    const options = {documents: [DOC_A]}
+    const state = getDocumentsHistoryState(instance, options)
+    const error = getDocumentsHistoryErrorState(instance, options)
+    const unsub = state.subscribe(() => {})
+
+    await vi.waitFor(() => {
+      expect(state.getCurrent()).toHaveLength(1)
+    })
+    expect(state.getCurrent()?.[0]?.id).toBe('drafts.doc-a:d1')
+    expect(error.getCurrent()).toBe(authError)
 
     unsub()
   })

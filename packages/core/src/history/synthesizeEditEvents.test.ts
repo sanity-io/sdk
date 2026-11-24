@@ -1,7 +1,12 @@
 import {type TransactionLogEventWithEffects} from '@sanity/types'
 import {describe, expect, it} from 'vitest'
 
-import {getEditEvents, getEffectState} from './synthesizeEditEvents'
+import {
+  extractActiveEditTransactions,
+  getEditEvents,
+  getEffectState,
+  synthesizeActiveEditEvents,
+} from './synthesizeEditEvents'
 
 describe('getEffectState', () => {
   it('classifies missing, created, modified, and deleted Mendoza effects', () => {
@@ -127,5 +132,129 @@ describe('getEditEvents', () => {
     expect(events[0]?.documentId).toBe('article-1')
     expect(events[0]?.variantId).toBe('versions.r1.article-1')
     expect(events[1]?.previousRevisionId).toBe('rev-base')
+  })
+})
+
+describe('extractActiveEditTransactions & synthesizeActiveEditEvents', () => {
+  const makeTx = (
+    id: string,
+    author: string,
+    timestamp: string,
+  ): TransactionLogEventWithEffects => ({
+    id,
+    author,
+    timestamp,
+    documentIDs: ['drafts.article-1'],
+    effects: {'drafts.article-1': {apply: [1, id], revert: [1, 'prev']}},
+  })
+
+  it('chains previousRevisionId from boundaryRevisionId when not truncated', () => {
+    const txs = [
+      makeTx('rev-1', 'user-1', '2025-05-06T12:01:00.000Z'),
+      makeTx('rev-2', 'user-2', '2025-05-06T12:02:00.000Z'),
+    ]
+
+    const active = extractActiveEditTransactions(txs, {
+      boundaryRevisionId: 'rev-create',
+      truncated: false,
+    })
+
+    expect(active).toEqual([
+      {
+        revisionId: 'rev-1',
+        previousRevisionId: 'rev-create',
+        author: 'user-1',
+        timestamp: '2025-05-06T12:01:00.000Z',
+      },
+      {
+        revisionId: 'rev-2',
+        previousRevisionId: 'rev-1',
+        author: 'user-2',
+        timestamp: '2025-05-06T12:02:00.000Z',
+      },
+    ])
+  })
+
+  it('holds back the oldest transaction as previousRevisionId anchor when truncated', () => {
+    const txs = [
+      makeTx('rev-101', 'user-1', '2025-05-06T12:01:00.000Z'),
+      makeTx('rev-102', 'user-2', '2025-05-06T12:02:00.000Z'),
+      makeTx('rev-103', 'user-1', '2025-05-06T12:10:00.000Z'),
+    ]
+
+    const active = extractActiveEditTransactions(txs, {
+      boundaryRevisionId: 'rev-create',
+      truncated: true,
+    })
+
+    expect(active).toEqual([
+      {
+        revisionId: 'rev-102',
+        previousRevisionId: 'rev-101',
+        author: 'user-2',
+        timestamp: '2025-05-06T12:02:00.000Z',
+      },
+      {
+        revisionId: 'rev-103',
+        previousRevisionId: 'rev-102',
+        author: 'user-1',
+        timestamp: '2025-05-06T12:10:00.000Z',
+      },
+    ])
+  })
+
+  it('groups active edit transactions, deduplicates by revisionId, omits empty authors, and preserves sequence order on equal timestamps', () => {
+    const events = synthesizeActiveEditEvents(
+      [
+        {
+          revisionId: 'rev-1',
+          previousRevisionId: 'rev-0',
+          author: '',
+          timestamp: '2025-05-06T12:00:00.000Z',
+        },
+        {
+          revisionId: 'rev-1',
+          previousRevisionId: 'rev-0',
+          author: '',
+          timestamp: '2025-05-06T12:00:00.000Z',
+        },
+        {
+          revisionId: 'rev-2',
+          previousRevisionId: 'rev-1',
+          author: 'user-2',
+          timestamp: '2025-05-06T12:00:00.000Z',
+        },
+      ],
+      'drafts.article-1',
+    )
+
+    expect(events).toEqual([
+      {
+        id: 'drafts.article-1:rev-2',
+        type: 'edited',
+        documentId: 'article-1',
+        variantId: 'drafts.article-1',
+        documentVariantType: 'draft',
+        author: 'user-2',
+        timestamp: '2025-05-06T12:00:00.000Z',
+        revisionId: 'rev-2',
+        previousRevisionId: 'rev-0',
+        contributors: ['user-2'],
+        transactions: [
+          {
+            type: 'editTransaction',
+            author: 'user-2',
+            timestamp: '2025-05-06T12:00:00.000Z',
+            revisionId: 'rev-2',
+          },
+          {
+            type: 'editTransaction',
+            author: '',
+            timestamp: '2025-05-06T12:00:00.000Z',
+            revisionId: 'rev-1',
+          },
+        ],
+      },
+    ])
   })
 })

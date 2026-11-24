@@ -1,7 +1,8 @@
 import {type SanityClient} from '@sanity/client'
 import {type TransactionLogEventWithEffects} from '@sanity/types'
-import {EMPTY, expand, map, type Observable, reduce} from 'rxjs'
+import {defer, EMPTY, expand, map, type Observable, of, reduce} from 'rxjs'
 
+import {getEffectState} from './synthesizeEditEvents'
 import {type DocumentHistoryPublishCause} from './types'
 
 /**
@@ -12,6 +13,8 @@ import {type DocumentHistoryPublishCause} from './types'
 export const HISTORY_API_VERSION = 'v2025-05-06'
 
 const TRANSLOG_PAGE_LIMIT = 50
+const ACTIVE_TRANSLOG_PAGE_LIMIT = 100
+const ACTIVE_TRANSLOG_MAX_PAGES = 4
 
 interface RawDocumentHistoryBaseEvent {
   author: string
@@ -226,4 +229,189 @@ export function fetchDocumentTransactions(
     }),
     reduce((all, page) => all.concat(page.filtered), [] as TransactionLogEventWithEffects[]),
   )
+}
+
+/**
+ * Target variant and optional lifecycle baseline for fetching active (unpublished) edits.
+ *
+ * @internal
+ */
+export interface ActiveVariantTransactionsTarget {
+  variantId: string
+  baselineRevisionId?: string
+}
+
+/**
+ * Chronologically ordered active `'modified'` transactions for a single open variant.
+ *
+ * @internal
+ */
+export interface ActiveVariantTransactionsResult {
+  transactions: TransactionLogEventWithEffects[]
+  boundaryRevisionId?: string
+  truncated: boolean
+}
+
+interface ReverseTransactionPageResult {
+  pageIndex: number
+  toCursor?: string
+  rawEntries: TransactionLogEventWithEffects[]
+}
+
+function fetchReverseTransactionPage(
+  client: SanityClient,
+  variantIds: readonly string[],
+  pageIndex: number,
+  toTransaction?: string,
+): Observable<ReverseTransactionPageResult> {
+  const encodedIds = variantIds.map((id) => encodeURIComponent(id)).join(',')
+  const query: Record<string, string> = {
+    excludeContent: 'true',
+    excludeMutations: 'true',
+    includeIdentifiedDocumentsOnly: 'true',
+    effectFormat: 'mendoza',
+    reverse: 'true',
+    limit: String(ACTIVE_TRANSLOG_PAGE_LIMIT),
+    ...(toTransaction ? {toTransaction, toInclusive: 'false'} : {}),
+  }
+
+  return client.observable
+    .request<string | Record<string, unknown> | undefined>({
+      url: client.getDataUrl('history', `transactions/${encodedIds}`),
+      query,
+      tag: 'history.transactions',
+    })
+    .pipe(
+      map((raw) => ({
+        pageIndex,
+        toCursor: toTransaction,
+        rawEntries: parseNdjsonTransactions(raw),
+      })),
+    )
+}
+
+function processReverseTransaction(
+  tx: TransactionLogEventWithEffects,
+  remaining: Map<string, string | undefined>,
+  collected: Map<string, TransactionLogEventWithEffects[]>,
+  boundaryByVariant: Map<string, string>,
+): void {
+  for (const [variantId, baselineRevisionId] of Array.from(remaining.entries())) {
+    const effect = tx.effects?.[variantId]
+    if (!effect) continue
+
+    const effectState = getEffectState(effect)
+    if ((baselineRevisionId && tx.id === baselineRevisionId) || effectState === 'created') {
+      boundaryByVariant.set(variantId, tx.id)
+      remaining.delete(variantId)
+      continue
+    }
+    if (effectState === 'deleted') {
+      remaining.delete(variantId)
+      continue
+    }
+    if (effectState === 'modified') {
+      collected.get(variantId)?.push(tx)
+    }
+  }
+}
+
+function buildActiveTransactionsResult(
+  targets: readonly ActiveVariantTransactionsTarget[],
+  collected: Map<string, TransactionLogEventWithEffects[]>,
+  boundaryByVariant: Map<string, string>,
+  remaining: Map<string, string | undefined>,
+  hitPageCap: boolean,
+): Record<string, ActiveVariantTransactionsResult> {
+  const results: Record<string, ActiveVariantTransactionsResult> = {}
+  for (const {variantId} of targets) {
+    const boundaryRevisionId = boundaryByVariant.get(variantId)
+    results[variantId] = {
+      transactions: [...(collected.get(variantId) ?? [])].reverse(),
+      ...(boundaryRevisionId ? {boundaryRevisionId} : {}),
+      truncated: hitPageCap && remaining.has(variantId),
+    }
+  }
+  return results
+}
+
+interface ReverseScanState {
+  remaining: Map<string, string | undefined>
+  collected: Map<string, TransactionLogEventWithEffects[]>
+  boundaryByVariant: Map<string, string>
+  hitPageCap: boolean
+}
+
+function ingestReversePage(page: ReverseTransactionPageResult, scan: ReverseScanState): void {
+  for (const tx of page.rawEntries) {
+    if (page.toCursor && tx.id === page.toCursor) continue
+    processReverseTransaction(tx, scan.remaining, scan.collected, scan.boundaryByVariant)
+  }
+}
+
+function advanceReverseScan(
+  client: SanityClient,
+  page: ReverseTransactionPageResult,
+  scan: ReverseScanState,
+): Observable<ReverseTransactionPageResult> {
+  ingestReversePage(page, scan)
+
+  if (scan.remaining.size === 0 || page.rawEntries.length < ACTIVE_TRANSLOG_PAGE_LIMIT) {
+    return EMPTY
+  }
+  const oldestId = page.rawEntries.at(-1)?.id
+  if (!oldestId || oldestId === page.toCursor) {
+    return EMPTY
+  }
+  if (page.pageIndex + 1 >= ACTIVE_TRANSLOG_MAX_PAGES) {
+    scan.hitPageCap = true
+    return EMPTY
+  }
+
+  return fetchReverseTransactionPage(
+    client,
+    Array.from(scan.remaining.keys()),
+    page.pageIndex + 1,
+    oldestId,
+  )
+}
+
+/**
+ * Fetches recent Mendoza-formatted `'modified'` transactions in reverse chronological order for
+ * one or more open draft/version variants in a single batched stream, stopping per variant as
+ * soon as its baseline revision or a `'created'`/`'deleted'` effect is reached (bounded by a
+ * page cap).
+ *
+ * @internal
+ */
+export function fetchActiveVariantTransactions(
+  client: SanityClient,
+  targets: readonly ActiveVariantTransactionsTarget[],
+): Observable<Record<string, ActiveVariantTransactionsResult>> {
+  if (targets.length === 0) {
+    return of({})
+  }
+
+  return defer(() => {
+    const scan: ReverseScanState = {
+      remaining: new Map(targets.map((target) => [target.variantId, target.baselineRevisionId])),
+      collected: new Map(targets.map((target) => [target.variantId, []])),
+      boundaryByVariant: new Map(),
+      hitPageCap: false,
+    }
+
+    return fetchReverseTransactionPage(client, Array.from(scan.remaining.keys()), 0).pipe(
+      expand((page) => advanceReverseScan(client, page, scan)),
+      reduce(() => undefined, undefined),
+      map(() =>
+        buildActiveTransactionsResult(
+          targets,
+          scan.collected,
+          scan.boundaryByVariant,
+          scan.remaining,
+          scan.hitPageCap,
+        ),
+      ),
+    )
+  })
 }

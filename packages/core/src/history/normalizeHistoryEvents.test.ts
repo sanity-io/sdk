@@ -6,6 +6,7 @@ import {
   dedupeHistoryEvents,
   mergeVariantTimelines,
   normalizeHistoryEvent,
+  orderEventsByTimestamp,
   sortHistoryEvents,
 } from './normalizeHistoryEvents'
 import {
@@ -34,6 +35,18 @@ describe('normalizeHistoryEvent', () => {
       variantId: 'drafts.doc-1',
       documentVariantType: 'draft',
     })
+
+    const rawUnpublishWithRev: RawDocumentHistoryEvent = {
+      type: 'unpublishDocument',
+      documentId: 'doc-1',
+      versionId: 'drafts.doc-1',
+      versionRevisionId: 'rev-d3',
+      author: 'user-1',
+      timestamp: '2025-05-06T10:05:00Z',
+    }
+    expect(normalizeHistoryEvent(rawUnpublishWithRev, 'drafts.doc-1').id).toBe(
+      'drafts.doc-1:unpublish-rev-d3',
+    )
   })
 
   it('produces distinct IDs for different documents sharing a revisionId in a multi-doc transaction', () => {
@@ -304,5 +317,61 @@ describe('applyVariantTransforms & mergeVariantTimelines', () => {
       ],
     })
     expect(transformed[1]).toMatchObject({id: 'doc-1:r1', author: 'user-2'})
+  })
+
+  it('folds completed release version lifecycles and preserves server order on equal timestamps via orderEventsByTimestamp', () => {
+    const versionPublish: DocumentHistoryPublishedEvent = {
+      id: 'versions.r1.doc-a:v2',
+      type: 'published',
+      author: 'user-1',
+      timestamp: '2025-05-06T12:00:00Z',
+      documentId: 'doc-a',
+      variantId: 'versions.r1.doc-a',
+      documentVariantType: 'version',
+      revisionId: 'pub-1',
+      releaseId: 'r1',
+      versionId: 'versions.r1.doc-a',
+      versionRevisionId: 'v2',
+      publishCause: 'release.publish',
+    }
+    const versionCreate: DocumentHistoryCreatedEvent = {
+      id: 'versions.r1.doc-a:v1',
+      type: 'created',
+      author: 'user-1',
+      timestamp: '2025-05-06T11:55:00Z',
+      documentId: 'doc-a',
+      variantId: 'versions.r1.doc-a',
+      documentVariantType: 'version',
+      releaseId: 'r1',
+      versionId: 'versions.r1.doc-a',
+      versionRevisionId: 'v1',
+    }
+    const newVersionCreateSameSecond: DocumentHistoryCreatedEvent = {
+      id: 'versions.r1.doc-a:v3',
+      type: 'created',
+      author: 'user-1',
+      timestamp: '2025-05-06T12:00:00Z',
+      documentId: 'doc-a',
+      variantId: 'versions.r1.doc-a',
+      documentVariantType: 'version',
+      releaseId: 'r1',
+      versionId: 'versions.r1.doc-a',
+      versionRevisionId: 'v3',
+    }
+
+    const ordered = orderEventsByTimestamp([
+      newVersionCreateSameSecond,
+      versionPublish,
+      versionCreate,
+    ])
+    const transformed = applyVariantTransforms(ordered, 'version')
+
+    expect(transformed).toHaveLength(2)
+    expect(transformed[0]).toMatchObject({type: 'created', id: 'versions.r1.doc-a:v3'})
+    expect(transformed[1]).toMatchObject({
+      type: 'published',
+      id: 'versions.r1.doc-a:v2',
+      creationEvent: {id: 'versions.r1.doc-a:v1'},
+    })
   })
 })

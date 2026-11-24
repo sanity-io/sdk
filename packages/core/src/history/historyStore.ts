@@ -2,15 +2,14 @@ import {type SanityClient} from '@sanity/client'
 import {DocumentId, getPublishedId} from '@sanity/id-utils'
 import {
   catchError,
-  concat,
   defer,
   distinctUntilChanged,
   EMPTY,
-  filter,
   first,
   firstValueFrom,
   groupBy,
   map,
+  merge,
   mergeMap,
   NEVER,
   Observable,
@@ -18,6 +17,7 @@ import {
   pairwise,
   race,
   startWith,
+  Subject,
   switchMap,
   tap,
 } from 'rxjs'
@@ -26,7 +26,11 @@ import {getClientAuthState} from '../auth/authStore'
 import {getClientState} from '../client/clientStore'
 import {retryRead} from '../client/retry'
 import {type DocumentResource} from '../config/sanityConfig'
-import {type DocumentChangeEvent, observeDocumentChanges} from '../document/documentChangeSource'
+import {
+  type DocumentChangeEvent,
+  type DocumentMutationChangeEvent,
+  observeDocumentChanges,
+} from '../document/documentChangeSource'
 import {bindActionByResource, type BoundResourceKey} from '../store/createActionBinder'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {
@@ -39,9 +43,11 @@ import {defineStore, type StoreContext} from '../store/defineStore'
 import {randomId} from '../utils/ids'
 import {setCleanupTimeout} from '../utils/setCleanupTimeout'
 import {
+  type ActiveVariantTransactionsResult,
+  type ActiveVariantTransactionsTarget,
+  fetchActiveVariantTransactions,
   fetchDocumentsHistoryEvents,
   HISTORY_API_VERSION,
-  type RawDocumentHistoryEvent,
 } from './historyClient'
 import {
   DEFAULT_HISTORY_LIMIT,
@@ -50,12 +56,19 @@ import {
   resolveDocumentsHistoryRequest,
 } from './historyOptions'
 import {
-  applyVariantTransforms,
-  dedupeHistoryEvents,
-  mergeVariantTimelines,
-  normalizeHistoryEvent,
-  sortHistoryEvents,
-} from './normalizeHistoryEvents'
+  applyFetchedActiveTransactions,
+  applyLiveVariantMutationToVariants,
+  buildVariantTimeline,
+  getActiveTargetsForInitialLoad,
+  getActiveTargetsForReload,
+  mergeLoadMoreVariants,
+  mergeReloadVariants,
+  normalizeEventsByVariant,
+  type PreFetchVariantSnapshot,
+  snapshotPreFetchVariants,
+  type VariantTimelineData,
+} from './historyVariantState'
+import {mergeVariantTimelines} from './normalizeHistoryEvents'
 import {
   type DocumentHistoryEvent,
   type DocumentsHistoryOptions,
@@ -87,12 +100,6 @@ const EMPTY_ERROR_STATE_SOURCE: StateSource<unknown> = {
   observable: of(undefined),
 }
 
-interface VariantTimelineData {
-  variantId: string
-  variantType: DocumentVariantType
-  apiEvents: DocumentHistoryEvent[]
-}
-
 interface HistoryEntryContent {
   variants: Record<string, VariantTimelineData>
 }
@@ -115,6 +122,8 @@ interface HistoryStoreState {
 interface FetchedHistoryBatch {
   variants: Record<string, VariantTimelineData>
   nextCursor: string
+  fetchedActiveByVariant?: Record<string, ActiveVariantTransactionsResult>
+  activeEditsError?: unknown
 }
 
 interface BoundHistoryRequest {
@@ -144,53 +153,6 @@ function createEmptyEntry(entryKey: string): HistoryEntryState {
     limit,
     nextCursor: '',
   }
-}
-
-function normalizeEventsByVariant(
-  variantIds: readonly string[],
-  eventsByVariant: Record<string, RawDocumentHistoryEvent[]>,
-): Record<string, VariantTimelineData> {
-  const variants: Record<string, VariantTimelineData> = {}
-  for (const variantId of variantIds) {
-    const variantType = getDocumentVariantType(variantId)
-    const rawEvents = eventsByVariant[variantId] ?? []
-    variants[variantId] = {
-      variantId,
-      variantType,
-      apiEvents: rawEvents.map((ev) => normalizeHistoryEvent(ev, variantId)),
-    }
-  }
-  return variants
-}
-
-function mergeSingleVariant(
-  variantId: string,
-  primaryVariant: VariantTimelineData | undefined,
-  secondaryVariant: VariantTimelineData | undefined,
-): VariantTimelineData {
-  const variantType =
-    primaryVariant?.variantType ??
-    secondaryVariant?.variantType ??
-    getDocumentVariantType(variantId)
-  const primaryEvents = primaryVariant ? primaryVariant.apiEvents : EMPTY_EVENTS
-  const secondaryEvents = secondaryVariant ? secondaryVariant.apiEvents : EMPTY_EVENTS
-  return {
-    variantId,
-    variantType,
-    apiEvents: dedupeHistoryEvents(primaryEvents, secondaryEvents),
-  }
-}
-
-function mergeVariantMaps(
-  primary: Record<string, VariantTimelineData>,
-  secondary: Record<string, VariantTimelineData>,
-  variantIds: readonly string[],
-): Record<string, VariantTimelineData> {
-  const merged: Record<string, VariantTimelineData> = {}
-  for (const variantId of variantIds) {
-    merged[variantId] = mergeSingleVariant(variantId, primary[variantId], secondary[variantId])
-  }
-  return merged
 }
 
 function addEntrySubscriber(entryKey: string, subscriptionId: string) {
@@ -244,26 +206,42 @@ function setEntryError(entryKey: string, error: unknown) {
   }
 }
 
-function applyInitialBatch(entryKey: string, batch: FetchedHistoryBatch) {
+function applyInitialBatch(
+  entryKey: string,
+  batch: FetchedHistoryBatch,
+  bufferedEvents: readonly DocumentChangeEvent[] = [],
+) {
   return (prev: HistoryStoreState): HistoryStoreState => {
     const existing = prev.entries[entryKey]
     if (!existing) return prev
+
+    let variants = batch.variants
+    for (const event of bufferedEvents) {
+      if (event.type === 'mutation') {
+        variants = applyLiveVariantMutationToVariants(variants, event)
+      }
+    }
+
     return {
       ...prev,
       entries: {
         ...prev.entries,
         [entryKey]: {
           ...existing,
-          content: {variants: batch.variants},
+          content: {variants},
           nextCursor: batch.nextCursor,
-          error: undefined,
+          error: batch.activeEditsError,
         },
       },
     }
   }
 }
 
-function applyReloadBatch(entryKey: string, batch: FetchedHistoryBatch) {
+function applyReloadBatch(
+  entryKey: string,
+  batch: FetchedHistoryBatch,
+  preFetchSnapshots: Map<string, PreFetchVariantSnapshot>,
+) {
   return (prev: HistoryStoreState): HistoryStoreState => {
     const existing = prev.entries[entryKey]
     if (!existing) return prev
@@ -278,13 +256,34 @@ function applyReloadBatch(entryKey: string, batch: FetchedHistoryBatch) {
         [entryKey]: {
           ...existing,
           content: {
-            variants: mergeVariantMaps(
-              batch.variants,
+            variants: mergeReloadVariants(
               existing.content.variants,
+              batch.variants,
               existing.variantIds,
+              batch.fetchedActiveByVariant,
+              preFetchSnapshots,
             ),
           },
-          error: undefined,
+          error: batch.activeEditsError,
+        },
+      },
+    }
+  }
+}
+
+function applyLiveMutation(entryKey: string, event: DocumentMutationChangeEvent) {
+  return (prev: HistoryStoreState): HistoryStoreState => {
+    const existing = prev.entries[entryKey]
+    if (!existing?.content) return prev
+    const nextVariants = applyLiveVariantMutationToVariants(existing.content.variants, event)
+    if (nextVariants === existing.content.variants) return prev
+    return {
+      ...prev,
+      entries: {
+        ...prev.entries,
+        [entryKey]: {
+          ...existing,
+          content: {variants: nextVariants},
         },
       },
     }
@@ -306,7 +305,7 @@ function applyLoadMorePage(
         [entryKey]: {
           ...existing,
           content: {
-            variants: mergeVariantMaps(
+            variants: mergeLoadMoreVariants(
               existing.content.variants,
               pageVariants,
               existing.variantIds,
@@ -334,53 +333,186 @@ function fetchHistoryBatch(
   )
 }
 
+function fetchActiveTransactionsSafe(
+  client: SanityClient,
+  targets: readonly ActiveVariantTransactionsTarget[],
+): Observable<{
+  fetched: Record<string, ActiveVariantTransactionsResult> | undefined
+  error: unknown
+}> {
+  if (targets.length === 0) {
+    return of({fetched: undefined, error: undefined})
+  }
+  return fetchActiveVariantTransactions(client, targets).pipe(
+    map((fetched) => ({fetched, error: undefined})),
+    catchError((error: unknown) => of({fetched: undefined, error})),
+  )
+}
+
 interface WatchedVariants {
   variantTypes: Map<string, DocumentVariantType>
-  draftPublishedIds: Set<string>
+  variantPublishedIds: Set<string>
   documentIds: string[]
 }
 
 function buildWatchedVariants(variantIds: readonly string[]): WatchedVariants {
   const variantTypes = new Map<string, DocumentVariantType>()
-  const draftPublishedIds = new Set<string>()
+  const variantPublishedIds = new Set<string>()
   const documentIds = new Set<string>(variantIds)
   for (const variantId of variantIds) {
     const variantType = getDocumentVariantType(variantId)
     variantTypes.set(variantId, variantType)
-    if (variantType === 'draft') {
+    if (variantType !== 'published') {
       const publishedId = getPublishedId(DocumentId(variantId))
-      draftPublishedIds.add(publishedId)
+      variantPublishedIds.add(publishedId)
       documentIds.add(publishedId)
     }
   }
-  return {variantTypes, draftPublishedIds, documentIds: Array.from(documentIds)}
+  return {variantTypes, variantPublishedIds, documentIds: Array.from(documentIds)}
 }
 
+type ReloadTrigger = {kind: 'resync'} | {kind: 'mutation'; id: string}
+
 /**
- * Returns a deduplication key when a document change event should trigger a reload:
- * - `null` for `'resync'` (never coalesced across resyncs)
- * - `event.transactionId` for relevant mutations (coalesces multi-doc transactions)
- * - `undefined` when the event does not affect `/events/documents` for any watched variant
+ * Classifies a document change event into a reload trigger:
+ * - `{kind: 'resync'}` for `'resync'` (never coalesced; refreshes all active transactions)
+ * - `{kind: 'mutation', id}` for semantic lifecycle / published mutations (coalesces multi-doc tx)
+ * - `undefined` for draft/version `'update'` mutations (handled in-memory without a reload)
  */
 function classifyReloadTrigger(
   event: DocumentChangeEvent,
   watched: WatchedVariants,
-): string | null | undefined {
-  if (event.type === 'resync') return null
+): ReloadTrigger | undefined {
+  if (event.type === 'resync') return {kind: 'resync'}
   if (event.type !== 'mutation') return undefined
 
-  if (watched.draftPublishedIds.has(event.documentId)) {
-    return event.transactionId
+  if (watched.variantPublishedIds.has(event.documentId)) {
+    return {kind: 'mutation', id: event.transactionId}
   }
 
   const variantType = watched.variantTypes.get(event.documentId)
   if (!variantType) return undefined
 
   if (variantType === 'published' || event.transition !== 'update') {
-    return event.transactionId
+    return {kind: 'mutation', id: event.transactionId}
   }
 
   return undefined
+}
+
+function collapseBufferedReloadTriggers(
+  buffered: readonly DocumentChangeEvent[],
+  watched: WatchedVariants,
+): ReloadTrigger | undefined {
+  let lastMutationTrigger: ReloadTrigger | undefined
+  for (const event of buffered) {
+    const trigger = classifyReloadTrigger(event, watched)
+    if (!trigger) continue
+    if (trigger.kind === 'resync') return trigger
+    lastMutationTrigger = trigger
+  }
+  return lastMutationTrigger
+}
+
+function fetchInitialWithActiveEdits(
+  clients$: Observable<SanityClient>,
+  credential: ReturnType<typeof getClientAuthState>,
+  variantIds: readonly string[],
+  limit: number,
+  onError: (error: unknown) => void,
+): Observable<FetchedHistoryBatch> {
+  return clients$.pipe(
+    first(),
+    switchMap((client) =>
+      fetchHistoryBatch(client, variantIds, limit).pipe(
+        retryRead(credential, onError),
+        switchMap((batch) => {
+          const targets = getActiveTargetsForInitialLoad(batch.variants)
+          return fetchActiveTransactionsSafe(client, targets).pipe(
+            map(({fetched, error}) => ({
+              variants: fetched
+                ? applyFetchedActiveTransactions(batch.variants, fetched)
+                : batch.variants,
+              nextCursor: batch.nextCursor,
+              activeEditsError: error,
+            })),
+          )
+        }),
+      ),
+    ),
+  )
+}
+
+function attachReloadActiveTransactions(
+  client: SanityClient,
+  batch: FetchedHistoryBatch,
+  existingVariants: Record<string, VariantTimelineData> | undefined,
+  variantIds: readonly string[],
+  refreshAllActive: boolean,
+): Observable<FetchedHistoryBatch> {
+  const targets = getActiveTargetsForReload(
+    existingVariants,
+    batch.variants,
+    variantIds,
+    refreshAllActive,
+  )
+  return fetchActiveTransactionsSafe(client, targets).pipe(
+    map(({fetched, error}) => ({
+      ...batch,
+      fetchedActiveByVariant: fetched,
+      activeEditsError: error,
+    })),
+  )
+}
+
+function runReloadOnce({
+  state,
+  entryKey,
+  clients$,
+  credential,
+  variantIds,
+  reloadLimit,
+  refreshAllActive,
+}: {
+  state: StoreState<HistoryStoreState>
+  entryKey: string
+  clients$: Observable<SanityClient>
+  credential: ReturnType<typeof getClientAuthState>
+  variantIds: readonly string[]
+  reloadLimit: number
+  refreshAllActive: boolean
+}): Observable<unknown> {
+  return defer(() => {
+    const preFetchSnapshots = snapshotPreFetchVariants(
+      state.get().entries[entryKey]?.content?.variants,
+    )
+    const onError = (error: unknown) => state.set('setHistoryError', setEntryError(entryKey, error))
+
+    return clients$.pipe(
+      first(),
+      switchMap((client) =>
+        fetchHistoryBatch(client, variantIds, reloadLimit).pipe(
+          retryRead(credential, onError),
+          switchMap((batch) =>
+            attachReloadActiveTransactions(
+              client,
+              batch,
+              state.get().entries[entryKey]?.content?.variants,
+              variantIds,
+              refreshAllActive,
+            ),
+          ),
+        ),
+      ),
+      tap((batch) =>
+        state.set('applyReloadHistory', applyReloadBatch(entryKey, batch, preFetchSnapshots)),
+      ),
+      catchError((error: unknown) => {
+        onError(error)
+        return EMPTY
+      }),
+    )
+  })
 }
 
 function observeHistoryEntry(
@@ -398,52 +530,76 @@ function observeHistoryEntry(
     resource: key.resource,
   }).observable
   const credential = getClientAuthState(instance)
+  const onError = (error: unknown) => state.set('setHistoryError', setEntryError(entryKey, error))
 
-  const readBatchWithRetry = (batchLimit: number): Observable<FetchedHistoryBatch> =>
-    clients$.pipe(
-      first(),
-      switchMap((client) => fetchHistoryBatch(client, variantIds, batchLimit)),
-      retryRead(credential, (error) =>
-        state.set('setHistoryError', setEntryError(entryKey, error)),
+  return defer(() => {
+    const bufferedDuringInitial: DocumentChangeEvent[] = []
+    let initialLoaded = Boolean(state.get().entries[entryKey]?.content)
+    const reloadTriggers$ = new Subject<ReloadTrigger>()
+
+    const liveChanges$ = observeDocumentChanges(instance, {
+      resource: key.resource,
+      documentIds: watched.documentIds,
+    }).pipe(
+      retryRead(credential, onError),
+      tap((event) => {
+        if (!initialLoaded) {
+          if (event.type !== 'connected') {
+            bufferedDuringInitial.push(event)
+          }
+          return
+        }
+        if (event.type === 'mutation') {
+          state.set('applyLiveHistoryMutation', applyLiveMutation(entryKey, event))
+        }
+        const trigger = classifyReloadTrigger(event, watched)
+        if (trigger !== undefined) {
+          reloadTriggers$.next(trigger)
+        }
+      }),
+    )
+
+    const initialLoad$ = initialLoaded
+      ? EMPTY
+      : fetchInitialWithActiveEdits(clients$, credential, variantIds, limit, onError).pipe(
+          tap((batch) => {
+            state.set(
+              'setInitialHistory',
+              applyInitialBatch(entryKey, batch, bufferedDuringInitial),
+            )
+            initialLoaded = true
+            const bufferedTrigger = collapseBufferedReloadTriggers(bufferedDuringInitial, watched)
+            bufferedDuringInitial.length = 0
+            if (bufferedTrigger !== undefined) {
+              reloadTriggers$.next(bufferedTrigger)
+            }
+          }),
+        )
+
+    const reloads$ = reloadTriggers$.pipe(
+      distinctUntilChanged(
+        (prev, next) => prev.kind === 'mutation' && next.kind === 'mutation' && prev.id === next.id,
+      ),
+      switchMap((trigger) =>
+        runReloadOnce({
+          state,
+          entryKey,
+          clients$,
+          credential,
+          variantIds,
+          reloadLimit,
+          refreshAllActive: trigger.kind === 'resync',
+        }),
       ),
     )
 
-  const initialLoad$ = defer(() => {
-    if (state.get().entries[entryKey]?.content) return EMPTY
-    return readBatchWithRetry(limit).pipe(
-      tap((batch) => state.set('setInitialHistory', applyInitialBatch(entryKey, batch))),
-    )
-  })
-
-  const reloadOnce$ = defer(() =>
-    readBatchWithRetry(reloadLimit).pipe(
-      tap((batch) => state.set('applyReloadHistory', applyReloadBatch(entryKey, batch))),
+    return merge(liveChanges$, initialLoad$, reloads$).pipe(
       catchError((error: unknown) => {
-        state.set('setHistoryError', setEntryError(entryKey, error))
+        onError(error)
         return EMPTY
       }),
-    ),
-  )
-
-  const watchLive$ = defer(() =>
-    observeDocumentChanges(instance, {
-      resource: key.resource,
-      documentIds: watched.documentIds,
-    }),
-  ).pipe(
-    retryRead(credential, (error) => state.set('setHistoryError', setEntryError(entryKey, error))),
-    map((event) => classifyReloadTrigger(event, watched)),
-    filter((trigger): trigger is string | null => trigger !== undefined),
-    distinctUntilChanged((prev, next) => prev !== null && prev === next),
-    switchMap(() => reloadOnce$),
-  )
-
-  return concat(initialLoad$, watchLive$).pipe(
-    catchError((error: unknown) => {
-      state.set('setHistoryError', setEntryError(entryKey, error))
-      return EMPTY
-    }),
-  )
+    )
+  })
 }
 
 function watchSubscribedHistoryEntries(context: StoreContext<HistoryStoreState, BoundResourceKey>) {
@@ -493,11 +649,7 @@ function selectCachedTimeline(content: HistoryEntryContent): DocumentHistoryEven
   const cached = timelineCache.get(content)
   if (cached) return cached
 
-  const perVariantTimelines = Object.values(content.variants).map((variant) =>
-    variant.apiEvents.length > 0
-      ? applyVariantTransforms(sortHistoryEvents(variant.apiEvents), variant.variantType)
-      : EMPTY_EVENTS,
-  )
+  const perVariantTimelines = Object.values(content.variants).map(buildVariantTimeline)
   const timeline = mergeVariantTimelines(perVariantTimelines)
 
   timelineCache.set(content, timeline)
@@ -702,18 +854,28 @@ function fetchHistoryBatchOnce(
   )
 }
 
+function getLoadedHistoryEntry(
+  state: StoreState<HistoryStoreState>,
+  request: BoundHistoryRequest,
+): {entryKey: string; entry: HistoryEntryState & {content: HistoryEntryContent}} | undefined {
+  const entryKey = toHistoryEntryKey(request.variantIds, request.limit)
+  const entry = state.get().entries[entryKey]
+  if (!entry?.content) return undefined
+  return {entryKey, entry: entry as HistoryEntryState & {content: HistoryEntryContent}}
+}
+
 const boundLoadMoreHistory = bindActionByResource(
   historyStore,
   (
     {state, instance, key}: StoreContext<HistoryStoreState, BoundResourceKey>,
     request: BoundHistoryRequest,
   ): Promise<void> => {
-    const entryKey = toHistoryEntryKey(request.variantIds, request.limit)
-    const entry = state.get().entries[entryKey]
-    if (!entry?.content || !entry.nextCursor) {
+    const loaded = getLoadedHistoryEntry(state, request)
+    if (!loaded || !loaded.entry.nextCursor) {
       return Promise.resolve()
     }
 
+    const {entryKey, entry} = loaded
     const cursor = entry.nextCursor
     const inFlightMap = state.get().inFlightLoadMore
     const existingInFlight = inFlightMap.get(entryKey)
@@ -770,15 +932,37 @@ const boundRefetchHistory = bindActionByResource(
     {state, instance, key}: StoreContext<HistoryStoreState, BoundResourceKey>,
     request: BoundHistoryRequest,
   ): Promise<void> => {
-    const entryKey = toHistoryEntryKey(request.variantIds, request.limit)
-    const entry = state.get().entries[entryKey]
-    if (!entry) {
+    const loaded = getLoadedHistoryEntry(state, request)
+    if (!loaded) {
       return boundResolveHistory(instance, request).then(() => {})
     }
 
-    return fetchHistoryBatchOnce(instance, key.resource, entry.variantIds, entry.limit)
+    const {entryKey, entry} = loaded
+    const preFetchSnapshots = snapshotPreFetchVariants(entry.content.variants)
+
+    return firstValueFrom(
+      getClientState(instance, {
+        apiVersion: HISTORY_API_VERSION,
+        resource: key.resource,
+      }).observable.pipe(
+        first(),
+        switchMap((client) =>
+          fetchHistoryBatch(client, entry.variantIds, entry.limit).pipe(
+            switchMap((batch) =>
+              attachReloadActiveTransactions(
+                client,
+                batch,
+                state.get().entries[entryKey]?.content?.variants,
+                entry.variantIds,
+                true,
+              ),
+            ),
+          ),
+        ),
+      ),
+    )
       .then((batch) => {
-        state.set('refetchHistory', applyReloadBatch(entryKey, batch))
+        state.set('refetchHistory', applyReloadBatch(entryKey, batch, preFetchSnapshots))
       })
       .catch((error: unknown) => {
         state.set('setHistoryError', setEntryError(entryKey, error))
