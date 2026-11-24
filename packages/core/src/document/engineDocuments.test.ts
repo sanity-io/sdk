@@ -351,6 +351,49 @@ describe('document events', () => {
   })
 })
 
+describe('batched edits', () => {
+  function twoEdits() {
+    const {engine} = fakeEngine()
+    const state = stateWith({a: engine})
+    const events: DocumentEvent[] = []
+    state.events.subscribe((event) => events.push(event))
+    applyWithEngine(state, [editDocument(handle, {set: {name: 'y'}})], 'one')
+    applyWithEngine(state, [editDocument(handle, {set: {name: 'z'}})], 'two')
+    const settled = ['one', 'two'].map((id) => state.engineTransactions.get(id)!.settled)
+    return {state, events, settled}
+  }
+  const httpEdits = [
+    {actionType: 'sanity.action.document.edit', draftId: 'drafts.a', publishedId: 'a'},
+    {actionType: 'sanity.action.document.edit', draftId: 'drafts.a', publishedId: 'a'},
+  ]
+
+  it('reports a batch as one accepted transaction carrying every caller id', async () => {
+    const {state, events, settled} = twoEdits()
+    emitAccepted(state, 'two', httpEdits as never, {transactionId: 'two'} as never, ['one', 'two'])
+    expect(events.filter((e) => e.type === 'accepted')).toMatchObject([
+      {outgoing: {transactionId: 'two', batchedTransactionIds: ['one', 'two']}},
+    ])
+    await expect(Promise.all(settled)).resolves.toEqual([{}, {}])
+    expect(state.engineTransactions.size).toBe(0)
+  })
+
+  it('reverts every transaction in a batch the server rejected', async () => {
+    const {state, events, settled} = twoEdits()
+    const transaction = {
+      transactionId: 'two',
+      actions: httpEdits,
+      submitted: false,
+      batchedTransactionIds: ['one', 'two'],
+    }
+    emitDropped(state, {transaction, reason: 'rejected', error: new Error('no')} as never)
+    expect(events).toMatchObject([
+      {type: 'reverted', outgoing: {batchedTransactionIds: ['one', 'two']}},
+    ])
+    const outcomes = await Promise.all(settled)
+    expect(outcomes.map((o) => (o.error as Error).message)).toEqual(['no', 'no'])
+  })
+})
+
 describe('signed-in user changes', () => {
   function sentBy(author: string | undefined) {
     const {engine} = fakeEngine()

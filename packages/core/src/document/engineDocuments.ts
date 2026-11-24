@@ -31,6 +31,7 @@ import {type Action} from './actions'
 import {
   API_VERSION,
   DOCUMENT_STATE_CLEAR_DELAY,
+  EDIT_BATCH_INTERVAL,
   SUBMISSION_RETRY_BASE_DELAY,
   SUBMISSION_RETRY_MAX_DELAY,
 } from './documentConstants'
@@ -93,18 +94,18 @@ function createStoreTransport(
         .subscribe((event) => onEvent(event as ListenEvent))
       return () => subscription.unsubscribe()
     },
-    submit: async ({transactionId, actions}) => {
+    submit: async ({transactionId, actions, batchedTransactionIds}) => {
       // As on the queue: wait until the user for the current token is confirmed, and never send a
       // transaction as anyone but its author. Another user's transaction is dropped from the
       // engine, which reports it (`emitDropped`), and nothing is sent.
       const user = await firstValueFrom(
         getConfirmedUserState(instance).observable.pipe(first((u) => u !== undefined)),
       )
-      const transaction = state.get().engineTransactions.get(transactionId)
-      if (transaction && user) {
-        transaction.author ??= user.id
-        if (transaction.author !== user.id) {
-          state.get().engines[publishedIdOf(transaction)]?.discardPending([transactionId])
+      const batch = batchOf(state.get(), transactionId, batchedTransactionIds)
+      if (batch.length && user) {
+        for (const t of batch) t.author ??= user.id
+        if (batch.some((t) => t.author !== user.id)) {
+          state.get().engines[publishedIdOf(batch[0]!)]?.discardPending([transactionId])
           return
         }
       }
@@ -117,28 +118,53 @@ function createStoreTransport(
           tag: 'document.action',
         })
       } catch (error) {
-        emitSubmitFailed(state.get(), transactionId, actions as HttpAction[], error)
+        emitSubmitFailed(
+          state.get(),
+          transactionId,
+          actions as HttpAction[],
+          error,
+          batchedTransactionIds,
+        )
         throw error
       }
-      emitAccepted(state.get(), transactionId, actions as HttpAction[], result)
+      emitAccepted(
+        state.get(),
+        transactionId,
+        actions as HttpAction[],
+        result,
+        batchedTransactionIds,
+      )
     },
   }
 }
 
-/** The engine transaction as the queue's `OutgoingTransaction`, the shape the events carry. */
+/**
+ * The recorded engine transactions behind one submission: the transaction itself, or every
+ * transaction the engine merged into a batch of edits.
+ */
+function batchOf(
+  {engineTransactions}: DocumentStoreState,
+  transactionId: string,
+  batchedTransactionIds: string[] = [transactionId],
+): EngineTransaction[] {
+  return batchedTransactionIds.flatMap((id) => engineTransactions.get(id) ?? [])
+}
+
+/** A submission as the queue's `OutgoingTransaction`, the shape the events carry. */
 function engineOutgoing(
-  {actions, callerTransactionId, previous, working}: EngineTransaction,
+  batch: EngineTransaction[],
   transactionId: string,
   outgoingActions: HttpAction[],
 ): OutgoingTransaction {
+  const previous = batch[0]!.previous
   return {
     transactionId,
-    actions,
-    // The caller's id, so code that waits on its own transaction id finds this one.
-    batchedTransactionIds: [callerTransactionId],
+    actions: batch.flatMap((t) => t.actions),
+    // The callers' ids, so code that waits on its own transaction id finds this one.
+    batchedTransactionIds: batch.map((t) => t.callerTransactionId),
     disableBatching: false,
     previous,
-    working,
+    working: batch.at(-1)!.working,
     base: previous,
     previousRevs: Object.fromEntries(Object.entries(previous).map(([id, doc]) => [id, doc?._rev])),
     timestamp: new Date().toISOString(),
@@ -152,18 +178,19 @@ function engineOutgoing(
  * @internal
  */
 export function emitAccepted(
-  {engineTransactions, events}: DocumentStoreState,
+  state: DocumentStoreState,
   transactionId: string,
   outgoingActions: HttpAction[],
   result: DocumentTransactionSubmissionResult,
+  batchedTransactionIds?: string[],
 ): void {
-  const transaction = engineTransactions.get(transactionId)
-  if (!transaction) return
-  engineTransactions.delete(transactionId)
-  const outgoing = engineOutgoing(transaction, transactionId, outgoingActions)
-  for (const event of getDocumentEvents(outgoing)) events.next(event)
-  events.next({type: 'accepted', outgoing, result})
-  transaction.settle({})
+  const batch = batchOf(state, transactionId, batchedTransactionIds)
+  if (!batch.length) return
+  for (const t of batch) state.engineTransactions.delete(t.callerTransactionId)
+  const outgoing = engineOutgoing(batch, transactionId, outgoingActions)
+  for (const event of getDocumentEvents(outgoing)) state.events.next(event)
+  state.events.next({type: 'accepted', outgoing, result})
+  for (const t of batch) t.settle({})
 }
 
 const errorMessage = (error: unknown) => (error instanceof Error ? error.message : 'Request failed')
@@ -179,24 +206,22 @@ export function emitSubmitFailed(
   transactionId: string,
   outgoingActions: HttpAction[],
   error: unknown,
+  batchedTransactionIds?: string[],
 ): void {
-  const transaction = state.engineTransactions.get(transactionId)
-  if (!transaction) return
+  const batch = batchOf(state, transactionId, batchedTransactionIds)
+  if (!batch.length) return
   const kind = classifySubmissionError(error)
   if (kind === 'accepted') {
-    emitAccepted(state, transactionId, outgoingActions, {
-      transactionId,
-      documentIds: [],
-      results: [],
-    })
+    const result = {transactionId, documentIds: [], results: []}
+    emitAccepted(state, transactionId, outgoingActions, result, batchedTransactionIds)
   } else if (kind === 'retry') {
-    transaction.failedAttempts++
+    for (const t of batch) t.failedAttempts++
     state.events.next({
       type: 'submission-failed',
       message: errorMessage(error),
       error,
-      outgoing: engineOutgoing(transaction, transactionId, outgoingActions),
-      attempt: transaction.failedAttempts,
+      outgoing: engineOutgoing(batch, transactionId, outgoingActions),
+      attempt: batch[0]!.failedAttempts,
     })
   }
 }
@@ -205,20 +230,17 @@ export function emitSubmitFailed(
  * Emits `reverted` for an engine transaction the server rejected and the engine dropped.
  * @internal
  */
-export function emitDropped(
-  {engineTransactions, events}: DocumentStoreState,
-  dropped: DroppedEdit,
-): void {
+export function emitDropped(state: DocumentStoreState, dropped: DroppedEdit): void {
   if (dropped.reason === 'no-op') return
-  const {transactionId, actions} = dropped.transaction
-  const transaction = engineTransactions.get(transactionId)
-  if (!transaction) return
-  engineTransactions.delete(transactionId)
-  const outgoing = engineOutgoing(transaction, transactionId, actions as HttpAction[])
+  const {transactionId, actions, batchedTransactionIds} = dropped.transaction
+  const batch = batchOf(state, transactionId, batchedTransactionIds)
+  if (!batch.length) return
+  for (const t of batch) state.engineTransactions.delete(t.callerTransactionId)
+  const outgoing = engineOutgoing(batch, transactionId, actions as HttpAction[])
   // `discarded`: the engine dropped another user's transaction (see `discardOtherUsersEdits`).
   const error = dropped.reason === 'rejected' ? dropped.error : new UserChangedError()
-  transaction.settle({error})
-  events.next({
+  for (const t of batch) t.settle({error})
+  state.events.next({
     type: 'reverted',
     message: errorMessage(error),
     error,
@@ -285,6 +307,8 @@ export function subscribeToSubscriptionsAndRunEngines(
           documentId: id,
           transport,
           retryDelay: submissionRetryDelay,
+          // As on the queue: edits go out together, at most once per interval.
+          editBatchInterval: EDIT_BATCH_INTERVAL,
         })
         const unsubscribe = sync.subscribe(() => {
           state.set('engineChanged', (prev) => ({engineChanges: prev.engineChanges + 1}))
@@ -504,7 +528,10 @@ export function applyWithEngine(
   const processed = processAsQueue({...state, grants}, engine, actions, transactionId)
   // An edit that changes nothing sends nothing, as on the transaction queue.
   const operations = processed.outgoingActions.map(toOperation)
-  const transactionIds = operations.length ? [engine.apply(operations, {transactionId})] : []
+  // Edits are batched only with edits by the same user.
+  const transactionIds = operations.length
+    ? [engine.apply(operations, {transactionId, ...(author && {batchKey: author})})]
+    : []
   for (const id of transactionIds) {
     let settle!: EngineTransaction['settle']
     const settled = new Promise<{error?: unknown}>((resolve) => (settle = resolve))

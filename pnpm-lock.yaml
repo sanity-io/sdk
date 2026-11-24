@@ -702,8 +702,8 @@ importers:
         specifier: ^7.0.0
         version: 7.0.0
       '@sanity/document-sync':
-        specifier: https://pkg.pr.new/sanity-labs/document-sync/@sanity/document-sync@25dfb1e
-        version: https://pkg.pr.new/sanity-labs/document-sync/@sanity/document-sync@25dfb1e(@types/react@19.3.0)(vitest@5.1.1)
+        specifier: https://pkg.pr.new/sanity-labs/document-sync/@sanity/document-sync@178dc2c
+        version: https://pkg.pr.new/sanity-labs/document-sync/@sanity/document-sync@178dc2c(@types/react@19.3.0)(vitest@5.1.1)
       '@sanity/id-utils':
         specifier: ^1.1.0
         version: 1.1.0
@@ -3462,8 +3462,8 @@ packages:
     resolution: {integrity: sha512-o3DBJC/M9IzA7oTk/0R0NdWyVY6AUkW1fyPHRm/xfMO23sHZcqyzpk6oBAQXcVbeDwcGRpy/HYAYeXWUBVJrzw==}
     engines: {node: '>=22.12'}
 
-  '@sanity/document-sync@https://pkg.pr.new/sanity-labs/document-sync/@sanity/document-sync@25dfb1e':
-    resolution: {integrity: sha512-Ut/QHXRlFwxcIfxOXZDHhS5/mfVkrABtGEk4o2fdCNQJRRUtfldFz8M/imAtn3a55XKvkwGGpyT5q8VCpxsjkQ==, tarball: https://pkg.pr.new/sanity-labs/document-sync/@sanity/document-sync@25dfb1e}
+  '@sanity/document-sync@https://pkg.pr.new/sanity-labs/document-sync/@sanity/document-sync@178dc2c':
+    resolution: {integrity: sha512-fyn3ElMCzaNlj5uOyXe51JCg22/m2vIG/d00YImVzRgHvhHybrhWVzQzMXp0C8f3w08D+7YeGmZKvOqle7V9rw==, tarball: https://pkg.pr.new/sanity-labs/document-sync/@sanity/document-sync@178dc2c}
     version: 0.0.0
     engines: {node: '>=20.19'}
 
@@ -10695,7 +10695,7 @@ snapshots:
     dependencies:
       '@sanity/diff-match-patch': 3.2.1
 
-  '@sanity/document-sync@https://pkg.pr.new/sanity-labs/document-sync/@sanity/document-sync@25dfb1e(@types/react@19.3.0)(vitest@5.1.1)':
+  '@sanity/document-sync@https://pkg.pr.new/sanity-labs/document-sync/@sanity/document-sync@178dc2c(@types/react@19.3.0)(vitest@5.1.1)':
     dependencies:
       '@sanity/client': 8.17.0(vitest@5.1.1)
       '@sanity/diff-match-patch': 3.2.1
