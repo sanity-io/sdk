@@ -18,7 +18,7 @@ export const resources = {
   'dataset': {projectId: 'resource-project-id', dataset: 'resource-dataset'},
 } as const
 
-export const viewApplication: ViewApplication = {
+export const viewApplication = {
   id: 'application-1',
   type: 'coreApp',
   name: 'notes',
@@ -28,7 +28,7 @@ export const viewApplication: ViewApplication = {
   slug: 'notes',
   organizationId: 'organization-1',
   isLocal: false,
-}
+} satisfies ViewApplication
 
 type WrapperComponent = React.ComponentType<{children: React.ReactNode}>
 
