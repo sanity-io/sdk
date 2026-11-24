@@ -31,7 +31,9 @@ import {
   type usePanel,
   type useTile,
   type useView,
+  type View,
   type ViewApplication,
+  type WebWorker,
   type WebWorkerProps,
 } from './dashboard'
 import {
@@ -91,6 +93,9 @@ test('view hooks return views with their application, useApplications lists them
   expectTypeOf<ReturnType<typeof useView>>().not.toHaveProperty('type')
   expectTypeOf<ReturnType<typeof useView>['application']>().toEqualTypeOf<ViewApplication>()
 
+  // Every interface type except `worker` is a view, with `app` as `window`.
+  expectTypeOf<View['surface']>().toEqualTypeOf<'window' | 'panel' | 'tile' | 'asset_source'>()
+
   type ListedView = DashboardApplication['views'][number]
   expectTypeOf<ListedView>().not.toHaveProperty('application')
   expectTypeOf<DashboardApplication['webWorkers'][number]>().not.toHaveProperty('application')
@@ -100,11 +105,8 @@ test('view hooks return views with their application, useApplications lists them
   >()
 })
 
-test('WebWorkerProps describes the worker with its name and type', () => {
-  expectTypeOf<WebWorkerProps['worker']>().toEqualTypeOf<{
-    readonly name: string
-    readonly type: 'worker'
-  }>()
+test('WebWorkerProps describes the worker with its application', () => {
+  expectTypeOf<WebWorkerProps['worker']>().toEqualTypeOf<WebWorker>()
 })
 
 test('WebWorkerProps bus.subscribe takes a handler and has no observable form', () => {

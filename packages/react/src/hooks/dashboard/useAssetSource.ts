@@ -1,7 +1,9 @@
 import {type AssetSourceView} from '@sanity/sdk/dashboard'
 import {type AssetSourceComponentProps} from '@sanity/types'
+import {useContext} from 'react'
 
-import {useViewRoot} from './useView'
+import {getDashboardRootContext} from '../../dashboard/module'
+import {useView} from './useView'
 
 /**
  * Returns the asset source view and the asset source props, such as `onSelect` and `onClose`.
@@ -20,11 +22,12 @@ import {useViewRoot} from './useView'
  * @category Dashboard
  */
 export function useAssetSource(): AssetSourceComponentProps & {view: AssetSourceView} {
-  const root = useViewRoot()
+  const view = useView()
+  const root = useContext(getDashboardRootContext())
 
-  if (root.viewType !== 'asset_source') {
+  if (root?.viewType !== 'asset_source') {
     throw new Error(
-      `useAssetSource must be called inside an asset source view, not a ${root.viewType} view`,
+      `useAssetSource must be called inside an asset source view, not a ${view.surface} view`,
     )
   }
 

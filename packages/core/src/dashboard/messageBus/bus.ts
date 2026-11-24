@@ -281,7 +281,7 @@ export interface WebWorkerProps {
       options?: MessageBusAbortOptions,
     ): void
   }
-  readonly worker: Readonly<Pick<WebWorker<false>, 'name' | 'type'>>
+  readonly worker: WebWorker
 }
 
 /**

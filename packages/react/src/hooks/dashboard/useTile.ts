@@ -1,6 +1,8 @@
 import {type TileView} from '@sanity/sdk/dashboard'
+import {useContext} from 'react'
 
-import {useViewRoot} from './useView'
+import {getDashboardRootContext} from '../../dashboard/module'
+import {useView} from './useView'
 
 /**
  * Returns the tile view.
@@ -19,10 +21,11 @@ import {useViewRoot} from './useView'
  * @category Dashboard
  */
 export function useTile(): {view: TileView} {
-  const root = useViewRoot()
+  const view = useView()
+  const root = useContext(getDashboardRootContext())
 
-  if (root.viewType !== 'tile') {
-    throw new Error(`useTile must be called inside a tile view, not a ${root.viewType} view`)
+  if (root?.viewType !== 'tile') {
+    throw new Error(`useTile must be called inside a tile view, not a ${view.surface} view`)
   }
 
   return root.props

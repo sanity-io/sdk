@@ -25,11 +25,18 @@ type MaybeApplication<WithApplication extends boolean> = WithApplication extends
   ? {application: ViewApplication}
   : unknown
 
-type ViewOf<
-  Type extends ApplicationInterface['type'],
-  Surface,
-  WithApplication extends boolean,
-> = Omit<InterfaceOf<Type>, 'type'> & {surface: Surface} & MaybeApplication<WithApplication>
+/**
+ * A view exposed by an application or installation: an interface record with its `type` as
+ * `surface`, where `app` is `window`. Every interface type except `worker` is a view.
+ * @public
+ * @category Types
+ * @category Dashboard
+ */
+export type View<WithApplication extends boolean = true> = {
+  [Type in Exclude<ApplicationInterface['type'], 'worker'>]: Omit<InterfaceOf<Type>, 'type'> & {
+    surface: Type extends 'app' ? 'window' : Type
+  } & MaybeApplication<WithApplication>
+}[Exclude<ApplicationInterface['type'], 'worker'>]
 
 /**
  * A view that opens as a full window.
@@ -37,10 +44,9 @@ type ViewOf<
  * @category Types
  * @category Dashboard
  */
-export type WindowView<WithApplication extends boolean = true> = ViewOf<
-  'app',
-  'window',
-  WithApplication
+export type WindowView<WithApplication extends boolean = true> = Extract<
+  View<WithApplication>,
+  {surface: 'window'}
 >
 
 /**
@@ -49,10 +55,9 @@ export type WindowView<WithApplication extends boolean = true> = ViewOf<
  * @category Types
  * @category Dashboard
  */
-export type PanelView<WithApplication extends boolean = true> = ViewOf<
-  'panel',
-  'panel',
-  WithApplication
+export type PanelView<WithApplication extends boolean = true> = Extract<
+  View<WithApplication>,
+  {surface: 'panel'}
 >
 
 /**
@@ -61,10 +66,9 @@ export type PanelView<WithApplication extends boolean = true> = ViewOf<
  * @category Types
  * @category Dashboard
  */
-export type TileView<WithApplication extends boolean = true> = ViewOf<
-  'tile',
-  'tile',
-  WithApplication
+export type TileView<WithApplication extends boolean = true> = Extract<
+  View<WithApplication>,
+  {surface: 'tile'}
 >
 
 /**
@@ -73,23 +77,10 @@ export type TileView<WithApplication extends boolean = true> = ViewOf<
  * @category Types
  * @category Dashboard
  */
-export type AssetSourceView<WithApplication extends boolean = true> = ViewOf<
-  'asset_source',
-  'asset_source',
-  WithApplication
+export type AssetSourceView<WithApplication extends boolean = true> = Extract<
+  View<WithApplication>,
+  {surface: 'asset_source'}
 >
-
-/**
- * A view exposed by an application or installation.
- * @public
- * @category Types
- * @category Dashboard
- */
-export type View<WithApplication extends boolean = true> =
-  | WindowView<WithApplication>
-  | PanelView<WithApplication>
-  | TileView<WithApplication>
-  | AssetSourceView<WithApplication>
 
 /**
  * A web worker exposed by an application or installation.
