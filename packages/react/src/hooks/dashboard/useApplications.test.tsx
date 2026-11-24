@@ -55,7 +55,7 @@ const application = {
         title: 'Inbox',
         version: '1',
         moduleId: 'App',
-        metadata: null,
+        metadata: {dock: {group: 'applications', order: 1}},
       },
       {
         id: 'panel-1',
@@ -64,7 +64,7 @@ const application = {
         title: 'Notifications',
         version: '1',
         moduleId: 'views/notifications',
-        metadata: {dock: {group: 'dock.applications', order: 1}},
+        metadata: {dock: {order: 1}},
       },
       {
         id: 'tile-1',
@@ -214,21 +214,34 @@ describe('useApplications', () => {
       activeDeployment: {id: 'deployment-1'},
       config: {mfManifest: {}},
     })
-    expect(federated?.views[0]?.application).not.toHaveProperty('activeDeployment')
-    expect(federated?.views[0]?.application).not.toHaveProperty('config')
-    expect(federated?.webWorkers[0]?.application).not.toHaveProperty('activeDeployment')
-    expect(federated?.webWorkers[0]?.application).not.toHaveProperty('config')
+    const inboxViewApplication = {
+      id: 'application-1',
+      type: 'coreApp',
+      name: 'inbox',
+      title: 'Inbox',
+      reference: 'sanity/inbox',
+      icon: null,
+      slug: 'inbox',
+      organizationId: 'organization-1',
+      isLocal: false,
+    }
+    expect(federated?.webWorkers[0]?.application).toEqual(inboxViewApplication)
     expect(federated?.views).toEqual([
-      expect.objectContaining({
-        application: expect.objectContaining({id: 'application-1'}),
+      {
+        id: 'view-1',
+        surface: 'window',
+        name: 'inbox',
+        title: 'Inbox',
+        version: '1',
+        moduleId: 'App',
+        metadata: {dock: {group: 'applications', order: 1}},
+        application: inboxViewApplication,
         module: {
           entry: 'https://inbox--apps--organization-1.sanity.run',
           moduleId: 'application-1/App',
           version: '1',
         },
-        name: 'inbox',
-        surface: 'window',
-      }),
+      },
       expect.objectContaining({
         module: expect.objectContaining({moduleId: 'application-1/views/notifications'}),
         name: 'notifications',
@@ -287,10 +300,20 @@ describe('useApplications', () => {
       updatedAt: '2026-01-02T00:00:00.000Z',
       installation,
     })
-    // Raw record fields must not leak onto the shaped entry, nor the raw record onto its views.
+    // Raw record fields must not leak onto the shaped entry.
     expect(shaped).not.toHaveProperty('applicationId')
     expect(shaped).not.toHaveProperty('installedBy')
-    expect(shaped?.views[0]?.application).not.toHaveProperty('installation')
+    expect(shaped?.views[0]?.application).toEqual({
+      id: 'installation-1',
+      type: 'installation',
+      name: 'remote',
+      title: 'Remote App',
+      reference: 'sanity/remote',
+      icon: null,
+      slug: 'remote',
+      organizationId: 'organization-publisher',
+      isLocal: false,
+    })
     expect(shaped?.views).toEqual([
       expect.objectContaining({
         name: 'remote',

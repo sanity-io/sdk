@@ -44,3 +44,13 @@ export type {
 } from '../dashboard/messageBus/topics'
 export {capabilities} from '../dashboard/messageBus/topics'
 export {type TopicData, TopicError} from '../dashboard/messageBus/topicStore'
+export type {
+  AssetSourceView,
+  Dock,
+  PanelView,
+  TileView,
+  View,
+  ViewApplication,
+  WebWorker,
+  WindowView,
+} from '../dashboard/views'

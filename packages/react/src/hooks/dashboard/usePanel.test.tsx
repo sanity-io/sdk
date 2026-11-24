@@ -3,7 +3,7 @@ import {type MessageBusHost, type PayloadOf} from '@sanity/sdk/dashboard'
 import {type ComponentProps, type ReactNode} from 'react'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
-import {AppProviders, renderHook} from '../../../test/test-utils'
+import {AppProviders, renderHook, viewApplication} from '../../../test/test-utils'
 import {getDashboardRootContext} from '../../dashboard/module'
 import {usePanel} from './usePanel'
 
@@ -11,6 +11,7 @@ const MESSAGE_BUS_KEY = Symbol.for('sanity.os.bus')
 const RootContext = getDashboardRootContext()
 const signal = new AbortController().signal
 const base = {
+  application: viewApplication,
   id: 'notes-inbox',
   moduleId: 'views/inbox',
   name: 'inbox',
@@ -48,7 +49,11 @@ describe('usePanel', () => {
 
     const {result} = renderInView({signal, viewType: 'panel', props: {onClose, view}})
 
-    expect(result.current).toEqual({onClose, view, setMode: expect.any(Function)})
+    expect(result.current).toEqual({
+      onClose,
+      view: {...base, metadata: null, surface: 'panel'},
+      setMode: expect.any(Function),
+    })
   })
 
   it('sends setMode payloads as panels.mode.set', () => {

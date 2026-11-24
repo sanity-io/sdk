@@ -2,11 +2,13 @@ import {renderHook} from '@testing-library/react'
 import {type ReactNode} from 'react'
 import {describe, expect, it} from 'vitest'
 
+import {viewApplication} from '../../../test/test-utils'
 import {getDashboardRootContext} from '../../dashboard/module'
 import {useView} from './useView'
 
 const RootContext = getDashboardRootContext()
 const view = {
+  application: viewApplication,
   id: 'notes-tile-inbox',
   metadata: {size: 'small'},
   moduleId: 'views/inbox',
@@ -17,7 +19,7 @@ const view = {
 } as const
 
 describe('useView', () => {
-  it('returns the view the host passed to render()', () => {
+  it('returns the view the host passed to render(), with its type as surface', () => {
     const {result} = renderHook(() => useView(), {
       wrapper: ({children}: {children: ReactNode}) => (
         <RootContext.Provider
@@ -28,7 +30,25 @@ describe('useView', () => {
       ),
     })
 
-    expect(result.current).toBe(view)
+    const {type: _type, ...rest} = view
+    expect(result.current).toEqual({...rest, surface: 'tile'})
+  })
+
+  it('returns the same view across renders', () => {
+    const {result, rerender} = renderHook(() => useView(), {
+      wrapper: ({children}: {children: ReactNode}) => (
+        <RootContext.Provider
+          value={{signal: new AbortController().signal, viewType: 'tile', props: {view}}}
+        >
+          {children}
+        </RootContext.Provider>
+      ),
+    })
+    const first = result.current
+
+    rerender()
+
+    expect(result.current).toBe(first)
   })
 
   it('throws when the host passes no view', () => {

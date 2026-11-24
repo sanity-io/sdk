@@ -1,6 +1,7 @@
+import {type PanelView} from '@sanity/sdk/dashboard'
 import {useContext} from 'react'
 
-import {type DashboardViewRoot, getDashboardRootContext} from '../../dashboard/module'
+import {getDashboardRootContext} from '../../dashboard/module'
 import {type TopicEmitter, useEmit} from './useEmit'
 import {useView} from './useView'
 
@@ -34,17 +35,19 @@ import {useView} from './useView'
  * @public
  * @category Dashboard
  */
-export function usePanel(): Extract<DashboardViewRoot, {viewType: 'panel'}>['props'] & {
+export function usePanel(): {
+  view: PanelView
+  onClose: () => void
   setMode: TopicEmitter<'panels.mode.set'>
 } {
   const view = useView()
   const root = useContext(getDashboardRootContext())
 
-  if (root?.viewType !== 'panel') {
-    throw new Error(`usePanel must be called inside a panel view, not a ${view.type} view`)
+  if (root?.viewType !== 'panel' || view.surface !== 'panel') {
+    throw new Error(`usePanel must be called inside a panel view, not a ${view.surface} view`)
   }
 
   const setMode = useEmit('panels.mode.set')
 
-  return {...root.props, setMode}
+  return {view, onClose: root.props.onClose, setMode}
 }

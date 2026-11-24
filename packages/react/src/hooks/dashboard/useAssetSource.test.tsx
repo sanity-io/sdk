@@ -2,12 +2,14 @@ import {renderHook} from '@testing-library/react'
 import {type ComponentProps, type ReactNode} from 'react'
 import {describe, expect, it, vi} from 'vitest'
 
-import {getDashboardRootContext} from '../../dashboard/module'
+import {viewApplication} from '../../../test/test-utils'
+import {getDashboardRootContext, type ViewRoot} from '../../dashboard/module'
 import {useAssetSource} from './useAssetSource'
 
 const RootContext = getDashboardRootContext()
 const signal = new AbortController().signal
 const base = {
+  application: viewApplication,
   id: 'notes-library',
   moduleId: 'views/library',
   name: 'library',
@@ -26,7 +28,7 @@ function renderInView(value: ComponentProps<typeof RootContext.Provider>['value'
 describe('useAssetSource', () => {
   it('returns the asset source view and props the host passed to render()', () => {
     const view = {...base, metadata: null, type: 'asset_source'} as const
-    const props: ReturnType<typeof useAssetSource> = {
+    const props: Extract<ViewRoot, {viewType: 'asset_source'}>['props'] = {
       accept: 'image/*',
       assetSource: {component: () => null, name: 'library'},
       onClose: vi.fn(),
@@ -38,7 +40,10 @@ describe('useAssetSource', () => {
 
     const {result} = renderInView({signal, viewType: 'asset_source', props})
 
-    expect(result.current).toBe(props)
+    expect(result.current).toEqual({
+      ...props,
+      view: {...base, metadata: null, surface: 'asset_source'},
+    })
   })
 
   it('throws in a view of another type', () => {

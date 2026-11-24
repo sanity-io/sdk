@@ -1,7 +1,8 @@
-import {type ApplicationInterface} from '@sanity/sdk'
-import {useContext} from 'react'
+import {type AssetSourceView, type PanelView, type TileView} from '@sanity/sdk/dashboard'
+import {useContext, useMemo} from 'react'
 
 import {getDashboardRootContext} from '../../dashboard/module'
+import {toView} from '../../dashboard/toView'
 
 /**
  * Returns the current view.
@@ -19,15 +20,14 @@ import {getDashboardRootContext} from '../../dashboard/module'
  * @public
  * @category Dashboard
  */
-export function useView(): Extract<
-  ApplicationInterface,
-  {type: 'panel' | 'tile' | 'asset_source'}
-> {
+export function useView(): PanelView | TileView | AssetSourceView {
   const root = useContext(getDashboardRootContext())
+  const hostView = root?.viewType ? root.props.view : undefined
+  const view = useMemo(() => hostView && toView(hostView), [hostView])
 
-  if (!root?.viewType || !root.props.view) {
+  if (!view) {
     throw new Error('useView must be called inside a Dashboard view')
   }
 
-  return root.props.view
+  return view
 }
