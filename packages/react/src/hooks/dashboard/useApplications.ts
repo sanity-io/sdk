@@ -53,8 +53,10 @@ export type DashboardInstallation = Omit<DashboardApplicationBase, 'type'> & {
  */
 export type DashboardApplication = (DashboardTopicApplication | DashboardInstallation) &
   Pick<DashboardApplicationBase, 'isLocal'> & {
-    readonly views: (View<false> & {readonly module: RemoteModuleRef})[]
-    readonly webWorkers: (WebWorker<false> & {readonly module: RemoteModuleRef})[]
+    readonly views: (View<{includeApplication: false}> & {readonly module: RemoteModuleRef})[]
+    readonly webWorkers: (WebWorker<{includeApplication: false}> & {
+      readonly module: RemoteModuleRef
+    })[]
   }
 
 // Only a federated deployment (one with a module federation manifest) exposes loadable modules.

@@ -20,8 +20,10 @@ type InterfaceOf<Type extends ApplicationInterface['type']> = Extract<
   {type: Type}
 >
 
-// Views listed under their application, as on `useApplications`, leave `application` out.
-type MaybeApplication<WithApplication extends boolean> = WithApplication extends true
+// `{includeApplication: false}` leaves `application` out, for views listed under their application.
+type ViewOptions = {includeApplication: boolean}
+
+type MaybeApplication<Options extends ViewOptions> = Options['includeApplication'] extends true
   ? {application: ViewApplication}
   : unknown
 
@@ -32,10 +34,10 @@ type MaybeApplication<WithApplication extends boolean> = WithApplication extends
  * @category Types
  * @category Dashboard
  */
-export type View<WithApplication extends boolean = true> = {
+export type View<Options extends ViewOptions = {includeApplication: true}> = {
   [Type in Exclude<ApplicationInterface['type'], 'worker'>]: Omit<InterfaceOf<Type>, 'type'> & {
     surface: Type extends 'app' ? 'window' : Type
-  } & MaybeApplication<WithApplication>
+  } & MaybeApplication<Options>
 }[Exclude<ApplicationInterface['type'], 'worker'>]
 
 /**
@@ -44,8 +46,8 @@ export type View<WithApplication extends boolean = true> = {
  * @category Types
  * @category Dashboard
  */
-export type WindowView<WithApplication extends boolean = true> = Extract<
-  View<WithApplication>,
+export type WindowView<Options extends ViewOptions = {includeApplication: true}> = Extract<
+  View<Options>,
   {surface: 'window'}
 >
 
@@ -55,8 +57,8 @@ export type WindowView<WithApplication extends boolean = true> = Extract<
  * @category Types
  * @category Dashboard
  */
-export type PanelView<WithApplication extends boolean = true> = Extract<
-  View<WithApplication>,
+export type PanelView<Options extends ViewOptions = {includeApplication: true}> = Extract<
+  View<Options>,
   {surface: 'panel'}
 >
 
@@ -66,8 +68,8 @@ export type PanelView<WithApplication extends boolean = true> = Extract<
  * @category Types
  * @category Dashboard
  */
-export type TileView<WithApplication extends boolean = true> = Extract<
-  View<WithApplication>,
+export type TileView<Options extends ViewOptions = {includeApplication: true}> = Extract<
+  View<Options>,
   {surface: 'tile'}
 >
 
@@ -77,8 +79,8 @@ export type TileView<WithApplication extends boolean = true> = Extract<
  * @category Types
  * @category Dashboard
  */
-export type AssetSourceView<WithApplication extends boolean = true> = Extract<
-  View<WithApplication>,
+export type AssetSourceView<Options extends ViewOptions = {includeApplication: true}> = Extract<
+  View<Options>,
   {surface: 'asset_source'}
 >
 
@@ -88,5 +90,5 @@ export type AssetSourceView<WithApplication extends boolean = true> = Extract<
  * @category Types
  * @category Dashboard
  */
-export type WebWorker<WithApplication extends boolean = true> = InterfaceOf<'worker'> &
-  MaybeApplication<WithApplication>
+export type WebWorker<Options extends ViewOptions = {includeApplication: true}> =
+  InterfaceOf<'worker'> & MaybeApplication<Options>
