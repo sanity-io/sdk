@@ -1,20 +1,12 @@
-import {type SanityUser as SanityUserFromClient} from '@sanity/client'
 import {filter, map, type Observable, of, switchMap, take} from 'rxjs'
 
 import {type ClientOptions, getClientState} from '../client/clientStore'
 import {observeAppOrganizationId} from '../organization/appOrganization'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {definePagedFetcher} from '../store/fetcherStore'
+import {type LegacyUser, readUsersByIds, toSanityUser, usersByIdsSource} from './readUsersByIds'
 import {type GetUsersOptions, type SanityUser, type SanityUserResponse} from './types'
 import {API_VERSION, DEFAULT_USERS_BATCH_SIZE, PROJECT_API_VERSION} from './usersConstants'
-
-// A user as the project API answers
-type ProjectUser = Omit<SanityUserFromClient, 'id'> & {
-  id: string
-  sanityUserId: string
-  email: string
-  provider: string
-}
 
 function get<T>(
   instance: SanityInstance,
@@ -80,31 +72,13 @@ function readUser(
       ),
     )
   }
-  return get<ProjectUser>(
+  return get<LegacyUser>(
     instance,
     {apiVersion: PROJECT_API_VERSION, projectId: source.projectId},
     {url: `/users/${source.userId}`, tag: 'users.get'},
   ).pipe(
     map((projectUser) => ({
-      data: [
-        {
-          sanityUserId: projectUser.sanityUserId,
-          profile: {
-            id: projectUser.id,
-            displayName: projectUser.displayName,
-            familyName: projectUser.familyName ?? undefined,
-            givenName: projectUser.givenName ?? undefined,
-            middleName: projectUser.middleName ?? undefined,
-            imageUrl: projectUser.imageUrl ?? undefined,
-            createdAt: projectUser.createdAt,
-            updatedAt: projectUser.updatedAt,
-            isCurrentUser: projectUser.isCurrentUser,
-            email: projectUser.email,
-            provider: projectUser.provider,
-          },
-          memberships: [],
-        },
-      ],
+      data: [toSanityUser(projectUser)],
       totalCount: 1,
       nextCursor: null,
     })),
@@ -114,22 +88,28 @@ function readUser(
 /**
  * Fetcher for the users of a project or an organization, on the shared fetcher cache, a batch at
  * a time. Without an `organizationId`, an organization's list waits for the app's organization.
- * With a `userId`, it reads only that user.
+ * With `userIds`, it resolves only those users via the legacy `/users/:ids` endpoint. With a
+ * `userId`, it reads only that user.
  *
  * @internal
  */
 export const users = definePagedFetcher<[options?: GetUsersOptions], SanityUserResponse>({
   name: 'users',
-  getKey: (instance, options) =>
-    JSON.stringify(
+  getKey: (instance, options) => {
+    if (options?.userIds) {
+      return JSON.stringify(usersByIdsSource(instance, {...options, userIds: options.userIds}))
+    }
+    return JSON.stringify(
       options?.userId
         ? userSource(instance, {...options, userId: options.userId})
         : {
             ...usersResource(instance, options),
             batchSize: options?.batchSize ?? DEFAULT_USERS_BATCH_SIZE,
           },
-    ),
+    )
+  },
   fetch: (instance) => (cursor, options) => {
+    if (options?.userIds) return readUsersByIds(instance, {...options, userIds: options.userIds})
     if (options?.userId) return readUser(instance, {...options, userId: options.userId})
     const {type, id} = usersResource(instance, options)
     const limit = String(options?.batchSize ?? DEFAULT_USERS_BATCH_SIZE)

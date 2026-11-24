@@ -15,6 +15,7 @@ interface Options {
   projectId?: string
   organizationId?: string
   batchSize?: number
+  userIds?: string[]
 }
 interface Page {
   data: SanityUser[]
@@ -198,4 +199,73 @@ it('reads the project of a ResourceProvider when the instance has no project', a
   })
 
   await vi.waitFor(() => expect(read).toHaveBeenCalledWith({projectId: 'bare-project'}, undefined))
+})
+
+it('resolves specific userIds and normalizes duplicates and ordering across re-renders', async () => {
+  read.mockReturnValue(page(['p1', 'p2'], null))
+
+  const {result, rerender} = renderHook(({userIds}) => useUsers({userIds}), {
+    initialProps: {userIds: ['p2', 'p1', 'p2']},
+  })
+
+  await vi.waitFor(() =>
+    expect(result.current).toMatchObject({
+      data: sanityUsers(['p1', 'p2']),
+      totalCount: 2,
+      hasMore: false,
+      isPending: false,
+    }),
+  )
+  expect(read).toHaveBeenCalledExactlyOnceWith(
+    {projectId: 'test', userIds: ['p1', 'p2']},
+    undefined,
+  )
+
+  rerender({userIds: ['p1', 'p2']})
+
+  expect(result.current.isPending).toBe(false)
+  expect(read).toHaveBeenCalledTimes(1)
+})
+
+it('keeps current users shown while an updated userIds list loads', async () => {
+  const next = new Subject<Page>()
+  read.mockImplementation(({userIds}) => (userIds?.includes('p2') ? next : page(['p1'], null)))
+
+  const {result, rerender} = renderHook(({userIds}) => useUsers({userIds}), {
+    initialProps: {userIds: ['p1']},
+  })
+  await vi.waitFor(() => expect(result.current?.data).toEqual(sanityUsers(['p1'])))
+
+  rerender({userIds: ['p1', 'p2']})
+
+  expect(result.current).toMatchObject({data: sanityUsers(['p1']), isPending: true})
+  await vi.waitFor(() =>
+    expect(read).toHaveBeenLastCalledWith({projectId: 'test', userIds: ['p1', 'p2']}, undefined),
+  )
+  await act(async () =>
+    next.next({data: sanityUsers(['p1', 'p2']), totalCount: 2, nextCursor: null}),
+  )
+  await vi.waitFor(() =>
+    expect(result.current).toMatchObject({data: sanityUsers(['p1', 'p2']), isPending: false}),
+  )
+})
+
+it('does not inject projectId when userIds is scoped to an organization', async () => {
+  renderBareHook(() => useUsers({resourceType: 'organization', userIds: ['g2', 'g1']}), {
+    wrapper: ({children}: {children: ReactNode}) => (
+      <ResourceProvider
+        resource={{projectId: 'resource-project', dataset: 'production'}}
+        fallback={null}
+      >
+        {children}
+      </ResourceProvider>
+    ),
+  })
+
+  await vi.waitFor(() =>
+    expect(read).toHaveBeenCalledWith(
+      {resourceType: 'organization', userIds: ['g1', 'g2']},
+      undefined,
+    ),
+  )
 })
