@@ -37,11 +37,23 @@ type ApplicationInterfaceBase = {
 /**
  * Placement metadata for application and panel interfaces.
  *
+ * @deprecated Read `metadata` from the `app` or `panel` member of {@link ApplicationInterface}.
  * @see https://www.sanity.io/docs/http-reference/applications-api
  * @public
  */
 export type ApplicationInterfacePlacementMetadata = {
   dock?: {group?: string; order?: number}
+}
+
+/**
+ * Where an `app` interface appears in the dock.
+ *
+ * @see https://www.sanity.io/docs/http-reference/applications-api
+ * @public
+ */
+export type Dock = {
+  group?: 'system' | 'applications'
+  order?: number
 }
 
 /**
@@ -52,8 +64,16 @@ export type ApplicationInterfacePlacementMetadata = {
  */
 export type ApplicationInterface = ApplicationInterfaceBase &
   (
-    | {type: 'app'; metadata: ApplicationInterfacePlacementMetadata | null}
-    | {type: 'panel'; metadata: ApplicationInterfacePlacementMetadata | null}
+    | {
+        type: 'app'
+        /** `icon` is a `cdn.sanity.io` URL that overrides the application icon in the dock. */
+        metadata: {dock?: Dock; icon?: string} | null
+      }
+    | {
+        type: 'panel'
+        /** `icon` is a `cdn.sanity.io` URL that overrides the application icon in the dock. */
+        metadata: {dock?: Pick<Dock, 'order'>; icon?: string} | null
+      }
     | {type: 'asset_source'; metadata: null}
     | {type: 'worker'; metadata: null}
     | {type: 'tile'; metadata: {order?: number; size: 'small' | 'large' | 'banner'}}

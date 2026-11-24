@@ -1,3 +1,4 @@
+export type {Dock} from '../applications/applications'
 export type {
   ConnectMessageBusOptions,
   MessageBus,
@@ -46,7 +47,6 @@ export {capabilities} from '../dashboard/messageBus/topics'
 export {type TopicData, TopicError} from '../dashboard/messageBus/topicStore'
 export type {
   AssetSourceView,
-  Dock,
   PanelView,
   TileView,
   View,

@@ -15,6 +15,6 @@ export function toView<T extends ViewInterface>({
   type,
   ...record
 }: T & {application: ViewApplication}): ViewOf<T> {
-  // Brett validates `metadata` per type (src/core/interfaces/validate.ts); the record type doesn't.
+  // TS can't correlate `surface` with the narrowed `type` across the generic.
   return {...record, surface: type === 'app' ? 'window' : type} as unknown as ViewOf<T>
 }

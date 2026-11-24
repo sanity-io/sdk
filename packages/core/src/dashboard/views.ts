@@ -1,15 +1,4 @@
-import {type ApplicationBase} from '../applications/applications'
-
-/**
- * Where a window view appears in the dock.
- * @public
- * @category Types
- * @category Dashboard
- */
-export type Dock = {
-  group?: 'system' | 'applications'
-  order?: number
-}
+import {type ApplicationBase, type ApplicationInterface} from '../applications/applications'
 
 /**
  * The application or installation a view or web worker belongs to.
@@ -26,13 +15,16 @@ export type ViewApplication = Pick<
   isLocal: boolean
 }
 
-type InterfaceBase = {
-  id: string
-  name: string
-  title: string
-  version: string
-  /** Module federation module id, unqualified, as stored on the interface. */
-  moduleId: string
+type InterfaceOf<Type extends ApplicationInterface['type']> = Extract<
+  ApplicationInterface,
+  {type: Type}
+>
+
+type ViewOf<Type extends ApplicationInterface['type'], Surface> = Omit<
+  InterfaceOf<Type>,
+  'type'
+> & {
+  surface: Surface
   application: ViewApplication
 }
 
@@ -42,14 +34,7 @@ type InterfaceBase = {
  * @category Types
  * @category Dashboard
  */
-export type WindowView = InterfaceBase & {
-  surface: 'window'
-  metadata: {
-    dock?: Dock
-    /** `cdn.sanity.io` URL. Overrides the application icon in the dock. */
-    icon?: string
-  } | null
-}
+export type WindowView = ViewOf<'app', 'window'>
 
 /**
  * A view that opens as a panel from the dock.
@@ -57,14 +42,7 @@ export type WindowView = InterfaceBase & {
  * @category Types
  * @category Dashboard
  */
-export type PanelView = InterfaceBase & {
-  surface: 'panel'
-  metadata: {
-    dock?: Pick<Dock, 'order'>
-    /** `cdn.sanity.io` URL. Overrides the application icon in the dock. */
-    icon?: string
-  } | null
-}
+export type PanelView = ViewOf<'panel', 'panel'>
 
 /**
  * A view that renders as a tile on the dashboard.
@@ -72,10 +50,7 @@ export type PanelView = InterfaceBase & {
  * @category Types
  * @category Dashboard
  */
-export type TileView = InterfaceBase & {
-  surface: 'tile'
-  metadata: {order?: number; size: 'small' | 'large' | 'banner'}
-}
+export type TileView = ViewOf<'tile', 'tile'>
 
 /**
  * A view that renders as an asset source.
@@ -83,10 +58,7 @@ export type TileView = InterfaceBase & {
  * @category Types
  * @category Dashboard
  */
-export type AssetSourceView = InterfaceBase & {
-  surface: 'asset_source'
-  metadata: null
-}
+export type AssetSourceView = ViewOf<'asset_source', 'asset_source'>
 
 /**
  * A view exposed by an application or installation.
@@ -102,7 +74,4 @@ export type View = WindowView | PanelView | TileView | AssetSourceView
  * @category Types
  * @category Dashboard
  */
-export type WebWorker = InterfaceBase & {
-  type: 'worker'
-  metadata: null
-}
+export type WebWorker = InterfaceOf<'worker'> & {application: ViewApplication}
