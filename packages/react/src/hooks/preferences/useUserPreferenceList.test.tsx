@@ -2,7 +2,7 @@ import {ClientError} from '@sanity/client'
 import {getCurrentUserState} from '@sanity/sdk'
 import {act} from '@testing-library/react'
 import {type Observable, of, Subject, throwError} from 'rxjs'
-import {beforeEach, expect, it, vi} from 'vitest'
+import {beforeEach, expect, it, onTestFinished, vi} from 'vitest'
 
 import {renderHook} from '../../../test/test-utils'
 import {useUserPreferenceList} from './useUserPreferenceList'
@@ -19,11 +19,16 @@ vi.mock(import('@sanity/sdk'), async (importOriginal) => {
     ...actual,
     getCurrentUserState: vi.fn(),
     userPreferenceList: definePagedFetcher<
-      [userId: string, key: string, options?: {projectId?: string}],
+      [
+        userId: string,
+        key: string,
+        options?: {projectId?: string; refetchInterval?: number | false},
+      ],
       {data: unknown[]; nextCursor: string | null}
     >({
       name: 'test-paged-list',
       getKey: (_instance, userId, key, {projectId} = {}) => `${userId}:${key}:${projectId}`,
+      refetchInterval: (_instance, _userId, _key, options) => options?.refetchInterval ?? 60_000,
       fetch: () => (cursor, _userId, _key, options) =>
         request({projectId: options?.projectId, cursor}) as Observable<{
           data: unknown[]
@@ -170,4 +175,25 @@ it('starts again from the first page for another project', async () => {
   await vi.waitFor(() => expect(result.current?.data).toEqual(items(['b'])))
   await act(async () => result.current.loadMore())
   await vi.waitFor(() => expect(result.current?.data).toEqual(items(['b', 'b-2'])))
+})
+
+it('disables polling when refetchInterval is false and supports a custom interval', async () => {
+  vi.useFakeTimers({toFake: ['setInterval', 'clearInterval']})
+  onTestFinished(() => void vi.useRealTimers())
+  request.mockReturnValue(page(['q1'], null))
+
+  const {result, rerender} = renderHook(
+    ({refetchInterval}: {refetchInterval?: number | false}) =>
+      useUserPreferenceList(QUERIES, {refetchInterval}),
+    {initialProps: {refetchInterval: false as number | false}},
+  )
+  await vi.waitFor(() => expect(result.current?.data).toEqual(items(['q1'])))
+  expect(request).toHaveBeenCalledTimes(1)
+
+  vi.advanceTimersByTime(120_000)
+  expect(request).toHaveBeenCalledTimes(1)
+
+  rerender({refetchInterval: 10_000})
+  vi.advanceTimersByTime(10_000)
+  expect(request).toHaveBeenCalledTimes(2)
 })

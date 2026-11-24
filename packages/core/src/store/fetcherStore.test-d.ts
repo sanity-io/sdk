@@ -48,6 +48,10 @@ test('unannotated getKey params are inferred (not any) from the fetcher', () => 
       expectTypeOf(id).toEqualTypeOf<string>()
       return id
     },
+    refetchInterval: (_i, id) => {
+      expectTypeOf(id).toEqualTypeOf<string>()
+      return id === 'static' ? false : 60_000
+    },
     fetch: () => (id: string) => of<Widget>({id, label: ''}),
   })
 })

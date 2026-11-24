@@ -238,6 +238,7 @@ export {
   type UserPreferenceOptions,
   type UserPreferenceOrganizationOptions,
   type UserPreferenceProjectOptions,
+  type UserPreferenceReadOptions,
   type UserPreferenceUserOptions,
   whenOrganizationKnown,
 } from '../preferences/preferences'

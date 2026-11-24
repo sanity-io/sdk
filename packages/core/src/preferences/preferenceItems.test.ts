@@ -95,6 +95,40 @@ describe('preference items', () => {
     expect(request).toHaveBeenCalledTimes(2)
   })
 
+  it('does not poll when refetchInterval is false', async () => {
+    vi.useFakeTimers({toFake: ['setInterval', 'clearInterval']})
+    onTestFinished(() => {
+      vi.useRealTimers()
+    })
+    request.mockReturnValue(of({data: [item('q1')], nextCursor: null}))
+    const unsubscribe = userPreferenceList
+      .getState(instance, 'user-1', QUERIES, {refetchInterval: false})
+      .subscribe()
+    onTestFinished(unsubscribe)
+    await vi.waitFor(() => expect(request).toHaveBeenCalledOnce())
+
+    vi.advanceTimersByTime(120_000)
+
+    expect(request).toHaveBeenCalledOnce()
+  })
+
+  it('polls at a custom refetchInterval when provided', async () => {
+    vi.useFakeTimers({toFake: ['setInterval', 'clearInterval']})
+    onTestFinished(() => {
+      vi.useRealTimers()
+    })
+    request.mockReturnValue(of({data: [item('q1')], nextCursor: null}))
+    const unsubscribe = userPreferenceList
+      .getState(instance, 'user-1', QUERIES, {refetchInterval: 15_000})
+      .subscribe()
+    onTestFinished(unsubscribe)
+    await vi.waitFor(() => expect(request).toHaveBeenCalledOnce())
+
+    vi.advanceTimersByTime(15_000)
+
+    expect(request).toHaveBeenCalledTimes(2)
+  })
+
   it('reads every page again from the first after a change, so an item that moved page shows once', async () => {
     // The API's cursor points at the last item on a page
     const pages: Record<string, {data: ReturnType<typeof item>[]; nextCursor: string | null}> = {

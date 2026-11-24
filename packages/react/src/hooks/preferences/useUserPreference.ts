@@ -2,7 +2,7 @@ import {
   type PreferenceKey,
   type UserPreference,
   userPreference,
-  type UserPreferenceOptions,
+  type UserPreferenceReadOptions,
   whenOrganizationKnown,
 } from '@sanity/sdk'
 
@@ -15,7 +15,7 @@ import {useSignedInUserId} from './useSignedInUserId'
 const useUserPreferenceFetcher = createFetcherHook(userPreference) as <K extends PreferenceKey>(
   userId: string,
   key: K,
-  options?: UserPreferenceOptions,
+  options?: UserPreferenceReadOptions,
 ) => FetcherHookResult<UserPreference<K>>
 
 /**
@@ -28,7 +28,9 @@ const useUserPreferenceFetcher = createFetcherHook(userPreference) as <K extends
  * `projectId`, it uses the project of the nearest resource; without an `organizationId`, the
  * Dashboard's organization, which it waits for. `shared: true` reads the value everyone in the
  * project or organization shares, where the key has one. `resourceType` names the kind of
- * resource, which a key stored in both projects and organizations needs.
+ * resource, which a key stored in both projects and organizations needs. `refetchInterval` sets
+ * how often (in ms) to poll for changes while mounted, or `false` to turn off polling (defaults
+ * to 60 seconds).
  *
  * `data` says where the value comes from:
  *
@@ -48,7 +50,7 @@ const useUserPreferenceFetcher = createFetcherHook(userPreference) as <K extends
  */
 export function useUserPreference<K extends PreferenceKey>(
   key: K,
-  options?: UserPreferenceOptions<K>,
+  options?: UserPreferenceReadOptions<K>,
 ): FetcherHookResult<UserPreference<K>> {
   const instance = useSanityInstance()
   const userId = useSignedInUserId()
