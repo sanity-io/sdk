@@ -1,7 +1,6 @@
 import {expectTypeOf, test} from 'vitest'
 
 import {
-  type AssetSourceView,
   type CapabilityRecord,
   type DashboardApplication,
   type DashboardTopics,
@@ -18,7 +17,6 @@ import {
   type MessageBusMessage,
   type MessageBusMeta,
   type MessageBusQueryOptions,
-  type PanelView,
   type PayloadOf,
   type ReplyOf,
   type StateTopicDef,
@@ -84,12 +82,17 @@ test('dashboard entrypoint exposes the message bus public types', () => {
 })
 
 test('view hooks return views with their application, useApplications lists them without', () => {
-  expectTypeOf<ReturnType<typeof useView>>().toEqualTypeOf<PanelView | TileView | AssetSourceView>()
-  expectTypeOf<ReturnType<typeof usePanel>['view']['surface']>().toEqualTypeOf<'panel'>()
-  expectTypeOf<ReturnType<typeof useTile>['view']['surface']>().toEqualTypeOf<'tile'>()
-  expectTypeOf<
-    ReturnType<typeof useAssetSource>['view']['surface']
-  >().toEqualTypeOf<'asset_source'>()
+  expectTypeOf<ReturnType<typeof useView>>().toEqualTypeOf<Exclude<View, {surface: 'window'}>>()
+  // Each hook returns the whole `View` member for its surface, not a narrower shape.
+  expectTypeOf<ReturnType<typeof usePanel>['view']>().toEqualTypeOf<
+    Extract<View, {surface: 'panel'}>
+  >()
+  expectTypeOf<ReturnType<typeof useTile>['view']>().toEqualTypeOf<
+    Extract<View, {surface: 'tile'}>
+  >()
+  expectTypeOf<ReturnType<typeof useAssetSource>['view']>().toEqualTypeOf<
+    Extract<View, {surface: 'asset_source'}>
+  >()
   expectTypeOf<ReturnType<typeof useView>>().not.toHaveProperty('type')
   expectTypeOf<ReturnType<typeof useView>['application']>().toEqualTypeOf<ViewApplication>()
 
