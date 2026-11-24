@@ -16,6 +16,7 @@ import {
 
 import {type Application} from '../../applications/applications'
 import {randomId} from '../../utils/ids'
+import {type WebWorker} from '../views'
 import {
   getInstalledMessageBus,
   MESSAGE_BUS_KEY,
@@ -280,7 +281,7 @@ export interface WebWorkerProps {
       options?: MessageBusAbortOptions,
     ): void
   }
-  readonly worker: {readonly name: string; readonly type: string}
+  readonly worker: Readonly<Pick<WebWorker<false>, 'name' | 'type'>>
 }
 
 /**

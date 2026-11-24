@@ -1,4 +1,9 @@
-import {type ApplicationBase, type Installation, type InstallationInclude} from '@sanity/sdk'
+import {
+  type ApplicationBase,
+  type ApplicationInterface,
+  type Installation,
+  type InstallationInclude,
+} from '@sanity/sdk'
 import {getApplicationOrigin} from '@sanity/sdk/_internal'
 import {type RemoteModuleRef, type ValueOf, type View, type WebWorker} from '@sanity/sdk/dashboard'
 import {useMemo} from 'react'
@@ -12,9 +17,6 @@ type DashboardTopicEntry = Extract<
 // The published union distinguishes an `Application` (has `type`) from an `Installation` (has not).
 type DashboardTopicApplication = Extract<DashboardTopicEntry, {type: unknown}>
 type DashboardTopicInstallation = Exclude<DashboardTopicEntry, {type: unknown}>
-type DashboardApplicationInterface = NonNullable<
-  NonNullable<DashboardTopicApplication['activeDeployment']>['interfaces']
->[number]
 
 /**
  * The shared identity fields of each {@link DashboardApplication}, and the input to module
@@ -60,13 +62,13 @@ export type DashboardApplication = (DashboardTopicApplication | DashboardInstall
 const loadableInterfaces = (
   {activeDeployment, config}: DashboardTopicApplication,
   isLocal: boolean,
-): readonly DashboardApplicationInterface[] =>
+): readonly ApplicationInterface[] =>
   isLocal || config?.mfManifest !== undefined ? (activeDeployment?.interfaces ?? []) : []
 
 // Turns an interface list into views and web workers loaded from `base`'s origin.
 const loadModules = (
   base: DashboardApplicationBase,
-  interfaces: readonly DashboardApplicationInterface[],
+  interfaces: readonly ApplicationInterface[],
 ): Pick<DashboardApplication, 'views' | 'webWorkers'> => {
   // Nothing to load without interfaces or an origin to load them from.
   const entry = interfaces.length === 0 ? null : getApplicationOrigin(base)
