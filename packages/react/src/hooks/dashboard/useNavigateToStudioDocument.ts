@@ -13,7 +13,7 @@ import {
 } from './useStudioWorkspacesByProjectIdDataset'
 
 /**
- * @beta
+ * @public
  * @category Types
  * @category Documents
  */
@@ -77,7 +77,7 @@ function useBusStudioNavigator(
 }
 
 /**
- * @beta
+ * @public
  *
  * Hook that provides a function to navigate to a given document in its parent Studio.
  *

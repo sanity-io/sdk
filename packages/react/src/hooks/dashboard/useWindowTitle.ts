@@ -68,7 +68,7 @@ function resolveAppTitle(resource: ContextResource): string | undefined {
  * // Browser tab: "My App | Sanity"
  * ```
  *
- * @beta
+ * @public
  * @category Dashboard
  */
 export function useWindowTitle(viewTitle?: string): void {

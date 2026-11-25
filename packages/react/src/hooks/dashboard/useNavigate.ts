@@ -21,7 +21,7 @@ const ignoreInbound = () => {}
  * A navigation the Dashboard asks the app to perform, or that the app reports to the Dashboard.
  * `path` is relative to the app's own route, with no leading slash (`'documents/abc'`), and may
  * carry a query string and hash.
- * @beta
+ * @public
  * @category Types
  * @category Dashboard
  */
@@ -35,7 +35,7 @@ export type DashboardNavigation = PathChangeMessage['data']
  * `scope` defaults to `'in-app'`, where `path` is relative to the app's route. With
  * `'dashboard'`, `path` is a Dashboard URL from {@link urlFor} and is navigated to as-is; only
  * the federated runtime supports it.
- * @beta
+ * @public
  * @category Types
  * @category Dashboard
  */
@@ -46,7 +46,7 @@ export type NavigateToDashboardPath = (options: {
 }) => void
 
 /**
- * @beta
+ * @public
  *
  * A helper hook designed to be injected into routing components for apps within the Dashboard.
  * It keeps the app's router and the Dashboard in two-way sync: `navigateFn` receives the

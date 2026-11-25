@@ -9,7 +9,7 @@ import {useWindowConnection} from '../comlink/useWindowConnection'
 import {useApplicationContext} from './useApplicationContext'
 
 /**
- * @beta
+ * @public
  * @category Types
  * @category Agent Actions
  */
@@ -34,7 +34,7 @@ export interface AgentResourceContextOptions {
 }
 
 /**
- * @beta
+ * @public
  * Hook for reporting the resource the user is currently interacting with (for example, which
  * document they're editing) so the Agent can understand their context. The hook reports on mount
  * and again whenever the context changes.
