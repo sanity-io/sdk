@@ -30,6 +30,7 @@ import {isReleasePerspective} from '../releases/utils/isReleasePerspective'
 import {type BoundResourceKey} from '../store/createActionBinder'
 import {type StoreContext} from '../store/defineStore'
 import {type ResolveDocument} from '../typegen/resolve'
+import {createLogger} from '../utils/logger'
 import {setCleanupTimeout} from '../utils/setCleanupTimeout'
 import {type Action} from './actions'
 import {
@@ -299,8 +300,23 @@ export function emitSubmitFailed(
  * Emits `reverted` for an engine transaction the server rejected and the engine dropped.
  * @internal
  */
-export function emitDropped(state: DocumentStoreState, dropped: DroppedEdit): void {
-  if (dropped.reason === 'no-op') return
+export function emitDropped(
+  state: DocumentStoreState,
+  dropped: DroppedEdit,
+  publishedId: string,
+): void {
+  if (dropped.reason === 'no-op') {
+    // The transaction was accepted and its echo showed some operations changed nothing.
+    const {transactionId, batchedTransactionIds} = dropped.transaction
+    state.events.next({
+      type: 'edit-no-op',
+      documentId: getDraftId(DocumentId(publishedId)),
+      transactionId,
+      ...(batchedTransactionIds && {batchedTransactionIds}),
+      noOps: dropped.noOps,
+    })
+    return
+  }
   const {transactionId, actions, batchedTransactionIds} = dropped.transaction
   const batch = batchOf(state, transactionId, batchedTransactionIds)
   if (!batch.length) return
@@ -386,6 +402,13 @@ export function subscribeToSubscriptionsAndRunEngines(
   const {state, instance} = context
   const transport = createStoreTransport(context)
   const cleanups = new Map<string, () => void>()
+  const logger = createLogger('document', {
+    instanceContext: {
+      instanceId: instance.instanceId,
+      projectId: instance.config.projectId,
+      dataset: instance.config.dataset,
+    },
+  })
   const subscription = state.observable
     .pipe(
       filter(() => !!instance.config.experimental_documentSync),
@@ -407,10 +430,21 @@ export function subscribeToSubscriptionsAndRunEngines(
           state.set('engineChanged', (prev) => ({engineChanges: prev.engineChanges + 1}))
           if (!sync.hasPending()) releaseHolds(state, id)
         })
-        const unsubscribeDropped = sync.onDropped((dropped) => emitDropped(state.get(), dropped))
+        const unsubscribeDropped = sync.onDropped((dropped) =>
+          emitDropped(state.get(), dropped, id),
+        )
+        // A diagnostic: the edit landed, but the local view showed something else until its echo.
+        const unsubscribeDivergence = sync.onDivergence(({transaction, documentId, paths}) =>
+          logger.warn('Content Lake stored an edit differently from the local replay', {
+            documentId,
+            transactionId: transaction.transactionId,
+            paths,
+          }),
+        )
         cleanups.set(id, () => {
           unsubscribe()
           unsubscribeDropped()
+          unsubscribeDivergence()
           sync.dispose()
         })
         state.set('addEngine', (prev) => ({engines: {...prev.engines, [id]: sync}}))

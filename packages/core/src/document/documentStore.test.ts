@@ -1287,7 +1287,13 @@ it('returns a promise that resolves when a document has been loaded in the store
 
 it('emits an event for each action after an outgoing transaction has been accepted', async () => {
   const handler = vi.fn()
-  const unsubscribe = subscribeDocumentEvents(instance, {resource, eventHandler: handler})
+  // Listener events (remote-sync from snapshots, remote-patches) arrive on their own schedule.
+  const unsubscribe = subscribeDocumentEvents(instance, {
+    resource,
+    eventHandler: (event) => {
+      if (!event.type.startsWith('remote-')) handler(event)
+    },
+  })
 
   const documentId = DocumentId(randomUuid())
   const doc = createDocumentHandle({documentId, documentType: 'article'})

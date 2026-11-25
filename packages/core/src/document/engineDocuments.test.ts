@@ -361,16 +361,20 @@ describe('document events', () => {
     const listener = new Subject<{type: string}>()
     settleOnEcho(state, listener, 'caller', httpEdit)
     const transaction = {transactionId: 'caller', actions: httpEdit, submitted: true}
-    emitDropped(state, {transaction, reason: 'rejected', error: new Error('no')} as never)
+    emitDropped(state, {transaction, reason: 'rejected', error: new Error('no')} as never, 'doc1')
     await vi.waitFor(() => expect(listener.observed).toBe(false))
   })
 
-  it('emits reverted when the engine drops a rejected transaction, and nothing for a no-op', () => {
+  it('emits edit-no-op for an accepted no-op, and reverted when the engine drops a transaction', () => {
     const {state, events} = sent()
     const transaction = {transactionId: 'caller', actions: httpEdit, submitted: true}
-    emitDropped(state, {transaction, reason: 'no-op', noOps: []} as never)
-    expect(events).toEqual([])
-    emitDropped(state, {transaction, reason: 'rejected', error: new Error('no')} as never)
+    const noOps = [{op: 'set', path: 'items[_key=="gone"].title', reason: 'target not found'}]
+    emitDropped(state, {transaction, reason: 'no-op', noOps} as never, 'doc1')
+    expect(events).toEqual([
+      {type: 'edit-no-op', documentId: 'drafts.doc1', transactionId: 'caller', noOps},
+    ])
+    events.length = 0
+    emitDropped(state, {transaction, reason: 'rejected', error: new Error('no')} as never, 'doc1')
     expect(events).toMatchObject([
       {type: 'reverted', message: 'no', outgoing: {batchedTransactionIds: ['caller']}},
     ])
@@ -411,7 +415,7 @@ describe('batched edits', () => {
       submitted: false,
       batchedTransactionIds: ['one', 'two'],
     }
-    emitDropped(state, {transaction, reason: 'rejected', error: new Error('no')} as never)
+    emitDropped(state, {transaction, reason: 'rejected', error: new Error('no')} as never, 'doc1')
     expect(events).toMatchObject([
       {type: 'reverted', outgoing: {batchedTransactionIds: ['one', 'two']}},
     ])
@@ -451,7 +455,7 @@ describe('signed-in user changes', () => {
     const {state, events} = sentBy('user-a')
     const {settled} = state.engineTransactions.get('caller')!
     const transaction = {transactionId: 'caller', actions: [], submitted: false}
-    emitDropped(state, {transaction, reason: 'discarded'})
+    emitDropped(state, {transaction, reason: 'discarded'}, 'doc1')
     expect(events).toMatchObject([
       {type: 'reverted', message: expect.stringMatching(/signed-in user changed/)},
     ])

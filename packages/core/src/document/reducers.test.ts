@@ -1317,7 +1317,7 @@ describe('applyRemoteDocument', () => {
       ])
     })
 
-    it('does not emit for sync events', () => {
+    it('emits remote-sync, not remote-patches, for sync events', () => {
       const events = new Subject<DocumentEvent>()
       const received: DocumentEvent[] = []
       events.subscribe((e) => received.push(e))
@@ -1331,10 +1331,10 @@ describe('applyRemoteDocument', () => {
       }
 
       applyRemoteDocument(createInitialState(), remote, events)
-      expect(received).toEqual([])
+      expect(received).toEqual([{type: 'remote-sync', documentId: docId, revision: 'revSync'}])
     })
 
-    it('does not emit when the mutations contain no patches', () => {
+    it('emits remote-sync, not remote-patches, when the mutations contain no patches', () => {
       const events = new Subject<DocumentEvent>()
       const received: DocumentEvent[] = []
       events.subscribe((e) => received.push(e))
@@ -1350,7 +1350,7 @@ describe('applyRemoteDocument', () => {
       }
 
       applyRemoteDocument(createInitialState(), remote, events)
-      expect(received).toEqual([])
+      expect(received).toEqual([{type: 'remote-sync', documentId: docId, revision: 'txnCreate'}])
     })
 
     it('excludes patches addressed to other documents in the same transaction', () => {

@@ -661,6 +661,41 @@ function extractPatchOperations(
   })
 }
 
+/**
+ * Emits the listener's view of a remote change before it is collapsed into the whole-document
+ * snapshot: `remote-patches` with the transaction's operational patches, which consumers that keep
+ * their own state (e.g. collaborative text editors) apply without re-diffing snapshots, or
+ * `remote-sync` when the document changed without patches for it (a fetched snapshot, a create or
+ * a delete), so those consumers reload it.
+ */
+function emitListenerEvents(
+  {documentId, previousRev, revision, timestamp, type, mutations}: Omit<RemoteDocument, 'document'>,
+  events: DocumentStoreState['events'],
+  {isOwnTransaction}: {isOwnTransaction: (revision: string) => boolean},
+): void {
+  if (type === 'sync') {
+    events.next({type: 'remote-sync', documentId, revision})
+    return
+  }
+  if (type !== 'mutation' || !revision) return
+  const patches = extractPatchOperations(mutations, documentId)
+  if (!patches.length) {
+    events.next({type: 'remote-sync', documentId, revision})
+    return
+  }
+  // `unverifiedRevisions` alone isn't a reliable origin marker: a sync event can prune an
+  // in-flight transaction's entry before its listener echo arrives. `recentOwnTransactionIds`
+  // survives that race
+  events.next({
+    type: 'remote-patches',
+    documentId,
+    transactionId: revision,
+    previousRev,
+    timestamp,
+    patches,
+    origin: isOwnTransaction(revision) ? 'local' : 'remote',
+  })
+}
 export function applyRemoteDocument(
   prev: SyncTransactionState,
   {document, documentId, previousRev, revision, timestamp, type, mutations}: RemoteDocument,
@@ -683,30 +718,10 @@ export function applyRemoteDocument(
     unverifiedRevisions = omitProperty(prevUnverifiedRevisions, revision)
   }
 
-  // surface the operational patches from this transaction before they are
-  // collapsed into the whole-document snapshot below. consumers that keep
-  // their own state (e.g. collaborative text editors) rely on these to apply
-  // remote changes without re-diffing document snapshots
-  if (type === 'mutation' && revision) {
-    const patches = extractPatchOperations(mutations, documentId)
-    if (patches.length) {
-      // `unverifiedRevisions` alone isn't a reliable origin marker: a sync
-      // event can prune an in-flight transaction's entry before its listener
-      // echo arrives. `recentOwnTransactionIds` survives that race
-      const isOwnTransaction =
-        Boolean(revisionToVerify) ||
-        (prevDocState.recentOwnTransactionIds?.includes(revision) ?? false)
-      events.next({
-        type: 'remote-patches',
-        documentId,
-        transactionId: revision,
-        previousRev,
-        timestamp,
-        patches,
-        origin: isOwnTransaction ? 'local' : 'remote',
-      })
-    }
-  }
+  emitListenerEvents({documentId, previousRev, revision, timestamp, type, mutations}, events, {
+    isOwnTransaction: (rev) =>
+      Boolean(revisionToVerify) || (prevDocState.recentOwnTransactionIds?.includes(rev) ?? false),
+  })
 
   // if this remote document is from a `'sync'` event (meaning that the whole
   // thing was just fetched and not re-created from mutations)
