@@ -448,7 +448,31 @@ describe('users with userIds', () => {
     expect(forbidden).toEqual([{data: [], totalCount: 0, nextCursor: null}])
   })
 
-  it('caps consecutive 403 retries when every requested ID is disallowed', async () => {
+  it('bisects chunks after linear 403 retries so many disallowed IDs never drop valid users', async () => {
+    const denied = Array.from({length: 15}, (_, i) => `g-robot${String(i).padStart(2, '0')}`)
+    const valid = Array.from({length: 10}, (_, i) => `gUser${String(i).padStart(2, '0')}`)
+    const deniedSet = new Set(denied)
+
+    request.mockImplementation(({url}: {url: string}) => {
+      const requested = url.replace('/users/', '').split(',')
+      const blocked = requested.find((id) => deniedSet.has(id))
+      if (blocked) {
+        return throwError(() => clientError(403, `Not allowed to fetch user with ID ${blocked}`))
+      }
+      return of(requested.map((id) => legacyUser(id)))
+    })
+
+    const pages = await users.resolveState(instance, {userIds: [...denied, ...valid]})
+
+    expect(pages[0]?.data.map((u) => u.profile.id)).toEqual(valid)
+    expect(pages[0]?.totalCount).toBe(valid.length)
+    // After the 4th 403, remaining IDs split so the valid right half resolves in one call
+    expect(request).toHaveBeenCalledWith(
+      expect.objectContaining({url: `/users/${valid.join(',')}`}),
+    )
+  })
+
+  it('returns an empty result without exceeding one request per ID when every ID is disallowed', async () => {
     const ids = Array.from({length: 15}, (_, i) => `gDenied${String(i).padStart(2, '0')}`)
     request.mockImplementation(({url}: {url: string}) => {
       const firstId = url.replace('/users/', '').split(',')[0]
@@ -457,15 +481,20 @@ describe('users with userIds', () => {
 
     const pages = await users.resolveState(instance, {userIds: ids})
 
-    // Initial request + 10 retries = 11 calls, then stops gracefully
-    expect(request).toHaveBeenCalledTimes(11)
+    // Each 403 strips one ID before retrying or splitting, so total requests never exceed ids.length
+    expect(request).toHaveBeenCalledTimes(ids.length)
     expect(pages).toEqual([{data: [], totalCount: 0, nextCursor: null}])
   })
 
-  it('propagates non-403/404 errors like 400 Bad Request', async () => {
+  it('propagates non-403/404 errors like 400 Bad Request and non-ClientError failures', async () => {
     const failure = clientError(400, 'Bad Request')
     request.mockReturnValueOnce(throwError(() => failure))
 
     await expect(users.resolveState(instance, {userIds: ['p1']})).rejects.toBe(failure)
+
+    const networkError = new Error('network down')
+    request.mockReturnValueOnce(throwError(() => networkError))
+
+    await expect(users.resolveState(instance, {userIds: ['p2']})).rejects.toBe(networkError)
   })
 })

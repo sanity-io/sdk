@@ -6,7 +6,8 @@ import {type ClientOptions, getClientState} from '../client/clientStore'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {type GetUsersOptions, type SanityUser, type SanityUserResponse} from './types'
 import {
-  MAX_FORBIDDEN_USER_ID_RETRIES,
+  FORBIDDEN_USER_ID_LINEAR_RETRIES,
+  FORBIDDEN_USER_ID_MAX_SPLITS,
   MAX_USER_IDS_BATCH_SIZE,
   PROJECT_API_VERSION,
 } from './usersConstants'
@@ -90,10 +91,52 @@ function extractDisallowedUserId(error: ClientError): string | undefined {
   return DISALLOWED_USER_ID_RE.exec(message)?.[1]
 }
 
+function retryRemainingIds(
+  client: SanityClient,
+  remaining: readonly string[],
+  linearRetriesLeft: number,
+  splitsLeft: number,
+): Observable<SanityUser[]> {
+  if (remaining.length === 0) return of([])
+
+  if (linearRetriesLeft > 0 || splitsLeft <= 0 || remaining.length === 1) {
+    return fetchUsersChunk(client, remaining, Math.max(0, linearRetriesLeft - 1), splitsLeft)
+  }
+
+  const mid = Math.ceil(remaining.length / 2)
+  return forkJoin([
+    fetchUsersChunk(client, remaining.slice(0, mid), 0, splitsLeft - 1),
+    fetchUsersChunk(client, remaining.slice(mid), 0, splitsLeft - 1),
+  ]).pipe(map((batches) => batches.flat()))
+}
+
+function recoverChunkError(
+  client: SanityClient,
+  ids: readonly string[],
+  error: unknown,
+  linearRetriesLeft: number,
+  splitsLeft: number,
+): Observable<SanityUser[]> {
+  if (!(error instanceof ClientError)) return throwError(() => error)
+  if (error.statusCode === 404) return of([])
+  if (error.statusCode !== 403) return throwError(() => error)
+
+  const disallowedId = extractDisallowedUserId(error)
+  if (!disallowedId || !ids.includes(disallowedId)) return of([])
+
+  return retryRemainingIds(
+    client,
+    ids.filter((id) => id !== disallowedId),
+    linearRetriesLeft,
+    splitsLeft,
+  )
+}
+
 function fetchUsersChunk(
   client: SanityClient,
   ids: readonly string[],
-  retriesLeft = MAX_FORBIDDEN_USER_ID_RETRIES,
+  linearRetriesLeft = FORBIDDEN_USER_ID_LINEAR_RETRIES,
+  splitsLeft = FORBIDDEN_USER_ID_MAX_SPLITS,
 ): Observable<SanityUser[]> {
   return client.observable
     .request<LegacyUser | LegacyUser[]>({
@@ -104,18 +147,9 @@ function fetchUsersChunk(
     .pipe(
       map((response) => (Array.isArray(response) ? response : response ? [response] : [])),
       map((items) => items.map(toSanityUser)),
-      catchError((error: unknown) => {
-        if (!(error instanceof ClientError)) return throwError(() => error)
-        if (error.statusCode === 404) return of([])
-        if (error.statusCode !== 403) return throwError(() => error)
-
-        const disallowedId = extractDisallowedUserId(error)
-        if (!disallowedId || retriesLeft <= 0 || !ids.includes(disallowedId)) return of([])
-
-        const remaining = ids.filter((id) => id !== disallowedId)
-        if (remaining.length === 0) return of([])
-        return fetchUsersChunk(client, remaining, retriesLeft - 1)
-      }),
+      catchError((error: unknown) =>
+        recoverChunkError(client, ids, error, linearRetriesLeft, splitsLeft),
+      ),
     )
 }
 
