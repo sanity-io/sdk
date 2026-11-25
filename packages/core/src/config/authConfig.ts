@@ -79,9 +79,8 @@ export interface AuthConfig {
   token?: string
 
   /**
-   * Include the signed-in user's attributes in the organization as `attributes` on the current
-   * user. The organization is the Dashboard's, then `organizationId` on the `SanityConfig`, or the
-   * project's in Studio. Each login costs the API several extra queries, so it is off by default.
+   * Adds the user's attributes in the app's organization to the current user.
+   * Defaults to `false`.
    */
   includeUserAttributes?: boolean
 
