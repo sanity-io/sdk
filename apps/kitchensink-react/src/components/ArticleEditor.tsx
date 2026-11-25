@@ -68,14 +68,16 @@ function ArticleListItem({
   const {data} = useDocumentProjection<ArticlePreview>({...handle, projection: PROJECTION})
 
   return (
-    <List.ButtonItem
-      end={<StatusIndicators {...data._status} />}
-      onClick={() => onSelect(handle.documentId)}
-      selected={selected}
-      start={<Icon aria-hidden icon={DocumentIcon} />}
-    >
-      <List.ItemText title={data.title || 'Untitled'} subtitle={data.subtitle} />
-    </List.ButtonItem>
+    <List.Item>
+      <List.ItemButton
+        current={selected}
+        end={<StatusIndicators {...data._status} />}
+        onClick={() => onSelect(handle.documentId)}
+        start={<Icon aria-hidden icon={DocumentIcon} />}
+        subtext={data.subtitle}
+        text={data.title || 'Untitled'}
+      />
+    </List.Item>
   )
 }
 
