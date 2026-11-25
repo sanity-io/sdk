@@ -11,7 +11,8 @@ import {
 } from 'rxjs'
 
 import {type StoreContext} from '../store/defineStore'
-import {DEFAULT_API_VERSION, REQUEST_TAG_PREFIX} from './authConstants'
+import {resolveRequestTagPrefix} from '../utils/requestTagPrefix'
+import {DEFAULT_API_VERSION} from './authConstants'
 import {getAuthLogger} from './authLogger'
 import {AuthStateType} from './authStateType'
 import {type AuthState, type AuthStoreState} from './authStore'
@@ -22,11 +23,12 @@ function createTokenRefreshStream(
   token: string,
   clientFactory: AuthStoreState['options']['clientFactory'],
   apiHost: string | undefined,
+  requestTagPrefix: string,
 ): Observable<{token: string}> {
   return new Observable((subscriber) => {
     const client = clientFactory({
       apiVersion: DEFAULT_API_VERSION,
-      requestTagPrefix: REQUEST_TAG_PREFIX,
+      requestTagPrefix,
       useProjectHostname: false,
       useCdn: false,
       token,
@@ -73,6 +75,7 @@ export const refreshStampedToken = ({
   const logger = getAuthLogger(instance)
 
   const {clientFactory, apiHost, storageArea, storageKey} = state.get().options
+  const requestTagPrefix = resolveRequestTagPrefix(instance.config.requestTagPrefix, 'auth')
 
   const refreshToken$ = state.observable.pipe(
     map((storeState) => storeState.authState),
@@ -95,6 +98,7 @@ export const refreshStampedToken = ({
               currentState.authState.token,
               clientFactory,
               apiHost,
+              requestTagPrefix,
             ).subscribe({
               next: (response) => {
                 state.set('setRefreshStampedToken', (prev) => ({
@@ -122,7 +126,12 @@ export const refreshStampedToken = ({
               if (currentState.type !== AuthStateType.LOGGED_IN) {
                 throw new Error('User logged out before refresh could complete')
               }
-              return createTokenRefreshStream(currentState.token, clientFactory, apiHost)
+              return createTokenRefreshStream(
+                currentState.token,
+                clientFactory,
+                apiHost,
+                requestTagPrefix,
+              )
             }),
           )
           .subscribe({

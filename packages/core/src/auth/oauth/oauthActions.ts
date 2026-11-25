@@ -2,6 +2,7 @@ import {createSelector} from 'reselect'
 
 import {bindActionGlobally} from '../../store/createActionBinder'
 import {createStateSourceAction} from '../../store/createStateSourceAction'
+import {resolveRequestTagPrefix} from '../../utils/requestTagPrefix'
 import {DEFAULT_BASE} from '../authConstants'
 import {getAuthLogger} from '../authLogger'
 import {AuthStateType} from '../authStateType'
@@ -177,7 +178,10 @@ export const handleOAuthCallback = bindActionGlobally(
     })
 
     try {
-      const client = createOAuthClient(options)
+      const client = createOAuthClient(
+        options,
+        resolveRequestTagPrefix(instance.config.requestTagPrefix, 'auth'),
+      )
       const params = new URLSearchParams({
         grant_type: 'authorization_code',
         code,
@@ -240,7 +244,10 @@ export const revokeOAuthTokens = bindActionGlobally(authStore, async ({state, in
 
   try {
     if (token) {
-      const client = createOAuthClient(options)
+      const client = createOAuthClient(
+        options,
+        resolveRequestTagPrefix(instance.config.requestTagPrefix, 'auth'),
+      )
       const params = new URLSearchParams({token, client_id: options.oauth.clientId})
       await client.request<void>({
         method: 'POST',

@@ -1,6 +1,6 @@
 import {type SanityClient} from '@sanity/client'
 
-import {REQUEST_TAG_PREFIX} from '../authConstants'
+import {resolveRequestTagPrefix} from '../../utils/requestTagPrefix'
 import {type AuthStoreState} from '../authStore'
 import {type OAuthTokens} from './types'
 
@@ -105,10 +105,13 @@ export function getOAuthOptions(state: AuthStoreState): ConfiguredOAuthOptions {
 }
 
 /** Creates a client for the (unauthenticated) public OAuth token/revoke calls. */
-export function createOAuthClient(options: AuthOptions): SanityClient {
+export function createOAuthClient(
+  options: AuthOptions,
+  requestTagPrefix: string = resolveRequestTagPrefix(undefined, 'auth'),
+): SanityClient {
   return options.clientFactory({
     apiVersion: 'v1',
-    requestTagPrefix: REQUEST_TAG_PREFIX,
+    requestTagPrefix,
     useProjectHostname: false,
     useCdn: false,
     ...(options.apiHost && {apiHost: options.apiHost}),
