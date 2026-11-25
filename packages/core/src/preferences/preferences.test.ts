@@ -185,6 +185,59 @@ describe('preferences', () => {
       stop.forEach((unsubscribe) => unsubscribe())
     })
 
+    it('does not poll when refetchInterval is false', async () => {
+      vi.useFakeTimers({
+        toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'],
+      })
+      request.mockImplementation(({query}) =>
+        of({data: query.keys.map((key: string) => stored(key, 'compact'))}),
+      )
+      const unsubscribe = userPreference
+        .getState(instance, 'user-1', pane('a'), {refetchInterval: false})
+        .subscribe()
+      onTestFinished(unsubscribe)
+
+      await vi.runAllTimersAsync()
+
+      expect(request).toHaveBeenCalledTimes(1)
+    })
+
+    it('polls at a custom refetchInterval when provided', async () => {
+      vi.useFakeTimers({
+        toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'],
+      })
+      request.mockImplementation(({query}) =>
+        of({data: query.keys.map((key: string) => stored(key, 'compact'))}),
+      )
+      const unsubFast = userPreference
+        .getState(instance, 'user-1', pane('fast'), {refetchInterval: 10_000})
+        .subscribe()
+      const unsubSlow = userPreference
+        .getState(instance, 'user-1', pane('slow'), {refetchInterval: 120_000})
+        .subscribe()
+      onTestFinished(() => {
+        unsubFast()
+        unsubSlow()
+      })
+      await vi.advanceTimersByTimeAsync(100)
+      expect(request).toHaveBeenCalledTimes(1)
+
+      await vi.advanceTimersByTimeAsync(10_000)
+      expect(request).toHaveBeenCalledTimes(2)
+      expect(request).toHaveBeenLastCalledWith(
+        expect.objectContaining({query: {keys: [pane('fast')]}}),
+      )
+
+      // At 60s only the fast key has been polling; the slow key waits until 120s
+      await vi.advanceTimersByTimeAsync(50_000)
+      const keysPolledSoFar = request.mock.calls.slice(1).flatMap(([{query}]) => query.keys)
+      expect(keysPolledSoFar).not.toContain(pane('slow'))
+
+      await vi.advanceTimersByTimeAsync(60_000)
+      const keysPolledByTwoMinutes = request.mock.calls.slice(1).flatMap(([{query}]) => query.keys)
+      expect(keysPolledByTwoMinutes).toContain(pane('slow'))
+    })
+
     it('waits until no key has joined for 50 ms, like projections, before sending', async () => {
       vi.useFakeTimers({
         toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'],

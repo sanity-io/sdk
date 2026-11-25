@@ -84,6 +84,26 @@ it('passes `shared` and `resourceType` on to the read', () => {
   )
 })
 
+it('forwards `refetchInterval` to the preference read', () => {
+  renderHook(() => useUserPreference(LAYOUT, {refetchInterval: false}))
+
+  expect(userPreference.getState).toHaveBeenCalledWith(
+    expect.anything(),
+    'user-1',
+    LAYOUT,
+    expect.objectContaining({projectId: 'test', refetchInterval: false}),
+  )
+
+  renderHook(() => useUserPreference(LAYOUT, {refetchInterval: 10_000}))
+
+  expect(userPreference.getState).toHaveBeenLastCalledWith(
+    expect.anything(),
+    'user-1',
+    LAYOUT,
+    expect.objectContaining({projectId: 'test', refetchInterval: 10_000}),
+  )
+})
+
 it("suspends until the Dashboard's organization is known, then reads the value", async () => {
   let organizationKnown!: () => void
   const waiting = new Promise<void>((resolve) => (organizationKnown = resolve))

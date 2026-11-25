@@ -1,6 +1,6 @@
 {
   "name": "@sanity/sdk",
-  "version": "3.15.0",
+  "version": "3.16.0",
   "private": false,
   "description": "Sanity SDK",
   "keywords": [
@@ -92,12 +92,12 @@
     "@sanity/comlink": "catalog:",
     "@sanity/diff-match-patch": "^3.2.1",
     "@sanity/diff-patch": "^7.0.0",
-    "@sanity/document-sync": "https://pkg.pr.new/sanity-labs/document-sync/@sanity/document-sync@178dc2c",
+    "@sanity/document-sync": "https://pkg.pr.new/sanity-labs/document-sync/@sanity/document-sync@f354a2a",
     "@sanity/id-utils": "^1.1.0",
     "@sanity/image-url": "^2.2.0",
     "@sanity/json-match": "^1.0.5",
     "@sanity/message-protocol": "catalog:",
-    "@sanity/mutate": "^0.18.2",
+    "@sanity/mutate": "^0.18.4",
     "@sanity/telemetry": "^1.1.0",
     "@sanity/types": "catalog:",
     "@sentry/browser": "^11.8.0",

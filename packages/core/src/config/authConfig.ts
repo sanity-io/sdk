@@ -78,6 +78,12 @@ export interface AuthConfig {
    */
   token?: string
 
+  /**
+   * Adds the user's attributes in the app's organization to the current user.
+   * Defaults to `false`.
+   */
+  includeUserAttributes?: boolean
+
   oauth?: {
     /**
      * Opaque OAuth `client_id`.

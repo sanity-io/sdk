@@ -1,7 +1,7 @@
 import {type ApplicationWorkspace} from '@sanity/sdk'
 
 /**
- * @public
+ * @beta
  * @category URLs
  */
 export interface DashboardUrl {
@@ -14,7 +14,7 @@ export interface DashboardUrl {
 const relativeUrlBase = 'https://dashboard.invalid'
 
 /**
- * @public
+ * @beta
  * @category URLs
  */
 export interface EditIntentParameters {
@@ -26,7 +26,7 @@ export interface EditIntentParameters {
 }
 
 /**
- * @public
+ * @beta
  * @category URLs
  */
 export interface CreateIntentParameters {
@@ -35,7 +35,7 @@ export interface CreateIntentParameters {
 }
 
 /**
- * @public
+ * @beta
  * @category URLs
  */
 export interface ReleaseIntentParameters {
@@ -43,7 +43,7 @@ export interface ReleaseIntentParameters {
 }
 
 /**
- * @public
+ * @beta
  * @category URLs
  */
 export interface StudioWorkspaceUrl extends DashboardUrl {
@@ -55,7 +55,7 @@ export interface StudioWorkspaceUrl extends DashboardUrl {
 }
 
 /**
- * @public
+ * @beta
  * @category URLs
  */
 export interface StudioUrl extends StudioWorkspaceUrl {
@@ -73,7 +73,7 @@ export interface StudioUrl extends StudioWorkspaceUrl {
 }
 
 /**
- * @public
+ * @beta
  * @category URLs
  */
 export interface StudioIntentUrl extends DashboardUrl {
@@ -83,7 +83,7 @@ export interface StudioIntentUrl extends DashboardUrl {
 }
 
 /**
- * @public
+ * @beta
  * @category URLs
  */
 export interface CoreApplicationUrl extends DashboardUrl {
@@ -91,7 +91,7 @@ export interface CoreApplicationUrl extends DashboardUrl {
 }
 
 /**
- * @public
+ * @beta
  * @category URLs
  */
 export interface MediaLibraryUrl extends DashboardUrl {
@@ -100,7 +100,7 @@ export interface MediaLibraryUrl extends DashboardUrl {
 }
 
 /**
- * @public
+ * @beta
  * @category URLs
  */
 export interface CanvasUrl extends DashboardUrl {
@@ -176,7 +176,7 @@ const appendSegments = (url: URL, segments: readonly string[]): URL => {
 /**
  * Base class for immutable URL grammars.
  *
- * @public
+ * @beta
  * @category URLs
  */
 export class UrlBuilder implements DashboardUrl {
@@ -417,7 +417,7 @@ class StudioUrlBuilder
 }
 
 /**
- * @public
+ * @beta
  * @category URLs
  */
 export interface Urls {
@@ -506,7 +506,7 @@ const createUrls = <const Builders extends BuilderRegistry>(
 }
 
 /**
- * @public
+ * @beta
  * @category URLs
  */
 export const urlFor: Urls = createUrls({})

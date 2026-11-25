@@ -3,7 +3,7 @@ import {type MessageBusHost, type PayloadOf} from '@sanity/sdk/dashboard'
 import {type ComponentProps, type ReactNode} from 'react'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
-import {AppProviders, renderHook} from '../../../test/test-utils'
+import {AppProviders, renderHook, viewApplication} from '../../../test/test-utils'
 import {getDashboardRootContext} from '../../dashboard/module'
 import {usePanel} from './usePanel'
 
@@ -11,6 +11,7 @@ const MESSAGE_BUS_KEY = Symbol.for('sanity.os.bus')
 const RootContext = getDashboardRootContext()
 const signal = new AbortController().signal
 const base = {
+  application: viewApplication,
   id: 'notes-inbox',
   moduleId: 'views/inbox',
   name: 'inbox',
@@ -43,7 +44,7 @@ describe('usePanel', () => {
   })
 
   it('returns the panel view and the onClose the host passed to render()', () => {
-    const view = {...base, metadata: null, type: 'panel'} as const
+    const view = {...base, metadata: null, surface: 'panel'} as const
     const onClose = vi.fn()
 
     const {result} = renderInView({signal, viewType: 'panel', props: {onClose, view}})
@@ -54,7 +55,7 @@ describe('usePanel', () => {
   it('sends setMode payloads as panels.mode.set', () => {
     const payloads: PayloadOf<'panels.mode.set'>[] = []
     host.subscribe('panels.mode.set', (message) => payloads.push(message.payload))
-    const view = {...base, metadata: null, type: 'panel'} as const
+    const view = {...base, metadata: null, surface: 'panel'} as const
 
     const {result} = renderInView({signal, viewType: 'panel', props: {onClose: vi.fn(), view}})
     result.current.setMode({name: 'inbox', mode: 'full'})
@@ -63,7 +64,7 @@ describe('usePanel', () => {
   })
 
   it('throws in a view of another type', () => {
-    const view = {...base, metadata: {size: 'small'}, type: 'tile'} as const
+    const view = {...base, metadata: {size: 'small'}, surface: 'tile'} as const
 
     expect(() => renderInView({signal, viewType: 'tile', props: {view}})).toThrow(
       'usePanel must be called inside a panel view, not a tile view',

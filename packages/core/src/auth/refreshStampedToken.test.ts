@@ -102,6 +102,37 @@ describe('refreshStampedToken', () => {
     }
   })
 
+  it('appends configured requestTagPrefix before auth when refreshing tokens', async () => {
+    const mockClient = {
+      observable: {request: vi.fn(() => of({token: 'sk-refreshed-token-st123'}))},
+    }
+    const mockClientFactory = vi.fn().mockReturnValue(mockClient)
+    const instance = createSanityInstance({
+      projectId: 'p',
+      dataset: 'd',
+      requestTagPrefix: 'workbench',
+      auth: {clientFactory: mockClientFactory, storageArea: mockStorage},
+    })
+    const initialState = authStore.getInitialState(instance, null)
+    initialState.authState = {
+      type: AuthStateType.LOGGED_IN,
+      token: 'sk-initial-token-st123',
+      currentUser: null,
+    }
+    const state = createStoreState(initialState)
+
+    const subscription = refreshStampedToken({state, instance, key: null})
+    subscriptions.push(subscription)
+
+    await vi.advanceTimersToNextTimerAsync()
+
+    expect(mockClientFactory).toHaveBeenCalledWith(
+      expect.objectContaining({
+        requestTagPrefix: 'sanity.sdk.workbench.auth',
+      }),
+    )
+  })
+
   it('writes the refreshed token to storage', async () => {
     const mockClient = {
       observable: {request: vi.fn(() => of({token: 'sk-refreshed-token-st123'}))},

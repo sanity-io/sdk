@@ -100,7 +100,8 @@ describe('dashboard topic types', () => {
       size: 'small' | 'large' | 'banner'
     }>()
     expectTypeOf<Extract<ListedInterface, {type: 'panel'}>['metadata']>().toEqualTypeOf<{
-      dock?: {group?: string; order?: number}
+      dock?: {order?: number}
+      icon?: string
     } | null>()
     expectTypeOf<ValueOf<'applications.foreground'>>().toEqualTypeOf<Application['id'] | null>()
   })

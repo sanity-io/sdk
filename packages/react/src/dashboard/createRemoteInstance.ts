@@ -8,7 +8,7 @@ import {createLogger} from '@sanity/sdk/_internal'
 type MakeOptional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>
 
 /**
- * @public
+ * @beta
  * @category Remote Modules
  */
 export type FederationRemote = {
@@ -25,7 +25,7 @@ function withManifest<T extends {entry: string}>(remote: T): T {
 }
 
 /**
- * @public
+ * @beta
  * @category Remote Modules
  */
 export type CreateRemoteInstanceOptions = MakeOptional<
@@ -34,7 +34,7 @@ export type CreateRemoteInstanceOptions = MakeOptional<
 >
 
 /**
- * @public
+ * @beta
  * @category Remote Modules
  */
 export interface RemoteInstance {
@@ -48,7 +48,7 @@ export interface RemoteInstance {
 
 /**
  * Creates a client for registering, loading, and preloading federated modules.
- * @public
+ * @beta
  * @category Remote Modules
  */
 export function createRemoteInstance(options: CreateRemoteInstanceOptions): RemoteInstance {

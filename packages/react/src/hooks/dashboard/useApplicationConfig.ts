@@ -5,7 +5,7 @@ import {useApplicationConfigs} from './useApplicationConfigs'
 
 /**
  * Selects an application configuration by application id or application type.
- * @public
+ * @beta
  * @category Types
  * @category Dashboard
  */
@@ -31,7 +31,7 @@ export type ApplicationConfigSelector =
  * }
  * ```
  *
- * @public
+ * @beta
  * @category Dashboard
  */
 export function useApplicationConfig(

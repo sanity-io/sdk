@@ -13,7 +13,7 @@ All outgoing Sanity API requests from the SDK must use the `sanity.sdk.*` tag na
 
 ## Rules
 
-1. **Do not pass an ad hoc `requestTagPrefix`.** In auth code only, set `requestTagPrefix: REQUEST_TAG_PREFIX` using the constant from `authConstants.ts` (currently `'sanity.sdk.auth'`). Everywhere else, omit `requestTagPrefix` so the default from `clientStore.ts` (`'sanity.sdk'`) is applied automatically.
+1. **Do not pass an ad hoc `requestTagPrefix`.** In auth code only, set `requestTagPrefix: resolveRequestTagPrefix(instance.config.requestTagPrefix, 'auth')` using `resolveRequestTagPrefix` from `utils/requestTagPrefix.ts` (producing `'sanity.sdk.auth'`, or `'sanity.sdk.<configured>.auth'` when `config.requestTagPrefix` is set). Everywhere else, omit `requestTagPrefix` so the default from `clientStore.ts` (`'sanity.sdk'`, or `'sanity.sdk.<configured>'`) is applied automatically.
 2. **Every `.request()`, `.fetch()`, `.listen()`, and `.action()` call must include a `tag` property** that describes the operation (e.g., `'users.get-current'`, `'logout'`, `'document.action'`).
 3. **Tag names should be short, lowercase, dot-separated descriptors** of the operation, not the endpoint path.
 
@@ -24,8 +24,10 @@ All outgoing Sanity API requests from the SDK must use the `sanity.sdk.*` tag na
 const client = clientFactory({requestTagPrefix: 'my-feature'})
 await client.request({url: '/users/me', method: 'GET'})
 
-// GOOD (auth code): use the shared constant prefix, set an explicit tag
-const client = clientFactory({requestTagPrefix: REQUEST_TAG_PREFIX})
+// GOOD (auth code): resolve the auth prefix from instance config, set an explicit tag
+const client = clientFactory({
+  requestTagPrefix: resolveRequestTagPrefix(instance.config.requestTagPrefix, 'auth'),
+})
 await client.request({url: '/users/me', method: 'GET', tag: 'users.get-current'})
 
 // GOOD (non-auth code): omit requestTagPrefix to inherit the default

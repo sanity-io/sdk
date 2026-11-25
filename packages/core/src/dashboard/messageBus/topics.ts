@@ -8,7 +8,7 @@ import {type OrganizationBase} from '../../organization/organization'
 
 /**
  * Identifies a module federation expose and the manifest that serves it.
- * @public
+ * @beta
  * @category Remote Modules
  */
 export interface RemoteModuleRef {
@@ -22,7 +22,7 @@ export interface RemoteModuleRef {
  *
  * The dashboard supplies this value over the message bus, so any string is accepted; known
  * types are listed for autocomplete. `& {}` keeps the literal from collapsing into `string`.
- * @public
+ * @beta
  * @category Types
  * @category Message Bus
  */
@@ -30,7 +30,7 @@ export type ApplicationConfigAppType = 'media-library' | (string & {})
 
 /**
  * Identifies a configuration module for an application or application type.
- * @public
+ * @beta
  * @category Types
  * @category Message Bus
  */
@@ -44,28 +44,28 @@ export interface ApplicationConfig extends RemoteModuleRef {
  *
  * Reuses the Studio's rendering-context identifiers so an application can hide its own
  * implementation of anything the host provides.
- * @public
+ * @beta
  * @category Message Bus
  */
 export const capabilities = ['globalUserMenu', 'favorites', 'history'] as const
 
 /**
  * A capability a host can provide.
- * @public
+ * @beta
  * @category Message Bus
  */
 export type Capability = (typeof capabilities)[number]
 
 /**
  * The capabilities the host provides. A missing key means the host does not provide it.
- * @public
+ * @beta
  * @category Message Bus
  */
 export type CapabilityRecord = Partial<Record<Capability, boolean>>
 
 /**
  * A document a user viewed, edited, created, or deleted in an application.
- * @public
+ * @beta
  * @category Types
  * @category Message Bus
  */
@@ -86,7 +86,7 @@ export interface DocumentActivity {
 
 /**
  * Activity an application reports to the host. Discriminated on `kind`.
- * @public
+ * @beta
  * @category Types
  * @category Message Bus
  */
@@ -94,7 +94,7 @@ export type ApplicationActivity = DocumentActivity
 
 /**
  * A document a user favorited, addressed like Comlink's favorite messages.
- * @public
+ * @beta
  * @category Types
  * @category Message Bus
  */
@@ -138,7 +138,7 @@ export type ApplicationStatusUpdate = {
 
 /**
  * What an application is currently showing: the Comlink agent resource context, made generic.
- * @public
+ * @beta
  * @category Types
  * @category Message Bus
  */
@@ -158,7 +158,7 @@ export interface ApplicationContext {
 /**
  * An application served by a CLI dev server. The workbench publishes it in the same shape as a
  * deployed application; `local` marks it and names the dev server it is served from.
- * @public
+ * @beta
  * @category Types
  * @category Message Bus
  */
@@ -168,14 +168,14 @@ export type LocalApplication = Application<ApplicationInclude> & {
 
 /**
  * Declares a topic that stores and replays its current value.
- * @public
+ * @beta
  * @category Message Bus
  */
 export type StateTopicDef<T> = {kind: 'state'; value: T}
 
 /**
  * Declares a topic that delivers events and an optional reply.
- * @public
+ * @beta
  * @category Message Bus
  */
 export type EventTopicDef<P, R = never> = {
@@ -186,14 +186,14 @@ export type EventTopicDef<P, R = never> = {
 
 /**
  * Represents a successful topic value or a failed topic operation.
- * @public
+ * @beta
  * @category Message Bus
  */
 export type TopicResult<T> = {ok: true; value: T} | {ok: false}
 
 /**
  * Identifies a dashboard application and a route within it.
- * @public
+ * @beta
  * @category Types
  * @category Message Bus
  */
@@ -206,7 +206,7 @@ export type NavigationTarget = {
 
 /**
  * Describes the current dashboard location and an active navigation.
- * @public
+ * @beta
  * @category Types
  * @category Message Bus
  */
@@ -222,7 +222,7 @@ export type NavigationLocation = NavigationTarget & {
 
 /**
  * Declares the topics provided by the dashboard.
- * @public
+ * @beta
  * @category Message Bus
  */
 export interface DashboardTopics {
@@ -347,7 +347,7 @@ export interface DashboardTopics {
 
 /**
  * Declares every topic available through the message bus.
- * @public
+ * @beta
  * @category Message Bus
  */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type -- Declaration merging extends the SDK manifest.
@@ -361,7 +361,7 @@ export type MessageBusTopics = Omit<Topics, 'applications.status.update'>
 
 /**
  * Every declared topic name.
- * @public
+ * @beta
  * @category Message Bus
  */
 export type TopicName<TTopics = Topics> = keyof TTopics
@@ -372,7 +372,7 @@ type StateTopicsOf<T> = {
 
 /**
  * Names of state topics exposed by message bus methods.
- * @public
+ * @beta
  * @category Message Bus
  */
 export type StateTopic<TTopics = MessageBusTopics> = StateTopicsOf<TTopics>
@@ -440,7 +440,7 @@ export type TopicManifest = Readonly<
 
 /**
  * Names of event topics exposed by message bus methods.
- * @public
+ * @beta
  * @category Message Bus
  */
 export type EventTopic<TTopics = MessageBusTopics> = {
@@ -449,7 +449,7 @@ export type EventTopic<TTopics = MessageBusTopics> = {
 
 /**
  * The value type of a state topic.
- * @public
+ * @beta
  * @category Message Bus
  */
 export type ValueOf<K extends StateTopic<TTopics>, TTopics = Topics> =
@@ -457,7 +457,7 @@ export type ValueOf<K extends StateTopic<TTopics>, TTopics = Topics> =
 
 /**
  * The payload type of an event topic.
- * @public
+ * @beta
  * @category Message Bus
  */
 export type PayloadOf<K extends EventTopic<TTopics>, TTopics = Topics> =
@@ -465,7 +465,7 @@ export type PayloadOf<K extends EventTopic<TTopics>, TTopics = Topics> =
 
 /**
  * The reply type of an event topic (`never` if it declares none).
- * @public
+ * @beta
  * @category Message Bus
  */
 export type ReplyOf<K extends EventTopic<TTopics>, TTopics = Topics> =

@@ -35,7 +35,7 @@ import {useEmit} from './useEmit'
  * }
  * ```
  *
- * @public
+ * @beta
  * @category Dashboard
  */
 export function useApplicationContext(context: ApplicationContext | null): void {

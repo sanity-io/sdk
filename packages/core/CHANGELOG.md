@@ -1,5 +1,28 @@
 # Changelog
 
+## 3.16.0
+
+[Compare changes](https://github.com/sanity-io/sdk/compare/sdk-v3.15.0...sdk-v3.16.0)
+
+_2026-11-25_
+
+### Features
+
+- When someone comes back to an app's tab, the projects, applications, preferences and other cached API data it shows are fetched again if they're more than 30 seconds old. Set `refetchOnWindowFocus: false` in the app's config to turn this off. ([#1575](https://github.com/sanity-io/sdk/pull/1575)) ([f90b767](https://github.com/sanity-io/sdk/commit/f90b76709c477bef9693117a730b87fab996be12)) by [@joshuaellis](https://github.com/joshuaellis)
+- An installation's `application` now has `updatedAt`, when the installed app last changed. Pass `organization` in `include` to also get `application.organization.logoUrl`, the logo of the organization that publishes the app. ([#1608](https://github.com/sanity-io/sdk/pull/1608)) ([9d63774](https://github.com/sanity-io/sdk/commit/9d63774fc19038e4568512aee608cf6a4d8f7112)) by [@joshuaellis](https://github.com/joshuaellis)
+- **auth:** `auth.includeUserAttributes` adds the signed-in user's attributes to the current user. ([#1634](https://github.com/sanity-io/sdk/pull/1634)) ([8548949](https://github.com/sanity-io/sdk/commit/854894908e6ef79e846818fc283708d16836e537)) by [@gu-stav](https://github.com/gu-stav)
+- **core:** Projects returned by the project and projects APIs include `logoUrl`, the bare CDN URL of the project's logo, or `null` when it has none. ([#1618](https://github.com/sanity-io/sdk/pull/1618)) ([8011cb5](https://github.com/sanity-io/sdk/commit/8011cb512aaec2bef4d25507bff88452d0e4e2d9)) by [@joshuaellis](https://github.com/joshuaellis)
+- **preferences:** `useUserPreference` and `useUserPreferenceList` (and the underlying `userPreference` and `userPreferenceList` fetchers) now accept a `refetchInterval` option to adjust the polling interval in milliseconds or pass `false` to disable polling. Polling continues to default to 60 seconds. ([#1628](https://github.com/sanity-io/sdk/pull/1628)) ([7f79ae4](https://github.com/sanity-io/sdk/commit/7f79ae459a7a823ef1e25768ea8aa908a1018c96)) by [@binoy14](https://github.com/binoy14)
+- **dashboard:** Dashboard views and web workers share one `View` and `WebWorker` type from `@sanity/sdk/dashboard`, replacing `DashboardView` and `DashboardWebWorker`. View hooks return `surface` and `application` instead of `type`. ([#1627](https://github.com/sanity-io/sdk/pull/1627)) ([9e33f8e](https://github.com/sanity-io/sdk/commit/9e33f8e148cc42b7a04e4f283043e0519a906803)) by [@gu-stav](https://github.com/gu-stav)
+
+### Bug Fixes
+
+- **dashboard:** Mark the `@sanity/sdk/dashboard` and `@sanity/sdk-react/dashboard` exports as beta. ([#1635](https://github.com/sanity-io/sdk/pull/1635)) ([4188783](https://github.com/sanity-io/sdk/commit/41887833ad3dc1c5076e2458fae2b6a92e1e4ec3)) by [@gu-stav](https://github.com/gu-stav)
+- **document:** Submit the first ready document transaction without a one-second batching delay. Continue batching repeated edits, and flush pending edits before publish and other non-batchable transactions while preserving submission order. ([#1298](https://github.com/sanity-io/sdk/pull/1298)) ([98bf7ce](https://github.com/sanity-io/sdk/commit/98bf7ceddc300fe2dfc57e6de3f09bee600a0319)) by [@ryanbonial](https://github.com/ryanbonial)
+- **deps:** Update dependencies: `groq@6.25.0`, `sanity@6.25.0` ([#1632](https://github.com/sanity-io/sdk/pull/1632)) ([1afa4a4](https://github.com/sanity-io/sdk/commit/1afa4a4f42f0fea6390715255ed41048425fbef8)) by [@squiggler-app](https://github.com/apps/squiggler-app)
+- **deps:** Update dependencies: `@sanity/mutate@0.18.4`, `@sanity/types@6.25.0` ([#1613](https://github.com/sanity-io/sdk/pull/1613)) ([165da89](https://github.com/sanity-io/sdk/commit/165da896cd1800df82e627205b4f5545b2a5ae41)) by [@squiggler-app](https://github.com/apps/squiggler-app)
+- Hundreds of components suspending on the same cached data, like a row each in a long table, no longer report "Maximum call stack size exceeded" errors when the data arrives, and the data is cleaned up once they unmount. ([#1619](https://github.com/sanity-io/sdk/pull/1619)) ([3c39c45](https://github.com/sanity-io/sdk/commit/3c39c45730b0158902e14d9622b73dcccccd193e)) by [@joshuaellis](https://github.com/joshuaellis)
+
 ## 3.15.0
 
 ### Minor Changes

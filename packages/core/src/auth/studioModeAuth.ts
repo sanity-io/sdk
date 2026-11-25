@@ -1,6 +1,6 @@
 import {type ClientConfig, type SanityClient} from '@sanity/client'
 
-import {REQUEST_TAG_PREFIX} from './authConstants'
+import {resolveRequestTagPrefix} from '../utils/requestTagPrefix'
 import {getTokenFromStorage} from './utils'
 
 /**
@@ -20,13 +20,14 @@ const COOKIE_AUTH_TIMEOUT_MS = 10_000
 export async function checkForCookieAuth(
   projectId: string | undefined,
   clientFactory: (config: ClientConfig) => SanityClient,
+  requestTagPrefix: string = resolveRequestTagPrefix(undefined, 'auth'),
 ): Promise<boolean> {
   if (!projectId) return false
   try {
     const client = clientFactory({
       projectId,
       useCdn: false,
-      requestTagPrefix: REQUEST_TAG_PREFIX,
+      requestTagPrefix,
       timeout: COOKIE_AUTH_TIMEOUT_MS,
     })
     const user = await client.request({

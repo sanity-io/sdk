@@ -1,22 +1,20 @@
-import {type ApplicationInterface} from '@sanity/sdk'
+import {type AssetSourceView, type PanelView, type TileView} from '@sanity/sdk/dashboard'
 import {type AssetSourceComponentProps} from '@sanity/types'
 import * as React from 'react'
 
 const ROOT_SLOT_KEY = Symbol.for('sanity.os.root')
 
 /** The props the host passed to `render()`, per view type. */
-export type DashboardViewRoot =
-  | {
-      viewType: 'panel'
-      props: {view: Extract<ApplicationInterface, {type: 'panel'}>; onClose: () => void}
-    }
-  | {viewType: 'tile'; props: {view: Extract<ApplicationInterface, {type: 'tile'}>}}
-  | {
-      viewType: 'asset_source'
-      props: AssetSourceComponentProps & {
-        view: Extract<ApplicationInterface, {type: 'asset_source'}>
-      }
-    }
+type ViewRoot =
+  | {viewType: 'panel'; props: {view: PanelView; onClose: () => void}}
+  | {viewType: 'tile'; props: {view: TileView}}
+  | {viewType: 'asset_source'; props: AssetSourceComponentProps & {view: AssetSourceView}}
+
+/** The props the host passes to `render()` for a view type. */
+export type ViewRootProps<ViewType extends ViewRoot['viewType']> = Extract<
+  ViewRoot,
+  {viewType: ViewType}
+>['props']
 
 /** The root a CLI-generated wrapper rendered the app into. */
 type DashboardRoot = {
@@ -26,7 +24,7 @@ type DashboardRoot = {
   moduleId?: string
   /** The key of the host's bus connection, when the host passed `renderOptions.parentKey`. */
   parentKey?: string
-} & (DashboardViewRoot | {viewType?: undefined})
+} & (ViewRoot | {viewType?: undefined})
 
 type RootSlot = WeakMap<typeof React.createContext, React.Context<DashboardRoot | undefined>>
 

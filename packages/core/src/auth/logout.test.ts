@@ -83,6 +83,31 @@ describe('logout', () => {
     expect(removeItem).toHaveBeenCalledWith('__sanity_auth_token')
   })
 
+  it('appends configured requestTagPrefix before auth on logout requests', async () => {
+    vi.mocked(getTokenFromStorage).mockReturnValue('token')
+    const mockRequest = vi.fn().mockResolvedValue(undefined)
+    const clientFactory = vi.fn().mockReturnValue({request: mockRequest})
+    const removeItem = vi.fn() as Storage['removeItem']
+
+    instance = createSanityInstance({
+      projectId: 'p',
+      dataset: 'd',
+      requestTagPrefix: 'workbench',
+      auth: {
+        clientFactory,
+        storageArea: {removeItem} as Storage,
+      },
+    })
+
+    await logout(instance)
+
+    expect(clientFactory).toHaveBeenCalledWith(
+      expect.objectContaining({
+        requestTagPrefix: 'sanity.sdk.workbench.auth',
+      }),
+    )
+  })
+
   it('returns early if there is a provided token', async () => {
     const clientFactory = vi.fn()
     const removeItem = vi.fn() as Storage['removeItem']

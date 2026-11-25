@@ -958,6 +958,101 @@ describe('fetcherStore', () => {
     unsub()
   })
 
+  describe('per-subscriber refetchInterval', () => {
+    let run = 0
+    const createDynamicPoller = () => {
+      let n = 0
+      const fetchSpy = vi.fn(() => of(++n))
+      const fetcher = defineFetcher<[options?: {refetchInterval?: number | false}], number>({
+        name: `dynamic-polling-${++run}`,
+        staleTime: 600_000,
+        refetchInterval: (_instance, options) => options?.refetchInterval ?? 60_000,
+        getKey: () => 'k',
+        fetch: () => fetchSpy,
+      })
+      return {fetcher, fetchSpy}
+    }
+
+    it('does not poll when a subscriber passes false or a non-positive interval', async () => {
+      vi.useFakeTimers({toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval']})
+      onTestFinished(() => void vi.useRealTimers())
+
+      const {fetcher, fetchSpy} = createDynamicPoller()
+      const unsubFalse = fetcher.getState(instance, {refetchInterval: false}).subscribe()
+      const unsubZero = fetcher.getState(instance, {refetchInterval: 0}).subscribe()
+      const unsubNeg = fetcher.getState(instance, {refetchInterval: -500}).subscribe()
+      onTestFinished(() => {
+        unsubFalse()
+        unsubZero()
+        unsubNeg()
+      })
+
+      await vi.runAllTimersAsync()
+
+      expect(fetchSpy).toHaveBeenCalledOnce()
+    })
+
+    it('uses the shortest active interval and reconciles as subscribers join and leave', async () => {
+      vi.useFakeTimers({toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval']})
+      onTestFinished(() => void vi.useRealTimers())
+
+      const {fetcher, fetchSpy} = createDynamicPoller()
+      const unsubSlow = fetcher.getState(instance, {refetchInterval: 60_000}).subscribe()
+      await vi.advanceTimersByTimeAsync(0)
+      expect(fetchSpy).toHaveBeenCalledTimes(1)
+
+      // A faster subscriber switches the shared entry to the shorter interval
+      const unsubFast = fetcher.getState(instance, {refetchInterval: 10_000}).subscribe()
+      await vi.advanceTimersByTimeAsync(10_000)
+      expect(fetchSpy).toHaveBeenCalledTimes(2)
+
+      // Once the faster subscriber leaves, the slower subscriber's interval takes over
+      unsubFast()
+      await vi.advanceTimersByTimeAsync(59_999)
+      expect(fetchSpy).toHaveBeenCalledTimes(2)
+      await vi.advanceTimersByTimeAsync(1)
+      expect(fetchSpy).toHaveBeenCalledTimes(3)
+
+      unsubSlow()
+    })
+
+    it('stops polling when the last polling subscriber leaves even if a non-polling subscriber remains', async () => {
+      vi.useFakeTimers({toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval']})
+      onTestFinished(() => void vi.useRealTimers())
+
+      const {fetcher, fetchSpy} = createDynamicPoller()
+      const unsubOptOut = fetcher.getState(instance, {refetchInterval: false}).subscribe()
+      const unsubPoll = fetcher.getState(instance, {refetchInterval: 10_000}).subscribe()
+      onTestFinished(unsubOptOut)
+      await vi.advanceTimersByTimeAsync(0)
+      expect(fetchSpy).toHaveBeenCalledTimes(1)
+
+      await vi.advanceTimersByTimeAsync(10_000)
+      expect(fetchSpy).toHaveBeenCalledTimes(2)
+
+      unsubPoll()
+      await vi.runAllTimersAsync()
+      expect(fetchSpy).toHaveBeenCalledTimes(2)
+    })
+
+    it('does not reset the timer when another subscriber joins with the same interval', async () => {
+      vi.useFakeTimers({toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval']})
+      onTestFinished(() => void vi.useRealTimers())
+
+      const {fetcher, fetchSpy} = createDynamicPoller()
+      const unsubFirst = fetcher.getState(instance, {refetchInterval: 60_000}).subscribe()
+      await vi.advanceTimersByTimeAsync(30_000)
+      expect(fetchSpy).toHaveBeenCalledTimes(1)
+
+      const unsubSecond = fetcher.getState(instance, {refetchInterval: 60_000}).subscribe()
+      await vi.advanceTimersByTimeAsync(30_000)
+      expect(fetchSpy).toHaveBeenCalledTimes(2)
+
+      unsubFirst()
+      unsubSecond()
+    })
+  })
+
   describe('when someone comes back to the tab', () => {
     let run = 0
     // Puts a count of its fetches on screen for `app`, once the first has landed

@@ -2,12 +2,14 @@ import {renderHook} from '@testing-library/react'
 import {type ComponentProps, type ReactNode} from 'react'
 import {describe, expect, it, vi} from 'vitest'
 
+import {viewApplication} from '../../../test/test-utils'
 import {getDashboardRootContext} from '../../dashboard/module'
 import {useTile} from './useTile'
 
 const RootContext = getDashboardRootContext()
 const signal = new AbortController().signal
 const base = {
+  application: viewApplication,
   id: 'notes-inbox',
   moduleId: 'views/inbox',
   name: 'inbox',
@@ -25,7 +27,7 @@ function renderInView(value: ComponentProps<typeof RootContext.Provider>['value'
 
 describe('useTile', () => {
   it('returns the tile view the host passed to render()', () => {
-    const view = {...base, metadata: {size: 'small'}, type: 'tile'} as const
+    const view = {...base, metadata: {size: 'small'}, surface: 'tile'} as const
 
     const {result} = renderInView({signal, viewType: 'tile', props: {view}})
 
@@ -33,7 +35,7 @@ describe('useTile', () => {
   })
 
   it('throws in a view of another type', () => {
-    const view = {...base, metadata: null, type: 'panel'} as const
+    const view = {...base, metadata: null, surface: 'panel'} as const
 
     expect(() =>
       renderInView({signal, viewType: 'panel', props: {onClose: vi.fn(), view}}),

@@ -3,7 +3,7 @@ import {
   userPreferenceList,
   type UserPreferenceListItem,
   type UserPreferenceListPage,
-  type UserPreferenceOptions,
+  type UserPreferenceReadOptions,
 } from '@sanity/sdk'
 
 import {type FetcherHookResult} from '../helpers/createFetcherHook'
@@ -20,7 +20,7 @@ const useUserPreferenceListFetcher = createPagedFetcherHook(userPreferenceList) 
 >(
   userId: string,
   key: K,
-  options?: UserPreferenceOptions,
+  options?: UserPreferenceReadOptions,
 ) => PagedFetcherHookResult<UserPreferenceListPage<K>>
 
 /**
@@ -46,7 +46,9 @@ export interface UserPreferenceListResult<K extends PreferenceListKey> extends O
  * Suspends until the user and the first page are known; `loadMore` adds the next page while the
  * list stays on screen. After a change, every page read so far is read again from the first,
  * so an item never shows twice or goes missing. Without a `projectId`, it uses the project of
- * the nearest resource. Change the items with {@link useUpdateUserPreferenceList}.
+ * the nearest resource. `refetchInterval` sets how often (in ms) to poll for changes while
+ * mounted, or `false` to turn off polling (defaults to 60 seconds). Change the items with
+ * {@link useUpdateUserPreferenceList}.
  *
  * @example
  * ```tsx
@@ -64,7 +66,7 @@ export interface UserPreferenceListResult<K extends PreferenceListKey> extends O
  */
 export function useUserPreferenceList<K extends PreferenceListKey>(
   key: K,
-  options?: UserPreferenceOptions<K>,
+  options?: UserPreferenceReadOptions<K>,
 ): UserPreferenceListResult<K> {
   const userId = useSignedInUserId()
   const projectId = useResolvedProjectId({projectId: options?.projectId})
