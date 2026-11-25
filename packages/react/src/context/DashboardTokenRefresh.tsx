@@ -90,7 +90,7 @@ function DashboardTokenRefresh({
  * }
  * ```
  *
- * @public
+ * @beta
  * @category Dashboard
  */
 export const DashboardTokenRefreshProvider: React.FC<PropsWithChildren> = ({children}) => {

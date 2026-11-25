@@ -20,7 +20,7 @@ import {useTopic} from './useTopic'
  * }
  * ```
  *
- * @public
+ * @beta
  * @category Dashboard
  */
 export function useCapabilities(): TopicData<'applications.capabilities'> {

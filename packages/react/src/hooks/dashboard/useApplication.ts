@@ -14,7 +14,7 @@ import {type DashboardApplication, useApplications} from './useApplications'
  * }
  * ```
  *
- * @public
+ * @beta
  * @category Dashboard
  */
 export function useApplication(applicationIdOrSlug: string): DashboardApplication | null {

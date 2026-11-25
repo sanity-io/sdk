@@ -16,7 +16,7 @@ import {getDashboardRootContext} from '../../dashboard/module'
  * }
  * ```
  *
- * @public
+ * @beta
  * @category Dashboard
  */
 export function useView(): PanelView | TileView | AssetSourceView {

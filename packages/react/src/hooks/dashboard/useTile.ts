@@ -16,7 +16,7 @@ import {useView} from './useView'
  * }
  * ```
  *
- * @public
+ * @beta
  * @category Dashboard
  */
 export function useTile(): ViewRootProps<'tile'> {

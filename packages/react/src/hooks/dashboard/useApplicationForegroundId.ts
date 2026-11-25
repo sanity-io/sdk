@@ -15,7 +15,7 @@ import {useTopic} from './useTopic'
  * }
  * ```
  *
- * @public
+ * @beta
  * @category Dashboard
  */
 export function useApplicationForegroundId(): Application['id'] | null {
