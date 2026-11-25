@@ -56,7 +56,7 @@ describe('subscribeToStateAndFetchCurrentUser', () => {
       authState: {type: AuthStateType.LOGGED_IN, token: 'new-token', currentUser: mockUser},
     })
     expect(clientFactory).toHaveBeenCalledWith({
-      apiVersion: '2021-06-07',
+      apiVersion: 'v2026-11-24',
       ignoreBrowserTokenWarning: true,
       requestTagPrefix: 'sanity.sdk.auth',
       token: 'new-token',
@@ -67,6 +67,32 @@ describe('subscribeToStateAndFetchCurrentUser', () => {
       method: 'GET',
       url: '/users/me',
       tag: 'users.get-current',
+    })
+
+    subscription.unsubscribe()
+  })
+
+  it('requests the user attributes in the configured organization with includeUserAttributes', () => {
+    const mockRequest = vi.fn().mockReturnValue(of({id: 'example-user'} as CurrentUser))
+    const clientFactory = vi.fn().mockReturnValue({observable: {request: mockRequest}})
+    const instance = createSanityInstance({
+      projectId: 'p',
+      dataset: 'd',
+      organizationId: 'oSyH1iET5',
+      auth: {clientFactory, includeUserAttributes: true},
+    })
+    const state = createStoreState(authStore.getInitialState(instance, null))
+    const subscription = subscribeToStateAndFetchCurrentUser({state, instance, key: null})
+
+    state.set('setLoggedIn', {
+      authState: {type: AuthStateType.LOGGED_IN, token: 'new-token', currentUser: null},
+    })
+
+    expect(mockRequest).toHaveBeenCalledWith({
+      method: 'GET',
+      url: '/users/me',
+      tag: 'users.get-current',
+      query: {includeUserAttributes: 'true', organizationId: 'oSyH1iET5'},
     })
 
     subscription.unsubscribe()
@@ -96,7 +122,7 @@ describe('subscribeToStateAndFetchCurrentUser', () => {
     })
 
     expect(clientFactory).toHaveBeenCalledWith({
-      apiVersion: '2021-06-07',
+      apiVersion: 'v2026-11-24',
       ignoreBrowserTokenWarning: true,
       requestTagPrefix: 'sanity.sdk.auth',
       token: 'new-token',
