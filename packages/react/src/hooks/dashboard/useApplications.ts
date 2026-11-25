@@ -21,7 +21,7 @@ type DashboardTopicInstallation = Exclude<DashboardTopicEntry, {type: unknown}>
 /**
  * The shared identity fields of each {@link DashboardApplication}, and the input to module
  * loading. Widens {@link ApplicationBase} so `type` also covers installations.
- * @public
+ * @beta
  * @category Types
  * @category Dashboard
  */
@@ -34,7 +34,7 @@ export type DashboardApplicationBase = Omit<ApplicationBase, 'type'> & {
 /**
  * An installation shaped into the shared application base, with its raw record kept under
  * `installation` for consumers that need the full record.
- * @public
+ * @beta
  * @category Types
  * @category Dashboard
  */
@@ -47,7 +47,7 @@ export type DashboardInstallation = Omit<DashboardApplicationBase, 'type'> & {
  * A dashboard entry — an application or an installation — in one consistent shape, with its
  * loadable views and web workers. `type` distinguishes the kinds and `isLocal` marks dev-server
  * applications; render a list without branching.
- * @public
+ * @beta
  * @category Types
  * @category Dashboard
  */
@@ -163,7 +163,7 @@ const toInstallation = (installation: DashboardTopicInstallation): DashboardAppl
  * }
  * ```
  *
- * @public
+ * @beta
  * @category Dashboard
  */
 export function useApplications(): DashboardApplication[] {

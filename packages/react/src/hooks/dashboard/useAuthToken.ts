@@ -13,7 +13,7 @@ import {useTopic} from './useTopic'
  * }
  * ```
  *
- * @public
+ * @beta
  * @category Dashboard
  */
 export function useAuthToken(): string | null {

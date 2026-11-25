@@ -21,7 +21,7 @@ import {useMessageBus} from './useMessageBus'
  * }
  * ```
  *
- * @public
+ * @beta
  * @category Dashboard
  */
 export function useApplicationId(): string | null {

@@ -6,7 +6,7 @@ import {useSanityInstance} from '../context/useSanityInstance'
 /**
  * What a worker takes and sends: the payload posted to it, its reply, and the messages it sends
  * back.
- * @public
+ * @beta
  * @category Dashboard
  */
 export interface WorkerTypes {
@@ -17,7 +17,7 @@ export interface WorkerTypes {
 
 /**
  * One of the application's workers, as {@link useWorker} returns it.
- * @public
+ * @beta
  * @category Dashboard
  */
 export interface WorkerClient<T extends WorkerTypes = WorkerTypes> {
@@ -71,7 +71,7 @@ export interface WorkerClient<T extends WorkerTypes = WorkerTypes> {
  * }
  * ```
  *
- * @public
+ * @beta
  * @category Dashboard
  */
 export function useWorker<T extends WorkerTypes = WorkerTypes>(name: string): WorkerClient<T> {

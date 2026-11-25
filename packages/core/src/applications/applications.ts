@@ -49,7 +49,7 @@ export type ApplicationInterfacePlacementMetadata = {
  * Where an `app` interface appears in the dock.
  *
  * @see https://www.sanity.io/docs/http-reference/applications-api
- * @public
+ * @beta
  */
 export type Dock = {
   group?: 'system' | 'applications'

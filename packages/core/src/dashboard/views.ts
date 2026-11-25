@@ -2,7 +2,7 @@ import {type ApplicationBase, type ApplicationInterface} from '../applications/a
 
 /**
  * The application or installation a view or web worker belongs to.
- * @public
+ * @beta
  * @category Types
  * @category Dashboard
  */
@@ -30,7 +30,7 @@ type MaybeApplication<Options extends ViewOptions> = Options['includeApplication
 /**
  * A view exposed by an application or installation: an interface record with its `type` as
  * `surface`, where `app` is `window`. Every interface type except `worker` is a view.
- * @public
+ * @beta
  * @category Types
  * @category Dashboard
  */
@@ -42,7 +42,7 @@ export type View<Options extends ViewOptions = {includeApplication: true}> = {
 
 /**
  * A view that opens as a full window.
- * @public
+ * @beta
  * @category Types
  * @category Dashboard
  */
@@ -53,7 +53,7 @@ export type WindowView<Options extends ViewOptions = {includeApplication: true}>
 
 /**
  * A view that opens as a panel from the dock.
- * @public
+ * @beta
  * @category Types
  * @category Dashboard
  */
@@ -64,7 +64,7 @@ export type PanelView<Options extends ViewOptions = {includeApplication: true}> 
 
 /**
  * A view that renders as a tile on the dashboard.
- * @public
+ * @beta
  * @category Types
  * @category Dashboard
  */
@@ -75,7 +75,7 @@ export type TileView<Options extends ViewOptions = {includeApplication: true}> =
 
 /**
  * A view that renders as an asset source.
- * @public
+ * @beta
  * @category Types
  * @category Dashboard
  */
@@ -86,7 +86,7 @@ export type AssetSourceView<Options extends ViewOptions = {includeApplication: t
 
 /**
  * A web worker exposed by an application or installation.
- * @public
+ * @beta
  * @category Types
  * @category Dashboard
  */

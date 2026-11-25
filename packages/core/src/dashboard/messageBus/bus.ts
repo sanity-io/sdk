@@ -40,7 +40,7 @@ import {
 
 /**
  * A message bus protocol error code.
- * @public
+ * @beta
  * @category Message Bus
  */
 export type MessageBusErrorCode =
@@ -56,7 +56,7 @@ export type MessageBusErrorCode =
 /**
  * How to resolve a refusal, when the host knows: the Dashboard sends these with its coded
  * errors.
- * @public
+ * @beta
  * @category Message Bus
  */
 export interface MessageBusErrorDetails {
@@ -68,7 +68,7 @@ export interface MessageBusErrorDetails {
 
 /**
  * An error raised by the message bus protocol.
- * @public
+ * @beta
  * @category Message Bus
  */
 export class MessageBusError extends Error {
@@ -95,7 +95,7 @@ export class MessageBusError extends Error {
 
 /**
  * Metadata that travels with each message bus event.
- * @public
+ * @beta
  * @category Message Bus
  */
 export interface MessageBusMeta {
@@ -118,7 +118,7 @@ export interface MessageBusMeta {
 
 /**
  * A message delivered to an event topic responder.
- * @public
+ * @beta
  * @category Message Bus
  */
 export interface MessageBusMessage<T, R = never, K extends PropertyKey = TopicName> {
@@ -150,7 +150,7 @@ export interface MessageBusMessage<T, R = never, K extends PropertyKey = TopicNa
 
 /**
  * An observable state topic with access to its current and first values.
- * @public
+ * @beta
  * @category Message Bus
  */
 export interface MessageBusStateSource<T> extends Observable<T> {
@@ -162,7 +162,7 @@ export interface MessageBusStateSource<T> extends Observable<T> {
 
 /**
  * Options for aborting a message bus operation.
- * @public
+ * @beta
  * @category Message Bus
  */
 export interface MessageBusAbortOptions {
@@ -172,7 +172,7 @@ export interface MessageBusAbortOptions {
 
 /**
  * Options for reading a state topic.
- * @public
+ * @beta
  * @category Message Bus
  */
 export interface MessageBusQueryOptions extends MessageBusAbortOptions {
@@ -182,7 +182,7 @@ export interface MessageBusQueryOptions extends MessageBusAbortOptions {
 
 /**
  * Options for emitting an event topic.
- * @public
+ * @beta
  * @category Message Bus
  */
 export interface MessageBusEmitOptions extends MessageBusAbortOptions {
@@ -192,7 +192,7 @@ export interface MessageBusEmitOptions extends MessageBusAbortOptions {
 
 /**
  * A lazily awaited event reply.
- * @public
+ * @beta
  * @category Message Bus
  */
 export interface MessageBusEmitResult<R> extends PromiseLike<R> {
@@ -208,7 +208,7 @@ export interface MessageBusEmitResult<R> extends PromiseLike<R> {
  * @remarks
  * State topics are written by the host to each connection separately through
  * {@link MessageBusClient.emit}; a connection only ever reads its own values.
- * @public
+ * @beta
  * @category Message Bus
  */
 export interface MessageBus<TTopics = MessageBusTopics> {
@@ -262,7 +262,7 @@ export interface MessageBus<TTopics = MessageBusTopics> {
  *   return () => controller.abort()
  * }
  * ```
- * @public
+ * @beta
  * @category Message Bus
  */
 export interface WebWorkerProps {
@@ -286,7 +286,7 @@ export interface WebWorkerProps {
 
 /**
  * A message bus connection that can be torn down independently of its siblings.
- * @public
+ * @beta
  * @category Message Bus
  */
 export interface MessageBusConnection<TTopics = MessageBusTopics> extends MessageBus<TTopics> {
@@ -307,7 +307,7 @@ export interface MessageBusConnection<TTopics = MessageBusTopics> extends Messag
 
 /**
  * The host's handle to one connection: who it is, when it closes, and where to write its state.
- * @public
+ * @beta
  * @category Message Bus
  */
 export interface MessageBusClient {
@@ -348,7 +348,7 @@ export interface MessageBusClient {
  * broadcast: sending the same value to everyone is a loop over `connections`, and giving a
  * new connection the current values is done when it appears there, as an SSE server writes
  * a snapshot to each new client.
- * @public
+ * @beta
  * @category Message Bus
  */
 export interface MessageBusHost<TTopics = MessageBusTopics> extends MessageBusConnection<TTopics> {
@@ -1367,7 +1367,7 @@ function throwMissingAppId(): never {
 
 /**
  * Options for connecting to an installed message bus.
- * @public
+ * @beta
  * @category Message Bus
  */
 export interface ConnectMessageBusOptions {
@@ -1384,7 +1384,7 @@ export interface ConnectMessageBusOptions {
 
 /**
  * Connects to the installed message bus, or returns `undefined` when no compatible connection exists.
- * @public
+ * @beta
  * @category Message Bus
  */
 export function connectMessageBus(

@@ -7,7 +7,7 @@ import {useSanityInstance} from '../context/useSanityInstance'
 type CurrentOrganization = Pick<OrganizationBase, 'id' | 'name' | 'slug'> | null | undefined
 
 /**
- * @public
+ * @beta
  *
  * A React hook that retrieves the dashboard organization ID that is currently selected in the Sanity Dashboard.
  *
