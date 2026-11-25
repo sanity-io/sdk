@@ -40,7 +40,7 @@ catalog:
   '@sanity/message-protocol': '^0.24.0'
   '@sanity/pkg-utils': '^14.0.0'
   '@sanity/tsconfig': '^2.2.1'
-  '@sanity/types': '^6.24.0'
+  '@sanity/types': '^6.25.0'
   'sanity': '^6.25.0'
   '@testing-library/jest-dom': '^8.0.0'
   '@testing-library/react': '^16.3.3'

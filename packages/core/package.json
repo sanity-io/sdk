@@ -96,7 +96,7 @@
     "@sanity/image-url": "^2.2.0",
     "@sanity/json-match": "^1.0.5",
     "@sanity/message-protocol": "catalog:",
-    "@sanity/mutate": "^0.18.2",
+    "@sanity/mutate": "^0.18.4",
     "@sanity/telemetry": "^1.1.0",
     "@sanity/types": "catalog:",
     "@sentry/browser": "^11.8.0",
