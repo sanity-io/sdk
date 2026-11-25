@@ -72,6 +72,33 @@ describe('subscribeToStateAndFetchCurrentUser', () => {
     subscription.unsubscribe()
   })
 
+  it('requests the user attributes in the configured organization with includeUserAttributes', () => {
+    const mockRequest = vi.fn().mockReturnValue(of({id: 'example-user'} as CurrentUser))
+    const clientFactory = vi.fn().mockReturnValue({observable: {request: mockRequest}})
+    const instance = createSanityInstance({
+      projectId: 'p',
+      dataset: 'd',
+      organizationId: 'oSyH1iET5',
+      auth: {clientFactory, includeUserAttributes: true},
+    })
+    const state = createStoreState(authStore.getInitialState(instance, null))
+    const subscription = subscribeToStateAndFetchCurrentUser({state, instance, key: null})
+
+    state.set('setLoggedIn', {
+      authState: {type: AuthStateType.LOGGED_IN, token: 'new-token', currentUser: null},
+    })
+
+    expect(clientFactory).toHaveBeenCalledWith(expect.objectContaining({apiVersion: 'v2026-11-24'}))
+    expect(mockRequest).toHaveBeenCalledWith({
+      method: 'GET',
+      url: '/users/me',
+      tag: 'users.get-current',
+      query: {includeUserAttributes: 'true', organizationId: 'oSyH1iET5'},
+    })
+
+    subscription.unsubscribe()
+  })
+
   it("doesn't set the current user if the state is not logged in", () => {
     const mockUser = {id: 'example-user'} as CurrentUser
     const mockRequest = vi.fn().mockReturnValue(of(mockUser).pipe(delay(0)))

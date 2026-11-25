@@ -20,7 +20,8 @@ import {
   OUT_OF_SYNC_RETRY_MAX_DELAY,
 } from '../document/documentConstants'
 import {type StoreContext} from '../store/defineStore'
-import {DEFAULT_API_VERSION, REQUEST_TAG_PREFIX} from './authConstants'
+import {buildQuery} from '../utils/buildQuery'
+import {DEFAULT_API_VERSION, REQUEST_TAG_PREFIX, USER_ATTRIBUTES_API_VERSION} from './authConstants'
 import {getAuthLogger} from './authLogger'
 import {isStudioConfig} from './authMode'
 import {AuthStateType} from './authStateType'
@@ -52,6 +53,7 @@ export const subscribeToStateAndFetchCurrentUser = (
   const {clientFactory, apiHost} = state.get().options
   const useProjectHostname = fetchOptions?.useProjectHostname ?? isStudioConfig(instance.config)
   const projectId = instance.config.projectId
+  const includeUserAttributes = instance.config.auth?.includeUserAttributes ?? false
 
   const currentUser$ = state.observable
     .pipe(
@@ -75,7 +77,7 @@ export const subscribeToStateAndFetchCurrentUser = (
         const {token, authMethod} = key
 
         return clientFactory({
-          apiVersion: DEFAULT_API_VERSION,
+          apiVersion: includeUserAttributes ? USER_ATTRIBUTES_API_VERSION : DEFAULT_API_VERSION,
           requestTagPrefix: REQUEST_TAG_PREFIX,
           token: authMethod === 'cookie' ? undefined : token,
           ignoreBrowserTokenWarning: true,
@@ -94,6 +96,14 @@ export const subscribeToStateAndFetchCurrentUser = (
             url: '/users/me',
             method: 'GET',
             tag: 'users.get-current',
+            ...(includeUserAttributes && {
+              query: buildQuery({
+                includeUserAttributes: true,
+                // Ignored on the project API, which reads the organization from the project
+                organizationId:
+                  state.get().dashboardContext?.orgId ?? instance.config.organizationId,
+              }),
+            }),
           })
           .pipe(
             retry({

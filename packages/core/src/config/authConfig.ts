@@ -78,6 +78,13 @@ export interface AuthConfig {
    */
   token?: string
 
+  /**
+   * Include the signed-in user's attributes in the organization as `attributes` on the current
+   * user. The organization is the Dashboard's, then `organizationId` on the `SanityConfig`, or the
+   * project's in Studio. Each login costs the API several extra queries, so it is off by default.
+   */
+  includeUserAttributes?: boolean
+
   oauth?: {
     /**
      * Opaque OAuth `client_id`.

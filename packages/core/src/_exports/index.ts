@@ -292,7 +292,6 @@ export {createSanityInstance, type SanityInstance} from '../store/createSanityIn
 export {type Selector, type StateSource} from '../store/createStateSourceAction'
 export {defineProjection} from '../typegen/defineProjection'
 export type {ResolveDocument, ResolveProjectionResult, ResolveQueryResult} from '../typegen/resolve'
-export {type CurrentUser, currentUser, type CurrentUserOptions} from '../users/currentUser'
 export {
   type GetUserOptions,
   type GetUsersOptions,
@@ -325,4 +324,4 @@ export {
   slicePath,
   stringifyPath,
 } from '@sanity/json-match'
-export type {Role, SanityDocument} from '@sanity/types'
+export type {CurrentUser, Role, SanityDocument} from '@sanity/types'
