@@ -10,7 +10,6 @@ import {
   type ApplicationDeployment,
   type ApplicationInclude,
   type ApplicationInterface,
-  type ApplicationInterfacePlacementMetadata,
   applications,
   type ApplicationsResponse,
   type ApplicationStudioConfig,
@@ -40,15 +39,14 @@ test('ApplicationInterface — matches the interface response', () => {
   expectTypeOf<ApplicationInterface['type']>().toEqualTypeOf<
     'app' | 'worker' | 'asset_source' | 'panel' | 'tile'
   >()
-  expectTypeOf<ApplicationInterfacePlacementMetadata>().toEqualTypeOf<{
-    dock?: {group?: string; order?: number}
-  }>()
-  expectTypeOf<
-    Extract<ApplicationInterface, {type: 'app'}>['metadata']
-  >().toEqualTypeOf<ApplicationInterfacePlacementMetadata | null>()
-  expectTypeOf<
-    Extract<ApplicationInterface, {type: 'panel'}>['metadata']
-  >().toEqualTypeOf<ApplicationInterfacePlacementMetadata | null>()
+  expectTypeOf<Extract<ApplicationInterface, {type: 'app'}>['metadata']>().toEqualTypeOf<{
+    dock?: {group?: 'system' | 'applications'; order?: number}
+    icon?: string
+  } | null>()
+  expectTypeOf<Extract<ApplicationInterface, {type: 'panel'}>['metadata']>().toEqualTypeOf<{
+    dock?: {order?: number}
+    icon?: string
+  } | null>()
   expectTypeOf<Extract<ApplicationInterface, {type: 'worker'}>['metadata']>().toEqualTypeOf<null>()
   expectTypeOf<Extract<ApplicationInterface, {type: 'tile'}>['metadata']>().toEqualTypeOf<{
     order?: number

@@ -2,6 +2,7 @@ import {expectTypeOf, test} from 'vitest'
 
 import {
   type CapabilityRecord,
+  type DashboardApplication,
   type DashboardTopics,
   type EventTopic,
   type EventTopicDef,
@@ -19,10 +20,18 @@ import {
   type PayloadOf,
   type ReplyOf,
   type StateTopicDef,
+  type TileView,
   type TopicName,
   type Topics,
   useApplicationBasePath,
+  type useAssetSource,
   useCapabilities,
+  type usePanel,
+  type useTile,
+  type useView,
+  type View,
+  type ViewApplication,
+  type WebWorker,
   type WebWorkerProps,
 } from './dashboard'
 import {
@@ -70,6 +79,37 @@ test('dashboard entrypoint exposes the message bus public types', () => {
   expectTypeOf<ReturnType<typeof useApplicationBasePath>>().toEqualTypeOf<string>()
   expectTypeOf<ReturnType<typeof useCapabilities>>().toEqualTypeOf<CapabilityRecord>()
   expectTypeOf<MessageBusHost['connections']['subscribe']>().toBeFunction()
+})
+
+test('view hooks return views with their application, useApplications lists them without', () => {
+  expectTypeOf<ReturnType<typeof useView>>().toEqualTypeOf<Exclude<View, {surface: 'window'}>>()
+  // Each hook returns the whole `View` member for its surface, not a narrower shape.
+  expectTypeOf<ReturnType<typeof usePanel>['view']>().toEqualTypeOf<
+    Extract<View, {surface: 'panel'}>
+  >()
+  expectTypeOf<ReturnType<typeof useTile>['view']>().toEqualTypeOf<
+    Extract<View, {surface: 'tile'}>
+  >()
+  expectTypeOf<ReturnType<typeof useAssetSource>['view']>().toEqualTypeOf<
+    Extract<View, {surface: 'asset_source'}>
+  >()
+  expectTypeOf<ReturnType<typeof useView>>().not.toHaveProperty('type')
+  expectTypeOf<ReturnType<typeof useView>['application']>().toEqualTypeOf<ViewApplication>()
+
+  // Every interface type except `worker` is a view, with `app` as `window`.
+  expectTypeOf<View['surface']>().toEqualTypeOf<'window' | 'panel' | 'tile' | 'asset_source'>()
+
+  type ListedView = DashboardApplication['views'][number]
+  expectTypeOf<ListedView>().not.toHaveProperty('application')
+  expectTypeOf<DashboardApplication['webWorkers'][number]>().not.toHaveProperty('application')
+  // `surface` still narrows `metadata` on a listed view.
+  expectTypeOf<Extract<ListedView, {surface: 'tile'}>['metadata']>().toEqualTypeOf<
+    TileView['metadata']
+  >()
+})
+
+test('WebWorkerProps describes the worker with its application', () => {
+  expectTypeOf<WebWorkerProps['worker']>().toEqualTypeOf<WebWorker>()
 })
 
 test('WebWorkerProps bus.subscribe takes a handler and has no observable form', () => {

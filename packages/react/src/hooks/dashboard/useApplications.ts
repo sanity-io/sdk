@@ -1,6 +1,11 @@
-import {type ApplicationBase, type Installation, type InstallationInclude} from '@sanity/sdk'
+import {
+  type ApplicationBase,
+  type ApplicationInterface,
+  type Installation,
+  type InstallationInclude,
+} from '@sanity/sdk'
 import {getApplicationOrigin} from '@sanity/sdk/_internal'
-import {type RemoteModuleRef, type ValueOf} from '@sanity/sdk/dashboard'
+import {type RemoteModuleRef, type ValueOf, type View, type WebWorker} from '@sanity/sdk/dashboard'
 import {useMemo} from 'react'
 
 import {useTopic} from './useTopic'
@@ -12,15 +17,10 @@ type DashboardTopicEntry = Extract<
 // The published union distinguishes an `Application` (has `type`) from an `Installation` (has not).
 type DashboardTopicApplication = Extract<DashboardTopicEntry, {type: unknown}>
 type DashboardTopicInstallation = Exclude<DashboardTopicEntry, {type: unknown}>
-type DashboardApplicationInterface = NonNullable<
-  NonNullable<DashboardTopicApplication['activeDeployment']>['interfaces']
->[number]
-type ViewInterface = Exclude<DashboardApplicationInterface, {type: 'worker'}>
 
 /**
- * The shared identity fields attached to each {@link DashboardView.application} and
- * {@link DashboardWebWorker.application}, and the input to module loading. Widens
- * {@link ApplicationBase} so `type` also covers installations.
+ * The shared identity fields of each {@link DashboardApplication}, and the input to module
+ * loading. Widens {@link ApplicationBase} so `type` also covers installations.
  * @public
  * @category Types
  * @category Dashboard
@@ -29,31 +29,6 @@ export type DashboardApplicationBase = Omit<ApplicationBase, 'type'> & {
   readonly type: ApplicationBase['type'] | 'installation'
   /** Served by a CLI dev server rather than a deployment. */
   readonly isLocal: boolean
-}
-
-/**
- * A dashboard view exposed by an application or installation.
- * @public
- * @category Types
- * @category Dashboard
- */
-export type DashboardView = {
-  [Type in ViewInterface['type']]: Omit<Extract<ViewInterface, {type: Type}>, 'type'> & {
-    readonly application: DashboardApplicationBase
-    readonly module: RemoteModuleRef
-    readonly surface: Type extends 'app' ? 'window' : Type
-  }
-}[ViewInterface['type']]
-
-/**
- * A web worker exposed by an application or installation.
- * @public
- * @category Types
- * @category Dashboard
- */
-export type DashboardWebWorker = Extract<DashboardApplicationInterface, {type: 'worker'}> & {
-  readonly application: DashboardApplicationBase
-  readonly module: RemoteModuleRef
 }
 
 /**
@@ -78,8 +53,10 @@ export type DashboardInstallation = Omit<DashboardApplicationBase, 'type'> & {
  */
 export type DashboardApplication = (DashboardTopicApplication | DashboardInstallation) &
   Pick<DashboardApplicationBase, 'isLocal'> & {
-    readonly views: DashboardView[]
-    readonly webWorkers: DashboardWebWorker[]
+    readonly views: (View<{includeApplication: false}> & {readonly module: RemoteModuleRef})[]
+    readonly webWorkers: (WebWorker<{includeApplication: false}> & {
+      readonly module: RemoteModuleRef
+    })[]
   }
 
 // Only a federated deployment (one with a module federation manifest) exposes loadable modules.
@@ -87,21 +64,20 @@ export type DashboardApplication = (DashboardTopicApplication | DashboardInstall
 const loadableInterfaces = (
   {activeDeployment, config}: DashboardTopicApplication,
   isLocal: boolean,
-): readonly DashboardApplicationInterface[] =>
+): readonly ApplicationInterface[] =>
   isLocal || config?.mfManifest !== undefined ? (activeDeployment?.interfaces ?? []) : []
 
-// Turns an interface list into views and web workers loaded from `base`'s origin. Shared by
-// applications and installations so the surface mapping lives in one place.
+// Turns an interface list into views and web workers loaded from `base`'s origin.
 const loadModules = (
   base: DashboardApplicationBase,
-  interfaces: readonly DashboardApplicationInterface[],
-): {views: DashboardView[]; webWorkers: DashboardWebWorker[]} => {
+  interfaces: readonly ApplicationInterface[],
+): Pick<DashboardApplication, 'views' | 'webWorkers'> => {
   // Nothing to load without interfaces or an origin to load them from.
   const entry = interfaces.length === 0 ? null : getApplicationOrigin(base)
   if (entry === null) return {views: [], webWorkers: []}
 
-  const views: DashboardView[] = []
-  const webWorkers: DashboardWebWorker[] = []
+  const views: DashboardApplication['views'] = []
+  const webWorkers: DashboardApplication['webWorkers'] = []
 
   for (const extension of interfaces) {
     const module: RemoteModuleRef = {
@@ -111,19 +87,17 @@ const loadModules = (
     }
 
     if (extension.type === 'worker') {
-      webWorkers.push({...extension, application: base, module})
+      webWorkers.push({...extension, module})
       continue
     }
 
     const {type, ...view} = extension
-    // TS cannot correlate `surface` with the narrowed `type` across the mapped union; the
-    // cast is checked by the `DashboardView` mapping above and the surface assertions in the tests.
+    // TS can't correlate `surface` with the narrowed `type` across the union.
     views.push({
       ...view,
-      application: base,
-      module,
       surface: type === 'app' ? 'window' : type,
-    } as DashboardView)
+      module,
+    } as DashboardApplication['views'][number])
   }
 
   return {views, webWorkers}

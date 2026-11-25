@@ -1,4 +1,6 @@
-import {type DashboardViewRoot} from '../../dashboard/module'
+import {useContext} from 'react'
+
+import {getDashboardRootContext, type ViewRootProps} from '../../dashboard/module'
 import {useView} from './useView'
 
 /**
@@ -17,12 +19,13 @@ import {useView} from './useView'
  * @public
  * @category Dashboard
  */
-export function useTile(): Extract<DashboardViewRoot, {viewType: 'tile'}>['props'] {
+export function useTile(): ViewRootProps<'tile'> {
   const view = useView()
+  const root = useContext(getDashboardRootContext())
 
-  if (view.type !== 'tile') {
-    throw new Error(`useTile must be called inside a tile view, not a ${view.type} view`)
+  if (root?.viewType !== 'tile') {
+    throw new Error(`useTile must be called inside a tile view, not a ${view.surface} view`)
   }
 
-  return {view}
+  return root.props
 }

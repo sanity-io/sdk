@@ -1,3 +1,4 @@
+import {type ViewApplication} from '@sanity/sdk/dashboard'
 import {
   render,
   renderHook,
@@ -16,6 +17,18 @@ export const resources = {
   'canvas': {canvasId: 'canvas-id'},
   'dataset': {projectId: 'resource-project-id', dataset: 'resource-dataset'},
 } as const
+
+export const viewApplication = {
+  id: 'application-1',
+  type: 'coreApp',
+  name: 'notes',
+  title: 'Notes',
+  reference: 'organization-1/notes',
+  icon: null,
+  slug: 'notes',
+  organizationId: 'organization-1',
+  isLocal: false,
+} satisfies ViewApplication
 
 type WrapperComponent = React.ComponentType<{children: React.ReactNode}>
 

@@ -1,6 +1,6 @@
 import {useContext} from 'react'
 
-import {type DashboardViewRoot, getDashboardRootContext} from '../../dashboard/module'
+import {getDashboardRootContext, type ViewRootProps} from '../../dashboard/module'
 import {type TopicEmitter, useEmit} from './useEmit'
 import {useView} from './useView'
 
@@ -34,14 +34,12 @@ import {useView} from './useView'
  * @public
  * @category Dashboard
  */
-export function usePanel(): Extract<DashboardViewRoot, {viewType: 'panel'}>['props'] & {
-  setMode: TopicEmitter<'panels.mode.set'>
-} {
+export function usePanel(): ViewRootProps<'panel'> & {setMode: TopicEmitter<'panels.mode.set'>} {
   const view = useView()
   const root = useContext(getDashboardRootContext())
 
   if (root?.viewType !== 'panel') {
-    throw new Error(`usePanel must be called inside a panel view, not a ${view.type} view`)
+    throw new Error(`usePanel must be called inside a panel view, not a ${view.surface} view`)
   }
 
   const setMode = useEmit('panels.mode.set')
