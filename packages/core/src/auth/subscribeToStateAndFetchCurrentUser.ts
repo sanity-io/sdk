@@ -21,7 +21,7 @@ import {
 } from '../document/documentConstants'
 import {type StoreContext} from '../store/defineStore'
 import {buildQuery} from '../utils/buildQuery'
-import {DEFAULT_API_VERSION, REQUEST_TAG_PREFIX, USER_ATTRIBUTES_API_VERSION} from './authConstants'
+import {CURRENT_USER_API_VERSION, REQUEST_TAG_PREFIX} from './authConstants'
 import {getAuthLogger} from './authLogger'
 import {isStudioConfig} from './authMode'
 import {AuthStateType} from './authStateType'
@@ -77,7 +77,7 @@ export const subscribeToStateAndFetchCurrentUser = (
         const {token, authMethod} = key
 
         return clientFactory({
-          apiVersion: includeUserAttributes ? USER_ATTRIBUTES_API_VERSION : DEFAULT_API_VERSION,
+          apiVersion: CURRENT_USER_API_VERSION,
           requestTagPrefix: REQUEST_TAG_PREFIX,
           token: authMethod === 'cookie' ? undefined : token,
           ignoreBrowserTokenWarning: true,

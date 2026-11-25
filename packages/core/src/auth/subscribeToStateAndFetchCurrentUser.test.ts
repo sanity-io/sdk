@@ -56,7 +56,7 @@ describe('subscribeToStateAndFetchCurrentUser', () => {
       authState: {type: AuthStateType.LOGGED_IN, token: 'new-token', currentUser: mockUser},
     })
     expect(clientFactory).toHaveBeenCalledWith({
-      apiVersion: '2021-06-07',
+      apiVersion: 'v2026-11-24',
       ignoreBrowserTokenWarning: true,
       requestTagPrefix: 'sanity.sdk.auth',
       token: 'new-token',
@@ -88,7 +88,6 @@ describe('subscribeToStateAndFetchCurrentUser', () => {
       authState: {type: AuthStateType.LOGGED_IN, token: 'new-token', currentUser: null},
     })
 
-    expect(clientFactory).toHaveBeenCalledWith(expect.objectContaining({apiVersion: 'v2026-11-24'}))
     expect(mockRequest).toHaveBeenCalledWith({
       method: 'GET',
       url: '/users/me',
@@ -123,7 +122,7 @@ describe('subscribeToStateAndFetchCurrentUser', () => {
     })
 
     expect(clientFactory).toHaveBeenCalledWith({
-      apiVersion: '2021-06-07',
+      apiVersion: 'v2026-11-24',
       ignoreBrowserTokenWarning: true,
       requestTagPrefix: 'sanity.sdk.auth',
       token: 'new-token',
