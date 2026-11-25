@@ -1,5 +1,28 @@
 # Changelog
 
+## 3.16.0
+
+[Compare changes](https://github.com/sanity-io/sdk/compare/sdk-v3.15.0...sdk-v3.16.0)
+
+_2026-11-25_
+
+### Features
+
+- **preferences:** `useUserPreference` and `useUserPreferenceList` (and the underlying `userPreference` and `userPreferenceList` fetchers) now accept a `refetchInterval` option to adjust the polling interval in milliseconds or pass `false` to disable polling. Polling continues to default to 60 seconds. ([#1628](https://github.com/sanity-io/sdk/pull/1628)) ([7f79ae4](https://github.com/sanity-io/sdk/commit/7f79ae459a7a823ef1e25768ea8aa908a1018c96)) by [@binoy14](https://github.com/binoy14)
+- **dashboard:** Dashboard views and web workers share one `View` and `WebWorker` type from `@sanity/sdk/dashboard`, replacing `DashboardView` and `DashboardWebWorker`. View hooks return `surface` and `application` instead of `type`. ([#1627](https://github.com/sanity-io/sdk/pull/1627)) ([9e33f8e](https://github.com/sanity-io/sdk/commit/9e33f8e148cc42b7a04e4f283043e0519a906803)) by [@gu-stav](https://github.com/gu-stav)
+
+### Bug Fixes
+
+- **dashboard:** Mark the `@sanity/sdk/dashboard` and `@sanity/sdk-react/dashboard` exports as beta. ([#1635](https://github.com/sanity-io/sdk/pull/1635)) ([4188783](https://github.com/sanity-io/sdk/commit/41887833ad3dc1c5076e2458fae2b6a92e1e4ec3)) by [@gu-stav](https://github.com/gu-stav)
+- **deps:** Update dependencies: `groq@6.25.0`, `sanity@6.25.0` ([#1632](https://github.com/sanity-io/sdk/pull/1632)) ([1afa4a4](https://github.com/sanity-io/sdk/commit/1afa4a4f42f0fea6390715255ed41048425fbef8)) by [@squiggler-app](https://github.com/apps/squiggler-app)
+- **deps:** Update dependencies: `@sanity/mutate@0.18.4`, `@sanity/types@6.25.0` ([#1613](https://github.com/sanity-io/sdk/pull/1613)) ([165da89](https://github.com/sanity-io/sdk/commit/165da896cd1800df82e627205b4f5545b2a5ae41)) by [@squiggler-app](https://github.com/apps/squiggler-app)
+
+### Dependencies
+
+- The following workspace dependencies were updated
+  - dependencies
+    - @sanity/sdk bumped to 3.16.0
+
 ## 3.15.0
 
 ### Minor Changes
