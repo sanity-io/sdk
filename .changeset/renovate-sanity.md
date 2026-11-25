@@ -3,4 +3,4 @@
 '@sanity/sdk-react': patch
 ---
 
-Update dependencies: `@sanity/client@8.17.0`, `@sanity/pkg-utils@13.0.20`
+Update dependencies: `@sanity/mutate@0.18.4`, `@sanity/types@6.25.0`

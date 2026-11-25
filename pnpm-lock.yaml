@@ -186,7 +186,7 @@ catalogs:
       specifier: ^2.2.1
       version: 2.2.1
     '@sanity/types':
-      specifier: ^6.24.0
+      specifier: ^6.25.0
       version: 6.25.0
     '@testing-library/jest-dom':
       specifier: ^8.0.0
@@ -714,7 +714,7 @@ importers:
         specifier: 'catalog:'
         version: 0.24.0
       '@sanity/mutate':
-        specifier: ^0.18.2
+        specifier: ^0.18.4
         version: 0.18.4(vitest@5.1.1)(xstate@5.33.4)
       '@sanity/telemetry':
         specifier: ^1.1.0
