@@ -1,5 +1,16 @@
 # Changelog
 
+## 3.17.0
+
+[Compare changes](https://github.com/sanity-io/sdk/compare/sdk-v3.16.0...sdk-v3.17.0)
+
+_2026-11-26_
+
+### Features
+
+- **core:** Add `requestTagPrefix` to `SanityConfig` so apps can append a segment under `sanity.sdk` for all outgoing API requests, including auth and presence. For example, setting `requestTagPrefix: 'workbench'` sends tags like `sanity.sdk.workbench.<tag>` and `sanity.sdk.workbench.auth.<tag>`. ([#1609](https://github.com/sanity-io/sdk/pull/1609)) ([d31fb8d](https://github.com/sanity-io/sdk/commit/d31fb8d25bec3d543538d7e68e0a95d48f727b87)) by [@binoy14](https://github.com/binoy14)
+- **core:** Load a custom SDK app's views and workers from its organization address (`<slug>--apps--<organizationId>.sanity.run`) when Dashboard marks it as a non-legacy app. Studios and legacy apps still load from `<slug>.sanity.studio`. ([#1642](https://github.com/sanity-io/sdk/pull/1642)) ([4a460e3](https://github.com/sanity-io/sdk/commit/4a460e376b1b82c36e35b831b39b35048ca95003)) by [@joshuaellis](https://github.com/joshuaellis)
+
 ## 3.16.0
 
 [Compare changes](https://github.com/sanity-io/sdk/compare/sdk-v3.15.0...sdk-v3.16.0)
