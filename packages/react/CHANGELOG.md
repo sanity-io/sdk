@@ -1,5 +1,17 @@
 # Changelog
 
+## 3.17.0
+
+[Compare changes](https://github.com/sanity-io/sdk/compare/sdk-v3.16.0...sdk-v3.17.0)
+
+_2026-11-26_
+
+### Dependencies
+
+- The following workspace dependencies were updated
+  - dependencies
+    - @sanity/sdk bumped to 3.17.0
+
 ## 3.16.0
 
 [Compare changes](https://github.com/sanity-io/sdk/compare/sdk-v3.15.0...sdk-v3.16.0)
