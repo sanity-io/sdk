@@ -164,6 +164,8 @@ export interface ApplicationBase {
   /** URL of the icon image on `cdn.sanity.io`, or `null` when the application has no icon. */
   icon: string | null
   isSingleton: boolean
+  /** `true` for a legacy application, `false` for a registry application; absent from older responses. */
+  isLegacy?: boolean
   visibility: 'default' | 'unlisted' | 'disabled'
   slug: string | null
   externalUrl: string | null

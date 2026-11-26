@@ -382,6 +382,16 @@ describe('useApplications', () => {
     ])
   })
 
+  it('loads a custom app from its organization address', () => {
+    emitApplications([{...nonSingletonApplication, slug: 'marketing', isLegacy: false}])
+
+    const {result} = renderHook(() => useApplications())
+
+    expect(result.current[0]?.views[0]?.module.entry).toBe(
+      'https://marketing--apps--organization-1.sanity.run',
+    )
+  })
+
   it('uses the staging application origin', () => {
     vi.stubGlobal('__SANITY_STAGING__', true)
     emitApplications([application, nonSingletonApplication])
