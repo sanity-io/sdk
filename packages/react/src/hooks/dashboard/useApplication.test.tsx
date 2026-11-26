@@ -1,10 +1,9 @@
 import {installMessageBus, resetMessageBus} from '@sanity/sdk/_internal'
-import {type MessageBusHost, type ValueOf} from '@sanity/sdk/dashboard'
+import {type DashboardApplication, type MessageBusHost, type ValueOf} from '@sanity/sdk/dashboard'
 import {afterEach, beforeEach, describe, expect, expectTypeOf, it, vi} from 'vitest'
 
 import {renderHook} from '../../../test/test-utils'
 import {useApplication} from './useApplication'
-import {type DashboardApplication} from './useApplications'
 
 const MESSAGE_BUS_KEY = Symbol.for('sanity.os.bus')
 

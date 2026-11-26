@@ -1,4 +1,6 @@
-import {type DashboardApplication, useApplications} from './useApplications'
+import {type DashboardApplication} from '@sanity/sdk/dashboard'
+
+import {useApplications} from './useApplications'
 
 /**
  * Returns a dashboard application by id or slug, or `null` when it is unavailable.

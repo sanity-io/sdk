@@ -34,12 +34,7 @@ export {useApplicationConfigs} from '../hooks/dashboard/useApplicationConfigs'
 export {useApplicationContext} from '../hooks/dashboard/useApplicationContext'
 export {useApplicationForegroundId} from '../hooks/dashboard/useApplicationForegroundId'
 export {useApplicationId} from '../hooks/dashboard/useApplicationId'
-export {
-  type DashboardApplication,
-  type DashboardApplicationBase,
-  type DashboardInstallation,
-  useApplications,
-} from '../hooks/dashboard/useApplications'
+export {useApplications} from '../hooks/dashboard/useApplications'
 export {useAssetSource} from '../hooks/dashboard/useAssetSource'
 export {useAuthToken} from '../hooks/dashboard/useAuthToken'
 export {useCapabilities} from '../hooks/dashboard/useCapabilities'
@@ -70,6 +65,9 @@ export type {
   Capability,
   CapabilityRecord,
   ConnectMessageBusOptions,
+  DashboardApplication,
+  DashboardApplicationBase,
+  DashboardInstallation,
   DashboardTopics,
   Dock,
   EventTopic,
