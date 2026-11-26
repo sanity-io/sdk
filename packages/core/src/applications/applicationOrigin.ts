@@ -10,7 +10,10 @@ type SanityGlobal = typeof globalThis & {__SANITY_STAGING__?: boolean}
  * @internal
  */
 export function getApplicationOrigin(
-  application: Pick<ApplicationBase, 'externalUrl' | 'slug' | 'isSingleton' | 'organizationId'>,
+  application: Pick<
+    ApplicationBase,
+    'externalUrl' | 'slug' | 'isSingleton' | 'organizationId' | 'isLegacy'
+  > & {type?: string},
 ): string | null {
   if (application.externalUrl !== null) return new URL(application.externalUrl).origin
   if (application.slug === null) return null
@@ -18,7 +21,10 @@ export function getApplicationOrigin(
   // Read at runtime, not via a bundler define: a remote is built once and runs in whichever
   // host page loaded it, and the host sets this flag. Mirrors workbench's `getSanityEnv`.
   const staging = (globalThis as SanityGlobal).__SANITY_STAGING__ === true
-  if (application.isSingleton) {
+  // Custom (non-legacy) core apps share the singleton host. A record without `isLegacy` comes from
+  // a host that predates that address, so it keeps the slug address.
+  const isSanityHostedCustomApp = application.type === 'coreApp' && application.isLegacy === false
+  if (application.isSingleton || isSanityHostedCustomApp) {
     const domain = staging ? 'run.sanity.work' : 'sanity.run'
     return `https://${application.slug}--apps--${application.organizationId}.${domain}`
   }

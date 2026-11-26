@@ -22,11 +22,38 @@ const application: ApplicationBase = {
 describe('getApplicationOrigin', () => {
   afterEach(() => vi.unstubAllGlobals())
 
-  it('derives singleton and organization origins from the slug', () => {
+  it('serves singletons from the organization address, and apps without isLegacy (older Dashboards) from their slug', () => {
     expect(getApplicationOrigin(application)).toBe('https://inbox--apps--organization-1.sanity.run')
     expect(getApplicationOrigin({...application, isSingleton: false, slug: 'canvas'})).toBe(
       'https://canvas.sanity.studio',
     )
+  })
+
+  it('serves custom apps from the organization address and studios and legacy apps from their slug', () => {
+    const custom = {...application, isSingleton: false, isLegacy: false, slug: 'marketing'}
+    expect(getApplicationOrigin(custom)).toBe('https://marketing--apps--organization-1.sanity.run')
+    expect(getApplicationOrigin({...custom, isLegacy: true})).toBe(
+      'https://marketing.sanity.studio',
+    )
+    expect(getApplicationOrigin({...custom, type: 'studio'})).toBe(
+      'https://marketing.sanity.studio',
+    )
+
+    vi.stubGlobal('__SANITY_STAGING__', true)
+    expect(getApplicationOrigin(custom)).toBe(
+      'https://marketing--apps--organization-1.run.sanity.work',
+    )
+  })
+
+  it('accepts the installation shape Studio builds by hand, without a type (a type-check guard)', () => {
+    expect(
+      getApplicationOrigin({
+        externalUrl: null,
+        slug: 'inbox',
+        isSingleton: true,
+        organizationId: 'organization-1',
+      }),
+    ).toBe('https://inbox--apps--organization-1.sanity.run')
   })
 
   it('uses the staging domains when the host sets the runtime flag', () => {
