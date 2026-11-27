@@ -64,7 +64,9 @@ const VARIANT_ID_RESOLVERS: {
   createDocumentVersion: (ev) => ev.versionRevisionId,
   deleteDocumentVersion: (ev) => ev.versionRevisionId,
   unpublishDocument: (ev) =>
-    ev.versionRevisionId || timestampPrefixed('unpublishAt-', ev.timestamp),
+    ev.versionRevisionId
+      ? `unpublish-${ev.versionRevisionId}`
+      : timestampPrefixed('unpublishAt-', ev.timestamp),
   deleteDocumentGroup: (ev) => timestampPrefixed('deleted-', ev.timestamp),
 }
 
@@ -210,6 +212,16 @@ function compareHistoryEvents(a: DocumentHistoryEvent, b: DocumentHistoryEvent):
 }
 
 /**
+ * Sorts history events newest-first by timestamp only, preserving relative input order for events
+ * sharing the same timestamp (for example, whole-second server events from `/events/documents`).
+ *
+ * @internal
+ */
+export function orderEventsByTimestamp(events: DocumentHistoryEvent[]): DocumentHistoryEvent[] {
+  return [...events].sort((a, b) => Date.parse(b.timestamp) - Date.parse(a.timestamp))
+}
+
+/**
  * Sorts history events newest-first using a strictly transitive comparator.
  *
  * @internal
@@ -314,12 +326,14 @@ export function applyVariantTransforms(
       : {...event, documentVariantType: variantType},
   )
 
-  const transformed = variantType === 'draft' ? foldDraftLifecycles(stamped) : stamped
+  const transformed = variantType !== 'published' ? foldDraftLifecycles(stamped) : stamped
   return squashLiveEditEvents(transformed)
 }
 
 /**
- * Merges already-normalized per-variant timelines into a single newest-first stream.
+ * Merges already-ordered per-variant timelines into a single newest-first stream via k-way merge.
+ * Preserves each variant's intra-variant sequence order for equal-timestamp events while using
+ * deterministic tie-breaking across distinct variants.
  *
  * @internal
  */
@@ -329,5 +343,27 @@ export function mergeVariantTimelines(
   const nonEmpty = timelines.filter((timeline) => timeline.length > 0)
   if (nonEmpty.length === 0) return []
   if (nonEmpty.length === 1) return nonEmpty[0]!
-  return sortHistoryEvents(nonEmpty.flat())
+
+  const cursors = nonEmpty.map(() => 0)
+  const merged: DocumentHistoryEvent[] = []
+
+  while (true) {
+    let bestIndex = -1
+    let bestEvent: DocumentHistoryEvent | undefined
+
+    for (let i = 0; i < nonEmpty.length; i++) {
+      const candidate = nonEmpty[i]![cursors[i]!]
+      if (!candidate) continue
+      if (!bestEvent || compareHistoryEvents(candidate, bestEvent) < 0) {
+        bestEvent = candidate
+        bestIndex = i
+      }
+    }
+
+    if (bestIndex === -1 || !bestEvent) break
+    merged.push(bestEvent)
+    cursors[bestIndex]! += 1
+  }
+
+  return merged
 }

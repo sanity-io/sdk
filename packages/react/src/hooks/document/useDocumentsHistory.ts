@@ -272,7 +272,8 @@ function useDocumentsHistoryImpl(options: UseDocumentsHistoryOptions): UseDocume
 
 /**
  * Reads the merged history timeline for one or more documents, keeping it synchronized with live
- * changes and supporting cursor pagination.
+ * changes and supporting cursor pagination. Pair with {@link useDocumentHistoryEventEdits} to
+ * expand the intermediate edits of a completed `published` or `discarded` lifecycle on demand.
  *
  * Each handle in `documents` may specify its own `perspective` (for example, combining draft and
  * published variants of the same document, or multiple documents in a single timeline). Passing an

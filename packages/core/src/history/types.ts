@@ -1,4 +1,4 @@
-import {type DocumentHandle} from '../config/sanityConfig'
+import {type DatasetHandle, type DocumentHandle} from '../config/sanityConfig'
 
 /**
  * Which document variant a history timeline belongs to.
@@ -190,6 +190,20 @@ export type DocumentHistoryEvent =
   | DocumentHistoryDeletedEvent
 
 /**
+ * A `published` or `discarded` history event whose intermediate edits can be fetched via
+ * {@link documentHistoryEventEdits}.
+ *
+ * @public
+ */
+export type ExpandableDocumentHistoryEvent = (
+  | DocumentHistoryPublishedEvent
+  | DocumentHistoryDiscardedEvent
+) & {
+  /** Final revision ID on the draft or version at publish or discard time. */
+  versionRevisionId: string
+}
+
+/**
  * Options for reading the merged history timeline of one or more documents.
  *
  * @public
@@ -219,4 +233,18 @@ export interface ResolveDocumentsHistoryOptions<
 > extends DocumentsHistoryOptions<TDataset, TProjectId> {
   /** Optional abort signal to cancel the pending read. */
   signal?: AbortSignal
+}
+
+/**
+ * Options for fetching the intermediate edit events (and creation boundary) of a completed
+ * draft or release version lifecycle via {@link documentHistoryEventEdits}.
+ *
+ * @public
+ */
+export interface DocumentHistoryEventEditsOptions<
+  TDataset extends string = string,
+  TProjectId extends string = string,
+> extends DatasetHandle<TDataset, TProjectId> {
+  /** Completed `published` or `discarded` lifecycle event to expand. */
+  event: ExpandableDocumentHistoryEvent
 }

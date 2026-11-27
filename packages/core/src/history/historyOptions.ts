@@ -1,6 +1,13 @@
 import {DocumentId, isDraftId, isVersionId} from '@sanity/id-utils'
 
-import {type DocumentHandle, type DocumentResource} from '../config/sanityConfig'
+import {
+  type DatasetHandle,
+  type DocumentHandle,
+  type DocumentResource,
+  isCanvasResource,
+  isDatasetResource,
+  isMediaLibraryResource,
+} from '../config/sanityConfig'
 import {getDocumentVariantId} from '../document/getDocumentVariantId'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {isDeepEqual} from '../utils/object'
@@ -60,24 +67,37 @@ export function getDocumentVariantType(variantId: string): DocumentVariantType {
   return 'published'
 }
 
-function getInstanceFallbackResource(instance: SanityInstance): DocumentResource | undefined {
+/**
+ * Resolves the effective {@link DocumentResource} for a history read from explicit options
+ * (`resource` or `projectId`/`dataset`) or the `SanityInstance` config.
+ *
+ * @internal
+ */
+export function resolveHistoryResource(
+  instance: SanityInstance,
+  options?: DatasetHandle,
+): DocumentResource {
+  if (options?.resource) return options.resource
+  if (options?.projectId && options?.dataset) {
+    return {projectId: options.projectId, dataset: options.dataset}
+  }
   if (instance.config.resource) return instance.config.resource
   if (instance.config.projectId && instance.config.dataset) {
     return {projectId: instance.config.projectId, dataset: instance.config.dataset}
   }
-  return undefined
+  throw new Error('This API requires a project ID and dataset configured.')
 }
 
-function resolveHandleResource(
-  handle: DocumentHandle,
-  fallbackResource: DocumentResource | undefined,
-): DocumentResource {
-  if (handle.resource) return handle.resource
-  if (handle.projectId && handle.dataset) {
-    return {projectId: handle.projectId, dataset: handle.dataset}
-  }
-  if (fallbackResource) return fallbackResource
-  throw new Error('This API requires a project ID and dataset configured.')
+/**
+ * Serializes a {@link DocumentResource} into a deterministic cache key prefix.
+ *
+ * @internal
+ */
+export function getHistoryResourceKey(resource: DocumentResource): string {
+  if (isDatasetResource(resource)) return `${resource.projectId}.${resource.dataset}`
+  if (isMediaLibraryResource(resource)) return `media-library:${resource.mediaLibraryId}`
+  if (isCanvasResource(resource)) return `canvas:${resource.canvasId}`
+  throw new Error(`Received invalid resource: ${JSON.stringify(resource)}`)
 }
 
 /**
@@ -97,12 +117,11 @@ export function resolveDocumentsHistoryRequest(
     return null
   }
 
-  const fallbackResource = getInstanceFallbackResource(instance)
   let sharedResource: DocumentResource | undefined
   const variantSet = new Set<string>()
 
   for (const handle of options.documents) {
-    const handleResource = resolveHandleResource(handle, fallbackResource)
+    const handleResource = resolveHistoryResource(instance, handle)
     if (!sharedResource) {
       sharedResource = handleResource
     } else if (!isDeepEqual(handleResource, sharedResource)) {
