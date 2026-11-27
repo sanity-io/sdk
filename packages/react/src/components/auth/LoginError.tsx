@@ -22,7 +22,7 @@ export type LoginErrorProps = FallbackProps
 
 /**
  * Displays authentication error details and provides retry functionality.
- * Only handles {@link AuthError} instances - rethrows other error types.
+ * Only handles `AuthError` instances - rethrows other error types.
  *
  * @alpha
  */

@@ -2,6 +2,7 @@
  * @module exports
  */
 export {AuthBoundary, type AuthBoundaryProps} from '../components/auth/AuthBoundary'
+export {LoginError, type LoginErrorProps} from '../components/auth/LoginError'
 export {SanityApp, type SanityAppProps} from '../components/SanityApp'
 export {SDKProvider, type SDKProviderProps} from '../components/SDKProvider'
 export {type DocumentHandle, type DocumentTypeHandle, type ResourceHandle} from '../config/handles'

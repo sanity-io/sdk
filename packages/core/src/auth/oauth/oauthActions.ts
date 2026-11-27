@@ -16,6 +16,7 @@ import {
   serializeTokens,
   toOAuthTokens,
 } from './oauthClient'
+import {OAuthError} from './oauthError'
 import {runOAuthTokenRefresh} from './oauthRefresh'
 import {generateCodeChallenge, generateCodeVerifier, generateState} from './pkce'
 import {type OAuthTokens} from './types'
@@ -95,8 +96,8 @@ export const startOAuthAuthorization = bindActionGlobally(authStore, async ({sta
 
 /**
  * Handles the OAuth redirect callback: validates `state`, surfaces `error`
- * responses, exchanges the authorization `code` for tokens, persists them, and
- * transitions to `LOGGED_IN`.
+ * responses as an {@link OAuthError} in the `ERROR` auth state, exchanges the
+ * authorization `code` for tokens, persists them, and transitions to `LOGGED_IN`.
  *
  * Returns the URL for the caller to `history.replaceState` to when a callback
  * was processed: on success, the same-origin location the user was on when
@@ -138,22 +139,22 @@ export const handleOAuthCallback = bindActionGlobally(
     // established: a stale callback URL (e.g. remount before the params were
     // stripped, after the artifacts were cleared) or a denied re-authorization
     // must not clobber LOGGED_IN.
-    const rejectCallback = (name: string, message: string): string => {
+    const rejectCallback = (name: string, callbackError: Error): string => {
       if (authState.type === AuthStateType.LOGGED_IN) {
         // Leave PKCE artifacts alone: a re-authorization may be in flight.
-        logger.warn(`${message} — ignoring callback, session already established`)
+        logger.warn(`${callbackError.message} — ignoring callback, session already established`)
         return cleanedUrl
       }
-      logger.error(`${message} — rejecting callback`)
+      logger.error(`${callbackError.message} — rejecting callback`)
       clearOAuthArtifacts(session)
-      state.set(name, {authState: {type: AuthStateType.ERROR, error: new Error(message)}})
+      state.set(name, {authState: {type: AuthStateType.ERROR, error: callbackError}})
       return cleanedUrl
     }
 
     if (error) {
       return rejectCallback(
         'oauthCallbackError',
-        errorDescription ? `${error}: ${errorDescription}` : error,
+        new OAuthError(error, errorDescription || undefined),
       )
     }
 
@@ -164,12 +165,12 @@ export const handleOAuthCallback = bindActionGlobally(
 
     const storedState = session?.getItem(OAUTH_STATE_KEY) ?? null
     if (!returnedState || !storedState || returnedState !== storedState) {
-      return rejectCallback('oauthStateMismatch', 'OAuth state mismatch')
+      return rejectCallback('oauthStateMismatch', new Error('OAuth state mismatch'))
     }
 
     const codeVerifier = session?.getItem(OAUTH_VERIFIER_KEY) ?? null
     if (!codeVerifier) {
-      return rejectCallback('oauthVerifierMissing', 'OAuth code verifier missing')
+      return rejectCallback('oauthVerifierMissing', new Error('OAuth code verifier missing'))
     }
 
     logger.info('Exchanging OAuth code for tokens')
