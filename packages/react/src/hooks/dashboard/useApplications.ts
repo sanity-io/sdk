@@ -1,4 +1,5 @@
-import {type DashboardApplication, toDashboardApplications} from '@sanity/sdk/dashboard'
+import {toDashboardApplications} from '@sanity/sdk/_internal'
+import {type DashboardApplication} from '@sanity/sdk/dashboard'
 import {useMemo} from 'react'
 
 import {useTopic} from './useTopic'

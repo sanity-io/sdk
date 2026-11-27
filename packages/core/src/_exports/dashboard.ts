@@ -4,7 +4,6 @@ export type {
   DashboardApplicationBase,
   DashboardInstallation,
 } from '../dashboard/applications'
-export {toDashboardApplications} from '../dashboard/applications'
 export type {
   ConnectMessageBusOptions,
   MessageBus,

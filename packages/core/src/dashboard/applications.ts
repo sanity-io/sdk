@@ -80,18 +80,32 @@ const loadModules = (
       version: extension.version,
     }
 
-    if (extension.type === 'worker') {
-      webWorkers.push({...extension, module})
-      continue
+    switch (extension.type) {
+      case 'worker': {
+        webWorkers.push({...extension, module})
+        break
+      }
+      case 'app': {
+        const {type: _type, ...view} = extension
+        views.push({...view, surface: 'window', module})
+        break
+      }
+      case 'panel': {
+        const {type, ...view} = extension
+        views.push({...view, surface: type, module})
+        break
+      }
+      case 'tile': {
+        const {type, ...view} = extension
+        views.push({...view, surface: type, module})
+        break
+      }
+      case 'asset_source': {
+        const {type, ...view} = extension
+        views.push({...view, surface: type, module})
+        break
+      }
     }
-
-    const {type, ...view} = extension
-    // TS can't correlate `surface` with the narrowed `type` across the union.
-    views.push({
-      ...view,
-      surface: type === 'app' ? 'window' : type,
-      module,
-    } as DashboardApplication['views'][number])
   }
 
   return {views, webWorkers}
