@@ -24,6 +24,11 @@ export type DashboardInstallation = Omit<ApplicationBase, 'type'> & {
   readonly installation: Installation<InstallationInclude>
 }
 
+// Listed under their application, so they leave `application` out.
+type WithoutApplication<Interface> = Interface extends unknown
+  ? Omit<Interface, 'application'>
+  : never
+
 /**
  * A dashboard entry — an application or an installation — in one consistent shape, with its
  * loadable views and web workers. `type` distinguishes the kinds and `isLocal` marks dev-server
@@ -39,8 +44,8 @@ export type DashboardApplication = (
     })
   | DashboardInstallation
 ) & {
-  readonly views: View[]
-  readonly webWorkers: WebWorker[]
+  readonly views: WithoutApplication<View>[]
+  readonly webWorkers: WithoutApplication<WebWorker>[]
 }
 
 // Only a federated deployment (one with a module federation manifest) exposes loadable modules.
@@ -56,8 +61,8 @@ const loadModules = (
   application: View['application'],
   interfaces: readonly ApplicationInterface[],
 ): DashboardApplication => {
-  const views: View[] = []
-  const webWorkers: WebWorker[] = []
+  const views: DashboardApplication['views'] = []
+  const webWorkers: DashboardApplication['webWorkers'] = []
   // Nothing to load without interfaces or an origin to load them from.
   const entry = interfaces.length === 0 ? null : getApplicationOrigin(application)
 
@@ -66,27 +71,27 @@ const loadModules = (
   for (const extension of interfaces) {
     switch (extension.type) {
       case 'worker': {
-        webWorkers.push({...extension, entry, application})
+        webWorkers.push({...extension, entry})
         break
       }
       case 'app': {
         const {type: _type, ...view} = extension
-        views.push({...view, surface: 'window', entry, application})
+        views.push({...view, surface: 'window', entry})
         break
       }
       case 'panel': {
         const {type, ...view} = extension
-        views.push({...view, surface: type, entry, application})
+        views.push({...view, surface: type, entry})
         break
       }
       case 'tile': {
         const {type, ...view} = extension
-        views.push({...view, surface: type, entry, application})
+        views.push({...view, surface: type, entry})
         break
       }
       case 'asset_source': {
         const {type, ...view} = extension
-        views.push({...view, surface: type, entry, application})
+        views.push({...view, surface: type, entry})
         break
       }
     }

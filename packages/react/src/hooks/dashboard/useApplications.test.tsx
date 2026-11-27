@@ -215,8 +215,6 @@ describe('useApplications', () => {
       activeDeployment: {id: 'deployment-1'},
       config: {mfManifest: {}},
     })
-    // Each view and web worker carries the application without its views and web workers.
-    const {views: _views, webWorkers: _webWorkers, ...federatedEntry} = federated!
     expect(federated?.views).toEqual([
       {
         id: 'view-1',
@@ -227,7 +225,6 @@ describe('useApplications', () => {
         moduleId: 'App',
         metadata: {dock: {group: 'applications', order: 1}},
         entry: 'https://inbox--apps--organization-1.sanity.run',
-        application: federatedEntry,
       },
       expect.objectContaining({
         moduleId: 'views/notifications',
@@ -247,7 +244,6 @@ describe('useApplications', () => {
         moduleId: 'services/sync',
         metadata: null,
         entry: 'https://inbox--apps--organization-1.sanity.run',
-        application: federatedEntry,
       },
     ])
     expect(nonFederated).toMatchObject({views: [], webWorkers: []})
@@ -308,7 +304,6 @@ describe('useApplications', () => {
         entry: 'https://remote--apps--organization-publisher.sanity.run',
         moduleId: 'App',
         version: '1',
-        application: expect.objectContaining({id: 'installation-1', installation}),
       }),
       expect.objectContaining({
         name: 'remote-panel',

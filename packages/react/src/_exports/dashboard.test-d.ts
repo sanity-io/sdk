@@ -82,7 +82,7 @@ test('dashboard entrypoint exposes the message bus public types', () => {
   expectTypeOf<MessageBusHost['connections']['subscribe']>().toBeFunction()
 })
 
-test('listed views and web workers are the View and WebWorker the view hooks return', () => {
+test('view hooks return views with their application, useApplications lists them without', () => {
   expectTypeOf<ReturnType<typeof useView>>().toEqualTypeOf<View>()
   // Each hook returns the whole `View` member for its surface, not a narrower shape.
   expectTypeOf<ReturnType<typeof usePanel>['view']>().toEqualTypeOf<
@@ -100,8 +100,8 @@ test('listed views and web workers are the View and WebWorker the view hooks ret
   expectTypeOf<View['surface']>().toEqualTypeOf<'window' | 'panel' | 'tile' | 'asset_source'>()
 
   type ListedView = DashboardApplication['views'][number]
-  expectTypeOf<ListedView>().toEqualTypeOf<View>()
-  expectTypeOf<DashboardApplication['webWorkers'][number]>().toEqualTypeOf<WebWorker>()
+  expectTypeOf<ListedView>().not.toHaveProperty('application')
+  expectTypeOf<DashboardApplication['webWorkers'][number]>().not.toHaveProperty('application')
   // `surface` still narrows `metadata` on a listed view.
   expectTypeOf<Extract<ListedView, {surface: 'tile'}>['metadata']>().toEqualTypeOf<
     TileView['metadata']
