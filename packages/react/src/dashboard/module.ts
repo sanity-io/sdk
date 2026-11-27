@@ -4,7 +4,6 @@ import * as React from 'react'
 
 const ROOT_SLOT_KEY = Symbol.for('sanity.os.root')
 
-// A new surface fails to index this until its host props are declared.
 type HostProps = {
   window: unknown
   panel: {onClose: () => void}
