@@ -72,7 +72,6 @@ describe('document submission with the production edit interval', () => {
       queued: [],
       applied: [],
       documentStates: {},
-      sharedListener: {events: NEVER, dispose: vi.fn()},
       fetchDocument: () => NEVER,
       events: new Subject(),
     })

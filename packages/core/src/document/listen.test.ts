@@ -1,8 +1,8 @@
-import {type MutationEvent} from '@sanity/client'
 import {lastValueFrom, Observable, of} from 'rxjs'
 import {toArray} from 'rxjs/operators'
 import {describe, expect, it, vi} from 'vitest'
 
+import {type DocumentMutationChangeEvent} from './documentChangeSource'
 import {
   DeadlineExceededError,
   type ListenerEvent,
@@ -50,21 +50,17 @@ function createMutationEvent({
   resultRev: string | undefined
   transition?: 'update' | 'appear' | 'disappear'
   docId?: string
-}): MutationEvent {
+}): DocumentMutationChangeEvent {
   return {
     type: 'mutation',
     documentId: docId,
-    eventId: id,
     identity: 'user',
     mutations: [],
     timestamp: new Date().toISOString(),
     transactionId: `tx-${id}`,
-    transactionCurrentEvent: 0,
-    transactionTotalEvents: 1,
     previousRev,
     resultRev,
     transition,
-    visibility: 'query',
   }
 }
 

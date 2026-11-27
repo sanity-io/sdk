@@ -27,7 +27,7 @@ import {
   isDatasetResource,
   isMediaLibraryResource,
 } from '../config/sanityConfig'
-import {getEditingDocumentId} from '../document/util'
+import {getDocumentVariantId} from '../document/getDocumentVariantId'
 import {bindActionByResource, type BoundResourceKey} from '../store/createActionBinder'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {
@@ -506,7 +506,7 @@ function selectDocumentPresence(
   options: DocumentPresenceOptions,
 ): DocumentPresence[] {
   const cacheKey = JSON.stringify([
-    getEditingDocumentId(options),
+    getDocumentVariantId(options),
     options.path ?? null,
     options.excludeVersions ?? false,
   ])
@@ -570,7 +570,7 @@ function computeDocumentPresence(
 ): DocumentPresence[] {
   // Resolved before scoping, and identically to the write side, or a query for a
   // document would not match the client reporting it.
-  const target = scopeId(getEditingDocumentId(options), options.excludeVersions)
+  const target = scopeId(getDocumentVariantId(options), options.excludeVersions)
 
   return Array.from(state.locations).flatMap(([sessionId, session]) =>
     session.locations
@@ -638,7 +638,7 @@ const _reportPresence = bindActionByResource(
       type: 'document',
       // The specific document being edited, not the canonical id. Other clients,
       // the Studio included, compare exact ids for field-level presence.
-      documentId: getEditingDocumentId(location),
+      documentId: getDocumentVariantId(location),
       path: location.path ?? [],
       lastActiveAt,
       ...(location.selection === undefined ? {} : {selection: location.selection}),

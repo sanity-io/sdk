@@ -84,7 +84,7 @@ import {
   type UnverifiedDocumentRevision,
 } from './reducers'
 import {scheduleOutgoingTransactions} from './scheduleOutgoingTransactions'
-import {createFetchDocument, createSharedListener, type SharedListener} from './sharedListener'
+import {createFetchDocument} from './sharedListener'
 import {classifySubmissionError} from './submissionErrors'
 
 export interface DocumentStoreState {
@@ -99,7 +99,6 @@ export interface DocumentStoreState {
   identity?: string
   error?: unknown
   aclError?: unknown
-  sharedListener: SharedListener
   fetchDocument: (documentId: string) => Observable<ResolveDocument | null>
   events: Subject<DocumentEvent>
 }
@@ -157,12 +156,10 @@ export const documentStore = defineStore<DocumentStoreState, BoundResourceKey>({
     // these can be emptied on refetch
     queued: [],
     applied: [],
-    sharedListener: createSharedListener(instance, resource),
     fetchDocument: createFetchDocument(instance, resource),
     events: new Subject(),
   }),
   initialize(context) {
-    const {sharedListener} = context.state.get()
     const subscriptions = [
       subscribeToQueuedAndApplyNextTransaction(context),
       subscribeToSubscriptionsAndListenToDocuments(context),
@@ -172,7 +169,6 @@ export const documentStore = defineStore<DocumentStoreState, BoundResourceKey>({
     ]
 
     return () => {
-      sharedListener.dispose()
       subscriptions.forEach((subscription) => subscription.unsubscribe())
     }
   },
