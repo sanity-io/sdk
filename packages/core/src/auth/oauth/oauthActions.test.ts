@@ -19,9 +19,14 @@ import {
 } from './oauthActions'
 import {OAUTH_TOKENS_KEY} from './oauthAuth'
 import {deserializeTokens, serializeTokens} from './oauthClient'
+import {OAuthError} from './oauthError'
 import {type OAuthTokens} from './types'
 
 const readStored = (storage: Storage) => deserializeTokens(storage.getItem(OAUTH_TOKENS_KEY))
+const authErrorOf = (instance: SanityInstance) => {
+  const authState = getAuthState(instance).getCurrent()
+  return authState.type === AuthStateType.ERROR ? authState.error : undefined
+}
 
 vi.mock('../subscribeToStateAndFetchCurrentUser')
 vi.mock('../../utils/logger', async (importOriginal) => {
@@ -397,6 +402,23 @@ describe('handleOAuthCallback', () => {
     expect(getAuthState(instance!).getCurrent()).toMatchObject({type: AuthStateType.ERROR})
   })
 
+  it("keeps the authorization server's error code and description on the error", async () => {
+    setup()
+
+    await handleOAuthCallback(
+      instance!,
+      'https://app.example.com/callback?error=invalid_target&error_description=The+requested+sanity+resource+is+invalid',
+    )
+
+    const error = authErrorOf(instance!)
+    expect(error).toBeInstanceOf(OAuthError)
+    expect(error).toMatchObject({
+      code: 'invalid_target',
+      description: 'The requested sanity resource is invalid',
+      message: 'invalid_target: The requested sanity resource is invalid',
+    })
+  })
+
   it('ignores an ?error= callback when a session is already established', async () => {
     setup({
       storageSeed: {[OAUTH_TOKENS_KEY]: serializeTokens(seededTokens)},
@@ -416,10 +438,24 @@ describe('handleOAuthCallback', () => {
     expect(sessionStorage.getItem(OAUTH_STATE_KEY)).toBe('state-next')
   })
 
-  it('surfaces an ?error= callback without a description', async () => {
+  it.each([
+    ['without a description', 'https://app.example.com/callback?error=access_denied'],
+    [
+      'with an empty description',
+      'https://app.example.com/callback?error=access_denied&error_description=',
+    ],
+  ])('surfaces an ?error= callback %s as just its code', async (_, href) => {
     setup()
-    await handleOAuthCallback(instance!, 'https://app.example.com/callback?error=access_denied')
-    expect(getAuthState(instance!).getCurrent()).toMatchObject({type: AuthStateType.ERROR})
+
+    await handleOAuthCallback(instance!, href)
+
+    const error = authErrorOf(instance!)
+    expect(error).toBeInstanceOf(OAuthError)
+    expect(error).toMatchObject({
+      code: 'access_denied',
+      description: undefined,
+      message: 'access_denied',
+    })
   })
 
   it('rejects a state mismatch as ERROR without exchanging', async () => {
@@ -432,6 +468,8 @@ describe('handleOAuthCallback', () => {
     expect(result).toBe('https://app.example.com/callback')
     expect(request).not.toHaveBeenCalled()
     expect(getAuthState(instance!).getCurrent()).toMatchObject({type: AuthStateType.ERROR})
+    // A failure in this tab, not a refusal from the server
+    expect(authErrorOf(instance!)).not.toBeInstanceOf(OAuthError)
   })
 
   it('errors when the code verifier is missing', async () => {

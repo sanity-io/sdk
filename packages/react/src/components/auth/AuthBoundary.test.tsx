@@ -1,13 +1,14 @@
-import {AuthStateType} from '@sanity/sdk'
+import {AuthStateType, OAuthError} from '@sanity/sdk'
 import {installMessageBus} from '@sanity/sdk/_internal'
 import {render, screen, waitFor} from '@testing-library/react'
 import React from 'react'
 import {type FallbackProps} from 'react-error-boundary'
-import {beforeEach, describe, expect, it, type MockInstance, vi} from 'vitest'
+import {beforeEach, describe, expect, it, type MockInstance, onTestFinished, vi} from 'vitest'
 
 import {DashboardTokenRefreshProvider} from '../../context/DashboardTokenRefresh'
 import {ResourceProvider} from '../../context/ResourceProvider'
 import {useAuthState} from '../../hooks/auth/useAuthState'
+import {useHandleAuthCallback} from '../../hooks/auth/useHandleAuthCallback'
 import {useLoginUrl} from '../../hooks/auth/useLoginUrl'
 import {useOAuthAuthorize} from '../../hooks/auth/useOAuthAuthorize'
 import {useVerifyOrgProjects} from '../../hooks/auth/useVerifyOrgProjects'
@@ -252,6 +253,45 @@ describe('AuthBoundary', () => {
 
       await waitFor(() => expect(screen.getByText('Authentication Error')).toBeInTheDocument())
       expect(authorize).not.toHaveBeenCalled()
+    })
+
+    it("gives the error component the server's error code when it refuses the sign-in", async () => {
+      const {useAuthState: realUseAuthState} = await vi.importActual<
+        typeof import('../../hooks/auth/useAuthState')
+      >('../../hooks/auth/useAuthState')
+      const {useHandleAuthCallback: realUseHandleAuthCallback} = await vi.importActual<
+        typeof import('../../hooks/auth/useHandleAuthCallback')
+      >('../../hooks/auth/useHandleAuthCallback')
+      mockUseAuthState.mockImplementation(realUseAuthState)
+      vi.mocked(useHandleAuthCallback).mockImplementation(realUseHandleAuthCallback)
+
+      const start = location.href
+      onTestFinished(() => history.replaceState(null, '', start))
+      history.replaceState(
+        null,
+        '',
+        '/callback?error=invalid_target&error_description=The+requested+sanity+resource+is+invalid',
+      )
+
+      function RefusalCode({error}: FallbackProps) {
+        const cause = error instanceof Error ? error.cause : undefined
+        return <p>{cause instanceof OAuthError ? cause.code : 'not an OAuthError'}</p>
+      }
+
+      render(
+        <ResourceProvider
+          projectId="p"
+          dataset="d"
+          auth={{oauth: {...oauth, redirectUri: `${location.origin}/callback`}}}
+          fallback={null}
+        >
+          <AuthBoundary projectIds={testProjectIds} LoginErrorComponent={RefusalCode}>
+            Protected Content
+          </AuthBoundary>
+        </ResourceProvider>,
+      )
+
+      expect(await screen.findByText('invalid_target')).toBeInTheDocument()
     })
   })
 

@@ -55,6 +55,7 @@ export {
   revokeOAuthTokens,
   startOAuthAuthorization,
 } from '../auth/oauth/oauthActions'
+export {OAuthError} from '../auth/oauth/oauthError'
 export {type OAuthTokens} from '../auth/oauth/types'
 export {getProjectAccessErrorProjectId} from '../auth/projectAccessError'
 export type {ClientStoreState as ClientState} from '../client/clientStore'
