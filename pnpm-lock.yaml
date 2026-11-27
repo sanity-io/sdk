@@ -812,8 +812,8 @@ importers:
   packages/react:
     dependencies:
       '@module-federation/runtime':
-        specifier: ^2.9.3
-        version: 2.9.3
+        specifier: ^2.9.4
+        version: 2.9.4
       '@sanity/client':
         specifier: 'catalog:'
         version: 8.17.0(vitest@5.1.2)
@@ -2526,17 +2526,29 @@ packages:
   '@module-federation/error-codes@2.9.3':
     resolution: {integrity: sha512-sXWo6XHOFKC1Dcu9DcSA1okZjtIz2y3uM+NJrAoSpeZ9QSPXielkMWT5PtG7MqGE3OQ+/HDawiLK53IOi3NHcQ==}
 
+  '@module-federation/error-codes@2.9.4':
+    resolution: {integrity: sha512-4JjaxBlQisDfkCTnMC4BaHphJRnlIYeobBNCgYSQY8xSnh1Y6rFFBHX7gyObDTJk66IrAB765G7xA9VYCcLB/g==}
+
   '@module-federation/managers@2.9.3':
     resolution: {integrity: sha512-C9yyp/edzCYs7+yvvQv2cBRd9A5/n9RPkGhn6KMBbchMuKWyn5qbC6pbl70TAkFh3wHRqcyUCIHrMf+Fek0u4A==}
 
   '@module-federation/runtime-core@2.9.3':
     resolution: {integrity: sha512-E6AjfIWFgZOEATxf+GzBIg54Ejp7QFNTxtVzwnnhEEu01dErBo7qLjJvEPXGiN5sJTNf2a4HIW/wZTM23skouQ==}
 
+  '@module-federation/runtime-core@2.9.4':
+    resolution: {integrity: sha512-i2uEHkJGliwRmjb5ZOzWkA9xzTPwYjPMReqO0ZnIkpp0JuHaE4nDme9vacMnU2P4qRC2xzhGD0/Tb7uGUsUMtg==}
+
   '@module-federation/runtime@2.9.3':
     resolution: {integrity: sha512-VCJV1VzKk+jvt+1CcTrslbl3LAKScHFpPxKSviafpMIqeHDWIDEY7ZEbVVJl/GuUjA36R7j0QhOPEjihPcz9/A==}
 
+  '@module-federation/runtime@2.9.4':
+    resolution: {integrity: sha512-iU5CqFNkmNVZHprp/glbaSn46q4/6PhSlMefrrzCBPMpoTd/pul+d+JbzQVHRtLv4w44SoGS+kFe3x9JF1BGog==}
+
   '@module-federation/sdk@2.9.3':
     resolution: {integrity: sha512-cT5ko/JDzGrKe8N+MFPgwb07G8fzmpnZbKZjGjXvT9phagQpiOfV6WQZhu1j+HtO152Frv1vjv/1Hhg2wMUL8g==}
+
+  '@module-federation/sdk@2.9.4':
+    resolution: {integrity: sha512-o7VGOEXtM3ITWrYtFOiaB3y/ssFv6mLs5TBx6QEgwXVzm3URgVgqh1KR1husFa94GTheP4Ei8hq4/B6xMQpT8g==}
 
   '@module-federation/third-party-dts-extractor@2.9.3':
     resolution: {integrity: sha512-jUWFWa5l7j2jb3JU9bfGHZ5luv6XAogMsvJ/yG59AZmhpliPozkyxYRjnbtik85IipZF4Cb06PW9qv5qRRf6OQ==}
@@ -10068,6 +10080,8 @@ snapshots:
 
   '@module-federation/error-codes@2.9.3': {}
 
+  '@module-federation/error-codes@2.9.4': {}
+
   '@module-federation/managers@2.9.3':
     dependencies:
       '@module-federation/sdk': 2.9.3
@@ -10077,13 +10091,26 @@ snapshots:
       '@module-federation/error-codes': 2.9.3
       '@module-federation/sdk': 2.9.3
 
+  '@module-federation/runtime-core@2.9.4':
+    dependencies:
+      '@module-federation/error-codes': 2.9.4
+      '@module-federation/sdk': 2.9.4
+
   '@module-federation/runtime@2.9.3':
     dependencies:
       '@module-federation/error-codes': 2.9.3
       '@module-federation/runtime-core': 2.9.3
       '@module-federation/sdk': 2.9.3
 
+  '@module-federation/runtime@2.9.4':
+    dependencies:
+      '@module-federation/error-codes': 2.9.4
+      '@module-federation/runtime-core': 2.9.4
+      '@module-federation/sdk': 2.9.4
+
   '@module-federation/sdk@2.9.3': {}
+
+  '@module-federation/sdk@2.9.4': {}
 
   '@module-federation/third-party-dts-extractor@2.9.3': {}
 
@@ -11417,7 +11444,7 @@ snapshots:
 
   '@sanity/sdk-react@3.15.0(@types/react@19.3.2)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(use-sync-external-store@1.7.0(react@19.3.1))(vitest@5.1.2)(xstate@5.33.4)':
     dependencies:
-      '@module-federation/runtime': 2.9.3
+      '@module-federation/runtime': 2.9.4
       '@sanity/client': 8.17.0(vitest@5.1.2)
       '@sanity/message-protocol': 0.24.0
       '@sanity/sdk': 3.15.0(@types/react@19.3.2)(react@19.3.1)(use-sync-external-store@1.7.0(react@19.3.1))(vitest@5.1.2)(xstate@5.33.4)
