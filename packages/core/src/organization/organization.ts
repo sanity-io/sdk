@@ -5,7 +5,7 @@ import {type SanityInstance} from '../store/createSanityInstance'
 import {defineFetcher} from '../store/fetcherStore'
 import {buildQuery} from '../utils/buildQuery'
 
-const API_VERSION = 'v2025-02-19'
+const API_VERSION = 'v2026-11-27'
 
 /** @public */
 export interface OrganizationMember {
@@ -35,6 +35,7 @@ export interface OrganizationMember {
 export interface OrganizationBase {
   id: string
   name: string
+  /** `null` when the organization has no slug, isn't on a Growth or Enterprise plan, or its slug can't be used in a URL. */
   slug: string | null
   /** Bare CDN URL of the logo; append image-pipeline params (`?w=&h=&fit=crop&auto=format`) for display. */
   logoUrl: string | null

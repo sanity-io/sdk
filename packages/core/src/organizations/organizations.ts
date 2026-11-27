@@ -10,7 +10,7 @@ import {type SanityInstance} from '../store/createSanityInstance'
 import {defineFetcher} from '../store/fetcherStore'
 import {buildQuery} from '../utils/buildQuery'
 
-const API_VERSION = 'v2025-02-19'
+const API_VERSION = 'v2026-11-27'
 
 /**
  * The list shape returned from `/organizations`, with `members` and/or
