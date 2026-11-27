@@ -1,5 +1,10 @@
 export type {Dock} from '../applications/applications'
 export type {
+  DashboardApplication,
+  DashboardApplicationBase,
+  DashboardInstallation,
+} from '../dashboard/applications'
+export type {
   ConnectMessageBusOptions,
   MessageBus,
   MessageBusAbortOptions,

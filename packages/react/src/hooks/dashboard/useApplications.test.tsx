@@ -6,6 +6,7 @@ import {
 } from '@sanity/sdk'
 import {installMessageBus, resetMessageBus} from '@sanity/sdk/_internal'
 import {
+  type DashboardApplication,
   type LocalApplication,
   type MessageBusHost,
   TopicError,
@@ -16,7 +17,7 @@ import {ErrorBoundary} from 'react-error-boundary'
 import {afterEach, beforeEach, describe, expect, expectTypeOf, it, vi} from 'vitest'
 
 import {act, render, renderHook, screen} from '../../../test/test-utils'
-import {type DashboardApplication, useApplications} from './useApplications'
+import {useApplications} from './useApplications'
 
 const MESSAGE_BUS_KEY = Symbol.for('sanity.os.bus')
 

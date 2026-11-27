@@ -15,6 +15,7 @@ export {
 } from '../comments/commentsOptions'
 // only used for memoizing in React, not needed for actual functionality
 export {getCommentsOptionsKey, parseCommentsOptionsKey} from '../comments/legacy/commentsOptions'
+export {toDashboardApplications} from '../dashboard/applications'
 export {
   installMessageBus,
   type InstallMessageBusOptions,
