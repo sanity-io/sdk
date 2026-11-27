@@ -252,7 +252,11 @@ describe('useApplications', () => {
     ])
     expect(nonFederated).toMatchObject({views: [], webWorkers: []})
     expect(nonSingleton?.views[0]?.entry).toBe('https://canvas.sanity.studio')
-    expect(result.current.map(({isLocal}) => isLocal)).toEqual([false, false, false])
+    expect(result.current.map((entry) => 'isLocal' in entry && entry.isLocal)).toEqual([
+      false,
+      false,
+      false,
+    ])
   })
 
   it('marks dev-server applications local and loads their modules from the dev server', () => {
@@ -260,11 +264,13 @@ describe('useApplications', () => {
 
     const {result} = renderHook(() => useApplications())
 
-    expect(result.current.map(({id, isLocal}) => [id, isLocal])).toEqual([
+    expect(result.current.map((entry) => [entry.id, 'isLocal' in entry && entry.isLocal])).toEqual([
       ['application-1', false],
       ['application-5', true],
       ['installation-1', false],
     ])
+    // Installations are never served by a dev server.
+    expect(result.current[2]).not.toHaveProperty('isLocal')
     const local = result.current[1]
     expect(local).toMatchObject({type: 'coreApp', local: {host: 'localhost', port: 3333}})
     expect(local?.views[0]?.entry).toBe('http://localhost:3333')

@@ -21,14 +21,13 @@ type DashboardTopicInstallation = Exclude<DashboardTopicEntry, {type: unknown}>
  */
 export type DashboardInstallation = Omit<ApplicationBase, 'type'> & {
   readonly type: 'installation'
-  readonly isLocal: false
   readonly installation: Installation<InstallationInclude>
 }
 
 /**
  * A dashboard entry — an application or an installation — in one consistent shape, with its
  * loadable views and web workers. `type` distinguishes the kinds and `isLocal` marks dev-server
- * applications; render a list without branching.
+ * applications.
  * @beta
  * @category Types
  * @category Dashboard
@@ -113,7 +112,6 @@ const toInstallation = (installation: DashboardTopicInstallation): DashboardAppl
   const shaped: DashboardInstallation = {
     id: installation.id,
     type: 'installation',
-    isLocal: false,
     title: application.title,
     name: application.name,
     reference: application.reference,
