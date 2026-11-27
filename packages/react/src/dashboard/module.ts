@@ -1,17 +1,26 @@
-import {type AssetSourceView, type PanelView, type TileView} from '@sanity/sdk/dashboard'
+import {type View} from '@sanity/sdk/dashboard'
 import {type AssetSourceComponentProps} from '@sanity/types'
 import * as React from 'react'
 
 const ROOT_SLOT_KEY = Symbol.for('sanity.os.root')
 
+type HostProps = {
+  window: unknown
+  panel: {onClose: () => void}
+  tile: unknown
+  asset_source: AssetSourceComponentProps
+}
+
 /** The props the host passed to `render()`, per view type. */
-type ViewRoot =
-  | {viewType: 'panel'; props: {view: PanelView; onClose: () => void}}
-  | {viewType: 'tile'; props: {view: TileView}}
-  | {viewType: 'asset_source'; props: AssetSourceComponentProps & {view: AssetSourceView}}
+type ViewRoot = {
+  [Surface in View['surface']]: {
+    viewType: Surface
+    props: HostProps[Surface] & {view: Extract<View, {surface: Surface}>}
+  }
+}[View['surface']]
 
 /** The props the host passes to `render()` for a view type. */
-export type ViewRootProps<ViewType extends ViewRoot['viewType']> = Extract<
+export type ViewRootProps<ViewType extends View['surface'] = View['surface']> = Extract<
   ViewRoot,
   {viewType: ViewType}
 >['props']

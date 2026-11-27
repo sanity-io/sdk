@@ -11,6 +11,7 @@ const view = {
   application: viewApplication,
   id: 'notes-tile-inbox',
   metadata: {size: 'small'},
+  entry: 'https://notes--apps--organization-1.sanity.run',
   moduleId: 'views/inbox',
   name: 'inbox',
   title: 'Inbox',
@@ -31,6 +32,26 @@ describe('useView', () => {
     })
 
     expect(result.current).toBe(view)
+  })
+
+  it('returns the window view the host passed to render()', () => {
+    const windowView = {...view, metadata: null, surface: 'window'} as const
+
+    const {result} = renderHook(() => useView(), {
+      wrapper: ({children}: {children: ReactNode}) => (
+        <RootContext.Provider
+          value={{
+            signal: new AbortController().signal,
+            viewType: 'window',
+            props: {view: windowView},
+          }}
+        >
+          {children}
+        </RootContext.Provider>
+      ),
+    })
+
+    expect(result.current).toBe(windowView)
   })
 
   it('throws when the host passes no view', () => {

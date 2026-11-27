@@ -13,6 +13,7 @@ const signal = new AbortController().signal
 const base = {
   application: viewApplication,
   id: 'notes-inbox',
+  entry: 'https://notes--apps--organization-1.sanity.run',
   moduleId: 'views/inbox',
   name: 'inbox',
   title: 'Inbox',

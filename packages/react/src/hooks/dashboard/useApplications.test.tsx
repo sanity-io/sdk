@@ -224,14 +224,10 @@ describe('useApplications', () => {
         version: '1',
         moduleId: 'App',
         metadata: {dock: {group: 'applications', order: 1}},
-        module: {
-          entry: 'https://inbox--apps--organization-1.sanity.run',
-          moduleId: 'application-1/App',
-          version: '1',
-        },
+        entry: 'https://inbox--apps--organization-1.sanity.run',
       },
       expect.objectContaining({
-        module: expect.objectContaining({moduleId: 'application-1/views/notifications'}),
+        moduleId: 'views/notifications',
         name: 'notifications',
         surface: 'panel',
       }),
@@ -247,16 +243,16 @@ describe('useApplications', () => {
         version: '1',
         moduleId: 'services/sync',
         metadata: null,
-        module: {
-          entry: 'https://inbox--apps--organization-1.sanity.run',
-          moduleId: 'application-1/services/sync',
-          version: '1',
-        },
+        entry: 'https://inbox--apps--organization-1.sanity.run',
       },
     ])
     expect(nonFederated).toMatchObject({views: [], webWorkers: []})
-    expect(nonSingleton?.views[0]?.module.entry).toBe('https://canvas.sanity.studio')
-    expect(result.current.map(({isLocal}) => isLocal)).toEqual([false, false, false])
+    expect(nonSingleton?.views[0]?.entry).toBe('https://canvas.sanity.studio')
+    expect(result.current.map((entry) => 'isLocal' in entry && entry.isLocal)).toEqual([
+      false,
+      false,
+      false,
+    ])
   })
 
   it('marks dev-server applications local and loads their modules from the dev server', () => {
@@ -264,14 +260,16 @@ describe('useApplications', () => {
 
     const {result} = renderHook(() => useApplications())
 
-    expect(result.current.map(({id, isLocal}) => [id, isLocal])).toEqual([
+    expect(result.current.map((entry) => [entry.id, 'isLocal' in entry && entry.isLocal])).toEqual([
       ['application-1', false],
       ['application-5', true],
       ['installation-1', false],
     ])
+    // Installations are never served by a dev server.
+    expect(result.current[2]).not.toHaveProperty('isLocal')
     const local = result.current[1]
     expect(local).toMatchObject({type: 'coreApp', local: {host: 'localhost', port: 3333}})
-    expect(local?.views[0]?.module.entry).toBe('http://localhost:3333')
+    expect(local?.views[0]?.entry).toBe('http://localhost:3333')
   })
 
   it('shapes installations alongside applications in one consistent shape', () => {
@@ -303,16 +301,14 @@ describe('useApplications', () => {
       expect.objectContaining({
         name: 'remote',
         surface: 'window',
-        module: {
-          entry: 'https://remote--apps--organization-publisher.sanity.run',
-          moduleId: 'installation-1/App',
-          version: '1',
-        },
+        entry: 'https://remote--apps--organization-publisher.sanity.run',
+        moduleId: 'App',
+        version: '1',
       }),
       expect.objectContaining({
         name: 'remote-panel',
         surface: 'panel',
-        module: expect.objectContaining({moduleId: 'installation-1/views/panel'}),
+        moduleId: 'views/panel',
       }),
     ])
     expect(shaped?.webWorkers).toEqual([])
@@ -366,7 +362,7 @@ describe('useApplications', () => {
 
     const {result} = renderHook(() => useApplications())
 
-    expect(result.current[0]?.views[0]?.module.entry).toBe('https://apps.example.com')
+    expect(result.current[0]?.views[0]?.entry).toBe('https://apps.example.com')
   })
 
   it('exposes no views or web workers for an application without a resolvable origin', () => {
@@ -388,7 +384,7 @@ describe('useApplications', () => {
 
     const {result} = renderHook(() => useApplications())
 
-    expect(result.current[0]?.views[0]?.module.entry).toBe(
+    expect(result.current[0]?.views[0]?.entry).toBe(
       'https://marketing--apps--organization-1.sanity.run',
     )
   })
@@ -399,7 +395,7 @@ describe('useApplications', () => {
 
     const {result} = renderHook(() => useApplications())
 
-    expect(result.current.map(({views}) => views[0]?.module.entry)).toEqual([
+    expect(result.current.map(({views}) => views[0]?.entry)).toEqual([
       'https://inbox--apps--organization-1.run.sanity.work',
       'https://canvas.studio.sanity.work',
     ])

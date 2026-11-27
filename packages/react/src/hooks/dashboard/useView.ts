@@ -1,7 +1,6 @@
-import {type AssetSourceView, type PanelView, type TileView} from '@sanity/sdk/dashboard'
 import {useContext} from 'react'
 
-import {getDashboardRootContext} from '../../dashboard/module'
+import {getDashboardRootContext, type ViewRootProps} from '../../dashboard/module'
 
 /**
  * Returns the current view.
@@ -19,7 +18,7 @@ import {getDashboardRootContext} from '../../dashboard/module'
  * @beta
  * @category Dashboard
  */
-export function useView(): PanelView | TileView | AssetSourceView {
+export function useView(): ViewRootProps['view'] {
   const root = useContext(getDashboardRootContext())
 
   if (!root?.viewType || !root.props.view) {

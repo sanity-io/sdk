@@ -1,6 +1,7 @@
 import {expectTypeOf, test} from 'vitest'
 
 import {
+  type ApplicationConfig,
   type CapabilityRecord,
   type DashboardApplication,
   type DashboardTopics,
@@ -18,6 +19,7 @@ import {
   type MessageBusMeta,
   type MessageBusQueryOptions,
   type PayloadOf,
+  type RemoteModuleRef,
   type ReplyOf,
   type StateTopicDef,
   type TileView,
@@ -30,7 +32,6 @@ import {
   type useTile,
   type useView,
   type View,
-  type ViewApplication,
   type WebWorker,
   type WebWorkerProps,
 } from './dashboard'
@@ -82,7 +83,7 @@ test('dashboard entrypoint exposes the message bus public types', () => {
 })
 
 test('view hooks return views with their application, useApplications lists them without', () => {
-  expectTypeOf<ReturnType<typeof useView>>().toEqualTypeOf<Exclude<View, {surface: 'window'}>>()
+  expectTypeOf<ReturnType<typeof useView>>().toEqualTypeOf<View>()
   // Each hook returns the whole `View` member for its surface, not a narrower shape.
   expectTypeOf<ReturnType<typeof usePanel>['view']>().toEqualTypeOf<
     Extract<View, {surface: 'panel'}>
@@ -94,7 +95,6 @@ test('view hooks return views with their application, useApplications lists them
     Extract<View, {surface: 'asset_source'}>
   >()
   expectTypeOf<ReturnType<typeof useView>>().not.toHaveProperty('type')
-  expectTypeOf<ReturnType<typeof useView>['application']>().toEqualTypeOf<ViewApplication>()
 
   // Every interface type except `worker` is a view, with `app` as `window`.
   expectTypeOf<View['surface']>().toEqualTypeOf<'window' | 'panel' | 'tile' | 'asset_source'>()
@@ -106,6 +106,18 @@ test('view hooks return views with their application, useApplications lists them
   expectTypeOf<Extract<ListedView, {surface: 'tile'}>['metadata']>().toEqualTypeOf<
     TileView['metadata']
   >()
+
+  expectTypeOf<WebWorker['application']>().toEqualTypeOf<View['application']>()
+  expectTypeOf<View['application']>().not.toHaveProperty('views')
+  expectTypeOf<View['application']>().not.toHaveProperty('webWorkers')
+  // Each kind keeps its own fields, so `type` still narrows.
+  expectTypeOf<Extract<View['application'], {type: 'installation'}>>().toHaveProperty(
+    'installation',
+  )
+  // Views, web workers and application configs share the same flat module fields.
+  expectTypeOf<View>().toExtend<RemoteModuleRef>()
+  expectTypeOf<WebWorker>().toExtend<RemoteModuleRef>()
+  expectTypeOf<ApplicationConfig>().toExtend<RemoteModuleRef>()
 })
 
 test('WebWorkerProps describes the worker with its application', () => {

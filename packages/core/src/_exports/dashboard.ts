@@ -1,9 +1,4 @@
-export type {Dock} from '../applications/applications'
-export type {
-  DashboardApplication,
-  DashboardApplicationBase,
-  DashboardInstallation,
-} from '../dashboard/applications'
+export type {DashboardApplication, DashboardInstallation} from '../dashboard/applications'
 export type {
   ConnectMessageBusOptions,
   MessageBus,
@@ -55,7 +50,6 @@ export type {
   PanelView,
   TileView,
   View,
-  ViewApplication,
   WebWorker,
   WindowView,
 } from '../dashboard/views'
