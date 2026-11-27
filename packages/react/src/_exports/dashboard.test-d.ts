@@ -83,7 +83,7 @@ test('dashboard entrypoint exposes the message bus public types', () => {
 })
 
 test('listed views and web workers are the View and WebWorker the view hooks return', () => {
-  expectTypeOf<ReturnType<typeof useView>>().toEqualTypeOf<Exclude<View, {surface: 'window'}>>()
+  expectTypeOf<ReturnType<typeof useView>>().toEqualTypeOf<View>()
   // Each hook returns the whole `View` member for its surface, not a narrower shape.
   expectTypeOf<ReturnType<typeof usePanel>['view']>().toEqualTypeOf<
     Extract<View, {surface: 'panel'}>

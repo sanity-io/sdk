@@ -4,10 +4,9 @@ import * as React from 'react'
 
 const ROOT_SLOT_KEY = Symbol.for('sanity.os.root')
 
-type RootSurface = Exclude<View['surface'], 'window'>
-
 // A new surface fails to index this until its host props are declared.
 type HostProps = {
+  window: unknown
   panel: {onClose: () => void}
   tile: unknown
   asset_source: AssetSourceComponentProps
@@ -15,14 +14,14 @@ type HostProps = {
 
 /** The props the host passed to `render()`, per view type. */
 type ViewRoot = {
-  [Surface in RootSurface]: {
+  [Surface in View['surface']]: {
     viewType: Surface
     props: HostProps[Surface] & {view: Extract<View, {surface: Surface}>}
   }
-}[RootSurface]
+}[View['surface']]
 
 /** The props the host passes to `render()` for a view type. */
-export type ViewRootProps<ViewType extends RootSurface = RootSurface> = Extract<
+export type ViewRootProps<ViewType extends View['surface'] = View['surface']> = Extract<
   ViewRoot,
   {viewType: ViewType}
 >['props']

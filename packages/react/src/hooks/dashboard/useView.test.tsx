@@ -34,6 +34,26 @@ describe('useView', () => {
     expect(result.current).toBe(view)
   })
 
+  it('returns the window view the host passed to render()', () => {
+    const windowView = {...view, metadata: null, surface: 'window'} as const
+
+    const {result} = renderHook(() => useView(), {
+      wrapper: ({children}: {children: ReactNode}) => (
+        <RootContext.Provider
+          value={{
+            signal: new AbortController().signal,
+            viewType: 'window',
+            props: {view: windowView},
+          }}
+        >
+          {children}
+        </RootContext.Provider>
+      ),
+    })
+
+    expect(result.current).toBe(windowView)
+  })
+
   it('throws when the host passes no view', () => {
     expect(() =>
       renderHook(() => useView(), {
