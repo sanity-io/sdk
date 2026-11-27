@@ -59,14 +59,24 @@ function withResolvedProjectId(
   return {...options, projectId}
 }
 
+function normalizeUsersOptions(
+  options: GetUsersOptions | undefined,
+  projectId: string | undefined,
+): GetUsersOptions | undefined {
+  const resolved = withResolvedProjectId(options, projectId)
+  if (!resolved?.userIds) return resolved
+  return {...resolved, userIds: Array.from(new Set(resolved.userIds)).sort()}
+}
+
 /**
  *
  * @public
  *
- * Retrieves the users for a given resource (either a project or an organization).
+ * Retrieves users for a given resource (either a project or an organization), or resolves a
+ * specific set of user IDs when `userIds` is provided.
  *
  * @category Users
- * @param params - The resource type, project ID, and the limit of users to fetch
+ * @param options - Resource options (`resourceType`, `projectId`, `organizationId`, `batchSize`) or `userIds` to resolve specific users
  * @returns A list of users, how many users the resource has in total, a boolean indicating whether there are more users to fetch, and a function to load more users
  *
  * @example
@@ -91,19 +101,30 @@ function withResolvedProjectId(
  *   </div>
  * )
  * ```
+ *
+ * @example Resolve specific user IDs (e.g. document history contributors)
+ * ```
+ * const { data } = useUsers({
+ *   userIds: ['pUser1', 'gUser2'],
+ * })
+ * ```
  * @remarks
  * For project-scoped queries the `projectId` is resolved in order from:
  * 1. an explicit `projectId` option
  * 2. A legacy ProjectContext (e.g. a `<ResourceProvider projectId="…">` with no dataset), then
  * 3. The active resource (`ResourceProvider`/`SDKProvider`)
  * 4. `instance.config`.
+ *
+ * When `userIds` is provided, users are resolved in batches via the legacy `/users/:ids` endpoint
+ * (without `memberships`), and unknown, deleted, or inaccessible IDs are omitted rather than
+ * throwing an error.
  */
 export function useUsers(options?: GetUsersOptions): UsersResult {
   const instance = useSanityInstance()
   trackHookUsage(instance, 'useUsers')
   const resolvedProjectId = useResolvedProjectId(options)
   // A string, so options written inline don't count as another list on every render
-  const key = JSON.stringify(withResolvedProjectId(options, resolvedProjectId) ?? {})
+  const key = JSON.stringify(normalizeUsersOptions(options, resolvedProjectId) ?? {})
   // The users already shown stay on screen while another list loads
   const shownKey = useDeferredValue(key)
   const shown = useMemo<GetUsersOptions>(() => JSON.parse(shownKey), [shownKey])

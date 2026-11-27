@@ -47,6 +47,12 @@ export interface GetUsersOptions extends ProjectHandle {
   batchSize?: number
   organizationId?: string
   /**
+   * Specific user IDs to resolve (`p*` project users, `g*` global users, or `e*` external users
+   * when project-scoped). When provided, only those users are fetched instead of paginating the
+   * resource directory, and unknown, deleted, or inaccessible IDs are omitted rather than failing.
+   */
+  userIds?: string[]
+  /**
    * @deprecated Read one user with `useUser` or `resolveUser`. Removed in the next major.
    */
   userId?: string

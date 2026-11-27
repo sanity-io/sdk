@@ -35,6 +35,7 @@ import {type StoreState} from '../store/createStoreState'
 import {defineStore, type StoreContext} from '../store/defineStore'
 import {randomId} from '../utils/ids'
 import {setCleanupTimeout} from '../utils/setCleanupTimeout'
+import {toSanityUser} from './readUsersByIds'
 import {
   addSubscription,
   cancelRequest,
@@ -180,31 +181,11 @@ const listenForLoadMoreAndFetch = ({state, instance}: StoreContext<UsersStoreSta
                     tag: 'users.get',
                   }),
                 ).pipe(
-                  map((user) => {
-                    // We need to convert the user to the format we expect
-                    const convertedUser: SanityUser = {
-                      sanityUserId: user.sanityUserId,
-                      profile: {
-                        id: user.id,
-                        displayName: user.displayName,
-                        familyName: user.familyName ?? undefined,
-                        givenName: user.givenName ?? undefined,
-                        middleName: user.middleName ?? undefined,
-                        imageUrl: user.imageUrl ?? undefined,
-                        createdAt: user.createdAt,
-                        updatedAt: user.updatedAt,
-                        isCurrentUser: user.isCurrentUser,
-                        email: user.email,
-                        provider: user.provider,
-                      },
-                      memberships: [],
-                    }
-                    return {
-                      data: [convertedUser],
-                      totalCount: 1,
-                      nextCursor: null,
-                    }
-                  }),
+                  map((user) => ({
+                    data: [toSanityUser(user)],
+                    totalCount: 1,
+                    nextCursor: null,
+                  })),
                   retryRead(getClientAuthState(instance), setError),
                   tap((response) => state.set('setUsersData', setUsersData(group$.key, response))),
                 )
