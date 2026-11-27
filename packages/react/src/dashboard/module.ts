@@ -4,7 +4,6 @@ import * as React from 'react'
 
 const ROOT_SLOT_KEY = Symbol.for('sanity.os.root')
 
-// Window views render as applications, not into a view root.
 type RootSurface = Exclude<View['surface'], 'window'>
 
 // A new surface fails to index this until its host props are declared.
