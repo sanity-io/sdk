@@ -145,3 +145,15 @@ export function toDashboardApplications(
 ): DashboardApplication[] {
   return entries.map((entry) => ('type' in entry ? toApplication(entry) : toInstallation(entry)))
 }
+
+/**
+ * Every view of the dashboard's published applications and installations, each with its
+ * `application` attached: the views the view hooks receive from the host.
+ * @beta
+ * @category Dashboard
+ */
+export function toDashboardViews(entries: readonly DashboardTopicEntry[]): View[] {
+  return toDashboardApplications(entries).flatMap(({views, webWorkers: _, ...application}) =>
+    views.map((view) => ({...view, application})),
+  )
+}
