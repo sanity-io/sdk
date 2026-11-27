@@ -34,6 +34,11 @@ export {getWorkerClient, type WorkerConnection} from '../dashboard/messageBus/wo
 export {reportError} from '../errorReporting/errorReporter'
 export {markSdkError} from '../errorReporting/sdkErrorOrigin'
 export {getBusFavoriteState, resolveBusFavorite, setBusFavorite} from '../favorites/busFavorites'
+// only used for memoizing in React, not needed for actual functionality
+export {
+  getDocumentsHistoryOptionsKey,
+  parseDocumentsHistoryOptionsKey,
+} from '../history/historyOptions'
 export {PREVIEW_PROJECTION} from '../preview/previewConstants'
 export {transformProjectionToPreview} from '../preview/previewProjectionUtils'
 export {getQueryKey, parseQueryKey} from '../query/queryStore' // only used for memoizing in React, not needed for actual functionality

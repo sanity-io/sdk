@@ -66,6 +66,11 @@ export {type CreateDocumentOverrides, useCreateDocument} from '../hooks/document
 export {useDocument} from '../hooks/document/useDocument'
 export {useDocumentEvent} from '../hooks/document/useDocumentEvent'
 export {useDocumentPermissions} from '../hooks/document/useDocumentPermissions'
+export {
+  useDocumentsHistory,
+  type UseDocumentsHistoryOptions,
+  type UseDocumentsHistoryResult,
+} from '../hooks/document/useDocumentsHistory'
 export {useDocumentSyncStatus} from '../hooks/document/useDocumentSyncStatus'
 export {useEditDocument} from '../hooks/document/useEditDocument'
 export {

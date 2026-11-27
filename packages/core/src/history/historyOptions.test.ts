@@ -3,8 +3,10 @@ import {afterEach, describe, expect, it} from 'vitest'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {
   DEFAULT_HISTORY_LIMIT,
+  getDocumentsHistoryOptionsKey,
   getDocumentVariantType,
   MAX_HISTORY_DOCUMENTS,
+  parseDocumentsHistoryOptionsKey,
   resolveDocumentsHistoryRequest,
   resolveHistoryDocumentId,
 } from './historyOptions'
@@ -221,5 +223,33 @@ describe('resolveDocumentsHistoryRequest', () => {
     expect(() => resolveDocumentsHistoryRequest(instance!, {documents})).toThrow(
       new RegExp(`more than ${MAX_HISTORY_DOCUMENTS}`),
     )
+  })
+})
+
+describe('getDocumentsHistoryOptionsKey & parseDocumentsHistoryOptionsKey', () => {
+  it('round-trips options and produces order-independent canonical keys', () => {
+    const docA = {
+      documentId: 'doc-a',
+      documentType: 'article',
+      projectId: 'proj-1',
+      dataset: 'production',
+      perspective: 'published' as const,
+    }
+    const docB = {
+      documentId: 'doc-b',
+      documentType: 'article',
+      projectId: 'proj-1',
+      dataset: 'production',
+      perspective: {releaseName: 'r1'},
+    }
+
+    const key1 = getDocumentsHistoryOptionsKey({documents: [docA, docB, docA], limit: 25})
+    const key2 = getDocumentsHistoryOptionsKey({documents: [docB, docA], limit: 25})
+
+    expect(key1).toBe(key2)
+    expect(parseDocumentsHistoryOptionsKey(key1)).toEqual({
+      documents: [docA, docB],
+      limit: 25,
+    })
   })
 })

@@ -132,3 +132,45 @@ export function resolveDocumentsHistoryRequest(
     limit: options.limit ?? DEFAULT_HISTORY_LIMIT,
   }
 }
+
+function serializeDocumentHandle(handle: DocumentHandle): string {
+  return JSON.stringify({
+    documentId: handle.documentId,
+    documentType: handle.documentType,
+    projectId: handle.projectId,
+    dataset: handle.dataset,
+    resource: handle.resource,
+    perspective: handle.perspective,
+    liveEdit: handle.liveEdit,
+  } satisfies DocumentHandle & Record<keyof DocumentHandle, unknown>)
+}
+
+/**
+ * Serializes {@link DocumentsHistoryOptions} into a deterministic string key so React hooks can
+ * memoize and defer option changes without bundling `historyStore` into unrelated entry points.
+ *
+ * Handles are canonicalized (deduplicated and sorted) so reordering the `documents` array or
+ * constructing new object literals with identical values produces the same key.
+ *
+ * @internal
+ */
+export function getDocumentsHistoryOptionsKey(options: DocumentsHistoryOptions): string {
+  const canonicalHandles = Array.from(new Set(options.documents.map(serializeDocumentHandle)))
+    .sort()
+    .map((serialized) => JSON.parse(serialized) as DocumentHandle)
+
+  return JSON.stringify({
+    documents: canonicalHandles,
+    limit: options.limit,
+  } satisfies DocumentsHistoryOptions & Record<keyof DocumentsHistoryOptions, unknown>)
+}
+
+/**
+ * Reconstructs {@link DocumentsHistoryOptions} from a key produced by
+ * {@link getDocumentsHistoryOptionsKey}.
+ *
+ * @internal
+ */
+export function parseDocumentsHistoryOptionsKey(key: string): DocumentsHistoryOptions {
+  return JSON.parse(key) as DocumentsHistoryOptions
+}
