@@ -223,11 +223,11 @@ describe('useApplications', () => {
         surface: 'window',
         name: 'inbox',
         title: 'Inbox',
-        metadata: {dock: {group: 'applications', order: 1}},
-        application: federatedEntry,
-        entry: 'https://inbox--apps--organization-1.sanity.run',
-        moduleId: 'App',
         version: '1',
+        moduleId: 'App',
+        metadata: {dock: {group: 'applications', order: 1}},
+        entry: 'https://inbox--apps--organization-1.sanity.run',
+        application: federatedEntry,
       },
       expect.objectContaining({
         moduleId: 'views/notifications',
@@ -243,11 +243,11 @@ describe('useApplications', () => {
         type: 'worker',
         name: 'sync',
         title: 'Sync',
-        metadata: null,
-        application: federatedEntry,
-        entry: 'https://inbox--apps--organization-1.sanity.run',
-        moduleId: 'services/sync',
         version: '1',
+        moduleId: 'services/sync',
+        metadata: null,
+        entry: 'https://inbox--apps--organization-1.sanity.run',
+        application: federatedEntry,
       },
     ])
     expect(nonFederated).toMatchObject({views: [], webWorkers: []})
@@ -299,10 +299,10 @@ describe('useApplications', () => {
       expect.objectContaining({
         name: 'remote',
         surface: 'window',
-        application: expect.objectContaining({id: 'installation-1', installation}),
         entry: 'https://remote--apps--organization-publisher.sanity.run',
         moduleId: 'App',
         version: '1',
+        application: expect.objectContaining({id: 'installation-1', installation}),
       }),
       expect.objectContaining({
         name: 'remote-panel',
