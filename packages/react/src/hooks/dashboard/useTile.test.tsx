@@ -13,11 +13,9 @@ const base = {
   id: 'notes-inbox',
   name: 'inbox',
   title: 'Inbox',
-  module: {
-    entry: 'https://notes--apps--organization-1.sanity.run',
-    moduleId: 'application-1/views/inbox',
-    version: '2',
-  },
+  entry: 'https://notes--apps--organization-1.sanity.run',
+  moduleId: 'views/inbox',
+  version: '2',
 }
 
 function renderInView(value: ComponentProps<typeof RootContext.Provider>['value']) {

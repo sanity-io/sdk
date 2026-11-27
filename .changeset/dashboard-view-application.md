@@ -3,4 +3,4 @@
 '@sanity/sdk-react': minor
 ---
 
-Dashboard views and web workers carry their application and a `module` reference wherever they are returned, and `useApplicationConfig` returns its config's `module`.
+Dashboard views and web workers carry their `application` and a flat `entry` wherever they are returned. `ViewApplication` and `view.module` are removed.

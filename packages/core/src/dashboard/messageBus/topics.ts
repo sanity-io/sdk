@@ -34,10 +34,9 @@ export type ApplicationConfigAppType = 'media-library' | (string & {})
  * @category Types
  * @category Message Bus
  */
-export interface ApplicationConfig {
+export interface ApplicationConfig extends RemoteModuleRef {
   readonly appId?: Application['id']
   readonly appType: ApplicationConfigAppType
-  readonly module: RemoteModuleRef
 }
 
 /**
@@ -252,9 +251,7 @@ export interface DashboardTopics {
   /** The capabilities the host provides. A missing key means the host does not provide it. */
   'applications.capabilities': StateTopicDef<CapabilityRecord>
   /** The available application configuration modules. */
-  'applications.config': StateTopicDef<
-    (Omit<ApplicationConfig, 'module'> & RemoteModuleRef)[] | null
-  >
+  'applications.config': StateTopicDef<ApplicationConfig[] | null>
   /** The foreground application's context, or `null` when it has published none. */
   'applications.context': StateTopicDef<
     (ApplicationContext & {readonly appId: Application['id']}) | null

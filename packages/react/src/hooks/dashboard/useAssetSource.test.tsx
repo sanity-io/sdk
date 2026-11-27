@@ -13,11 +13,9 @@ const base = {
   id: 'notes-library',
   name: 'library',
   title: 'Library',
-  module: {
-    entry: 'https://notes--apps--organization-1.sanity.run',
-    moduleId: 'application-1/views/library',
-    version: '2',
-  },
+  entry: 'https://notes--apps--organization-1.sanity.run',
+  moduleId: 'views/library',
+  version: '2',
 }
 
 function renderInView(value: ComponentProps<typeof RootContext.Provider>['value']) {

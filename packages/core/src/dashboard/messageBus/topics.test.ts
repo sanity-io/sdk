@@ -17,7 +17,6 @@ import {
   type FavoriteDocument,
   type LocalApplication,
   type PayloadOf,
-  type RemoteModuleRef,
   type ReplyOf,
   type StateTopic,
   type TopicName,
@@ -88,9 +87,7 @@ describe('dashboard topic types', () => {
       Application['id'] | null
     >()
     expectTypeOf<ValueOf<'applications.capabilities'>>().toEqualTypeOf<CapabilityRecord>()
-    expectTypeOf<ValueOf<'applications.config'>>().toEqualTypeOf<
-      (Omit<ApplicationConfig, 'module'> & RemoteModuleRef)[] | null
-    >()
+    expectTypeOf<ValueOf<'applications.config'>>().toEqualTypeOf<ApplicationConfig[] | null>()
     expectTypeOf<ValueOf<'applications.list'>>().toEqualTypeOf<TopicResult<
       (Application<ApplicationInclude> | LocalApplication | Installation<InstallationInclude>)[]
     > | null>()

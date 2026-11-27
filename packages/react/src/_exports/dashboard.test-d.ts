@@ -1,9 +1,9 @@
 import {expectTypeOf, test} from 'vitest'
 
 import {
+  type ApplicationConfig,
   type CapabilityRecord,
   type DashboardApplication,
-  type DashboardApplicationEntry,
   type DashboardTopics,
   type EventTopic,
   type EventTopicDef,
@@ -103,14 +103,17 @@ test('listed views and web workers are the View and WebWorker the view hooks ret
   expectTypeOf<DashboardApplication['views'][number]>().toEqualTypeOf<View>()
   expectTypeOf<DashboardApplication['webWorkers'][number]>().toEqualTypeOf<WebWorker>()
 
-  expectTypeOf<View['application']>().toEqualTypeOf<DashboardApplicationEntry>()
-  expectTypeOf<WebWorker['application']>().toEqualTypeOf<DashboardApplicationEntry>()
-  expectTypeOf<View['module']>().toEqualTypeOf<RemoteModuleRef>()
-  expectTypeOf<WebWorker['module']>().toEqualTypeOf<RemoteModuleRef>()
-  expectTypeOf<View>().not.toHaveProperty('moduleId')
-  expectTypeOf<WebWorker>().not.toHaveProperty('moduleId')
-  expectTypeOf<DashboardApplicationEntry>().not.toHaveProperty('views')
-  expectTypeOf<DashboardApplicationEntry>().not.toHaveProperty('webWorkers')
+  expectTypeOf<WebWorker['application']>().toEqualTypeOf<View['application']>()
+  // Each kind keeps its own fields, so `type` still narrows.
+  expectTypeOf<Extract<View['application'], {type: 'installation'}>>().toHaveProperty(
+    'installation',
+  )
+  // Views, web workers and application configs share the same flat module fields.
+  expectTypeOf<View>().toExtend<RemoteModuleRef>()
+  expectTypeOf<WebWorker>().toExtend<RemoteModuleRef>()
+  expectTypeOf<ApplicationConfig>().toExtend<RemoteModuleRef>()
+  expectTypeOf<View['application']>().not.toHaveProperty('views')
+  expectTypeOf<View['application']>().not.toHaveProperty('webWorkers')
   expectTypeOf<Extract<View, {surface: 'tile'}>['metadata']>().toEqualTypeOf<TileView['metadata']>()
 })
 

@@ -2,7 +2,6 @@ export type {Dock} from '../applications/applications'
 export type {
   DashboardApplication,
   DashboardApplicationBase,
-  DashboardApplicationEntry,
   DashboardInstallation,
 } from '../dashboard/applications'
 export type {

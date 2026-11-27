@@ -1,5 +1,5 @@
 import {type ApplicationInterface} from '../applications/applications'
-import {type DashboardApplicationEntry} from './applications'
+import {type DashboardApplication} from './applications'
 import {type RemoteModuleRef} from './messageBus/topics'
 
 type InterfaceOf<Type extends ApplicationInterface['type']> = Extract<
@@ -7,11 +7,16 @@ type InterfaceOf<Type extends ApplicationInterface['type']> = Extract<
   {type: Type}
 >
 
-// `module` replaces `moduleId` and `version`, which are relative to the application.
-type Loadable<Interface> = Readonly<Omit<Interface, 'moduleId' | 'version'>> & {
-  readonly module: RemoteModuleRef
-  readonly application: DashboardApplicationEntry
-}
+// Distributes over the union so each kind keeps its own fields.
+type WithoutInterfaces<Application> = Application extends unknown
+  ? Omit<Application, 'views' | 'webWorkers'>
+  : never
+
+type Loadable<Interface> = Readonly<Interface> &
+  RemoteModuleRef & {
+    /** The application without its views and web workers. */
+    readonly application: WithoutInterfaces<DashboardApplication>
+  }
 
 /**
  * A view exposed by an application or installation: an interface record with its `type` as

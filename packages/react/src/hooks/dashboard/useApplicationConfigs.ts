@@ -1,5 +1,4 @@
 import {type ApplicationConfig} from '@sanity/sdk/dashboard'
-import {useMemo} from 'react'
 
 import {useTopic} from './useTopic'
 
@@ -16,7 +15,7 @@ const NO_CONFIGS: readonly ApplicationConfig[] = Object.freeze([])
  * ```tsx
  * function Applications() {
  *   const configs = useApplicationConfigs()
- *   return configs.map((config) => <div key={config.module.moduleId}>{config.appType}</div>)
+ *   return configs.map((config) => <div key={config.moduleId}>{config.appType}</div>)
  * }
  * ```
  *
@@ -24,14 +23,5 @@ const NO_CONFIGS: readonly ApplicationConfig[] = Object.freeze([])
  * @category Dashboard
  */
 export function useApplicationConfigs(): readonly ApplicationConfig[] {
-  const configs = useTopic('applications.config')
-
-  return useMemo(
-    () =>
-      configs?.map(({entry, moduleId, version, ...config}) => ({
-        ...config,
-        module: {entry, moduleId, version},
-      })) ?? NO_CONFIGS,
-    [configs],
-  )
+  return useTopic('applications.config') ?? NO_CONFIGS
 }

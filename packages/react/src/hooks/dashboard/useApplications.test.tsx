@@ -225,14 +225,12 @@ describe('useApplications', () => {
         title: 'Inbox',
         metadata: {dock: {group: 'applications', order: 1}},
         application: federatedEntry,
-        module: {
-          entry: 'https://inbox--apps--organization-1.sanity.run',
-          moduleId: 'application-1/App',
-          version: '1',
-        },
+        entry: 'https://inbox--apps--organization-1.sanity.run',
+        moduleId: 'App',
+        version: '1',
       },
       expect.objectContaining({
-        module: expect.objectContaining({moduleId: 'application-1/views/notifications'}),
+        moduleId: 'views/notifications',
         name: 'notifications',
         surface: 'panel',
       }),
@@ -247,15 +245,13 @@ describe('useApplications', () => {
         title: 'Sync',
         metadata: null,
         application: federatedEntry,
-        module: {
-          entry: 'https://inbox--apps--organization-1.sanity.run',
-          moduleId: 'application-1/services/sync',
-          version: '1',
-        },
+        entry: 'https://inbox--apps--organization-1.sanity.run',
+        moduleId: 'services/sync',
+        version: '1',
       },
     ])
     expect(nonFederated).toMatchObject({views: [], webWorkers: []})
-    expect(nonSingleton?.views[0]?.module.entry).toBe('https://canvas.sanity.studio')
+    expect(nonSingleton?.views[0]?.entry).toBe('https://canvas.sanity.studio')
     expect(result.current.map(({isLocal}) => isLocal)).toEqual([false, false, false])
   })
 
@@ -271,7 +267,7 @@ describe('useApplications', () => {
     ])
     const local = result.current[1]
     expect(local).toMatchObject({type: 'coreApp', local: {host: 'localhost', port: 3333}})
-    expect(local?.views[0]?.module.entry).toBe('http://localhost:3333')
+    expect(local?.views[0]?.entry).toBe('http://localhost:3333')
   })
 
   it('shapes installations alongside applications in one consistent shape', () => {
@@ -304,16 +300,14 @@ describe('useApplications', () => {
         name: 'remote',
         surface: 'window',
         application: expect.objectContaining({id: 'installation-1', installation}),
-        module: {
-          entry: 'https://remote--apps--organization-publisher.sanity.run',
-          moduleId: 'installation-1/App',
-          version: '1',
-        },
+        entry: 'https://remote--apps--organization-publisher.sanity.run',
+        moduleId: 'App',
+        version: '1',
       }),
       expect.objectContaining({
         name: 'remote-panel',
         surface: 'panel',
-        module: expect.objectContaining({moduleId: 'installation-1/views/panel'}),
+        moduleId: 'views/panel',
       }),
     ])
     expect(shaped?.webWorkers).toEqual([])
@@ -367,7 +361,7 @@ describe('useApplications', () => {
 
     const {result} = renderHook(() => useApplications())
 
-    expect(result.current[0]?.views[0]?.module.entry).toBe('https://apps.example.com')
+    expect(result.current[0]?.views[0]?.entry).toBe('https://apps.example.com')
   })
 
   it('exposes no views or web workers for an application without a resolvable origin', () => {
@@ -389,7 +383,7 @@ describe('useApplications', () => {
 
     const {result} = renderHook(() => useApplications())
 
-    expect(result.current[0]?.views[0]?.module.entry).toBe(
+    expect(result.current[0]?.views[0]?.entry).toBe(
       'https://marketing--apps--organization-1.sanity.run',
     )
   })
@@ -400,7 +394,7 @@ describe('useApplications', () => {
 
     const {result} = renderHook(() => useApplications())
 
-    expect(result.current.map(({views}) => views[0]?.module.entry)).toEqual([
+    expect(result.current.map(({views}) => views[0]?.entry)).toEqual([
       'https://inbox--apps--organization-1.run.sanity.work',
       'https://canvas.studio.sanity.work',
     ])

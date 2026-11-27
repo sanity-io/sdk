@@ -11,32 +11,22 @@ const MESSAGE_BUS_KEY = Symbol.for('sanity.os.bus')
 let host: MessageBusHost
 
 // The host writes state to each connection, so publish by emitting to every connection's client.
-// The topic carries each module ref flat on its config.
 const emitConfigs = (value: ApplicationConfig[] | null) =>
-  host.connections.subscribe((client) =>
-    client.emit(
-      'applications.config',
-      value?.map(({module, ...config}) => ({...config, ...module})) ?? null,
-    ),
-  )
+  host.connections.subscribe((client) => client.emit('applications.config', value))
 
 const typeConfig: ApplicationConfig = {
   appType: 'media-library',
-  module: {
-    entry: 'https://media-library-config.sanity.run',
-    moduleId: 'configs/installation_config',
-    version: '1',
-  },
+  entry: 'https://media-library-config.sanity.run',
+  moduleId: 'configs/installation_config',
+  version: '1',
 }
 
 const appConfig: ApplicationConfig = {
   appId: 'application-1',
   appType: 'media-library',
-  module: {
-    entry: 'https://application-config.sanity.run',
-    moduleId: 'configs/installation_config',
-    version: '2',
-  },
+  entry: 'https://application-config.sanity.run',
+  moduleId: 'configs/installation_config',
+  version: '2',
 }
 
 describe('useApplicationConfig', () => {
@@ -63,10 +53,10 @@ describe('useApplicationConfig', () => {
     })
 
     expectTypeOf(result.current).toEqualTypeOf<ApplicationConfig | null>()
-    expect(result.current).toEqual(typeConfig)
+    expect(result.current).toBe(typeConfig)
 
     rerender({selector: {appId: 'application-1'}})
-    expect(result.current).toEqual(appConfig)
+    expect(result.current).toBe(appConfig)
   })
 
   it('selects the type-level config for an appType query regardless of emit order', () => {
@@ -75,7 +65,7 @@ describe('useApplicationConfig', () => {
 
     const {result} = renderHook(() => useApplicationConfig({appType: 'media-library'}))
 
-    expect(result.current).toEqual(typeConfig)
+    expect(result.current).toBe(typeConfig)
   })
 
   it('returns null when no config matches the selector', () => {
@@ -89,7 +79,7 @@ describe('useApplicationConfig', () => {
   it('suspends until the dashboard publishes its configs', async () => {
     function MediaLibrary() {
       const config = useApplicationConfig({appType: 'media-library'})
-      return <span>{config?.module.moduleId ?? 'none'}</span>
+      return <span>{config?.moduleId ?? 'none'}</span>
     }
     render(
       <Suspense fallback="Loading">
@@ -111,6 +101,6 @@ describe('useApplicationConfig', () => {
     expect(result.current).toBeNull()
 
     act(() => emitConfigs([typeConfig, appConfig]))
-    expect(result.current).toEqual(appConfig)
+    expect(result.current).toBe(appConfig)
   })
 })

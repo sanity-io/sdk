@@ -1,7 +1,7 @@
 import {getApplicationOrigin} from '../applications/applicationOrigin'
 import {type ApplicationBase, type ApplicationInterface} from '../applications/applications'
 import {type Installation, type InstallationInclude} from '../installations/installations'
-import {type RemoteModuleRef, type ValueOf} from './messageBus/topics'
+import {type ValueOf} from './messageBus/topics'
 import {type View, type WebWorker} from './views'
 
 type DashboardTopicEntry = Extract<
@@ -38,16 +38,6 @@ export type DashboardInstallation = Omit<DashboardApplicationBase, 'type'> & {
 }
 
 /**
- * A {@link DashboardApplication} without its views and web workers: the application each view and
- * web worker carries.
- * @beta
- * @category Types
- * @category Dashboard
- */
-export type DashboardApplicationEntry = (DashboardTopicApplication | DashboardInstallation) &
-  Pick<DashboardApplicationBase, 'isLocal'>
-
-/**
  * A dashboard entry — an application or an installation — in one consistent shape, with its
  * loadable views and web workers. `type` distinguishes the kinds and `isLocal` marks dev-server
  * applications; render a list without branching.
@@ -55,10 +45,11 @@ export type DashboardApplicationEntry = (DashboardTopicApplication | DashboardIn
  * @category Types
  * @category Dashboard
  */
-export type DashboardApplication = DashboardApplicationEntry & {
-  readonly views: View[]
-  readonly webWorkers: WebWorker[]
-}
+export type DashboardApplication = (DashboardTopicApplication | DashboardInstallation) &
+  Pick<DashboardApplicationBase, 'isLocal'> & {
+    readonly views: View[]
+    readonly webWorkers: WebWorker[]
+  }
 
 // Only a federated deployment (one with a module federation manifest) exposes loadable modules.
 // A dev server is always federated, whether or not the workbench synthesised a manifest for it.
@@ -70,7 +61,7 @@ const loadableInterfaces = (
 
 // Turns an interface list into views and web workers loaded from `application`'s origin.
 const loadModules = (
-  application: DashboardApplicationEntry,
+  application: View['application'],
   interfaces: readonly ApplicationInterface[],
 ): DashboardApplication => {
   const views: View[] = []
@@ -80,32 +71,30 @@ const loadModules = (
 
   if (entry === null) return {...application, views, webWorkers}
 
-  for (const {moduleId, version, ...extension} of interfaces) {
-    const module: RemoteModuleRef = {entry, moduleId: `${application.id}/${moduleId}`, version}
-
+  for (const extension of interfaces) {
     switch (extension.type) {
       case 'worker': {
-        webWorkers.push({...extension, module, application})
+        webWorkers.push({...extension, entry, application})
         break
       }
       case 'app': {
         const {type: _type, ...view} = extension
-        views.push({...view, surface: 'window', module, application})
+        views.push({...view, surface: 'window', entry, application})
         break
       }
       case 'panel': {
         const {type, ...view} = extension
-        views.push({...view, surface: type, module, application})
+        views.push({...view, surface: type, entry, application})
         break
       }
       case 'tile': {
         const {type, ...view} = extension
-        views.push({...view, surface: type, module, application})
+        views.push({...view, surface: type, entry, application})
         break
       }
       case 'asset_source': {
         const {type, ...view} = extension
-        views.push({...view, surface: type, module, application})
+        views.push({...view, surface: type, entry, application})
         break
       }
     }

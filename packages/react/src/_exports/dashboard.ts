@@ -67,7 +67,6 @@ export type {
   ConnectMessageBusOptions,
   DashboardApplication,
   DashboardApplicationBase,
-  DashboardApplicationEntry,
   DashboardInstallation,
   DashboardTopics,
   Dock,

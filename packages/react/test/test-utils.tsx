@@ -1,4 +1,4 @@
-import {type DashboardApplicationEntry} from '@sanity/sdk/dashboard'
+import {type View} from '@sanity/sdk/dashboard'
 import {
   render,
   renderHook,
@@ -33,7 +33,7 @@ export const viewApplication = {
   createdAt: '2026-01-01T00:00:00Z',
   updatedAt: '2026-01-01T00:00:00Z',
   isLocal: false,
-} satisfies DashboardApplicationEntry
+} satisfies View['application']
 
 type WrapperComponent = React.ComponentType<{children: React.ReactNode}>
 

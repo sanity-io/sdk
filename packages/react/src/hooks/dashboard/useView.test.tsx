@@ -14,11 +14,9 @@ const view = {
   name: 'inbox',
   title: 'Inbox',
   surface: 'tile',
-  module: {
-    entry: 'https://notes--apps--organization-1.sanity.run',
-    moduleId: 'application-1/views/inbox',
-    version: '2',
-  },
+  entry: 'https://notes--apps--organization-1.sanity.run',
+  moduleId: 'views/inbox',
+  version: '2',
 } as const
 
 describe('useView', () => {
