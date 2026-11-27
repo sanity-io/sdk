@@ -13,27 +13,15 @@ type DashboardTopicApplication = Extract<DashboardTopicEntry, {type: unknown}>
 type DashboardTopicInstallation = Exclude<DashboardTopicEntry, {type: unknown}>
 
 /**
- * The shared identity fields of each {@link DashboardApplication}, and the input to module
- * loading. Widens {@link ApplicationBase} so `type` also covers installations.
- * @beta
- * @category Types
- * @category Dashboard
- */
-export type DashboardApplicationBase = Omit<ApplicationBase, 'type'> & {
-  readonly type: ApplicationBase['type'] | 'installation'
-  /** Served by a CLI dev server rather than a deployment. */
-  readonly isLocal: boolean
-}
-
-/**
  * An installation shaped into the shared application base, with its raw record kept under
  * `installation` for consumers that need the full record.
  * @beta
  * @category Types
  * @category Dashboard
  */
-export type DashboardInstallation = Omit<DashboardApplicationBase, 'type'> & {
+export type DashboardInstallation = Omit<ApplicationBase, 'type'> & {
   readonly type: 'installation'
+  readonly isLocal: false
   readonly installation: Installation<InstallationInclude>
 }
 
@@ -45,11 +33,16 @@ export type DashboardInstallation = Omit<DashboardApplicationBase, 'type'> & {
  * @category Types
  * @category Dashboard
  */
-export type DashboardApplication = (DashboardTopicApplication | DashboardInstallation) &
-  Pick<DashboardApplicationBase, 'isLocal'> & {
-    readonly views: View[]
-    readonly webWorkers: WebWorker[]
-  }
+export type DashboardApplication = (
+  | (DashboardTopicApplication & {
+      /** Served by a CLI dev server rather than a deployment. */
+      readonly isLocal: boolean
+    })
+  | DashboardInstallation
+) & {
+  readonly views: View[]
+  readonly webWorkers: WebWorker[]
+}
 
 // Only a federated deployment (one with a module federation manifest) exposes loadable modules.
 // A dev server is always federated, whether or not the workbench synthesised a manifest for it.
@@ -117,7 +110,7 @@ const toInstallation = (installation: DashboardTopicInstallation): DashboardAppl
   // `getApplicationOrigin`'s singleton branch (`https://<slug>--apps--<publisherOrgId>.sanity.run`).
   // The installing org stays on the raw record. The workbench always serves installations
   // federated, so their interfaces are never gated.
-  const base: DashboardApplicationBase = {
+  const shaped: DashboardInstallation = {
     id: installation.id,
     type: 'installation',
     isLocal: false,
@@ -132,9 +125,10 @@ const toInstallation = (installation: DashboardTopicInstallation): DashboardAppl
     organizationId: application.organizationId,
     createdAt: installation.createdAt,
     updatedAt: installation.updatedAt,
+    installation,
   }
 
-  return loadModules({...base, type: 'installation', installation}, installation.interfaces ?? [])
+  return loadModules(shaped, installation.interfaces ?? [])
 }
 
 /**
