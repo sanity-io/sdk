@@ -11,11 +11,11 @@ const view = {
   application: viewApplication,
   id: 'notes-tile-inbox',
   metadata: {size: 'small'},
+  entry: 'https://notes--apps--organization-1.sanity.run',
+  moduleId: 'views/inbox',
   name: 'inbox',
   title: 'Inbox',
   surface: 'tile',
-  entry: 'https://notes--apps--organization-1.sanity.run',
-  moduleId: 'views/inbox',
   version: '2',
 } as const
 

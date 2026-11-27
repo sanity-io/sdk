@@ -99,11 +99,17 @@ test('listed views and web workers are the View and WebWorker the view hooks ret
   // Every interface type except `worker` is a view, with `app` as `window`.
   expectTypeOf<View['surface']>().toEqualTypeOf<'window' | 'panel' | 'tile' | 'asset_source'>()
 
-  // A listed view is the same `View` a view hook returns.
-  expectTypeOf<DashboardApplication['views'][number]>().toEqualTypeOf<View>()
+  type ListedView = DashboardApplication['views'][number]
+  expectTypeOf<ListedView>().toEqualTypeOf<View>()
   expectTypeOf<DashboardApplication['webWorkers'][number]>().toEqualTypeOf<WebWorker>()
+  // `surface` still narrows `metadata` on a listed view.
+  expectTypeOf<Extract<ListedView, {surface: 'tile'}>['metadata']>().toEqualTypeOf<
+    TileView['metadata']
+  >()
 
   expectTypeOf<WebWorker['application']>().toEqualTypeOf<View['application']>()
+  expectTypeOf<View['application']>().not.toHaveProperty('views')
+  expectTypeOf<View['application']>().not.toHaveProperty('webWorkers')
   // Each kind keeps its own fields, so `type` still narrows.
   expectTypeOf<Extract<View['application'], {type: 'installation'}>>().toHaveProperty(
     'installation',
@@ -112,9 +118,6 @@ test('listed views and web workers are the View and WebWorker the view hooks ret
   expectTypeOf<View>().toExtend<RemoteModuleRef>()
   expectTypeOf<WebWorker>().toExtend<RemoteModuleRef>()
   expectTypeOf<ApplicationConfig>().toExtend<RemoteModuleRef>()
-  expectTypeOf<View['application']>().not.toHaveProperty('views')
-  expectTypeOf<View['application']>().not.toHaveProperty('webWorkers')
-  expectTypeOf<Extract<View, {surface: 'tile'}>['metadata']>().toEqualTypeOf<TileView['metadata']>()
 })
 
 test('WebWorkerProps describes the worker with its application', () => {

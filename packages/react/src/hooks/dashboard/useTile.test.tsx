@@ -11,10 +11,10 @@ const signal = new AbortController().signal
 const base = {
   application: viewApplication,
   id: 'notes-inbox',
-  name: 'inbox',
-  title: 'Inbox',
   entry: 'https://notes--apps--organization-1.sanity.run',
   moduleId: 'views/inbox',
+  name: 'inbox',
+  title: 'Inbox',
   version: '2',
 }
 

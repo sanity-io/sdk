@@ -11,10 +11,10 @@ const signal = new AbortController().signal
 const base = {
   application: viewApplication,
   id: 'notes-library',
-  name: 'library',
-  title: 'Library',
   entry: 'https://notes--apps--organization-1.sanity.run',
   moduleId: 'views/library',
+  name: 'library',
+  title: 'Library',
   version: '2',
 }
 
