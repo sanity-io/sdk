@@ -38,6 +38,16 @@ export type DashboardInstallation = Omit<DashboardApplicationBase, 'type'> & {
 }
 
 /**
+ * A {@link DashboardApplication} without its views and web workers: the application each view and
+ * web worker carries.
+ * @beta
+ * @category Types
+ * @category Dashboard
+ */
+export type DashboardApplicationEntry = (DashboardTopicApplication | DashboardInstallation) &
+  Pick<DashboardApplicationBase, 'isLocal'>
+
+/**
  * A dashboard entry — an application or an installation — in one consistent shape, with its
  * loadable views and web workers. `type` distinguishes the kinds and `isLocal` marks dev-server
  * applications; render a list without branching.
@@ -45,13 +55,10 @@ export type DashboardInstallation = Omit<DashboardApplicationBase, 'type'> & {
  * @category Types
  * @category Dashboard
  */
-export type DashboardApplication = (DashboardTopicApplication | DashboardInstallation) &
-  Pick<DashboardApplicationBase, 'isLocal'> & {
-    readonly views: (View<{includeApplication: false}> & {readonly module: RemoteModuleRef})[]
-    readonly webWorkers: (WebWorker<{includeApplication: false}> & {
-      readonly module: RemoteModuleRef
-    })[]
-  }
+export type DashboardApplication = DashboardApplicationEntry & {
+  readonly views: View[]
+  readonly webWorkers: WebWorker[]
+}
 
 // Only a federated deployment (one with a module federation manifest) exposes loadable modules.
 // A dev server is always federated, whether or not the workbench synthesised a manifest for it.
@@ -61,64 +68,56 @@ const loadableInterfaces = (
 ): readonly ApplicationInterface[] =>
   isLocal || config?.mfManifest !== undefined ? (activeDeployment?.interfaces ?? []) : []
 
-// Turns an interface list into views and web workers loaded from `base`'s origin.
+// Turns an interface list into views and web workers loaded from `application`'s origin.
 const loadModules = (
-  base: DashboardApplicationBase,
+  application: DashboardApplicationEntry,
   interfaces: readonly ApplicationInterface[],
-): Pick<DashboardApplication, 'views' | 'webWorkers'> => {
+): DashboardApplication => {
+  const views: View[] = []
+  const webWorkers: WebWorker[] = []
   // Nothing to load without interfaces or an origin to load them from.
-  const entry = interfaces.length === 0 ? null : getApplicationOrigin(base)
-  if (entry === null) return {views: [], webWorkers: []}
+  const entry = interfaces.length === 0 ? null : getApplicationOrigin(application)
 
-  const views: DashboardApplication['views'] = []
-  const webWorkers: DashboardApplication['webWorkers'] = []
+  if (entry === null) return {...application, views, webWorkers}
 
-  for (const extension of interfaces) {
-    const module: RemoteModuleRef = {
-      entry,
-      moduleId: `${base.id}/${extension.moduleId}`,
-      version: extension.version,
-    }
+  for (const {moduleId, version, ...extension} of interfaces) {
+    const module: RemoteModuleRef = {entry, moduleId: `${application.id}/${moduleId}`, version}
 
     switch (extension.type) {
       case 'worker': {
-        webWorkers.push({...extension, module})
+        webWorkers.push({...extension, module, application})
         break
       }
       case 'app': {
         const {type: _type, ...view} = extension
-        views.push({...view, surface: 'window', module})
+        views.push({...view, surface: 'window', module, application})
         break
       }
       case 'panel': {
         const {type, ...view} = extension
-        views.push({...view, surface: type, module})
+        views.push({...view, surface: type, module, application})
         break
       }
       case 'tile': {
         const {type, ...view} = extension
-        views.push({...view, surface: type, module})
+        views.push({...view, surface: type, module, application})
         break
       }
       case 'asset_source': {
         const {type, ...view} = extension
-        views.push({...view, surface: type, module})
+        views.push({...view, surface: type, module, application})
         break
       }
     }
   }
 
-  return {views, webWorkers}
+  return {...application, views, webWorkers}
 }
 
 const toApplication = (application: DashboardTopicApplication): DashboardApplication => {
-  const {activeDeployment: _activeDeployment, config: _config, ...applicationBase} = application
   const isLocal = 'local' in application
-  return {
-    ...application,
-    isLocal,
-    ...loadModules({...applicationBase, isLocal}, loadableInterfaces(application, isLocal)),
-  }
+
+  return loadModules({...application, isLocal}, loadableInterfaces(application, isLocal))
 }
 
 const toInstallation = (installation: DashboardTopicInstallation): DashboardApplication => {
@@ -145,13 +144,8 @@ const toInstallation = (installation: DashboardTopicInstallation): DashboardAppl
     createdAt: installation.createdAt,
     updatedAt: installation.updatedAt,
   }
-  // The raw record rides only the entry, not every view's `application`.
-  return {
-    ...base,
-    type: 'installation',
-    installation,
-    ...loadModules(base, installation.interfaces ?? []),
-  }
+
+  return loadModules({...base, type: 'installation', installation}, installation.interfaces ?? [])
 }
 
 /**

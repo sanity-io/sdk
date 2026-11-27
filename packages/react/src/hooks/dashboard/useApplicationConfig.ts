@@ -27,7 +27,7 @@ export type ApplicationConfigSelector =
  * ```tsx
  * function MediaLibraryConfig() {
  *   const config = useApplicationConfig({appType: 'media-library'})
- *   return config ? <span>{config.moduleId}</span> : <p>Not installed</p>
+ *   return config ? <span>{config.module.moduleId}</span> : <p>Not installed</p>
  * }
  * ```
  *

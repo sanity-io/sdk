@@ -2,6 +2,7 @@ export type {Dock} from '../applications/applications'
 export type {
   DashboardApplication,
   DashboardApplicationBase,
+  DashboardApplicationEntry,
   DashboardInstallation,
 } from '../dashboard/applications'
 export type {
@@ -55,7 +56,6 @@ export type {
   PanelView,
   TileView,
   View,
-  ViewApplication,
   WebWorker,
   WindowView,
 } from '../dashboard/views'

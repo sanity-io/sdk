@@ -3,6 +3,7 @@ import {expectTypeOf, test} from 'vitest'
 import {
   type CapabilityRecord,
   type DashboardApplication,
+  type DashboardApplicationEntry,
   type DashboardTopics,
   type EventTopic,
   type EventTopicDef,
@@ -18,6 +19,7 @@ import {
   type MessageBusMeta,
   type MessageBusQueryOptions,
   type PayloadOf,
+  type RemoteModuleRef,
   type ReplyOf,
   type StateTopicDef,
   type TileView,
@@ -30,7 +32,6 @@ import {
   type useTile,
   type useView,
   type View,
-  type ViewApplication,
   type WebWorker,
   type WebWorkerProps,
 } from './dashboard'
@@ -81,7 +82,7 @@ test('dashboard entrypoint exposes the message bus public types', () => {
   expectTypeOf<MessageBusHost['connections']['subscribe']>().toBeFunction()
 })
 
-test('view hooks return views with their application, useApplications lists them without', () => {
+test('listed views and web workers are the View and WebWorker the view hooks return', () => {
   expectTypeOf<ReturnType<typeof useView>>().toEqualTypeOf<Exclude<View, {surface: 'window'}>>()
   // Each hook returns the whole `View` member for its surface, not a narrower shape.
   expectTypeOf<ReturnType<typeof usePanel>['view']>().toEqualTypeOf<
@@ -94,18 +95,23 @@ test('view hooks return views with their application, useApplications lists them
     Extract<View, {surface: 'asset_source'}>
   >()
   expectTypeOf<ReturnType<typeof useView>>().not.toHaveProperty('type')
-  expectTypeOf<ReturnType<typeof useView>['application']>().toEqualTypeOf<ViewApplication>()
 
   // Every interface type except `worker` is a view, with `app` as `window`.
   expectTypeOf<View['surface']>().toEqualTypeOf<'window' | 'panel' | 'tile' | 'asset_source'>()
 
-  type ListedView = DashboardApplication['views'][number]
-  expectTypeOf<ListedView>().not.toHaveProperty('application')
-  expectTypeOf<DashboardApplication['webWorkers'][number]>().not.toHaveProperty('application')
-  // `surface` still narrows `metadata` on a listed view.
-  expectTypeOf<Extract<ListedView, {surface: 'tile'}>['metadata']>().toEqualTypeOf<
-    TileView['metadata']
-  >()
+  // A listed view is the same `View` a view hook returns.
+  expectTypeOf<DashboardApplication['views'][number]>().toEqualTypeOf<View>()
+  expectTypeOf<DashboardApplication['webWorkers'][number]>().toEqualTypeOf<WebWorker>()
+
+  expectTypeOf<View['application']>().toEqualTypeOf<DashboardApplicationEntry>()
+  expectTypeOf<WebWorker['application']>().toEqualTypeOf<DashboardApplicationEntry>()
+  expectTypeOf<View['module']>().toEqualTypeOf<RemoteModuleRef>()
+  expectTypeOf<WebWorker['module']>().toEqualTypeOf<RemoteModuleRef>()
+  expectTypeOf<View>().not.toHaveProperty('moduleId')
+  expectTypeOf<WebWorker>().not.toHaveProperty('moduleId')
+  expectTypeOf<DashboardApplicationEntry>().not.toHaveProperty('views')
+  expectTypeOf<DashboardApplicationEntry>().not.toHaveProperty('webWorkers')
+  expectTypeOf<Extract<View, {surface: 'tile'}>['metadata']>().toEqualTypeOf<TileView['metadata']>()
 })
 
 test('WebWorkerProps describes the worker with its application', () => {

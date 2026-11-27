@@ -11,22 +11,32 @@ const MESSAGE_BUS_KEY = Symbol.for('sanity.os.bus')
 let host: MessageBusHost
 
 // The host writes state to each connection, so publish by emitting to every connection's client.
+// The topic carries each module ref flat on its config.
 const emitConfigs = (value: ApplicationConfig[] | null) =>
-  host.connections.subscribe((client) => client.emit('applications.config', value))
+  host.connections.subscribe((client) =>
+    client.emit(
+      'applications.config',
+      value?.map(({module, ...config}) => ({...config, ...module})) ?? null,
+    ),
+  )
 
 const configs: ApplicationConfig[] = [
   {
     appType: 'media-library',
-    entry: 'https://media-library-config.sanity.run',
-    moduleId: 'configs/installation_config',
-    version: '1',
+    module: {
+      entry: 'https://media-library-config.sanity.run',
+      moduleId: 'configs/installation_config',
+      version: '1',
+    },
   },
   {
     appId: 'application-1',
     appType: 'media-library',
-    entry: 'https://application-config.sanity.run',
-    moduleId: 'configs/installation_config',
-    version: '2',
+    module: {
+      entry: 'https://application-config.sanity.run',
+      moduleId: 'configs/installation_config',
+      version: '2',
+    },
   },
 ]
 
@@ -78,12 +88,16 @@ describe('useApplicationConfigs', () => {
     expect(result.current).toEqual([])
   })
 
-  it('follows topic updates', () => {
+  it('follows topic updates without remapping unchanged lists', () => {
     emitConfigs(null)
-    const {result} = renderHook(() => useApplicationConfigs())
+    const {result, rerender} = renderHook(() => useApplicationConfigs())
     expect(result.current).toEqual([])
 
     act(() => emitConfigs(configs))
-    expect(result.current).toEqual(configs)
+    const first = result.current
+    expect(first).toEqual(configs)
+
+    rerender()
+    expect(result.current).toBe(first)
   })
 })

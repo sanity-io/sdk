@@ -11,11 +11,14 @@ const view = {
   application: viewApplication,
   id: 'notes-tile-inbox',
   metadata: {size: 'small'},
-  moduleId: 'views/inbox',
   name: 'inbox',
   title: 'Inbox',
   surface: 'tile',
-  version: '2',
+  module: {
+    entry: 'https://notes--apps--organization-1.sanity.run',
+    moduleId: 'application-1/views/inbox',
+    version: '2',
+  },
 } as const
 
 describe('useView', () => {

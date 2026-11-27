@@ -11,10 +11,13 @@ const signal = new AbortController().signal
 const base = {
   application: viewApplication,
   id: 'notes-inbox',
-  moduleId: 'views/inbox',
   name: 'inbox',
   title: 'Inbox',
-  version: '2',
+  module: {
+    entry: 'https://notes--apps--organization-1.sanity.run',
+    moduleId: 'application-1/views/inbox',
+    version: '2',
+  },
 }
 
 function renderInView(value: ComponentProps<typeof RootContext.Provider>['value']) {
