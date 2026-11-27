@@ -1,5 +1,21 @@
 # Changelog
 
+## 3.18.0
+
+[Compare changes](https://github.com/sanity-io/sdk/compare/sdk-v3.17.0...sdk-v3.18.0)
+
+_2026-11-27_
+
+### Features
+
+- **sdk:** Export the `DashboardApplication` types from `@sanity/sdk/dashboard`. ([#1643](https://github.com/sanity-io/sdk/pull/1643)) ([51c2d9b](https://github.com/sanity-io/sdk/commit/51c2d9b51bf82a14fa8ae9df3ee428821a96f42d)) by [@gu-stav](https://github.com/gu-stav)
+- **dashboard:** Views from `useView`, `usePanel`, `useTile` and `useAssetSource` carry their full `application`, views and web workers carry a flat `entry`, and `useView` also returns window views. `ViewApplication`, `DashboardApplicationBase`, `Dock` and `view.module` are removed from `@sanity/sdk/dashboard`. ([#1652](https://github.com/sanity-io/sdk/pull/1652)) ([f7b87a5](https://github.com/sanity-io/sdk/commit/f7b87a5220512d12c9bc2acd52a0feec8f919b85)) by [@gu-stav](https://github.com/gu-stav)
+- An organization's `slug` is now `null` unless the organization is on a Growth or Enterprise plan and its slug can be used in a URL. ([#1644](https://github.com/sanity-io/sdk/pull/1644)) ([c1fe686](https://github.com/sanity-io/sdk/commit/c1fe68644ff220fe177e89857edb8703cb5005a1)) by [@joshuaellis](https://github.com/joshuaellis)
+
+### Bug Fixes
+
+- **deps:** Update dependencies: `@module-federation/runtime@2.9.4` ([#1649](https://github.com/sanity-io/sdk/pull/1649)) ([dd4275f](https://github.com/sanity-io/sdk/commit/dd4275fd2fa598793b02692ecf5c49b81ba937ba)) by [@squiggler-app](https://github.com/apps/squiggler-app)
+
 ## 3.17.0
 
 [Compare changes](https://github.com/sanity-io/sdk/compare/sdk-v3.16.0...sdk-v3.17.0)

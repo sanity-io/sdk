@@ -1,5 +1,25 @@
 # Changelog
 
+## 3.18.0
+
+[Compare changes](https://github.com/sanity-io/sdk/compare/sdk-v3.17.0...sdk-v3.18.0)
+
+_2026-11-27_
+
+### Features
+
+- **dashboard:** Views from `useView`, `usePanel`, `useTile` and `useAssetSource` carry their full `application`, views and web workers carry a flat `entry`, and `useView` also returns window views. `ViewApplication`, `DashboardApplicationBase`, `Dock` and `view.module` are removed from `@sanity/sdk/dashboard`. ([#1652](https://github.com/sanity-io/sdk/pull/1652)) ([f7b87a5](https://github.com/sanity-io/sdk/commit/f7b87a5220512d12c9bc2acd52a0feec8f919b85)) by [@gu-stav](https://github.com/gu-stav)
+
+### Bug Fixes
+
+- **deps:** Update dependencies: `@module-federation/runtime@2.9.4` ([#1649](https://github.com/sanity-io/sdk/pull/1649)) ([dd4275f](https://github.com/sanity-io/sdk/commit/dd4275fd2fa598793b02692ecf5c49b81ba937ba)) by [@squiggler-app](https://github.com/apps/squiggler-app)
+
+### Dependencies
+
+- The following workspace dependencies were updated
+  - dependencies
+    - @sanity/sdk bumped to 3.18.0
+
 ## 3.17.0
 
 [Compare changes](https://github.com/sanity-io/sdk/compare/sdk-v3.16.0...sdk-v3.17.0)
