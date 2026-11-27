@@ -1,5 +1,7 @@
-import {distinctUntilChanged, filter, first, firstValueFrom, map, race} from 'rxjs'
+import {DocumentId, getDraftId, getPublishedId} from '@sanity/id-utils'
+import {distinctUntilChanged, filter, first, firstValueFrom, from, map, race} from 'rxjs'
 
+import {getConfirmedUserState} from '../auth/authStore'
 import {type DocumentResource} from '../config/sanityConfig'
 import {bindActionByResource} from '../store/createActionBinder'
 import {type SanityInstance} from '../store/createSanityInstance'
@@ -9,9 +11,17 @@ import {type ResolveDocument} from '../typegen/resolve'
 import {randomUuid} from '../utils/ids'
 import {type Action} from './actions'
 import {documentStore, type DocumentStoreState, getStoreError} from './documentStore'
+import {applyWithEngine} from './engineDocuments'
 import {type DocumentTransactionSubmissionResult} from './events'
+import {ActionError} from './processActions/shared'
 import {type DocumentSet} from './processMutations'
-import {type AppliedTransaction, type QueuedTransaction, queueTransaction} from './reducers'
+import {
+  addOwnTransactionIds,
+  type AppliedTransaction,
+  holdForEngineTransactions,
+  type QueuedTransaction,
+  queueTransaction,
+} from './reducers'
 import {normalizeActionsForResource} from './resourceRules'
 
 /** @beta */
@@ -71,7 +81,52 @@ export function applyDocumentActions(
   return boundApplyDocumentActions(...args)
 }
 
-const boundApplyDocumentActions = bindActionByResource(documentStore, _applyDocumentActions)
+const boundApplyDocumentActions = bindActionByResource(documentStore, applyThroughEngineOrQueue)
+
+// `experimental_documentSync` prototype: a document's engine takes the actions it can handle,
+// and the rest go to the transaction queue. The transaction id is the caller's; the engine sends
+// under its own.
+function applyThroughEngineOrQueue(
+  context: StoreContext<DocumentStoreState>,
+  options: ApplyDocumentActionsOptions,
+): Promise<ActionsResult> {
+  const {actions, resource, transactionId = randomUuid()} = options
+  let routed
+  try {
+    routed = applyWithEngine(
+      context.state.get(),
+      normalizeActionsForResource(actions, resource),
+      transactionId,
+      getConfirmedUserState(context.instance).getCurrent()?.id,
+    )
+  } catch (error) {
+    // As on the queue, an action the store's rules reject is reported as an `error` event too.
+    if (error instanceof ActionError) {
+      context.state.get().events.next({
+        type: 'error',
+        message: error.message,
+        documentId: error.documentId,
+        transactionId: error.transactionId,
+        error,
+      })
+    }
+    return Promise.reject(error)
+  }
+  if (routed) {
+    const {documentId} = routed.handle
+    const ids = [getDraftId(DocumentId(documentId)), getPublishedId(DocumentId(documentId))]
+    context.state.set('addEngineTransactionIds', (prev) =>
+      holdForEngineTransactions(
+        addOwnTransactionIds(prev, ids, routed.transactionIds),
+        ids,
+        routed.transactionIds,
+      ),
+    )
+    const {settled} = context.state.get().engineTransactions.get(transactionId) ?? {}
+    return Promise.resolve(engineActionsResult(routed, transactionId, context.state, settled))
+  }
+  return _applyDocumentActions(context, {...options, transactionId})
+}
 
 /**
  * Returns the result of a transaction with no actions. `batchAppliedTransactions`
@@ -104,8 +159,47 @@ function watchStateError(
 }
 
 /** @internal */
+function engineActionsResult(
+  {engine, handle, previous: before}: NonNullable<ReturnType<typeof applyWithEngine>>,
+  transactionId: string,
+  state: StoreState<DocumentStoreState>,
+  settled: Promise<{error?: unknown}> | undefined,
+): ActionsResult {
+  // As on the queue: the outcome is the transaction's own (accepted, reverted or discarded) or a
+  // permanent store error, whichever comes first. A recoverable `aclError` does not end it. Raced
+  // from the start, so the store subscription ends as soon as the transaction settles.
+  const outcome = settled
+    ? firstValueFrom(race([from(settled), watchStateError(state, (s) => s.error)]))
+    : Promise.resolve({error: undefined})
+  const draftId = getDraftId(DocumentId(handle.documentId))
+  const previous = {[draftId]: before}
+  const documents = {[draftId]: engine.local() as ResolveDocument | null}
+  return {
+    transactionId,
+    documents,
+    previous,
+    previousRevs: {[draftId]: previous[draftId]?._rev},
+    appeared: previous[draftId] ? [] : [draftId],
+    updated: previous[draftId] ? [draftId] : [],
+    disappeared: [],
+    // Resolves once the server accepts the transaction, and rejects when it is reverted or
+    // discarded or the store fails. An edit that changed nothing sent nothing and resolves at once.
+    submitted: async () => {
+      const {error} = await outcome
+      if (error) throw error
+      return {transactionId}
+    },
+  }
+}
+
+/** The confirmed user a new transaction is sent as, when one is confirmed. */
+function authorOf(instance: SanityInstance): {author?: string} {
+  const author = getConfirmedUserState(instance).getCurrent()?.id
+  return author ? {author} : {}
+}
+
 async function _applyDocumentActions(
-  {state}: StoreContext<DocumentStoreState>,
+  {state, instance}: StoreContext<DocumentStoreState>,
   {actions, resource, transactionId = randomUuid(), disableBatching}: ApplyDocumentActionsOptions,
 ): Promise<ActionsResult> {
   if (!actions.length) return emptyActionsResult(transactionId)
@@ -120,6 +214,7 @@ async function _applyDocumentActions(
   const transaction: QueuedTransaction = {
     transactionId,
     actions: normalizedActions,
+    ...authorOf(instance),
     ...(disableBatching && {disableBatching}),
   }
 

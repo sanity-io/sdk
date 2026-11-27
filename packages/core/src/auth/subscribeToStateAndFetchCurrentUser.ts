@@ -77,7 +77,7 @@ export const subscribeToStateAndFetchCurrentUser = (
 
         const {token, authMethod} = key
 
-        return clientFactory({
+        const client = clientFactory({
           apiVersion: CURRENT_USER_API_VERSION,
           requestTagPrefix: resolveRequestTagPrefix(instance.config.requestTagPrefix, 'auth'),
           token: authMethod === 'cookie' ? undefined : token,
@@ -88,9 +88,11 @@ export const subscribeToStateAndFetchCurrentUser = (
           ...(useProjectHostname && projectId ? {projectId} : {}),
           ...(apiHost && {apiHost}),
         })
+        return {client, token}
       }),
-      switchMap((client) => {
-        if (!client) return EMPTY
+      switchMap((target) => {
+        if (!target) return EMPTY
+        const {client, token} = target
 
         return client.observable
           .request<CurrentUser>({
@@ -136,12 +138,13 @@ export const subscribeToStateAndFetchCurrentUser = (
               )
               return EMPTY
             }),
+            map((currentUser) => ({currentUser, token})),
           )
       }),
     )
 
   return currentUser$.subscribe({
-    next: (currentUser) => {
+    next: ({currentUser, token}) => {
       logger.info('Current user fetched successfully', {
         hasEmail: !!currentUser.email,
       })
@@ -153,6 +156,7 @@ export const subscribeToStateAndFetchCurrentUser = (
           prev.authState.currentUser?.id !== currentUser.id
             ? {...prev.authState, currentUser}
             : prev.authState,
+        currentUserToken: token,
       }))
     },
   })

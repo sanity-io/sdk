@@ -23,6 +23,8 @@ const EMPTY_REVISIONS: NonNullable<Required<DocumentState['unverifiedRevisions']
  * between submitting a transaction and observing its listener echo.
  */
 const MAX_RECENT_OWN_TRANSACTION_IDS = 50
+// Prefix of the subscription ids an engine transaction holds its documents with.
+const ENGINE_HOLD = 'engine:'
 
 export type SyncTransactionState = Pick<
   DocumentStoreState,
@@ -94,6 +96,11 @@ export interface QueuedTransaction {
    * the ID of this transaction. this is generated client-side.
    */
   transactionId: string
+  /**
+   * The id of the user the transaction is sent as: the user confirmed for the current token when
+   * it was queued, or the first one confirmed after that. Another user never sends it.
+   */
+  author?: string
   /**
    * the high-level actions associated with this transaction. note that these
    * actions don't mention draft IDs and is meant to abstract away the draft
@@ -310,6 +317,8 @@ export function batchAppliedTransactions([curr, ...rest]: AppliedTransaction[]):
   const next = batchAppliedTransactions(rest)
   if (!next) return editAction
   if (next.disableBatching) return editAction
+  // Each outgoing transaction is sent as one user.
+  if (next.author !== curr.author) return editAction
 
   // Don't batch a liveEdit edit with a non-liveEdit edit — they route to different APIs
   const nextFirst = next.actions[0]
@@ -318,6 +327,7 @@ export function batchAppliedTransactions([curr, ...rest]: AppliedTransaction[]):
 
   return {
     disableBatching: false,
+    author: curr.author,
     // Use the transactionId from the later (next) transaction.
     transactionId: next.transactionId,
     // Accumulate actions: current action first, then later ones.
@@ -390,6 +400,146 @@ export function transitionAppliedTransactionsToOutgoing(
       {...prev.documentStates},
     ),
   }
+}
+
+/**
+ * Records transactions sent outside the queue (by a document-sync engine) as this client's own,
+ * so `remote-patches` events label their echoes `local`.
+ */
+export function addOwnTransactionIds(
+  prev: SyncTransactionState,
+  documentIds: string[],
+  transactionIds: string[],
+): SyncTransactionState {
+  const documentStates = {...prev.documentStates}
+  for (const documentId of documentIds) {
+    const documentState = documentStates[documentId]
+    if (!documentState) continue
+    documentStates[documentId] = {
+      ...documentState,
+      recentOwnTransactionIds: [
+        ...(documentState.recentOwnTransactionIds ?? []),
+        ...transactionIds,
+      ].slice(-MAX_RECENT_OWN_TRANSACTION_IDS),
+    }
+  }
+  return {...prev, documentStates}
+}
+
+/**
+ * Keeps the documents an engine transaction writes subscribed until the engine has nothing pending,
+ * as the queue does for its own transactions, so their states (and engines) outlive the last
+ * subscriber while a write is in flight.
+ */
+export function holdForEngineTransactions(
+  prev: SyncTransactionState,
+  documentIds: string[],
+  transactionIds: string[],
+): SyncTransactionState {
+  return documentIds.reduce(
+    (acc, documentId) =>
+      transactionIds.reduce(
+        (held, transactionId) =>
+          addSubscriptionIdToDocument(held, documentId, `${ENGINE_HOLD}${transactionId}`),
+        acc,
+      ),
+    prev,
+  )
+}
+
+/** Releases the documents held by {@link holdForEngineTransactions}. */
+export function releaseEngineHolds(
+  prev: SyncTransactionState,
+  documentIds: string[],
+): SyncTransactionState {
+  return documentIds.reduce((acc, documentId) => {
+    const held = (acc.documentStates[documentId]?.subscriptions ?? []).filter((id) =>
+      id.startsWith(ENGINE_HOLD),
+    )
+    return held.reduce((next, id) => removeSubscriptionIdFromDocument(next, documentId, id), acc)
+  }, prev)
+}
+
+/** The `reverted` message for edits discarded because the signed-in user changed. */
+const USER_CHANGED_MESSAGE =
+  'The signed-in user changed, so edits made by the previous user were discarded without being sent.'
+
+/** Thrown before a submission whose author is not the user confirmed for the current token. */
+export class UserChangedError extends Error {
+  constructor() {
+    super(USER_CHANGED_MESSAGE)
+    this.name = 'UserChangedError'
+  }
+}
+
+/**
+ * Binds transactions with no author to `userId` and discards the queued and applied transactions
+ * another user made, rebuilding the local documents without them. The outgoing transaction is
+ * left to its submission, which refuses to send it as `userId` (`UserChangedError`).
+ */
+export function discardOtherUsersTransactions(
+  prev: SyncTransactionState,
+  userId: string,
+): {state: SyncTransactionState; discarded: QueuedTransaction[]} {
+  const byOther = (t: QueuedTransaction) => t.author !== undefined && t.author !== userId
+  const bind = <T extends QueuedTransaction>(t: T): T => (t.author ? t : {...t, author: userId})
+  const discarded = [...prev.queued, ...prev.applied].filter(byOther)
+  const bound = {
+    ...prev,
+    queued: prev.queued.filter((t) => !byOther(t)).map(bind),
+    applied: prev.applied.filter((t) => !byOther(t)).map(bind),
+    outgoing: prev.outgoing && bind(prev.outgoing),
+  }
+  if (!discarded.length) return {state: bound, discarded}
+  let unsubscribed: SyncTransactionState = bound
+  for (const transaction of discarded) {
+    for (const documentId of getDocumentIdsFromHandleLikes(transaction.actions)) {
+      unsubscribed = removeSubscriptionIdFromDocument(
+        unsubscribed,
+        documentId,
+        transaction.transactionId,
+      )
+    }
+  }
+  const keepOutgoing = !prev.outgoing || !byOther(prev.outgoing)
+  return {state: rebuildLocalDocuments(unsubscribed, keepOutgoing), discarded}
+}
+
+/**
+ * Rebuilds the local documents from `remote`, the outgoing transaction (when `keepOutgoing`) and
+ * the applied transactions, as `revertOutgoingTransaction` does, keeping the outgoing transaction
+ * in place.
+ */
+function rebuildLocalDocuments(
+  prev: SyncTransactionState,
+  keepOutgoing: boolean,
+): SyncTransactionState {
+  if (!prev.grants) return prev
+  let working = Object.fromEntries(
+    Object.entries(prev.documentStates).map(([id, documentState]) => [id, documentState?.remote]),
+  )
+  const applied: AppliedTransaction[] = []
+  for (const t of [...(prev.outgoing && keepOutgoing ? [prev.outgoing] : []), ...prev.applied]) {
+    try {
+      const processed = processActions({
+        ...t,
+        working,
+        grants: prev.grants,
+        identity: prev.identity,
+      })
+      working = processed.working
+      if (t !== prev.outgoing) applied.push({...t, ...processed})
+    } catch (error) {
+      if (!(error instanceof ActionError)) throw error
+    }
+  }
+  const documentStates = Object.fromEntries(
+    Object.entries(prev.documentStates).map(([id, documentState]) => [
+      id,
+      documentState && id in working ? {...documentState, local: working[id]} : documentState,
+    ]),
+  )
+  return {...prev, applied, documentStates: evictOrphanedDocumentStates(documentStates)}
 }
 
 export function cleanupOutgoingTransaction(prev: SyncTransactionState): SyncTransactionState {
@@ -511,6 +661,41 @@ function extractPatchOperations(
   })
 }
 
+/**
+ * Emits the listener's view of a remote change before it is collapsed into the whole-document
+ * snapshot: `remote-patches` with the transaction's operational patches, which consumers that keep
+ * their own state (e.g. collaborative text editors) apply without re-diffing snapshots, or
+ * `remote-sync` when the document changed without patches for it (a fetched snapshot, a create or
+ * a delete), so those consumers reload it.
+ */
+function emitListenerEvents(
+  {documentId, previousRev, revision, timestamp, type, mutations}: Omit<RemoteDocument, 'document'>,
+  events: DocumentStoreState['events'],
+  {isOwnTransaction}: {isOwnTransaction: (revision: string) => boolean},
+): void {
+  if (type === 'sync') {
+    events.next({type: 'remote-sync', documentId, revision})
+    return
+  }
+  if (type !== 'mutation' || !revision) return
+  const patches = extractPatchOperations(mutations, documentId)
+  if (!patches.length) {
+    events.next({type: 'remote-sync', documentId, revision})
+    return
+  }
+  // `unverifiedRevisions` alone isn't a reliable origin marker: a sync event can prune an
+  // in-flight transaction's entry before its listener echo arrives. `recentOwnTransactionIds`
+  // survives that race
+  events.next({
+    type: 'remote-patches',
+    documentId,
+    transactionId: revision,
+    previousRev,
+    timestamp,
+    patches,
+    origin: isOwnTransaction(revision) ? 'local' : 'remote',
+  })
+}
 export function applyRemoteDocument(
   prev: SyncTransactionState,
   {document, documentId, previousRev, revision, timestamp, type, mutations}: RemoteDocument,
@@ -533,30 +718,10 @@ export function applyRemoteDocument(
     unverifiedRevisions = omitProperty(prevUnverifiedRevisions, revision)
   }
 
-  // surface the operational patches from this transaction before they are
-  // collapsed into the whole-document snapshot below. consumers that keep
-  // their own state (e.g. collaborative text editors) rely on these to apply
-  // remote changes without re-diffing document snapshots
-  if (type === 'mutation' && revision) {
-    const patches = extractPatchOperations(mutations, documentId)
-    if (patches.length) {
-      // `unverifiedRevisions` alone isn't a reliable origin marker: a sync
-      // event can prune an in-flight transaction's entry before its listener
-      // echo arrives. `recentOwnTransactionIds` survives that race
-      const isOwnTransaction =
-        Boolean(revisionToVerify) ||
-        (prevDocState.recentOwnTransactionIds?.includes(revision) ?? false)
-      events.next({
-        type: 'remote-patches',
-        documentId,
-        transactionId: revision,
-        previousRev,
-        timestamp,
-        patches,
-        origin: isOwnTransaction ? 'local' : 'remote',
-      })
-    }
-  }
+  emitListenerEvents({documentId, previousRev, revision, timestamp, type, mutations}, events, {
+    isOwnTransaction: (rev) =>
+      Boolean(revisionToVerify) || (prevDocState.recentOwnTransactionIds?.includes(rev) ?? false),
+  })
 
   // if this remote document is from a `'sync'` event (meaning that the whole
   // thing was just fetched and not re-created from mutations)

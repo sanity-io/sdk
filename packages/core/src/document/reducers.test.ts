@@ -9,14 +9,18 @@ import {type DocumentEvent} from './events'
 import {type RemoteDocument} from './listen'
 import {type DocumentSet} from './processMutations'
 import {
+  addOwnTransactionIds,
   addSubscriptionIdToDocument,
   type AppliedTransaction,
   applyFirstQueuedTransaction,
   applyRemoteDocument,
   batchAppliedTransactions,
   cleanupOutgoingTransaction,
+  discardOtherUsersTransactions,
+  holdForEngineTransactions,
   type QueuedTransaction,
   queueTransaction,
+  releaseEngineHolds,
   removeQueuedTransaction,
   removeSubscriptionIdFromDocument,
   revertOutgoingTransaction,
@@ -1313,7 +1317,7 @@ describe('applyRemoteDocument', () => {
       ])
     })
 
-    it('does not emit for sync events', () => {
+    it('emits remote-sync, not remote-patches, for sync events', () => {
       const events = new Subject<DocumentEvent>()
       const received: DocumentEvent[] = []
       events.subscribe((e) => received.push(e))
@@ -1327,10 +1331,10 @@ describe('applyRemoteDocument', () => {
       }
 
       applyRemoteDocument(createInitialState(), remote, events)
-      expect(received).toEqual([])
+      expect(received).toEqual([{type: 'remote-sync', documentId: docId, revision: 'revSync'}])
     })
 
-    it('does not emit when the mutations contain no patches', () => {
+    it('emits remote-sync, not remote-patches, when the mutations contain no patches', () => {
       const events = new Subject<DocumentEvent>()
       const received: DocumentEvent[] = []
       events.subscribe((e) => received.push(e))
@@ -1346,7 +1350,7 @@ describe('applyRemoteDocument', () => {
       }
 
       applyRemoteDocument(createInitialState(), remote, events)
-      expect(received).toEqual([])
+      expect(received).toEqual([{type: 'remote-sync', documentId: docId, revision: 'txnCreate'}])
     })
 
     it('excludes patches addressed to other documents in the same transaction', () => {
@@ -1746,5 +1750,107 @@ describe('removeSubscriptionIdFromDocument', () => {
     }
     const newState = removeSubscriptionIdFromDocument(initialState, 'nonexistent', 'subX')
     expect(newState).toEqual(initialState)
+  })
+})
+
+describe('engine transactions', () => {
+  const stateWith = (subscriptions: string[]): SyncTransactionState => ({
+    queued: [],
+    applied: [],
+    outgoing: undefined,
+    grants,
+    documentStates: {
+      'doc': {id: 'doc', subscriptions, local: null},
+      'drafts.doc': {id: 'drafts.doc', subscriptions, local: null},
+    },
+  })
+  const ids = ['drafts.doc', 'doc']
+
+  it('holds the documents an engine transaction writes past their last subscriber', () => {
+    const held = holdForEngineTransactions(stateWith(['sub']), ids, ['t1'])
+    const left = ids.reduce((acc, id) => removeSubscriptionIdFromDocument(acc, id, 'sub'), held)
+    expect(left.documentStates['drafts.doc']?.subscriptions).toEqual(['engine:t1'])
+    expect(left.documentStates['doc']?.subscriptions).toEqual(['engine:t1'])
+  })
+
+  it('releases every engine hold, evicting documents with no other subscriber', () => {
+    const held = holdForEngineTransactions(stateWith([]), ids, ['t1', 't2'])
+    expect(releaseEngineHolds(held, ids).documentStates).toEqual({})
+    const subscribed = holdForEngineTransactions(stateWith(['sub']), ids, ['t1'])
+    expect(releaseEngineHolds(subscribed, ids).documentStates['doc']?.subscriptions).toEqual([
+      'sub',
+    ])
+  })
+
+  it('records engine transactions as own, keeping the most recent', () => {
+    const next = addOwnTransactionIds(stateWith(['sub']), ids, ['t1', 't2'])
+    expect(next.documentStates['drafts.doc']?.recentOwnTransactionIds).toEqual(['t1', 't2'])
+    const many = Array.from({length: 60}, (_, i) => `t${i}`)
+    const capped = addOwnTransactionIds(stateWith(['sub']), ids, many)
+    expect(capped.documentStates['doc']?.recentOwnTransactionIds).toEqual(many.slice(-50))
+  })
+})
+
+describe('discardOtherUsersTransactions', () => {
+  const draftId = getDraftId(DocumentId('doc1'))
+  const remote = {...exampleDoc, _id: draftId, foo: 'remote', _rev: 'rev1'}
+  const edit = (transactionId: string, foo: string, author?: string): AppliedTransaction => ({
+    transactionId,
+    ...(author && {author}),
+    actions: [
+      {type: 'document.edit', documentId: 'doc1', documentType: 'book', patches: [{set: {foo}}]},
+    ],
+    disableBatching: true,
+    outgoingActions: [],
+    outgoingMutations: [],
+    base: {[draftId]: remote},
+    working: {[draftId]: {...remote, foo}},
+    previous: {[draftId]: remote},
+    previousRevs: {[draftId]: 'rev1'},
+    timestamp: '2025-02-06T00:04:00.000Z',
+  })
+  const state = (
+    applied: AppliedTransaction[],
+    queued: QueuedTransaction[] = [],
+  ): SyncTransactionState => ({
+    queued,
+    applied,
+    outgoing: undefined,
+    grants,
+    documentStates: {
+      [draftId]: {
+        id: draftId,
+        subscriptions: [
+          'sub',
+          ...applied.map((t) => t.transactionId),
+          ...queued.map((t) => t.transactionId),
+        ],
+        remote,
+        local: {...remote, foo: applied.at(-1)?.working[draftId]?.['foo'] as string},
+      },
+    },
+  })
+
+  it("removes another user's queued and applied edits and rebuilds the local document without them", () => {
+    const {actions} = edit('q-a', 'queued by a')
+    const queuedByA: QueuedTransaction = {transactionId: 'q-a', author: 'user-a', actions}
+    const {state: next, discarded} = discardOtherUsersTransactions(
+      state([edit('t-b', 'by b', 'user-b'), edit('t-a', 'by a', 'user-a')], [queuedByA]),
+      'user-b',
+    )
+    expect(discarded.map((t) => t.transactionId)).toEqual(['q-a', 't-a'])
+    expect(next.applied.map((t) => t.transactionId)).toEqual(['t-b'])
+    expect(next.queued).toEqual([])
+    expect(next.documentStates[draftId]?.local).toMatchObject({foo: 'by b'})
+    expect(next.documentStates[draftId]?.subscriptions).toEqual(['sub', 't-b'])
+  })
+
+  it('binds edits with no author to the confirmed user and keeps them', () => {
+    const {state: next, discarded} = discardOtherUsersTransactions(
+      state([edit('t', 'x')]),
+      'user-b',
+    )
+    expect(discarded).toEqual([])
+    expect(next.applied[0]?.author).toBe('user-b')
   })
 })

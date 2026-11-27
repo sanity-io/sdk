@@ -701,6 +701,9 @@ importers:
       '@sanity/diff-patch':
         specifier: ^7.0.0
         version: 7.0.0
+      '@sanity/document-sync':
+        specifier: https://pkg.pr.new/sanity-labs/document-sync/@sanity/document-sync@f354a2a
+        version: https://pkg.pr.new/sanity-labs/document-sync/@sanity/document-sync@f354a2a(@types/react@19.3.2)(vitest@5.1.1)
       '@sanity/id-utils':
         specifier: ^1.1.0
         version: 1.1.0
@@ -3647,6 +3650,11 @@ packages:
     resolution: {integrity: sha512-bxnqN8vvB7aKIbB2ouTVFnNtIOlUASbi69IxQaidU66eB9hocGCTLnqUcYHMUMfAGcjFGzbtdTYwycTkjyRSpA==}
     engines: {node: '>=22.12'}
 
+  '@sanity/document-sync@https://pkg.pr.new/sanity-labs/document-sync/@sanity/document-sync@f354a2a':
+    resolution: {integrity: sha512-D+ohp5iDSjLuh1II+N+3PlcScsAb3fWaDmGMBITAMLRjo8P9A5vGiIZeAFUSrvqUJSAUs3VAD/inCtrGrMnYkw==, tarball: https://pkg.pr.new/sanity-labs/document-sync/@sanity/document-sync@f354a2a}
+    version: 0.0.0
+    engines: {node: '>=20.19'}
+
   '@sanity/eventsource@5.0.4':
     resolution: {integrity: sha512-NT6XrTJePJd7q1ZdTqB3NsTyNNOe9R2zMkg4Hlkqwb0LL6UmekVamAD46yjSJ+HbRyXAKLl1Rb65xZBdzC1f8Q==}
 
@@ -6332,6 +6340,10 @@ packages:
   memorystream@0.3.1:
     resolution: {integrity: sha512-S3UwM3yj5mtUSEfP41UZmt/0SCoVYUcU1rkXv+BQ5Ig8ndL4sPoJNBUJERafdPb5jjHJGuMgytgKvKIf58XNBw==}
     engines: {node: '>= 0.10.0'}
+
+  mendoza@3.0.8:
+    resolution: {integrity: sha512-iwxgEpSOx9BDLJMD0JAzNicqo9xdrvzt6w/aVwBKMndlA6z/DH41+o60H2uHB0vCR1Xr37UOgu9xFWJHvYsuKw==}
+    engines: {node: '>=14.18'}
 
   mendoza@6.0.0:
     resolution: {integrity: sha512-hgHqpcF6iAB7M49nCrfmWZJMYssEXBgXTgIB9VIp3UxE9HCnAjziu3fHhQesaqvgzOwpddeNMqat/JzNiZjJPQ==}
@@ -11084,6 +11096,18 @@ snapshots:
     dependencies:
       '@sanity/diff-match-patch': 3.2.1
 
+  '@sanity/document-sync@https://pkg.pr.new/sanity-labs/document-sync/@sanity/document-sync@f354a2a(@types/react@19.3.2)(vitest@5.1.1)':
+    dependencies:
+      '@sanity/client': 8.17.0(vitest@5.1.1)
+      '@sanity/diff-match-patch': 3.2.1
+      '@sanity/json-match': 1.0.5
+      '@sanity/types': 6.25.0(@types/react@19.3.2)(vitest@5.1.1)
+      mendoza: 3.0.8
+      rxjs: 7.8.2
+    transitivePeerDependencies:
+      - '@types/react'
+      - vitest
+
   '@sanity/eventsource@5.0.4':
     dependencies:
       '@types/event-source-polyfill': 1.0.5
@@ -13995,6 +14019,8 @@ snapshots:
   media-tracks@0.3.5: {}
 
   memorystream@0.3.1: {}
+
+  mendoza@3.0.8: {}
 
   mendoza@6.0.0: {}
 

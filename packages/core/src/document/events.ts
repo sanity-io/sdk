@@ -24,6 +24,8 @@ export type DocumentEvent =
   | DocumentUnpublishedEvent
   | DocumentDiscardedEvent
   | DocumentRemotePatchesEvent
+  | DocumentRemoteSyncEvent
+  | DocumentEditNoOpEvent
 
 /**
  * @beta
@@ -211,4 +213,38 @@ export function getDocumentEvents(outgoing: OutgoingTransaction): DocumentEvent[
       outgoing,
     })),
   )
+}
+
+/**
+ * @beta
+ * Event emitted when a document's server copy changed without patches a consumer can apply: a
+ * fetched snapshot (the first load, a reconnect, a gap in the revision chain), or a create or
+ * delete. Consumers that apply `remote-patches` to their own state reload the document instead.
+ */
+export interface DocumentRemoteSyncEvent {
+  type: 'remote-sync'
+  /** The ID of the document version that changed (e.g. a draft ID). */
+  documentId: string
+  /** The document's revision after the change, if it exists. */
+  revision?: string
+}
+
+/**
+ * @beta
+ * Event emitted when an accepted edit turned out to change nothing in some operations, because
+ * their target was gone by the time Content Lake applied them: an insert whose anchor was
+ * deleted, a text patch whose text was deleted or whose hunks no longer matched, a set under a
+ * deleted key. Content Lake applies these as silent no-ops, so without this event the edit is
+ * lost without notice. Only emitted with `experimental_documentSync`.
+ */
+export interface DocumentEditNoOpEvent {
+  type: 'edit-no-op'
+  /** The document version the edit targeted (the draft). */
+  documentId: string
+  /** The ID the transaction was sent under, as in the `accepted` event. */
+  transactionId: string
+  /** The callers' transaction IDs when several edits were sent as one transaction. */
+  batchedTransactionIds?: string[]
+  /** The operations that changed nothing, with the path each addressed and why. */
+  noOps: {op: string; path: string; reason: string}[]
 }

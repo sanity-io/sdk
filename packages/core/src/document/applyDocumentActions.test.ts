@@ -1,3 +1,4 @@
+import {type DocumentSync} from '@sanity/document-sync'
 import {type SanityDocument} from '@sanity/types'
 import {Subject} from 'rxjs'
 import {describe, expect, it} from 'vitest'
@@ -8,6 +9,7 @@ import {createStoreState, type StoreState} from '../store/createStoreState'
 import {type DocumentAction} from './actions'
 import {type DocumentStoreState} from './documentStore'
 import {type DocumentEvent} from './events'
+import {createGrantsLookup, type DatasetAcl} from './permissions'
 import {type AppliedTransaction, type OutgoingTransaction} from './reducers'
 
 vi.mock('../store/createActionBinder', async (importOriginal) => ({
@@ -17,7 +19,16 @@ vi.mock('../store/createActionBinder', async (importOriginal) => ({
 
 type TestState = Pick<
   DocumentStoreState,
-  'documentStates' | 'queued' | 'applied' | 'outgoing' | 'error' | 'aclError' | 'events'
+  | 'documentStates'
+  | 'queued'
+  | 'applied'
+  | 'outgoing'
+  | 'error'
+  | 'aclError'
+  | 'events'
+  | 'engines'
+  | 'grants'
+  | 'engineTransactions'
 >
 
 const exampleDoc: SanityDocument = {
@@ -44,6 +55,8 @@ describe('applyDocumentActions', () => {
       error: undefined,
       aclError: undefined,
       events: eventsSubject,
+      engines: {},
+      engineTransactions: new Map(),
     }
     state = createStoreState(initialState)
     instance = createSanityInstance({projectId: 'p', dataset: 'd'})
@@ -245,6 +258,152 @@ describe('applyDocumentActions', () => {
     expect(queued).toBeDefined()
     const [queuedAction] = queued!.actions
     expect(queuedAction).toMatchObject({type: 'document.edit', liveEdit: true})
+  })
+  /** A loaded document `doc1` served by a fake engine. */
+  function engineServes() {
+    let local: SanityDocument = {...exampleDoc, _id: 'drafts.doc1'}
+    const engine = {
+      remote: () => ({draft: local, published: null}),
+      local: () => local,
+      apply: vi.fn((_operations: unknown, {transactionId}: {transactionId: string}) => {
+        local = {...local, _rev: transactionId}
+        return transactionId
+      }),
+      localDocuments: () => ({draft: local, published: null}),
+    }
+    // The engine serves a document only once the queue has loaded it and the grants.
+    state.set('loaded', {
+      grants: createGrantsLookup([
+        {filter: '_id in path("**")', permissions: ['read', 'update', 'create']},
+      ] as DatasetAcl),
+      documentStates: {
+        'doc1': {id: 'doc1', local: null},
+        'drafts.doc1': {id: 'drafts.doc1', local},
+      } as unknown as DocumentStoreState['documentStates'],
+    })
+    state.set('addEngine', {engines: {doc1: engine as unknown as DocumentSync}})
+
+    return {engine}
+  }
+
+  it('hands edits of a document with a ready engine to the engine instead of the queue', async () => {
+    const {engine} = engineServes()
+    const result = await applyDocumentActions(instance, {
+      actions: [
+        {
+          type: 'document.edit',
+          documentId: 'doc1',
+          documentType: 'author',
+          patches: [{set: {name: 'y'}}],
+        },
+      ],
+      transactionId: 'txn-caller',
+    })
+
+    expect(engine.apply).toHaveBeenCalledWith([{type: 'edit', patches: [{set: {name: 'y'}}]}], {
+      transactionId: 'txn-caller',
+    })
+    expect(state.get().queued).toEqual([])
+    expect(result).toMatchObject({
+      transactionId: 'txn-caller',
+      previous: {'drafts.doc1': {_rev: 'txn0'}},
+      documents: {'drafts.doc1': {_rev: 'txn-caller'}},
+      updated: ['drafts.doc1'],
+    })
+    // Resolves once the server accepts the transaction (`emitAccepted` settles it).
+    const submitted = result.submitted()
+    state.get().engineTransactions.get('txn-caller')?.settle({})
+    await expect(submitted).resolves.toEqual({transactionId: 'txn-caller'})
+  })
+
+  it('rejects submitted() for an engine transaction that is reverted', async () => {
+    engineServes()
+    const result = await applyDocumentActions(instance, {
+      actions: [
+        {
+          type: 'document.edit',
+          documentId: 'doc1',
+          documentType: 'author',
+          patches: [{set: {name: 'y'}}],
+        },
+      ],
+      transactionId: 'txn-caller',
+    })
+    const submitted = result.submitted()
+    state
+      .get()
+      .engineTransactions.get('txn-caller')
+      ?.settle({error: new Error('discarded')})
+    await expect(submitted).rejects.toThrow('discarded')
+  })
+
+  it('rejects submitted() for an engine transaction when a fatal store error occurs', async () => {
+    engineServes()
+    const result = await applyDocumentActions(instance, {
+      actions: [
+        {
+          type: 'document.edit',
+          documentId: 'doc1',
+          documentType: 'author',
+          patches: [{set: {name: 'y'}}],
+        },
+      ],
+      transactionId: 'txn-caller',
+    })
+    const submitted = result.submitted()
+    const fatalError = new Error('Client stream completed empty')
+    state.set('setError', {error: fatalError})
+    await expect(submitted).rejects.toBe(fatalError)
+  })
+
+  it('ignores a recoverable aclError while an engine transaction is pending', async () => {
+    engineServes()
+    const result = await applyDocumentActions(instance, {
+      actions: [
+        {
+          type: 'document.edit',
+          documentId: 'doc1',
+          documentType: 'author',
+          patches: [{set: {name: 'y'}}],
+        },
+      ],
+      transactionId: 'txn-caller',
+    })
+    const submitted = result.submitted()
+    state.set('setAclError', {aclError: new Error('ACL 401')})
+    state.get().engineTransactions.get('txn-caller')?.settle({})
+    await expect(submitted).resolves.toEqual({transactionId: 'txn-caller'})
+  })
+
+  it('records the engine transaction as its own, so its echo is labelled local', async () => {
+    engineServes()
+    await applyDocumentActions(instance, {
+      actions: [
+        {
+          type: 'document.edit',
+          documentId: 'doc1',
+          documentType: 'author',
+          patches: [{set: {name: 'y'}}],
+        },
+      ],
+      transactionId: 'txn-caller',
+    })
+    expect(state.get().documentStates['drafts.doc1']?.recentOwnTransactionIds).toEqual([
+      'txn-caller',
+    ])
+  })
+
+  it('emits an error event and rejects when the engine path rejects an action', async () => {
+    engineServes()
+    const events: DocumentEvent[] = []
+    eventsSubject.subscribe((event) => events.push(event))
+    await expect(
+      applyDocumentActions(instance, {
+        actions: [{type: 'document.create', documentId: 'doc1', documentType: 'author'}],
+        transactionId: 'txn-caller',
+      }),
+    ).rejects.toThrow(/already exists/)
+    expect(events).toMatchObject([{type: 'error', documentId: 'doc1', transactionId: 'txn-caller'}])
   })
 
   it('rejects submitted() when a fatal store error occurs after apply', async () => {

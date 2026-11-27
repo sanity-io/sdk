@@ -42,12 +42,15 @@ import {
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {getClientState} from '../client/clientStore'
+import {type DocumentHandle} from '../config/sanityConfig'
+import {bindActionByResource} from '../store/createActionBinder'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {type StateSource} from '../store/createStateSourceAction'
 import {randomUuid} from '../utils/ids'
 import {editDocument, publishDocument} from './actions'
 import {applyDocumentActions} from './applyDocumentActions'
-import {getDocumentState, getDocumentSyncStatus} from './documentStore'
+import {documentStore, getDocumentState, getDocumentSyncStatus} from './documentStore'
+import {engineForHandle} from './engineDocuments'
 import {type DatasetAcl} from './permissions'
 import {type DocumentSet, getDocumentIds, processMutations} from './processMutations'
 import {type HttpAction} from './reducers'
@@ -109,6 +112,8 @@ interface MockContentLake {
   getDocument: (id: string) => SanityDocument | null
   seed: (docs: DocumentSet) => void
   holdSubmissions: () => void
+  /** Adds Mendoza effects to listener events, as Content Lake does for `effectFormat=mendoza`. */
+  sendEffects: () => void
   submitActions: (actions: HttpAction[], transactionId: string) => Promise<{transactionId: string}>
   release: (transactionId: string) => Promise<void>
   pendingTransactionIds: () => string[]
@@ -118,6 +123,7 @@ function createMockContentLake(): MockContentLake {
   let documents: DocumentSet = {}
   const connections: Subject<ListenEvent<SanityDocument>>[] = []
   let holding = false
+  let effects = false
   const held: HeldSubmission[] = []
 
   function convertAction(action: HttpAction, current: DocumentSet): Mutation[] {
@@ -205,6 +211,8 @@ function createMockContentLake(): MockContentLake {
         visibility: 'query',
         ...(before && {previousRev: before._rev}),
         ...(after && {resultRev: transactionId}),
+        // A whole-value Mendoza patch (`[0, value]`), computed without `_rev` as Content Lake does.
+        ...(effects && {effects: {apply: [0, withoutRev(after)], revert: [0, withoutRev(before)]}}),
       })
     }
     for (const event of events) event.transactionTotalEvents = events.length
@@ -247,6 +255,9 @@ function createMockContentLake(): MockContentLake {
     holdSubmissions() {
       holding = true
     },
+    sendEffects() {
+      effects = true
+    },
     submitActions(actions, transactionId) {
       return new Promise<{transactionId: string}>((resolve, reject) => {
         const submission: HeldSubmission = {transactionId, actions, resolve}
@@ -265,6 +276,12 @@ function createMockContentLake(): MockContentLake {
     },
     pendingTransactionIds: () => held.map((s) => s.transactionId),
   }
+}
+
+function withoutRev(doc: SanityDocument | null | undefined): Omit<SanityDocument, '_rev'> | null {
+  if (!doc) return null
+  const {_rev, ...rest} = doc
+  return rest
 }
 
 function createMockClient(server: MockContentLake): SanityClient {
@@ -752,15 +769,69 @@ beforeEach(() => {
     () => (id: string) => defer(() => of(server.getDocument(id))).pipe(delay(0)),
   )
 
-  clientA = {
-    instance: createSanityInstance({projectId: 'p', dataset: 'rig-a'}),
-    resource: {projectId: 'p', dataset: 'rig-a'},
-  }
-  clientB = {
-    instance: createSanityInstance({projectId: 'p', dataset: 'rig-b'}),
-    resource: {projectId: 'p', dataset: 'rig-b'},
-  }
+  clientA = createRigClient('rig-a')
+  clientB = createRigClient('rig-b')
 })
+
+function createRigClient(dataset: string, experimental_documentSync = false): ClientContext {
+  return {
+    instance: createSanityInstance({projectId: 'p', dataset, experimental_documentSync}),
+    resource: {projectId: 'p', dataset},
+  }
+}
+
+/**
+ * Runs the scenario's clients on the document-sync engine: replaces both clients with ones that
+ * have `experimental_documentSync` on, and has the server send Mendoza effects, which the engine
+ * builds its remote documents from.
+ */
+function useDocumentSyncEngine() {
+  clientA.instance.dispose()
+  clientB.instance.dispose()
+  clientA = createRigClient('rig-a', true)
+  clientB = createRigClient('rig-b', true)
+  server.sendEffects()
+}
+
+/** Whether the client's store has a document-sync engine with a snapshot for the rig document. */
+const hasReadyEngine = bindActionByResource(
+  documentStore,
+  ({state}, doc: DocumentHandle) => engineForHandle(state.get(), doc) !== undefined,
+)
+
+/** Waits until both clients' engines have a snapshot: an edit made before that goes to the queue. */
+function waitForEngines() {
+  return vi.waitFor(() => {
+    expect(hasReadyEngine(clientA.instance, handle)).toBe(true)
+    expect(hasReadyEngine(clientB.instance, handle)).toBe(true)
+  })
+}
+
+/**
+ * Checks what the hooks read for the rig document against the server: the engine's local view with
+ * the engine on, the transaction queue's otherwise.
+ */
+function expectHookViewsMatchServer(...states: StateSource<RigDocument | null | undefined>[]) {
+  const serverView = server.getDocument(DRAFT_ID) ?? server.getDocument(PUBLISHED_ID)
+  for (const state of states) {
+    expect(withoutUpdatedAt(state.getCurrent() ?? null)).toEqual(withoutUpdatedAt(serverView))
+  }
+}
+
+/**
+ * Runs an act and returns the id of the transaction it submitted, which the server holds. The
+ * engine picks its own transaction ids, so the rig releases transactions by these ids rather than
+ * by the ids the scenario passes.
+ */
+async function actAndHold(act: Act, client: ClientContext): Promise<string> {
+  const before = server.pendingTransactionIds()
+  await act(client)
+  return vi.waitFor(() => {
+    const submitted = server.pendingTransactionIds().find((id) => !before.includes(id))
+    expect(submitted).toBeDefined()
+    return submitted!
+  })
+}
 
 afterEach(() => {
   clientA.instance.dispose()
@@ -789,7 +860,9 @@ const withoutUpdatedAt = (doc: RigDocument | SanityDocument | null): unknown => 
 async function runCollision(
   scenario: Scenario,
   order: 'a-first' | 'b-first',
+  documentSync: boolean,
 ): Promise<CollisionResult> {
+  if (documentSync) useDocumentSyncEngine()
   server.seed({[DRAFT_ID]: seedDocument()})
 
   const stateA = getDocumentState<RigDocument>(clientA.instance, handle)
@@ -801,17 +874,17 @@ async function runCollision(
     await firstValueFrom(stateA.observable.pipe(first((doc) => doc !== undefined)))
     await firstValueFrom(stateB.observable.pipe(first((doc) => doc !== undefined)))
 
+    if (documentSync) await waitForEngines()
+
     // hold submissions so both clients edit against the same base revision
     server.holdSubmissions()
 
-    await scenario.actA(clientA)
-    await scenario.actB(clientB)
+    const txnA = await actAndHold(scenario.actA, clientA)
+    const txnB = await actAndHold(scenario.actB, clientB)
+    // Both the queue and the engine send under the ids the scenario passes.
+    expect([txnA, txnB]).toContain('txn-a')
 
-    await vi.waitFor(() => {
-      expect(server.pendingTransactionIds()).toHaveLength(2)
-    })
-
-    const [firstTxn, secondTxn] = order === 'a-first' ? ['txn-a', 'txn-b'] : ['txn-b', 'txn-a']
+    const [firstTxn, secondTxn] = order === 'a-first' ? [txnA, txnB] : [txnB, txnA]
     await server.release(firstTxn)
     await server.release(secondTxn)
 
@@ -828,6 +901,7 @@ async function runCollision(
       () => {
         expect(syncA.getCurrent()).toBe(true)
         expect(syncB.getCurrent()).toBe(true)
+        expectHookViewsMatchServer(stateA, stateB)
         for (const id of [DRAFT_ID, PUBLISHED_ID]) {
           const serverDoc = withoutUpdatedAt(server.getDocument(id))
           for (const {label, context} of clients) {
@@ -870,12 +944,17 @@ async function runCollision(
 }
 
 describe.each([
-  {order: 'a-first' as const, firstWriter: 'A' as const},
-  {order: 'b-first' as const, firstWriter: 'B' as const},
-])('collision matrix ($order)', ({order, firstWriter}) => {
-  it.each(scenarios)('$id: $title', async (scenario) => {
-    const result = await runCollision(scenario, order)
-    scenario.verify(result, firstWriter)
+  {store: 'transaction queue', documentSync: false},
+  {store: 'document-sync engine', documentSync: true},
+])('collision matrix on the $store', ({documentSync}) => {
+  describe.each([
+    {order: 'a-first' as const, firstWriter: 'A' as const},
+    {order: 'b-first' as const, firstWriter: 'B' as const},
+  ])('$order', ({order, firstWriter}) => {
+    it.each(scenarios)('$id: $title', async (scenario) => {
+      const result = await runCollision(scenario, order, documentSync)
+      scenario.verify(result, firstWriter)
+    })
   })
 })
 
@@ -1205,7 +1284,9 @@ const rebaseScenarios: RebaseScenario[] = [
 async function runRebaseCollision(
   scenario: RebaseScenario,
   order: 'a-first' | 'b-first',
+  documentSync: boolean,
 ): Promise<CollisionResult> {
+  if (documentSync) useDocumentSyncEngine()
   server.seed({[DRAFT_ID]: (scenario.seed ?? seedDocument)()})
 
   const stateA = getDocumentState<RigDocument>(clientA.instance, handle)
@@ -1217,43 +1298,41 @@ async function runRebaseCollision(
     await firstValueFrom(stateA.observable.pipe(first((doc) => doc !== undefined)))
     await firstValueFrom(stateB.observable.pipe(first((doc) => doc !== undefined)))
 
+    if (documentSync) await waitForEngines()
+
     server.holdSubmissions()
 
-    await scenario.actA1(clientA)
     // wait until txn-a1 is submitted (and held) so the follow-up edit stays in
     // the applied queue instead of batching into the same outgoing transaction
-    await vi.waitFor(() => {
-      expect(server.pendingTransactionIds()).toContain('txn-a1')
-    })
+    const txnA1 = await actAndHold(scenario.actA1, clientA)
     await scenario.actA2(clientA)
     await scenario.actA3?.(clientA)
-    await scenario.actB(clientB)
-    await vi.waitFor(() => {
-      expect(server.pendingTransactionIds()).toContain('txn-b')
-    })
+    const txnB = await actAndHold(scenario.actB, clientB)
+    const txnsB = [txnB]
+    // Both the queue and the engine send under the ids the scenario passes.
+    expect(txnA1).toBe('txn-a1')
 
-    const [firstTxn, secondTxn] = order === 'a-first' ? ['txn-a1', 'txn-b'] : ['txn-b', 'txn-a1']
+    const [firstTxn, secondTxn] = order === 'a-first' ? [txnA1, txnB] : [txnB, txnA1]
     await server.release(firstTxn)
     await server.release(secondTxn)
 
+    const pendingFromA = () => server.pendingTransactionIds().filter((id) => !txnsB.includes(id))
     // txn-a1's ack clears A's outgoing slot; the queued edits submit next,
     // either individually or batched into one outgoing transaction (queued
     // applied edits coalesce, and the batch carries the last transactionId)
     await vi.waitFor(() => {
-      expect(server.pendingTransactionIds().some((id) => id.startsWith('txn-a'))).toBe(true)
+      expect(pendingFromA().length).toBeGreaterThan(0)
     })
     // B's second edit (if any) lands while A's follow-up is in flight, so
     // any remaining rebase happens over a remote that already contains it
     if (scenario.actB2) {
-      await scenario.actB2(clientB)
-      await vi.waitFor(() => {
-        expect(server.pendingTransactionIds()).toContain('txn-b2')
-      })
-      await server.release('txn-b2')
+      const txnB2 = await actAndHold(scenario.actB2, clientB)
+      txnsB.push(txnB2)
+      await server.release(txnB2)
     }
     // release A transactions until none remain pending or queued
     for (;;) {
-      const pendingA = server.pendingTransactionIds().filter((id) => id.startsWith('txn-a'))
+      const pendingA = pendingFromA()
       if (pendingA.length === 0) break
       await server.release(pendingA[0])
       // let the store submit the next queued transaction, if any
@@ -1267,6 +1346,7 @@ async function runRebaseCollision(
       () => {
         expect(syncA.getCurrent()).toBe(true)
         expect(syncB.getCurrent()).toBe(true)
+        expectHookViewsMatchServer(stateA, stateB)
         for (const id of [DRAFT_ID, PUBLISHED_ID]) {
           const serverDoc = withoutUpdatedAt(server.getDocument(id))
           expect(withoutUpdatedAt(localDoc(clientA, id) ?? null)).toEqual(serverDoc)
@@ -1297,11 +1377,16 @@ async function runRebaseCollision(
 }
 
 describe.each([
-  {order: 'a-first' as const, firstWriter: 'A' as const},
-  {order: 'b-first' as const, firstWriter: 'B' as const},
-])('rebase matrix ($order)', ({order, firstWriter}) => {
-  it.each(rebaseScenarios)('$id: $title', async (scenario) => {
-    const result = await runRebaseCollision(scenario, order)
-    scenario.verify(result, firstWriter)
+  {store: 'transaction queue', documentSync: false},
+  {store: 'document-sync engine', documentSync: true},
+])('rebase matrix on the $store', ({documentSync}) => {
+  describe.each([
+    {order: 'a-first' as const, firstWriter: 'A' as const},
+    {order: 'b-first' as const, firstWriter: 'B' as const},
+  ])('$order', ({order, firstWriter}) => {
+    it.each(rebaseScenarios)('$id: $title', async (scenario) => {
+      const result = await runRebaseCollision(scenario, order, documentSync)
+      scenario.verify(result, firstWriter)
+    })
   })
 })

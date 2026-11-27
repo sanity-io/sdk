@@ -38,7 +38,7 @@ import {
 } from 'rxjs'
 import {afterEach, beforeEach, expect, it, vi} from 'vitest'
 
-import {setAuthToken} from '../auth/authStore'
+import {getConfirmedUserState, setAuthToken} from '../auth/authStore'
 import {getClientState} from '../client/clientStore'
 import {createDocumentHandle} from '../config/handles'
 import {type DocumentHandle} from '../config/sanityConfig'
@@ -102,8 +102,17 @@ const resource = {projectId: 'p', dataset: 'd'}
 const source1 = {projectId: 'p', dataset: 'd1'}
 const source2 = {projectId: 'p', dataset: 'd2'}
 
+/**
+ * The auth store's client for `/users/me`: every token belongs to `user-1`, so a renewed token
+ * confirms the same user and held writes are sent.
+ */
+const sameUserAuth = {
+  clientFactory: () =>
+    ({observable: {request: () => of({id: 'user-1'})}}) as unknown as SanityClient,
+}
+
 beforeEach(() => {
-  instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+  instance = createSanityInstance({projectId: 'p', dataset: 'd', auth: sameUserAuth})
   // test uses two instances that share the same in-memory dataset, but separate
   // store instances. in real scenarios, this would be separate machines but with
   // the same project + dataset
@@ -1278,7 +1287,13 @@ it('returns a promise that resolves when a document has been loaded in the store
 
 it('emits an event for each action after an outgoing transaction has been accepted', async () => {
   const handler = vi.fn()
-  const unsubscribe = subscribeDocumentEvents(instance, {resource, eventHandler: handler})
+  // Listener events (remote-sync from snapshots, remote-patches) arrive on their own schedule.
+  const unsubscribe = subscribeDocumentEvents(instance, {
+    resource,
+    eventHandler: (event) => {
+      if (!event.type.startsWith('remote-')) handler(event)
+    },
+  })
 
   const documentId = DocumentId(randomUuid())
   const doc = createDocumentHandle({documentId, documentType: 'article'})
@@ -2359,6 +2374,89 @@ it('treats transactionAlreadyExistsError on a retry as an ack of the earlier att
   unsubscribe()
   unsubscribeEvents()
   vi.mocked(client.action).mockImplementation(actualAction)
+})
+
+it('discards edits held for one user when another signs in, without sending them as the new user', async () => {
+  const users: Record<string, string> = {'token-a': 'user-a', 'token-b': 'user-b'}
+  const switching = createSanityInstance({
+    projectId: 'p',
+    dataset: 'd',
+    auth: {
+      clientFactory: (config: {token?: string}) =>
+        ({
+          observable: {request: () => of({id: users[config.token ?? ''] ?? 'nobody'})},
+        }) as unknown as SanityClient,
+    },
+  })
+  setAuthToken(switching, 'token-a')
+  await firstValueFrom(
+    getConfirmedUserState(switching).observable.pipe(first((u) => u?.id === 'user-a')),
+  )
+
+  const actualAction = vi.mocked(client.action).getMockImplementation()!
+  const sent: string[] = []
+  let sessionValid = true
+  vi.mocked(client.action).mockImplementation(async (...args) => {
+    const [, {transactionId = ''} = {}] = args
+    sent.push(transactionId)
+    if (sessionValid) return await actualAction(...args)
+    throw new ClientError({statusCode: 401, headers: {}, body: {message: 'Session not found'}})
+  })
+  const reverted: TransactionRevertedEvent[] = []
+  const unsubscribeEvents = subscribeDocumentEvents(switching, {
+    resource,
+    eventHandler: (e) => {
+      if (e.type === 'reverted') reverted.push(e)
+    },
+  })
+  const doc = createDocumentHandle({documentId: DocumentId('user-switch'), documentType: 'article'})
+  const state = getDocumentState<TestDocument>(switching, doc)
+  const unsubscribe = state.subscribe()
+
+  const retryDelay = submissionRetryDelay.ms
+  submissionRetryDelay.ms = 60_000
+  try {
+    await applyDocumentActions(switching, {
+      actions: [createDocument(doc), editDocument(doc, {set: {title: 'public'}})],
+      resource,
+    }).then((r) => r.submitted())
+
+    sessionValid = false
+    const secret = applyDocumentActions(switching, {
+      actions: [editDocument(doc, {set: {title: 'secret'}})],
+      transactionId: 'secret-edit',
+      resource,
+    })
+    await vi.waitFor(() => expect(sent).toContain('secret-edit'))
+    // a second edit waits behind the first, applied but not yet outgoing
+    const secretAgain = applyDocumentActions(switching, {
+      actions: [editDocument(doc, {set: {title: 'secret, again'}})],
+      transactionId: 'secret-edit-2',
+      resource,
+      disableBatching: true,
+    })
+    expect(state.getCurrent()?.title).toBe('secret, again')
+
+    // user B signs in on the same instance: the session is valid again, for B
+    sessionValid = true
+    const attemptsBefore = sent.length
+    setAuthToken(switching, 'token-b')
+
+    await expect((await secret).submitted()).rejects.toThrow(/signed-in user changed/)
+    await expect((await secretAgain).submitted()).rejects.toThrow(/signed-in user changed/)
+    expect(sent.slice(attemptsBefore)).toEqual([])
+    expect(reverted.map((e) => e.outgoing.batchedTransactionIds).sort()).toEqual([
+      ['secret-edit'],
+      ['secret-edit-2'],
+    ])
+    expect(state.getCurrent()?.title).toBe('public')
+  } finally {
+    submissionRetryDelay.ms = retryDelay
+    vi.mocked(client.action).mockImplementation(actualAction)
+    unsubscribe()
+    unsubscribeEvents()
+    switching.dispose()
+  }
 })
 
 it('resubmits held text edits as soon as the credentials change, in order and once each', async () => {

@@ -75,6 +75,9 @@ describe('document submission with the production edit interval', () => {
       sharedListener: {events: NEVER, dispose: vi.fn()},
       fetchDocument: () => NEVER,
       events: new Subject(),
+      engines: {},
+      engineChanges: 0,
+      engineTransactions: new Map(),
     })
     cleanup = documentStore.initialize?.({
       instance,

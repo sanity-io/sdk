@@ -190,6 +190,13 @@ export interface SanityConfig extends DatasetHandle, PerspectiveHandle {
    * @beta
    */
   refetchOnWindowFocus?: boolean
+  /**
+   * Prototype: sends single-document edits, publishes and discards through the
+   * `@sanity/document-sync` engine instead of the document store's own transaction queue.
+   *
+   * @internal
+   */
+  experimental_documentSync?: boolean
 }
 
 /**

@@ -1,4 +1,5 @@
 import {type MutationEvent} from '@sanity/client'
+import {applyEffect} from '@sanity/document-sync'
 import {type Mutation, type SanityDocument} from '@sanity/types'
 import {
   concat,
@@ -230,6 +231,36 @@ export function sortListenerEvents(options?: SortListenerEventsOptions) {
   }
 }
 
+/**
+ * The remote document after a mutation event. Prefers the server's own mendoza effects: they
+ * describe what Content Lake stored, so the remote copy cannot drift from it the way replaying
+ * `mutations` with our own patch code can (patch operation order, `merge`, operations we do not
+ * implement). Falls back to replaying `mutations` when an event carries no effects.
+ *
+ * `applyEffect` comes from `@sanity/document-sync`: it applies the effects to the document
+ * without `_rev`, since Content Lake computes them without it and mendoza addresses fields by
+ * their index among the sorted keys, then sets `_rev` from the resulting revision.
+ *
+ * @internal
+ */
+export function remoteAfter(
+  event: MutationEvent,
+  documentId: string,
+  remote: SanityDocument | null | undefined,
+): SanityDocument | null | undefined {
+  if (event.effects?.apply) {
+    return applyEffect(remote ?? null, event.effects.apply, event.resultRev ?? event.transactionId)
+  }
+  return Object.values(
+    processMutations({
+      documents: {[documentId]: remote},
+      mutations: event.mutations as Mutation[],
+      transactionId: event.transactionId,
+      timestamp: event.timestamp,
+    }),
+  )[0]
+}
+
 export const listen = (
   {state}: StoreContext<DocumentStoreState>,
   documentId: string,
@@ -269,20 +300,7 @@ export const listen = (
         }
       }
 
-      // TODO: from manual testing, mendoza patches seem to be applying
-      // let document
-      // if (next.effects?.apply) {
-      //   document = applyPatch(omit(documentState.remote, '_rev'), next.effects?.apply)
-      // }
-
-      const [document] = Object.values(
-        processMutations({
-          documents: {[documentId]: documentState.remote},
-          mutations: next.mutations as Mutation[],
-          transactionId: next.transactionId,
-          timestamp: next.timestamp,
-        }),
-      )
+      const document = remoteAfter(next, documentId, documentState.remote)
 
       const {previousRev, transactionId, timestamp} = next
 
